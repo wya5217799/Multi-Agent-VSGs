@@ -1,0 +1,18 @@
+__pycache__/
+*.pyc
+*.pyo
+.claude/
+_archive/
+
+# ANDES output
+kundur_full_out.*
+
+# Large model checkpoints (keep figures)
+results/models/
+results/andes_models*/
+results/new_england/models/
+results/*.npz
+
+# OS
+.DS_Store
+Thumbs.db

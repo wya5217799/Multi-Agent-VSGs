@@ -30,6 +30,7 @@ from env.simulink.sac_agent_standalone import SACAgent
 from utils.monitor import TrainingMonitor
 from utils.run_meta import save_run_meta, update_run_meta
 from utils.artifact_writer import ArtifactWriter
+from utils.run_protocol import generate_run_id, ensure_run_dir, write_training_status
 import scenarios.kundur.config_simulink as _cfg_module
 from scenarios.kundur.config_simulink import (
     N_AGENTS, OBS_DIM, ACT_DIM, HIDDEN_SIZES,
@@ -156,6 +157,21 @@ def evaluate(env, agent, n_eval=3):
 
 def train(args):
     np.random.seed(args.seed)
+
+    # Per-run output directory
+    run_id = generate_run_id("kundur")
+    run_dir = ensure_run_dir("kundur", run_id)
+    print(f"[train] run_id={run_id}, output={run_dir}")
+
+    write_training_status(run_dir, {
+        "status": "running",
+        "run_id": run_id,
+        "scenario": "kundur",
+        "episodes_total": args.episodes,
+        "episodes_done": 0,
+        "started_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        "last_reward": None,
+    })
 
     env = make_env(args)
     agent = SACAgent(
@@ -315,6 +331,16 @@ def train(args):
         mean_reward = ep_reward.mean()
         log["episode_rewards"].append(float(mean_reward))
 
+        write_training_status(run_dir, {
+            "status": "running",
+            "run_id": run_id,
+            "scenario": "kundur",
+            "episodes_total": args.episodes,
+            "episodes_done": ep - start_episode + 1,
+            "last_reward": float(mean_reward),
+            "last_updated": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        })
+
         # compute and record episode physics_summary
         ep_mean_freq_dev = ep_sum_freq_dev / max(ep_step_count_actual, 1)
         ep_settled = bool(ep_tail_freq_devs and all(d < 0.1 for d in ep_tail_freq_devs))
@@ -472,6 +498,29 @@ def train(args):
         monitor.export_csv(os.path.join(log_dir, "monitor_data.csv"))
         monitor.save_checkpoint(os.path.join(log_dir, "monitor_state.json"))
         print(f"Monitor data exported to {log_dir}/")
+
+        write_training_status(run_dir, {
+            "status": "completed",
+            "run_id": run_id,
+            "scenario": "kundur",
+            "episodes_total": args.episodes,
+            "episodes_done": len(log["episode_rewards"]),
+            "finished_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        })
+    except Exception as _train_exc:
+        try:
+            write_training_status(run_dir, {
+                "status": "failed",
+                "run_id": run_id,
+                "scenario": "kundur",
+                "episodes_total": args.episodes,
+                "episodes_done": len(log["episode_rewards"]),
+                "failed_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                "error": str(_train_exc),
+            })
+        except Exception:
+            pass
+        raise
     finally:
         try:
             update_run_meta(args.checkpoint_dir, {

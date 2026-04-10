@@ -1,0 +1,14 @@
+# Lychee link checker config — auxiliary checker for standard Markdown links.
+# Primary checker is scripts/lint_nav.py (handles backtick paths).
+
+[include]
+glob = ["*.md", "docs/**/*.md"]
+
+[exclude_path]
+paths = ["_archive", "node_modules", ".git", ".pytest_cache", "results"]
+
+[options]
+no_progress = true
+include_fragments = true
+# Only check local files, skip remote URLs (avoid network dependency)
+exclude = ["^https?://", "^mailto:"]

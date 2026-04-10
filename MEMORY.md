@@ -19,6 +19,7 @@ short and link to the source record instead of duplicating document bodies.
 - [2026-04-09 Harness boundary convention](docs/decisions/2026-04-09-harness-boundary-convention.md)
 - [2026-04-10 Paper baseline contract](docs/decisions/2026-04-10-paper-baseline-contract.md)
 - [2026-04-11 Workspace hygiene](docs/decisions/2026-04-11-workspace-hygiene.md)
+- [2026-04-11 Nav freshness system](docs/decisions/2026-04-11-nav-freshness-system.md)
 
 ## Devlog
 

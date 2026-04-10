@@ -1,9 +1,0 @@
-{
-  "run_id": "ne39_v1",
-  "scenario_id": "ne39",
-  "goal": "NE39 FastRestart co-simulation pipeline ready for RL training. Smoke test passed: warmup + 1 step, omega stable [0.95,1.05]. patch_ne39_faststart applied, vsg_warmup/vsg_step_and_read rewritten for FastRestart, bridge updated for 2-return signature + delta/Pe feedback loop.",
-  "requested_tasks": [
-    "scenario_status"
-  ],
-  "created_at": "2026-04-07T08:18:36.992825+00:00"
-}

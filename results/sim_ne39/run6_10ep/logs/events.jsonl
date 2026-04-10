@@ -1,2 +1,0 @@
-{"episode": 0, "ts": "2026-04-10T07:24:48.768925+00:00", "type": "training_start", "scenario": "sim_ne39", "n_agents": 8, "config": {"mode": "simulink", "episodes": 10}}
-{"episode": 9, "ts": "2026-04-10T07:45:31.158700+00:00", "type": "training_end", "total_episodes": 10}

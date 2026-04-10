@@ -1,9 +1,0 @@
-{
-  "run_id": "ne39_v2",
-  "scenario_id": "ne39",
-  "goal": "start simulink training 500 episodes",
-  "requested_tasks": [
-    "scenario_status"
-  ],
-  "created_at": "2026-04-07T12:44:38.932371+00:00"
-}

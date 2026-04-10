@@ -1,9 +1,0 @@
-{
-  "run_id": "ne39_sdi1",
-  "scenario_id": "ne39",
-  "goal": "Verify ne39 ready for training run to test Simulink.sdi.clear warmup fix",
-  "requested_tasks": [
-    "scenario_status"
-  ],
-  "created_at": "2026-04-07T19:13:17.311668+00:00"
-}

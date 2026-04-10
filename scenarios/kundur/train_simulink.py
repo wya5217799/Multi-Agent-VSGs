@@ -31,6 +31,7 @@ from utils.monitor import TrainingMonitor
 from utils.run_meta import save_run_meta, update_run_meta
 from utils.artifact_writer import ArtifactWriter
 from utils.run_protocol import generate_run_id, ensure_run_dir, write_training_status
+from utils.training_log import load_or_create_log
 import scenarios.kundur.config_simulink as _cfg_module
 from scenarios.kundur.config_simulink import (
     N_AGENTS, OBS_DIM, ACT_DIM, HIDDEN_SIZES,
@@ -40,32 +41,6 @@ from scenarios.kundur.config_simulink import (
 )
 
 
-_EMPTY_LOG = {
-    "episode_rewards": [],
-    "eval_rewards": [],
-    "critic_losses": [],
-    "policy_losses": [],
-    "alphas": [],
-    "physics_summary": [],
-}
-
-
-def load_or_create_log(path: str, fresh: bool = False) -> dict:
-    """Load an existing training log or return a fresh empty one.
-
-    On resume this lets new episodes extend the existing lists instead of
-    overwriting them.  Handles truncated JSON (e.g. interrupted mid-write)
-    by falling back to a fresh log with a warning.
-    """
-    if not fresh and os.path.exists(path):
-        try:
-            with open(path) as f:
-                existing = json.load(f)
-            # Ensure all expected keys exist (handles logs from older runs)
-            return {k: existing.get(k, list(v)) for k, v in _EMPTY_LOG.items()}
-        except json.JSONDecodeError:
-            print(f"[train] WARNING: {path} is not valid JSON (truncated?). Starting fresh log.")
-    return {k: list(v) for k, v in _EMPTY_LOG.items()}
 
 
 def parse_args():

@@ -1,9 +1,0 @@
-{
-  "run_id": "2026-04-06-test1",
-  "scenario_id": "kundur",
-  "goal": "Test harness workflow end-to-end",
-  "requested_tasks": [
-    "scenario_status"
-  ],
-  "created_at": "2026-04-05T18:26:10.211994+00:00"
-}

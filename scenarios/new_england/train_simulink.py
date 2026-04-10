@@ -31,49 +31,24 @@ from utils.monitor import TrainingMonitor
 from utils.run_meta import save_run_meta, update_run_meta
 from utils.artifact_writer import ArtifactWriter
 from utils.run_protocol import generate_run_id, ensure_run_dir, write_training_status
+from utils.training_log import load_or_create_log
 import scenarios.new_england.config_simulink as _cfg_module
 from scenarios.new_england.config_simulink import (
-    HIDDEN_SIZES,
+    N_AGENTS, OBS_DIM, ACT_DIM, HIDDEN_SIZES,
     LR, GAMMA, TAU_SOFT, BUFFER_SIZE, BATCH_SIZE, WARMUP_STEPS,
+    DEFAULT_EPISODES, CHECKPOINT_INTERVAL, EVAL_INTERVAL,
 )
 
 
-_EMPTY_LOG = {
-    "episode_rewards": [],
-    "eval_rewards": [],
-    "critic_losses": [],
-    "policy_losses": [],
-    "alphas": [],
-    "physics_summary": [],
-}
-
-
-def load_or_create_log(path: str, fresh: bool = False) -> dict:
-    """Load an existing training log or return a fresh empty one.
-
-    On resume this lets new episodes extend the existing lists instead of
-    overwriting them.  Handles truncated JSON (e.g. interrupted mid-write)
-    by falling back to a fresh log with a warning.
-    """
-    if not fresh and os.path.exists(path):
-        try:
-            with open(path) as f:
-                existing = json.load(f)
-            return {k: existing.get(k, list(v)) for k, v in _EMPTY_LOG.items()}
-        except json.JSONDecodeError:
-            print(f"[train] WARNING: {path} is not valid JSON (truncated?). Starting fresh log.")
-    return {k: list(v) for k, v in _EMPTY_LOG.items()}
 
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Train MARL-VSG on Modified NE 39-Bus")
     parser.add_argument("--mode", choices=["standalone", "simulink"], default="simulink",
                         help="Simulation backend")
-    parser.add_argument("--episodes", type=int, default=500)
-    parser.add_argument("--eval-interval", type=int, default=50,
-                        help="Evaluate every N episodes")
-    parser.add_argument("--save-interval", type=int, default=100,
-                        help="Save checkpoint every N episodes")
+    parser.add_argument("--episodes", type=int, default=DEFAULT_EPISODES)
+    parser.add_argument("--eval-interval", type=int, default=EVAL_INTERVAL)
+    parser.add_argument("--save-interval", type=int, default=CHECKPOINT_INTERVAL)
     _script_dir = os.path.dirname(os.path.abspath(__file__))
     _results_dir = os.path.join(_script_dir, '..', '..', 'results', 'sim_ne39')
     parser.add_argument("--checkpoint-dir", default=None,
@@ -164,8 +139,8 @@ def train(args):
     # Create environment and agent
     env = make_env(args)
     agent = SACAgent(
-        obs_dim=env.OBS_DIM,
-        act_dim=env.ACT_DIM,
+        obs_dim=OBS_DIM,
+        act_dim=ACT_DIM,
         hidden_sizes=HIDDEN_SIZES,
         lr=LR,
         gamma=GAMMA,

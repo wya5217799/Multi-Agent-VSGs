@@ -1,7 +1,0 @@
-警告: Source 'kundur_vsg/BrkCtrl_1' specifies that its sample time (-1) is back-inherited. You should explicitly specify the sample time of sources. You can disable this diagnostic by setting the 'Source block specifies -1 sample time' diagnostic to 'none' in the Sample Time group on the Diagnostics pane of the Configuration Parameters dialog box.
-> 位置：vsg_warmup>warmup_fastrestart_reset (第 132 行)
-位置: vsg_warmup (第 35 行)
-警告: Source 'kundur_vsg/BrkCtrl_2' specifies that its sample time (-1) is back-inherited. You should explicitly specify the sample time of sources. You can disable this diagnostic by setting the 'Source block specifies -1 sample time' diagnostic to 'none' in the Sample Time group on the Diagnostics pane of the Configuration Parameters dialog box.
-> 位置：vsg_warmup>warmup_fastrestart_reset (第 132 行)
-位置: vsg_warmup (第 35 行)
-RESULT: vsg_warmup (Kundur) done, t_warmup=0.500 s

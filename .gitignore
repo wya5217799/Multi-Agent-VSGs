@@ -11,7 +11,7 @@ _archive/
 *_out.txt
 results/andes_output/
 
-# Large model checkpoints (keep figures and logs)
+# Generated run artifacts
 results/models/
 results/andes_models*/
 results/andes_kundur_models_v*/
@@ -21,7 +21,23 @@ results/new_england/models/
 results/sim_ne39/checkpoints/
 results/sim_kundur/checkpoints/
 results/scalability/
-results/*.npz
+results/**/*.csv
+results/**/*.json
+results/**/*.jsonl
+results/**/*.log
+results/**/*.npz
+results/**/*.pdf
+results/**/*.png
+results/**/*.pt
+results/**/*.pth
+results/**/summary.md
+!results/harness/
+!results/harness/.gitkeep
+!results/harness/README.md
+scenarios/**/results/
+scenarios/**/*.autosave
+scenarios/**/*.slxc
+scenarios/**/*.fig
 
 # Simulink cache
 slprj/

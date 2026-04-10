@@ -1,0 +1,21 @@
+{
+  "scenario_id": "sim_ne39",
+  "description": "Simulink × NE 39-bus, 8 VSG agents, 60 Hz",
+  "n_agents": 8,
+  "omega_hz": 60,
+  "t_episode_s": 10.0,
+  "artifact_root": "results/sim_ne39",
+  "quality_thresholds": {
+    "eval_reward_pass": -80000,
+    "eval_reward_marginal": -300000,
+    "settled_rate_100ep_pass": 0.20,
+    "settled_rate_100ep_marginal": 0.05,
+    "mean_freq_dev_hz_pass": 3.0,
+    "mean_freq_dev_hz_marginal": 8.0,
+    "alpha_min": 0.001,
+    "alpha_max": 4.5,
+    "reward_trend_window": 100,
+    "reward_trend_slope_marginal": 0,
+    "reward_trend_slope_fail": -100
+  }
+}

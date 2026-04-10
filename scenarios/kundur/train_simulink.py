@@ -1,0 +1,495 @@
+"""
+Training script for Multi-Agent SAC on Modified Kundur Two-Area System.
+
+Usage:
+    # Standalone mode (no MATLAB, fast prototyping):
+    python train.py --mode standalone --episodes 500
+
+    # Simulink mode (requires MATLAB):
+    python train.py --mode simulink --episodes 500
+
+    # Resume training:
+    python train.py --mode standalone --episodes 1000 --resume results/checkpoints/best.pt
+"""
+
+import argparse
+import datetime
+import os
+import sys
+import time
+import json
+
+# Add project root to path before importing repo-local utilities.
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
+
+from utils.python_env_check import check_python_env
+check_python_env(r"C:\Users\27443\miniconda3\envs\andes_env\python.exe")
+from collections import deque
+import numpy as np
+
+from env.simulink.kundur_simulink_env import KundurStandaloneEnv, KundurSimulinkEnv
+from env.simulink.sac_agent_standalone import SACAgent
+from utils.monitor import TrainingMonitor
+from utils.run_meta import save_run_meta, update_run_meta
+from utils.artifact_writer import ArtifactWriter
+import scenarios.kundur.config_simulink as _cfg_module
+from scenarios.kundur.config_simulink import (
+    N_AGENTS, OBS_DIM, ACT_DIM, HIDDEN_SIZES,
+    LR, GAMMA, TAU_SOFT, BUFFER_SIZE, BATCH_SIZE, WARMUP_STEPS,
+    DEFAULT_EPISODES, CHECKPOINT_INTERVAL, EVAL_INTERVAL,
+    SCENARIO1_BREAKER, SCENARIO1_TIME,
+)
+
+
+_EMPTY_LOG = {
+    "episode_rewards": [],
+    "eval_rewards": [],
+    "critic_losses": [],
+    "policy_losses": [],
+    "alphas": [],
+    "physics_summary": [],
+}
+
+
+def load_or_create_log(path: str, fresh: bool = False) -> dict:
+    """Load an existing training log or return a fresh empty one.
+
+    On resume this lets new episodes extend the existing lists instead of
+    overwriting them.  Handles truncated JSON (e.g. interrupted mid-write)
+    by falling back to a fresh log with a warning.
+    """
+    if not fresh and os.path.exists(path):
+        try:
+            with open(path) as f:
+                existing = json.load(f)
+            # Ensure all expected keys exist (handles logs from older runs)
+            return {k: existing.get(k, list(v)) for k, v in _EMPTY_LOG.items()}
+        except json.JSONDecodeError:
+            print(f"[train] WARNING: {path} is not valid JSON (truncated?). Starting fresh log.")
+    return {k: list(v) for k, v in _EMPTY_LOG.items()}
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description="Train MARL-VSG on Modified Kundur Two-Area"
+    )
+    parser.add_argument(
+        "--mode", choices=["standalone", "simulink"],
+        default="simulink", help="Simulation backend"
+    )
+    parser.add_argument("--episodes", type=int, default=DEFAULT_EPISODES)
+    parser.add_argument("--eval-interval", type=int, default=EVAL_INTERVAL)
+    parser.add_argument("--save-interval", type=int, default=CHECKPOINT_INTERVAL)
+    _script_dir = os.path.dirname(os.path.abspath(__file__))
+    _results_dir = os.path.join(_script_dir, '..', '..', 'results', 'sim_kundur')
+    parser.add_argument(
+        "--checkpoint-dir", default=None,
+        help="Checkpoint directory (default: results/sim_kundur/checkpoints/<mode>/)"
+    )
+    parser.add_argument(
+        "--resume", type=str, default=None,
+        help="Path to checkpoint to resume from.  Pass 'none' to force a fresh start "
+             "even when checkpoints exist (disables auto-resume).",
+    )
+    parser.add_argument("--comm-delay", type=int, default=0)
+    parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument(
+        "--update-repeat", type=int, default=10,
+        help="Gradient updates per env step (10 for Simulink, 1 for standalone)"
+    )
+    parser.add_argument(
+        "--log-file", default=None,
+        help="Training log JSON path (default: results/sim_kundur/logs/<mode>/training_log.json)"
+    )
+    args = parser.parse_args()
+    # Derive mode-namespaced defaults so standalone and simulink never share state.
+    if args.checkpoint_dir is None:
+        args.checkpoint_dir = os.path.join(_results_dir, "checkpoints", args.mode)
+    if args.log_file is None:
+        args.log_file = os.path.join(_results_dir, "logs", args.mode, "training_log.json")
+    return args
+
+
+def make_env(args):
+    if args.mode == "standalone":
+        return KundurStandaloneEnv(
+            comm_delay_steps=args.comm_delay,
+            training=True,
+        )
+    else:
+        return KundurSimulinkEnv(
+            comm_delay_steps=args.comm_delay,
+            training=True,
+        )
+
+
+_EVAL_DISTURBANCE_MAGNITUDE = 2.0  # fixed load-step (p.u. on system base)
+
+
+def evaluate(env, agent, n_eval=3):
+    """Run evaluation episodes with a fixed disturbance magnitude.
+
+    Using a deterministic disturbance ensures best_eval_reward tracks policy
+    quality rather than disturbance luck.
+    """
+    env.training = False
+    try:
+        total_rewards = []
+
+        for _ in range(n_eval):
+            obs, _ = env.reset()
+            ep_reward = np.zeros(env.N_ESS)
+
+            env.apply_disturbance(bus_idx=0, magnitude=_EVAL_DISTURBANCE_MAGNITUDE)
+
+            for step in range(int(env.T_EPISODE / env.DT)):
+                actions = agent.select_actions_multi(obs, deterministic=True)
+                obs, rewards, terminated, truncated, info = env.step(actions)
+                ep_reward += rewards
+                if terminated or truncated:
+                    break
+
+            total_rewards.append(ep_reward.mean())
+
+        return np.mean(total_rewards)
+    finally:
+        env.training = True
+
+
+def train(args):
+    np.random.seed(args.seed)
+
+    env = make_env(args)
+    agent = SACAgent(
+        obs_dim=OBS_DIM,
+        act_dim=ACT_DIM,
+        hidden_sizes=HIDDEN_SIZES,
+        lr=LR,
+        gamma=GAMMA,
+        tau=TAU_SOFT,
+        buffer_size=BUFFER_SIZE,
+        batch_size=BATCH_SIZE,
+        warmup_steps=WARMUP_STEPS,
+        reward_scale=1e-3,
+        alpha_max=5.0,
+    )
+
+    start_episode = 0
+    # Normalise --resume: the string literal "none" means "force fresh start".
+    force_fresh = (args.resume or "").lower() == "none"
+    resume_path = None if force_fresh else args.resume
+
+    # Auto-resume: if no --resume given but a checkpoint directory already
+    # contains episode checkpoints, load the latest one automatically.
+    # This prevents the "alpha reset" collapse that occurs when a fresh
+    # SACAgent (alpha=1.0) is appended onto an existing training_log.json.
+    if resume_path is None and not force_fresh:
+        ckpt_dir = args.checkpoint_dir
+        if os.path.isdir(ckpt_dir):
+            # Prefer highest-numbered ep<N>.pt; fall back to final.pt / best.pt.
+            ep_ckpts = sorted(
+                [
+                    f for f in os.listdir(ckpt_dir)
+                    if f.startswith("ep") and f.endswith(".pt")
+                ],
+                key=lambda name: int(name[2:-3]),
+            )
+            if ep_ckpts:
+                resume_path = os.path.join(ckpt_dir, ep_ckpts[-1])
+                print(
+                    f"[train] Auto-resume: found existing checkpoint "
+                    f"'{ep_ckpts[-1]}' — resuming (pass --resume none to start fresh)."
+                )
+            elif os.path.exists(os.path.join(ckpt_dir, "final.pt")):
+                resume_path = os.path.join(ckpt_dir, "final.pt")
+                print("[train] Auto-resume: loading final.pt.")
+
+    if resume_path and os.path.exists(resume_path):
+        meta = agent.load(resume_path)
+        start_episode = meta.get("start_episode", 0)
+        print(f"Resumed from {resume_path} (starting at episode {start_episode})")
+
+    os.makedirs(args.checkpoint_dir, exist_ok=True)
+    os.makedirs(os.path.dirname(args.log_file), exist_ok=True)
+
+    _log_dir = os.path.dirname(args.log_file)
+    fresh_run = start_episode == 0
+    writer = ArtifactWriter(_log_dir, reset_existing=fresh_run)
+    writer.log_event(start_episode, "training_start", {
+        "mode": args.mode,
+        "start_episode": start_episode,
+        "end_episode": start_episode + args.episodes,
+    })
+    _prev_trigger_len = 0
+    _last_eval_reward: float | None = None
+
+    save_run_meta(args.checkpoint_dir, args, _cfg_module)
+
+    monitor = TrainingMonitor()
+
+    log = load_or_create_log(args.log_file, fresh=fresh_run)
+
+    best_eval_reward = -float("inf")
+    print(f"\n{'='*60}")
+    print(f"Training MARL-VSG on Modified Kundur Two-Area System")
+    print(f"Mode: {args.mode} | Episodes: {args.episodes} | "
+          f"Agents: {N_AGENTS} | Seed: {args.seed}")
+    print(f"{'='*60}\n")
+
+    t_start = time.time()
+
+    end_episode = start_episode + args.episodes
+    for ep in range(start_episode, end_episode):
+        # Draw disturbance BEFORE reset so Simulink env can pre-schedule
+        # the breaker event via configure_breaker_event() → warmup() recompile.
+        dist_mag = np.random.uniform(env.DIST_MIN, env.DIST_MAX)
+        if np.random.random() > 0.5:
+            dist_mag = -dist_mag
+
+        obs, _ = env.reset(options={"disturbance_magnitude": dist_mag})
+        ep_reward = np.zeros(env.N_ESS)
+        ep_losses = {"critic": [], "policy": [], "alpha": []}
+        actions_history = []
+        ep_components = {"r_f": 0.0, "r_h": 0.0, "r_d": 0.0}
+        last_info: dict = {}
+
+        # physics_summary accumulators
+        ep_max_freq_dev = 0.0
+        ep_sum_freq_dev = 0.0
+        ep_step_count_actual = 0
+        ep_tail_freq_devs = deque(maxlen=10)
+        ep_P_es_min = np.full(env.N_ESS, np.inf)
+        ep_P_es_max = np.full(env.N_ESS, -np.inf)
+
+        for step in range(int(env.T_EPISODE / env.DT)):
+            # Apply disturbance after warmup (t=0.5s)
+            if step == int(0.5 / env.DT):
+                env.apply_disturbance(magnitude=dist_mag)
+
+            actions = agent.select_actions_multi(obs, deterministic=False)
+            next_obs, rewards, terminated, truncated, info = env.step(actions)
+
+            actions_history.append(actions)
+            for k in ep_components:
+                ep_components[k] += info.get("reward_components", {}).get(k, 0.0)
+            last_info = info
+
+            # accumulate physics_summary (fix: track max over all steps, not last step)
+            step_freq_dev = info.get("max_freq_deviation_hz", 0.0)
+            ep_max_freq_dev = max(ep_max_freq_dev, step_freq_dev)
+            ep_sum_freq_dev += step_freq_dev
+            ep_step_count_actual += 1
+            ep_tail_freq_devs.append(step_freq_dev)
+            p_es = info.get("P_es", None)
+            if p_es is not None:
+                p_arr = np.asarray(p_es)
+                ep_P_es_min = np.minimum(ep_P_es_min, p_arr)
+                ep_P_es_max = np.maximum(ep_P_es_max, p_arr)
+
+            done = terminated or truncated
+            agent.store_multi_transitions(
+                obs, actions, rewards, next_obs, done
+            )
+
+            # Dynamic update_repeat: ramp from 1 → args.update_repeat as buffer fills.
+            # Prevents critic overfitting when buffer is small.
+            effective_repeat = min(
+                args.update_repeat,
+                max(1, len(agent.buffer) // agent.warmup_steps),
+            )
+            for _ in range(effective_repeat):
+                update_info = agent.update()
+                if update_info:
+                    ep_losses["critic"].append(
+                        update_info.get("critic_loss", 0)
+                    )
+                    ep_losses["policy"].append(
+                        update_info.get("policy_loss", 0)
+                    )
+                    ep_losses["alpha"].append(update_info.get("alpha", 0))
+
+            obs = next_obs
+            ep_reward += rewards
+
+            if terminated or truncated:
+                break
+
+        mean_reward = ep_reward.mean()
+        log["episode_rewards"].append(float(mean_reward))
+
+        # compute and record episode physics_summary
+        ep_mean_freq_dev = ep_sum_freq_dev / max(ep_step_count_actual, 1)
+        ep_settled = bool(ep_tail_freq_devs and all(d < 0.1 for d in ep_tail_freq_devs))
+        if (ep_step_count_actual > 0
+                and not np.any(np.isinf(ep_P_es_max))
+                and not np.any(np.isinf(ep_P_es_min))):
+            ep_power_swing = float(np.max(ep_P_es_max - ep_P_es_min))
+        else:
+            ep_power_swing = 0.0
+        log["physics_summary"].append({
+            "max_freq_dev_hz": float(ep_max_freq_dev),
+            "mean_freq_dev_hz": float(ep_mean_freq_dev),
+            "settled": ep_settled,
+            "max_power_swing": ep_power_swing,
+        })
+        if ep_losses["critic"]:
+            log["critic_losses"].append(
+                float(np.mean(ep_losses["critic"]))
+            )
+            log["policy_losses"].append(
+                float(np.mean(ep_losses["policy"]))
+            )
+            log["alphas"].append(float(np.mean(ep_losses["alpha"])))
+
+        # Monitor: diagnostic checks
+        # Pass one aggregated dict (shared-weight SAC = one logical agent)
+        sac_losses_for_monitor = (
+            [{"critic_loss": float(np.mean(ep_losses["critic"])),
+              "policy_loss": float(np.mean(ep_losses["policy"])),
+              "alpha": float(np.mean(ep_losses["alpha"]))}]
+            if ep_losses["critic"] else None
+        )
+        stop_triggered = monitor.log_and_check(
+            episode=ep,
+            rewards=float(mean_reward),
+            reward_components=ep_components,
+            actions=np.stack(actions_history) if actions_history else np.zeros((1, env.N_ESS, 2)),
+            info={
+                "tds_failed": last_info.get("tds_failed", False),
+                "max_freq_deviation_hz": ep_max_freq_dev,  # episode peak, not last-step value
+            },
+            per_agent_rewards={i: float(ep_reward[i]) for i in range(env.N_ESS)},
+            sac_losses=sac_losses_for_monitor,
+        )
+        # Route any new monitor triggers to events.jsonl
+        _new_triggers = monitor._trigger_history[_prev_trigger_len:]
+        for t in _new_triggers:
+            writer.log_event(ep, "monitor_alert", {"rule": t})
+        _prev_trigger_len = len(monitor._trigger_history)
+
+        if stop_triggered:
+            writer.log_event(ep, "monitor_stop", {"triggered_by": "monitor"})
+            print(f"[Monitor] Hard stop at episode {ep}. Saving checkpoint.")
+            agent.save(
+                os.path.join(args.checkpoint_dir, f"monitor_stop_ep{ep}.pt"),
+                metadata={"start_episode": ep + 1},
+            )
+            break
+
+        if (ep + 1) % 10 == 0:
+            elapsed = time.time() - t_start
+            avg_r = np.mean(log["episode_rewards"][-10:])
+            print(
+                f"[Ep {ep+1:4d}/{end_episode}] "
+                f"R={mean_reward:+8.2f} | Avg10={avg_r:+8.2f} | "
+                f"Alpha={agent.alpha:.4f} | "
+                f"Buf={len(agent.buffer)} | "
+                f"Time={elapsed:.0f}s"
+            )
+
+        if (ep + 1) % args.eval_interval == 0:
+            _last_eval_reward = None
+            eval_reward = evaluate(env, agent)
+            _last_eval_reward = float(eval_reward)
+            writer.log_event(ep, "eval", {"eval_reward": float(eval_reward)})
+            log["eval_rewards"].append(
+                {"episode": ep + 1, "reward": float(eval_reward)}
+            )
+            print(f"  >>> Eval reward: {eval_reward:+.2f}")
+
+            if eval_reward > best_eval_reward:
+                best_eval_reward = eval_reward
+                agent.save(
+                    os.path.join(args.checkpoint_dir, "best.pt"),
+                    metadata={"start_episode": ep + 1},
+                )
+                print(
+                    f"  >>> New best! Saved to "
+                    f"{args.checkpoint_dir}/best.pt"
+                )
+
+        # --- artifact writer: append episode metrics ---
+        writer.log_metric(ep, {
+            "reward": float(mean_reward),
+            "reward_components": ep_components,
+            "alpha": float(np.mean(ep_losses["alpha"])) if ep_losses["alpha"] else None,
+            "critic_loss": float(np.mean(ep_losses["critic"])) if ep_losses["critic"] else None,
+            "policy_loss": float(np.mean(ep_losses["policy"])) if ep_losses["policy"] else None,
+            "eval_reward": _last_eval_reward if (ep + 1) % args.eval_interval == 0 else None,
+            "physics": {
+                "max_freq_dev_hz": float(ep_max_freq_dev),
+                "mean_freq_dev_hz": float(ep_mean_freq_dev),
+                "settled": ep_settled,
+                "max_power_swing": ep_power_swing,
+            },
+        })
+
+        if (ep + 1) % args.save_interval == 0:
+            agent.save(
+                os.path.join(args.checkpoint_dir, f"ep{ep+1}.pt"),
+                metadata={"start_episode": ep + 1},
+            )
+            writer.log_event(ep, "checkpoint", {"file": f"ep{ep+1}.pt"})
+
+        # Update latest_state every 50 episodes
+        if (ep + 1) % 50 == 0:
+            _recent_rewards = log["episode_rewards"][-50:]
+            _recent_physics = log["physics_summary"][-50:]
+            _settled_recent = [p["settled"] for p in _recent_physics]
+            writer.update_state({
+                "episode": ep,
+                "reward_mean_50": float(np.mean(_recent_rewards)),
+                "alpha": float(agent.alpha),
+                "settled_rate_50": float(np.mean(_settled_recent)) if _settled_recent else 0.0,
+                "buffer_size": len(agent.buffer),
+            })
+
+    try:
+        agent.save(
+            os.path.join(args.checkpoint_dir, "final.pt"),
+            metadata={"start_episode": start_episode + args.episodes},
+        )
+        _recent_rewards = log["episode_rewards"][-50:]
+        _recent_physics = log["physics_summary"][-50:]
+        _settled_recent = [p["settled"] for p in _recent_physics]
+        if _recent_rewards:
+            writer.update_state({
+                "episode": ep,
+                "reward_mean_50": float(np.mean(_recent_rewards)),
+                "alpha": float(agent.alpha),
+                "settled_rate_50": float(np.mean(_settled_recent)) if _settled_recent else 0.0,
+                "buffer_size": len(agent.buffer),
+            })
+        writer.log_event(
+            start_episode + args.episodes - 1,
+            "training_end",
+            {"total_episodes": start_episode + args.episodes},
+        )
+
+        with open(args.log_file, "w") as f:
+            json.dump(log, f, indent=2)
+        print(f"\nTraining log saved to {args.log_file}")
+
+        log_dir = os.path.dirname(args.log_file)
+        monitor.export_csv(os.path.join(log_dir, "monitor_data.csv"))
+        monitor.save_checkpoint(os.path.join(log_dir, "monitor_state.json"))
+        print(f"Monitor data exported to {log_dir}/")
+    finally:
+        try:
+            update_run_meta(args.checkpoint_dir, {
+                "finished_at": datetime.datetime.now().isoformat(),
+                "total_episodes": start_episode + args.episodes,
+            })
+        except Exception:
+            pass  # metadata loss is acceptable; don't shadow the real error
+
+    total_time = time.time() - t_start
+    print(f"\nTraining complete in {total_time:.1f}s ({total_time/60:.1f}min)")
+    print(f"Best eval reward: {best_eval_reward:+.2f}")
+
+    env.close()
+
+
+if __name__ == "__main__":
+    args = parse_args()
+    train(args)

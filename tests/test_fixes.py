@@ -360,6 +360,25 @@ class TestEvalDeterministicDisturbance:
             f"{_EVAL_DISTURBANCE_MAGNITUDE}: {magnitudes_seen}"
         )
 
+    def test_evaluate_can_return_diagnostic_metrics(self):
+        """Eval diagnostics must include physics, per-agent rewards, and disturbance metadata."""
+        from env.simulink.kundur_simulink_env import KundurStandaloneEnv
+        from env.simulink.sac_agent_standalone import SACAgent
+        from scenarios.kundur.train_simulink import evaluate, _EVAL_DISTURBANCE_MAGNITUDE
+
+        env = KundurStandaloneEnv(training=False)
+        agent = SACAgent(obs_dim=7, act_dim=2, buffer_size=100, warmup_steps=0)
+
+        details = evaluate(env, agent, n_eval=1, return_details=True)
+
+        assert details["type"] == "eval"
+        assert "eval_reward" in details
+        assert details["disturbance"]["magnitude"] == _EVAL_DISTURBANCE_MAGNITUDE
+        assert details["physics"]["max_freq_dev_hz"] >= 0.0
+        assert details["physics"]["mean_freq_dev_hz"] >= 0.0
+        assert "max_power_swing" in details["physics"]
+        assert len(details["per_agent_rewards"]) == env.N_ESS
+
 
 # =============================================================================
 # T6: physics_summary correctness

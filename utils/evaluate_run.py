@@ -75,7 +75,8 @@ def compute_verdict(rows: list[dict], thresholds: dict) -> EvaluationResult:
     """Compute a PASS/MARGINAL/FAIL verdict from episode metrics rows."""
     reasons: list[str] = []
     computed: dict[str, Any] = {}
-    n = len(rows)
+    train_rows = [r for r in rows if r.get("type", "train") != "eval"]
+    n = len(train_rows)
     computed["episode_count"] = n
 
     # ── Guard: insufficient data ──────────────────────────────────────────────
@@ -88,7 +89,7 @@ def compute_verdict(rows: list[dict], thresholds: dict) -> EvaluationResult:
         )
 
     window = min(thresholds.get("reward_trend_window", 100), n)
-    recent = rows[-window:]
+    recent = train_rows[-window:]
 
     # ── Extract reward series ─────────────────────────────────────────────────
     rewards = [r["reward"] for r in recent if "reward" in r]

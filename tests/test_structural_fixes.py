@@ -300,6 +300,33 @@ class TestRunIsolation:
             "Two modes will append entries into the same JSON, making the log ambiguous."
         )
 
+    def test_kundur_default_outputs_are_inside_one_run_dir(self):
+        """Kundur defaults must put checkpoints and logs under the same isolated run."""
+        args = self._parse_kundur(["--mode", "standalone"])
+        checkpoint_dir = os.path.normpath(args.checkpoint_dir)
+        log_file = os.path.normpath(args.log_file)
+
+        assert hasattr(args, "run_id")
+        assert args.run_id.startswith("kundur_standalone_")
+        assert os.path.join("results", "sim_kundur", "runs") in checkpoint_dir
+        assert checkpoint_dir.endswith(os.path.join(args.run_id, "checkpoints"))
+        assert log_file.endswith(os.path.join(args.run_id, "logs", "training_log.json"))
+        assert os.path.dirname(os.path.dirname(log_file)) == os.path.dirname(checkpoint_dir)
+
+    def test_kundur_explicit_checkpoint_and_log_paths_are_preserved(self, tmp_path):
+        """Harness smoke explicit paths must remain one complete run directory."""
+        run_root = tmp_path / "custom"
+        ckpt = run_root / "checkpoints"
+        log_file = run_root / "logs" / "training_log.json"
+        args = self._parse_kundur([
+            "--mode", "simulink",
+            "--checkpoint-dir", str(ckpt),
+            "--log-file", str(log_file),
+        ])
+        assert os.path.normpath(args.checkpoint_dir) == os.path.normpath(str(ckpt))
+        assert os.path.normpath(args.log_file) == os.path.normpath(str(log_file))
+        assert os.path.normpath(args.run_dir) == os.path.normpath(str(run_root))
+
     # ── NE39 ─────────────────────────────────────────────────────────────────
 
     def test_ne39_checkpoint_dir_contains_mode_standalone(self):
@@ -323,3 +350,30 @@ class TestRunIsolation:
         assert args_sta.log_file != args_sim.log_file, (
             "NE39: standalone and simulink share the same log_file."
         )
+
+    def test_ne39_default_outputs_are_inside_one_run_dir(self):
+        """NE39 defaults must put checkpoints and logs under the same isolated run."""
+        args = self._parse_ne39(["--mode", "simulink"])
+        checkpoint_dir = os.path.normpath(args.checkpoint_dir)
+        log_file = os.path.normpath(args.log_file)
+
+        assert hasattr(args, "run_id")
+        assert args.run_id.startswith("ne39_simulink_")
+        assert os.path.join("results", "sim_ne39", "runs") in checkpoint_dir
+        assert checkpoint_dir.endswith(os.path.join(args.run_id, "checkpoints"))
+        assert log_file.endswith(os.path.join(args.run_id, "logs", "training_log.json"))
+        assert os.path.dirname(os.path.dirname(log_file)) == os.path.dirname(checkpoint_dir)
+
+    def test_ne39_explicit_checkpoint_and_log_paths_are_preserved(self, tmp_path):
+        """Harness smoke explicit paths must remain one complete run directory."""
+        run_root = tmp_path / "custom"
+        ckpt = run_root / "checkpoints"
+        log_file = run_root / "logs" / "training_log.json"
+        args = self._parse_ne39([
+            "--mode", "simulink",
+            "--checkpoint-dir", str(ckpt),
+            "--log-file", str(log_file),
+        ])
+        assert os.path.normpath(args.checkpoint_dir) == os.path.normpath(str(ckpt))
+        assert os.path.normpath(args.log_file) == os.path.normpath(str(log_file))
+        assert os.path.normpath(args.run_dir) == os.path.normpath(str(run_root))

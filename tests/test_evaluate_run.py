@@ -251,3 +251,40 @@ def test_verdict_fails_when_eval_and_alpha_missing(tmp_run_dir):
     assert result.verdict == Verdict.FAIL
     assert any("eval_reward" in r for r in result.reasons)
     assert any("alpha" in r.lower() for r in result.reasons)
+
+
+def test_verdict_uses_training_rows_and_eval_metric_rows(tmp_run_dir):
+    """Rows marked type=eval must feed eval_reward without inflating episode count."""
+    rows = []
+    for i in range(120):
+        rows.append({
+            "type": "train",
+            "reward": -5000.0 + i * 30,
+            "alpha": 0.1,
+            "physics": {
+                "max_freq_dev_hz": 1.0,
+                "mean_freq_dev_hz": 0.5,
+                "settled": True,
+            },
+        })
+    rows.append({
+        "type": "eval",
+        "eval_reward": -4000.0,
+        "physics": {
+            "max_freq_dev_hz": 0.8,
+            "mean_freq_dev_hz": 0.4,
+            "settled": True,
+            "max_power_swing": 0.05,
+        },
+        "per_agent_rewards": {"0": -3900.0, "1": -4100.0},
+        "disturbance": {"kind": "load_step", "magnitude": 2.0},
+    })
+    _write_metrics(tmp_run_dir / "metrics.jsonl", rows)
+    with tempfile.TemporaryDirectory() as cd:
+        contract = _make_contract(cd)
+
+    result = compute_verdict(load_metrics(tmp_run_dir), contract["quality_thresholds"])
+
+    assert result.verdict == Verdict.PASS
+    assert result.episode_count == 120
+    assert result.metrics["last_eval_reward"] == pytest.approx(-4000.0)

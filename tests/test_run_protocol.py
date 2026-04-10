@@ -71,3 +71,4 @@ def test_ensure_run_dir_creates_directory(tmp_path, monkeypatch):
     assert run_dir.exists()
     assert (run_dir.parent.name == "runs")
     assert (run_dir / "checkpoints").exists()
+    assert (run_dir / "logs").exists()

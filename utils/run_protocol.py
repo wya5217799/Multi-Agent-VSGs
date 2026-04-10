@@ -16,6 +16,9 @@ Output layout:
         verdict.json           ← written at training end
         checkpoints/           ← model files
 
+Current Simulink training writes metrics/events/training_log.json under the
+run's logs/ subdirectory and keeps checkpoint files under checkpoints/.
+
 This layout intentionally separates native training outputs from
 results/harness/ (the modeling quality-gate fact layer).
 See docs/decisions/2026-04-09-harness-boundary-convention.md.
@@ -64,7 +67,30 @@ def ensure_run_dir(scenario: str, run_id: str) -> Path:
     """Create run directory (and subdirs) and return the path."""
     run_dir = get_run_dir(scenario, run_id)
     (run_dir / "checkpoints").mkdir(parents=True, exist_ok=True)
+    (run_dir / "logs").mkdir(parents=True, exist_ok=True)
     return run_dir
+
+
+def infer_run_dir_from_output_paths(
+    checkpoint_dir: str | os.PathLike[str],
+    log_file: str | os.PathLike[str],
+) -> Path | None:
+    """Infer a run root from '<root>/checkpoints' and '<root>/logs/training_log.json'.
+
+    Explicit callers such as harness smoke pass checkpoint and log paths instead
+    of a run_dir. When they use the standard run layout, metadata and status
+    files should stay under that same root.
+    """
+    checkpoint_path = Path(checkpoint_dir)
+    log_path = Path(log_file)
+    if (
+        checkpoint_path.name == "checkpoints"
+        and log_path.name == "training_log.json"
+        and log_path.parent.name == "logs"
+        and checkpoint_path.parent == log_path.parent.parent
+    ):
+        return checkpoint_path.parent
+    return None
 
 
 def write_training_status(run_dir: Path, status: dict[str, Any]) -> None:

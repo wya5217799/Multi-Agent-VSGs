@@ -18,6 +18,7 @@ import os
 import sys
 import time
 import json
+from pathlib import Path
 
 # Add project root to path before importing repo-local utilities.
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
@@ -30,7 +31,12 @@ from env.simulink.sac_agent_standalone import SACAgent
 from utils.monitor import TrainingMonitor
 from utils.run_meta import save_run_meta, update_run_meta
 from utils.artifact_writer import ArtifactWriter
-from utils.run_protocol import generate_run_id, ensure_run_dir, write_training_status
+from utils.run_protocol import (
+    generate_run_id,
+    get_run_dir,
+    infer_run_dir_from_output_paths,
+    write_training_status,
+)
 from utils.training_log import load_or_create_log
 import scenarios.kundur.config_simulink as _cfg_module
 from scenarios.kundur.config_simulink import (
@@ -54,11 +60,9 @@ def parse_args():
     parser.add_argument("--episodes", type=int, default=DEFAULT_EPISODES)
     parser.add_argument("--eval-interval", type=int, default=EVAL_INTERVAL)
     parser.add_argument("--save-interval", type=int, default=CHECKPOINT_INTERVAL)
-    _script_dir = os.path.dirname(os.path.abspath(__file__))
-    _results_dir = os.path.join(_script_dir, '..', '..', 'results', 'sim_kundur')
     parser.add_argument(
         "--checkpoint-dir", default=None,
-        help="Checkpoint directory (default: results/sim_kundur/checkpoints/<mode>/)"
+        help="Checkpoint directory (default: results/sim_kundur/runs/<run_id>/checkpoints/)"
     )
     parser.add_argument(
         "--resume", type=str, default=None,
@@ -73,14 +77,25 @@ def parse_args():
     )
     parser.add_argument(
         "--log-file", default=None,
-        help="Training log JSON path (default: results/sim_kundur/logs/<mode>/training_log.json)"
+        help="Training log JSON path (default: results/sim_kundur/runs/<run_id>/logs/training_log.json)"
     )
     args = parser.parse_args()
-    # Derive mode-namespaced defaults so standalone and simulink never share state.
+    checkpoint_was_default = args.checkpoint_dir is None
+    log_was_default = args.log_file is None
+
+    # Derive run-namespaced defaults so every training launch is isolated.
+    args.run_id = generate_run_id(f"kundur_{args.mode}")
+    run_dir = get_run_dir("kundur", args.run_id)
     if args.checkpoint_dir is None:
-        args.checkpoint_dir = os.path.join(_results_dir, "checkpoints", args.mode)
+        args.checkpoint_dir = str(run_dir / "checkpoints")
     if args.log_file is None:
-        args.log_file = os.path.join(_results_dir, "logs", args.mode, "training_log.json")
+        args.log_file = str(run_dir / "logs" / "training_log.json")
+    if checkpoint_was_default and log_was_default:
+        args.run_dir = str(run_dir)
+    else:
+        explicit_run_dir = infer_run_dir_from_output_paths(args.checkpoint_dir, args.log_file)
+        if explicit_run_dir is not None:
+            args.run_dir = str(explicit_run_dir)
     return args
 
 
@@ -100,7 +115,7 @@ def make_env(args):
 _EVAL_DISTURBANCE_MAGNITUDE = 2.0  # fixed load-step (p.u. on system base)
 
 
-def evaluate(env, agent, n_eval=3):
+def evaluate(env, agent, n_eval=3, return_details=False):
     """Run evaluation episodes with a fixed disturbance magnitude.
 
     Using a deterministic disturbance ensures best_eval_reward tracks policy
@@ -109,10 +124,18 @@ def evaluate(env, agent, n_eval=3):
     env.training = False
     try:
         total_rewards = []
+        per_agent_reward_rows = []
+        episode_physics = []
 
         for _ in range(n_eval):
             obs, _ = env.reset()
             ep_reward = np.zeros(env.N_ESS)
+            ep_max_freq_dev = 0.0
+            ep_sum_freq_dev = 0.0
+            ep_step_count_actual = 0
+            ep_tail_freq_devs = deque(maxlen=10)
+            ep_P_es_min = np.full(env.N_ESS, np.inf)
+            ep_P_es_max = np.full(env.N_ESS, -np.inf)
 
             env.apply_disturbance(bus_idx=0, magnitude=_EVAL_DISTURBANCE_MAGNITUDE)
 
@@ -120,12 +143,66 @@ def evaluate(env, agent, n_eval=3):
                 actions = agent.select_actions_multi(obs, deterministic=True)
                 obs, rewards, terminated, truncated, info = env.step(actions)
                 ep_reward += rewards
+
+                step_freq_dev = info.get("max_freq_deviation_hz", 0.0)
+                ep_max_freq_dev = max(ep_max_freq_dev, step_freq_dev)
+                ep_sum_freq_dev += step_freq_dev
+                ep_step_count_actual += 1
+                ep_tail_freq_devs.append(step_freq_dev)
+                p_es = info.get("P_es", None)
+                if p_es is not None:
+                    p_arr = np.asarray(p_es)
+                    ep_P_es_min = np.minimum(ep_P_es_min, p_arr)
+                    ep_P_es_max = np.maximum(ep_P_es_max, p_arr)
                 if terminated or truncated:
                     break
 
-            total_rewards.append(ep_reward.mean())
+            total_rewards.append(float(ep_reward.mean()))
+            per_agent_reward_rows.append(ep_reward.astype(float))
+            ep_mean_freq_dev = ep_sum_freq_dev / max(ep_step_count_actual, 1)
+            ep_settled = bool(ep_tail_freq_devs and all(d < 0.1 for d in ep_tail_freq_devs))
+            if (ep_step_count_actual > 0
+                    and not np.any(np.isinf(ep_P_es_max))
+                    and not np.any(np.isinf(ep_P_es_min))):
+                ep_power_swing = float(np.max(ep_P_es_max - ep_P_es_min))
+            else:
+                ep_power_swing = 0.0
+            episode_physics.append({
+                "max_freq_dev_hz": float(ep_max_freq_dev),
+                "mean_freq_dev_hz": float(ep_mean_freq_dev),
+                "settled": ep_settled,
+                "max_power_swing": ep_power_swing,
+            })
 
-        return np.mean(total_rewards)
+        eval_reward = float(np.mean(total_rewards)) if total_rewards else 0.0
+        if not return_details:
+            return eval_reward
+
+        per_agent_mean = (
+            np.mean(np.vstack(per_agent_reward_rows), axis=0)
+            if per_agent_reward_rows else np.zeros(env.N_ESS)
+        )
+        return {
+            "type": "eval",
+            "eval_reward": eval_reward,
+            "n_eval": n_eval,
+            "per_agent_rewards": {
+                str(i): float(per_agent_mean[i]) for i in range(env.N_ESS)
+            },
+            "disturbance": {
+                "kind": "load_step",
+                "bus_idx": 0,
+                "magnitude": _EVAL_DISTURBANCE_MAGNITUDE,
+            },
+            "physics": {
+                "max_freq_dev_hz": float(max((p["max_freq_dev_hz"] for p in episode_physics), default=0.0)),
+                "mean_freq_dev_hz": float(np.mean([p["mean_freq_dev_hz"] for p in episode_physics])) if episode_physics else 0.0,
+                "settled": bool(episode_physics and all(p["settled"] for p in episode_physics)),
+                "settled_rate": float(np.mean([p["settled"] for p in episode_physics])) if episode_physics else 0.0,
+                "max_power_swing": float(max((p["max_power_swing"] for p in episode_physics), default=0.0)),
+            },
+            "episodes": episode_physics,
+        }
     finally:
         env.training = True
 
@@ -134,8 +211,25 @@ def train(args):
     np.random.seed(args.seed)
 
     # Per-run output directory
-    run_id = generate_run_id("kundur")
-    run_dir = ensure_run_dir("kundur", run_id)
+    if not hasattr(args, "run_id"):
+        args.run_id = generate_run_id(f"kundur_{args.mode}")
+    run_dir_default = get_run_dir("kundur", args.run_id)
+    if args.checkpoint_dir is None:
+        args.checkpoint_dir = str(run_dir_default / "checkpoints")
+    if args.log_file is None:
+        args.log_file = str(run_dir_default / "logs" / "training_log.json")
+    if not hasattr(args, "run_dir"):
+        inferred_run_dir = infer_run_dir_from_output_paths(args.checkpoint_dir, args.log_file)
+        if inferred_run_dir is not None:
+            args.run_dir = str(inferred_run_dir)
+    run_id = args.run_id
+    if hasattr(args, "run_dir"):
+        run_dir = Path(args.run_dir)
+        (run_dir / "checkpoints").mkdir(parents=True, exist_ok=True)
+        (run_dir / "logs").mkdir(parents=True, exist_ok=True)
+    else:
+        run_dir = Path(args.checkpoint_dir)
+        run_dir.mkdir(parents=True, exist_ok=True)
     print(f"[train] run_id={run_id}, output={run_dir}")
 
     write_training_status(run_dir, {
@@ -212,7 +306,8 @@ def train(args):
     _prev_trigger_len = 0
     _last_eval_reward: float | None = None
 
-    save_run_meta(args.checkpoint_dir, args, _cfg_module)
+    meta_dir = getattr(args, "run_dir", args.checkpoint_dir)
+    save_run_meta(meta_dir, args, _cfg_module)
 
     monitor = TrainingMonitor()
 
@@ -356,6 +451,7 @@ def train(args):
             info={
                 "tds_failed": last_info.get("tds_failed", False),
                 "max_freq_deviation_hz": ep_max_freq_dev,  # episode peak, not last-step value
+                "max_power_swing": ep_power_swing,
             },
             per_agent_rewards={i: float(ep_reward[i]) for i in range(env.N_ESS)},
             sac_losses=sac_losses_for_monitor,
@@ -388,11 +484,13 @@ def train(args):
 
         if (ep + 1) % args.eval_interval == 0:
             _last_eval_reward = None
-            eval_reward = evaluate(env, agent)
-            _last_eval_reward = float(eval_reward)
-            writer.log_event(ep, "eval", {"eval_reward": float(eval_reward)})
+            eval_details = evaluate(env, agent, return_details=True)
+            eval_reward = float(eval_details["eval_reward"])
+            _last_eval_reward = eval_reward
+            writer.log_metric(ep, eval_details)
+            writer.log_event(ep, "eval", {"eval_reward": eval_reward})
             log["eval_rewards"].append(
-                {"episode": ep + 1, "reward": float(eval_reward)}
+                {"episode": ep + 1, "reward": eval_reward}
             )
             print(f"  >>> Eval reward: {eval_reward:+.2f}")
 
@@ -498,7 +596,7 @@ def train(args):
         raise
     finally:
         try:
-            update_run_meta(args.checkpoint_dir, {
+            update_run_meta(meta_dir, {
                 "finished_at": datetime.datetime.now().isoformat(),
                 "total_episodes": start_episode + args.episodes,
             })

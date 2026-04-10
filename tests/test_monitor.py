@@ -337,6 +337,56 @@ class TestFreqOutOfRange:
         assert not any(t["check"] == "freq_out_of_range" for t in m._trigger_history)
 
 
+class TestPhysicsFrozen:
+    def test_zero_power_swing_window_triggers_stop_before_calibration_complete(self):
+        """Frozen electrical response is severe enough to stop without waiting for calibration."""
+        m = TrainingMonitor(
+            calibration_episodes=20,
+            checks={"physics_frozen": {"window": 10, "epsilon": 0.0, "action": "stop"}},
+        )
+        actions = np.random.randn(50, 4, 2) * 0.5
+
+        result = False
+        for ep in range(10):
+            result = m.log_and_check(
+                ep,
+                rewards=-1500,
+                reward_components={"r_f": -1400, "r_h": -5, "r_d": -3},
+                actions=actions,
+                info={
+                    "tds_failed": False,
+                    "max_freq_deviation_hz": 0.3,
+                    "max_power_swing": 0.0,
+                },
+            )
+
+        assert result is True
+        assert any(t["check"] == "physics_frozen" for t in m._trigger_history)
+
+    def test_nonzero_power_swing_does_not_trigger_physics_frozen(self):
+        m = TrainingMonitor(
+            calibration_episodes=3,
+            checks={"physics_frozen": {"window": 5, "epsilon": 1e-9, "action": "stop"}},
+        )
+        actions = np.random.randn(50, 4, 2) * 0.5
+
+        for ep in range(8):
+            result = m.log_and_check(
+                ep,
+                rewards=-1500,
+                reward_components={"r_f": -1400, "r_h": -5, "r_d": -3},
+                actions=actions,
+                info={
+                    "tds_failed": False,
+                    "max_freq_deviation_hz": 0.3,
+                    "max_power_swing": 0.02,
+                },
+            )
+
+        assert result is False
+        assert not any(t["check"] == "physics_frozen" for t in m._trigger_history)
+
+
 class TestOutputFormatting:
     def test_log_summary_prints(self, capsys):
         m = TrainingMonitor(calibration_episodes=3, log_interval=5)

@@ -24,6 +24,7 @@ _DEFAULT_CHECKS = {
     "reward_divergence":      {"window": 50, "action": "stop"},
     "tds_failure_rate":       {"threshold": 0.2, "window": 50, "action": "warn"},
     "freq_out_of_range":      {"threshold_hz": 2.0, "window": 10, "min_episodes": 3, "action": "warn"},
+    "physics_frozen":         {"window": 10, "epsilon": 1e-9, "action": "stop"},
     "agent_reward_disparity": {"window": 50, "std_threshold": 2.0, "action": "warn"},
     "loss_explosion":         {"multiplier": 10.0, "window": 20, "action": "warn"},
     "early_stopping":         {"patience": 500, "min_improvement": 0.02, "action": "warn"},
@@ -136,6 +137,7 @@ class TrainingMonitor:
         self._env_health.append({
             "tds_failed": info.get("tds_failed", False),
             "max_freq_deviation_hz": info.get("max_freq_deviation_hz", 0.0),
+            "max_power_swing": info.get("max_power_swing"),
         })
 
         # Calibration phase
@@ -314,17 +316,18 @@ class TrainingMonitor:
         results.append(self._check_reward_divergence(episode))
         results.append(self._check_tds_failure_rate(episode))
         results.append(self._check_freq_out_of_range(episode))
+        results.append(self._check_physics_frozen(episode))
         results.append(self._check_agent_reward_disparity(episode))
         results.append(self._check_loss_explosion(episode))
         results.append(self._check_early_stopping(episode))
         return "stop" in results
 
     def _run_manual_checks(self, episode: int) -> bool:
-        """During calibration, only run reward_magnitude if user set expected_range."""
+        """During calibration, run checks with explicit thresholds or severe physics checks."""
         results = []
         if "expected_range" in self._user_checks.get("reward_magnitude", {}):
             results.append(self._check_reward_magnitude(episode))
-        # All other checks wait until calibration completes (spec section 4.2)
+        results.append(self._check_physics_frozen(episode))
         return "stop" in results
 
     # ─── Check: reward_magnitude ───
@@ -568,6 +571,30 @@ class TrainingMonitor:
             return cfg["action"]
         return None
 
+    # ─── Check: physics_frozen ───
+
+    def _check_physics_frozen(self, episode: int) -> str | None:
+        cfg = self._checks["physics_frozen"]
+        if cfg["action"] == "ignore":
+            return None
+
+        window = cfg.get("window", 10)
+        epsilon = cfg.get("epsilon", 1e-9)
+        if len(self._env_health) < window:
+            return None
+
+        recent = self._env_health[-window:]
+        swings = [h.get("max_power_swing") for h in recent]
+        if any(s is None for s in swings):
+            return None
+
+        if all(abs(float(s)) <= epsilon for s in swings):
+            self._emit_check("physics_frozen", episode, cfg["action"],
+                f"max_power_swing <= {epsilon:g} for the last {window} episodes.\n"
+                f"  Electrical power response appears frozen; M/D changes may not reach the grid.")
+            return cfg["action"]
+        return None
+
     # ─── Check: agent_reward_disparity ───
 
     def _check_agent_reward_disparity(self, episode: int) -> str | None:
@@ -761,7 +788,7 @@ class TrainingMonitor:
             header.append(f"action_mean_agent_{i}")
         for i in range(n_agents):
             header.append(f"action_std_agent_{i}")
-        header.extend(["saturation_ratio", "tds_failed", "max_freq_deviation_hz"])
+        header.extend(["saturation_ratio", "tds_failed", "max_freq_deviation_hz", "max_power_swing"])
 
         Path(path).parent.mkdir(parents=True, exist_ok=True)
         with open(path, "w", newline="") as f:
@@ -787,6 +814,7 @@ class TrainingMonitor:
                 row.append(stats["saturation_ratio"])
                 row.append(int(health["tds_failed"]))
                 row.append(health["max_freq_deviation_hz"])
+                row.append(health.get("max_power_swing"))
 
                 writer.writerow(row)
 

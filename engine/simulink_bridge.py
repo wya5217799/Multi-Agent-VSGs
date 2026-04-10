@@ -240,9 +240,19 @@ class SimulinkBridge:
         Workspace variables for M/D Constant blocks are initialised here so
         the model can compile without "Undefined variable" errors.  Actual
         per-step values are overridden by setVariable inside vsg_step_and_read.
+
+        Also initialises Pe/phAng/wref feedback variables and seeds
+        ``_Pe_prev`` / ``_delta_prev_deg`` so the first RL step sends valid
+        feedback to vsg_step_and_read.m (fixes max_power_swing=0 symptom).
         """
         # Constant blocks reference workspace variables by name (e.g. 'M0_val_ES1').
         # These must exist in the base workspace before the model is first compiled.
+        #
+        # Pe/phAng/wref feedback vars: without these, vsg_step_and_read skips
+        # the Pe writeback (``if ~isempty(Pe_prev)`` → false) and the electrical
+        # power never responds to M/D changes.  NE39's 5-arg warmup sets these
+        # in MATLAB; the Kundur 3-arg path must do it here in Python.
+        pe_nominal_vsg = 0.5   # VSG base p.u. — safe initial for any scenario
         for i in range(1, self.cfg.n_agents + 1):
             m_var = self.cfg.m_var_template.replace('{idx}', str(i))
             d_var = self.cfg.d_var_template.replace('{idx}', str(i))
@@ -251,6 +261,15 @@ class SimulinkBridge:
             )
             self.session.eval(
                 f"assignin('base', '{d_var}', {self.cfg.d0_default})", nargout=0
+            )
+            self.session.eval(
+                f"assignin('base', 'Pe_ES{i}', {pe_nominal_vsg})", nargout=0
+            )
+            self.session.eval(
+                f"assignin('base', 'phAng_ES{i}', 0.0)", nargout=0
+            )
+            self.session.eval(
+                f"assignin('base', 'wref_{i}', 1.0)", nargout=0
             )
         # Disturbance loads: use CURRENT _tripload_state (set by caller before warmup).
         # TripLoad_1/2 P values are Simscape physical params — only tunable at compile time.
@@ -263,6 +282,13 @@ class SimulinkBridge:
         self.session.call("vsg_warmup", self.cfg.model_name, duration, do_recompile, nargout=0)
         self._fr_compiled = True
         self.t_current = duration
+
+        # Seed feedback state so the first RL step has valid Pe/delta args.
+        # pe_scale converts sbase p.u. → VSG base p.u.; invert to get sbase.
+        pe_scale = self.cfg.sbase_va / self.cfg.vsg_sn_va
+        self._Pe_prev = np.full(self.cfg.n_agents, pe_nominal_vsg / pe_scale)
+        self._delta_prev_deg = np.zeros(self.cfg.n_agents)
+
         logger.debug("Warmup complete: t=%.4f s (recompile=%s)", duration, do_recompile)
 
     def _apply_breaker_events(self) -> None:

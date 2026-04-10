@@ -1,0 +1,43 @@
+# Workspace hygiene rules for keeping personal/reference artifacts out of the
+# project root. The cleanup tool reads this file as the single rule source.
+
+quarantine_root = "C:\\Users\\27443\\Desktop\\一切\\论文"
+
+movable_patterns = [
+  "论文",
+  "论文/**",
+  "其他",
+  "其他/**",
+  "Figure.paper",
+  "Figure.paper/**",
+  "paper_draft.tex",
+  "journey-into-multi-agent-vsgs.md",
+  "MEMORY.md",
+  ".claude",
+  ".claude/**",
+  ".worktrees",
+  ".worktrees/**",
+  "results/sim_kundur",
+  "results/sim_kundur/**",
+  "results/sim_ne39",
+  "results/sim_ne39/**",
+  ".pytest_cache",
+  ".pytest_cache/**",
+  "__pycache__",
+  "__pycache__/**",
+  "**/__pycache__",
+  "**/__pycache__/**",
+  "*.pyc",
+  "*.pyo",
+]
+
+report_only_patterns = [
+]
+
+protected_patterns = [
+  ".git",
+  ".git/**",
+  "AGENTS.md",
+  "CLAUDE.md",
+  ".gitignore",
+]

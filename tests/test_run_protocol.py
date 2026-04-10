@@ -70,3 +70,4 @@ def test_ensure_run_dir_creates_directory(tmp_path, monkeypatch):
     run_dir = run_protocol.ensure_run_dir("ne39", "ne39_20260410_120000")
     assert run_dir.exists()
     assert (run_dir.parent.name == "runs")
+    assert (run_dir / "checkpoints").exists()

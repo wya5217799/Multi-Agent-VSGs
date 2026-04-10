@@ -57,6 +57,10 @@ class CentralizedSACManager:
     def update(self):
         return [self.agent.update()]
 
+    def clear_buffers(self):
+        """清空回放缓冲区 (论文 Algorithm 1 line 16)."""
+        self.agent.buffer.clear()
+
     def save(self, dir_path):
         import os
         os.makedirs(dir_path, exist_ok=True)

@@ -9,9 +9,12 @@ SAC (Soft Actor-Critic) 智能体
 """
 
 import copy
+import math
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+from torch.optim.lr_scheduler import CosineAnnealingLR
 
 from agents.networks import GaussianActor, DoubleQCritic
 from agents.replay_buffer import ReplayBuffer
@@ -31,6 +34,9 @@ class SACAgent:
         buffer_size=10000,
         batch_size=256,
         device='cpu',
+        total_updates=100000,
+        alpha_min=0.005,
+        alpha_max=5.0,
     ):
         self.obs_dim = obs_dim
         self.action_dim = action_dim
@@ -56,9 +62,20 @@ class SACAgent:
         self.target_entropy = -float(action_dim)
         self.log_alpha = torch.zeros(1, requires_grad=True, device=device)
         self.alpha_optimizer = optim.Adam([self.log_alpha], lr=lr)
+        self._log_alpha_min = math.log(alpha_min)
+        self._log_alpha_max = math.log(alpha_max)
 
         # ── 经验回放 ──
         self.buffer = ReplayBuffer(obs_dim, action_dim, capacity=buffer_size)
+
+        # ── LR 衰减 (cosine annealing: lr → lr*0.1) ──
+        self.actor_scheduler = CosineAnnealingLR(
+            self.actor_optimizer, T_max=total_updates, eta_min=lr * 0.1)
+        self.critic_scheduler = CosineAnnealingLR(
+            self.critic_optimizer, T_max=total_updates, eta_min=lr * 0.1)
+
+        # ── 梯度裁剪 ──
+        self.max_grad_norm = 1.0
 
     @property
     def alpha(self):
@@ -112,6 +129,7 @@ class SACAgent:
 
         self.critic_optimizer.zero_grad()
         critic_loss.backward()
+        nn.utils.clip_grad_norm_(self.critic.parameters(), self.max_grad_norm)
         self.critic_optimizer.step()
 
         # ═══ Actor 更新 ═══
@@ -122,6 +140,7 @@ class SACAgent:
 
         self.actor_optimizer.zero_grad()
         actor_loss.backward()
+        nn.utils.clip_grad_norm_(self.actor.parameters(), self.max_grad_norm)
         self.actor_optimizer.step()
 
         # ═══ Alpha 更新 ═══
@@ -129,10 +148,17 @@ class SACAgent:
 
         self.alpha_optimizer.zero_grad()
         alpha_loss.backward()
+        nn.utils.clip_grad_norm_([self.log_alpha], self.max_grad_norm)
         self.alpha_optimizer.step()
+        with torch.no_grad():
+            self.log_alpha.data.clamp_(self._log_alpha_min, self._log_alpha_max)
 
         # ═══ 软目标更新 ═══
         self._soft_update()
+
+        # ═══ LR 衰减 ═══
+        self.actor_scheduler.step()
+        self.critic_scheduler.step()
 
         return {
             'critic_loss': critic_loss.item(),
@@ -146,7 +172,7 @@ class SACAgent:
         for p, p_tgt in zip(self.critic.parameters(), self.critic_target.parameters()):
             p_tgt.data.mul_(1 - self.tau).add_(self.tau * p.data)
 
-    def save(self, path):
+    def save(self, path, metadata: dict | None = None):
         torch.save({
             'actor': self.actor.state_dict(),
             'critic': self.critic.state_dict(),
@@ -155,9 +181,11 @@ class SACAgent:
             'actor_opt': self.actor_optimizer.state_dict(),
             'critic_opt': self.critic_optimizer.state_dict(),
             'alpha_opt': self.alpha_optimizer.state_dict(),
+            'metadata': metadata or {},
         }, path)
 
-    def load(self, path):
+    def load(self, path) -> dict:
+        """加载 checkpoint，返回 metadata dict（无 metadata 时返回 {}）。"""
         ckpt = torch.load(path, map_location=self.device, weights_only=False)
         self.actor.load_state_dict(ckpt['actor'])
         self.critic.load_state_dict(ckpt['critic'])
@@ -166,3 +194,4 @@ class SACAgent:
         self.actor_optimizer.load_state_dict(ckpt['actor_opt'])
         self.critic_optimizer.load_state_dict(ckpt['critic_opt'])
         self.alpha_optimizer.load_state_dict(ckpt['alpha_opt'])
+        return ckpt.get('metadata', {})

@@ -1,0 +1,121 @@
+{
+  "$schema": "https://aka.ms/codetour-schema",
+  "title": "架构总览 — Multi-Agent VSGs",
+  "description": "Yang et al. TPWRS 2023 复现项目的完整架构漫游。适合架构师/新成员快速建立全局心智模型。覆盖：论文参数层 → MARL 智能体层 → 三后端环境层 → MATLAB Engine 三层接口 → MCP Harness 控制平面 → 训练 & 监控。",
+  "steps": [
+    {
+      "directory": ".",
+      "title": "项目全貌",
+      "description": "根目录揭示整体切分：`agents/`（SAC 算法）、`env/`（三后端环境）、`engine/`（MATLAB 接口 + MCP Harness）、`scenarios/`（训练/评估脚本）、`vsg_helpers/`（MATLAB .m 工具库）、`utils/`（监控）、`plotting/`（论文图表）。六个训练场景：3 后端 × 2 拓扑（Kundur 4机 / NE 39节点）。"
+    },
+    {
+      "file": "config.py",
+      "line": 19,
+      "title": "论文参数层（唯一真相源）",
+      "description": "Section IV-A/B 的所有超参数集中于此：`N_AGENTS=4`、控制步长 `DT=0.2s`、VSG 欠阻尼基值 `H=3,D=2`、动作范围 `DH/DD`、奖励权重 `PHI_F=100`、SAC 超参（LR/GAMMA/TAU/BUFFER）。**Gotcha**：NE 39节点子类将 `FN` 覆盖为 60Hz，根 `config.py` 的 50Hz 仅对 Kundur 有效。"
+    },
+    {
+      "file": "agents/networks.py",
+      "line": 29,
+      "title": "神经网络：GaussianActor + DoubleQCritic",
+      "description": "论文 4×128 全连接结构。`GaussianActor` 共享隐藏层，分叉出 `mean_head` 和 `log_std_head`，输出经 `tanh` 压缩到 [-1,1]（再映射到动作范围）。`DoubleQCritic` 两个独立 Q 头，取最小值抑制过估计。**Gotcha**：`build_mlp` 工具函数与 Actor 共存，但 Actor 并未复用它——共享 `net` 直接用循环手搭，避免最后一层多余 ReLU。"
+    },
+    {
+      "file": "agents/sac.py",
+      "line": 22,
+      "title": "SACAgent — 单个 VSG 的决策核心",
+      "description": "每个 VSG 储能对应一个独立 `SACAgent`，拥有自己的 Actor/Critic/目标网络/回放缓冲/熵系数 α。关键组件：Actor + DoubleQCritic + 软目标网络（τ=0.005 EMA）+ Cosine LR 衰减 + 梯度裁剪（max_norm=1.0）。"
+    },
+    {
+      "file": "agents/sac.py",
+      "line": 58,
+      "title": "自动熵调节（论文核心）",
+      "description": "可学习的 `log_alpha`，目标熵 `target_entropy = -action_dim`（对连续动作标准设置）。α 随训练自动调节探索-利用平衡，无需手动调参。**Implication**：这是论文分布式控制策略有效性的关键——每个 agent 独立维护自己的探索度。"
+    },
+    {
+      "file": "agents/ma_manager.py",
+      "line": 10,
+      "title": "MultiAgentManager — N 个 SAC 的协调器",
+      "description": "`MultiAgentManager` 是极简的横向扩展层：初始化 N 个同构 `SACAgent`，提供 `select_actions(obs_dict)`、`store_transitions()`、`update()` 三个批量接口。无集中式 critic，无智能体间梯度共享——这是论文「分布式」的实现体现。**Gotcha**：各 agent buffer 独立，episode 结束时 Kundur 训练脚本会手动清空 buffer（`action=[0,0]` 在非对称动作空间中不等于「不控制」）。"
+    },
+    {
+      "directory": "env/andes",
+      "title": "环境层：ANDES 后端（实验台）",
+      "description": "三文件结构：`base_env.py`（共享逻辑）、`andes_vsg_env.py`（Kundur 子类）、`andes_ne_env.py`（NE39 子类）。ANDES 是纯 Python 电力系统仿真器，最快，用于实验和论文验证。"
+    },
+    {
+      "file": "env/andes/base_env.py",
+      "line": 25,
+      "title": "AndesBaseEnv — 三环境共享的抽象基类",
+      "description": "封装所有共享逻辑：`step()` 动作解码→GENCLS 参数修改→TDS 推进→观测/奖励；`reset()` 系统构建→潮流→TDS(0.5s)→扰动→通信重置；`_build_obs()`（7维：本地 ω/ω̇/动作 + 2邻居各2维）；`_compute_rewards()`（Eq.14：PHI_F·ω偏差² + PHI_H·ΔH² + PHI_D·ΔD²）。子类只需实现 `_build_system()` 和 `_apply_disturbance()`。"
+    },
+    {
+      "file": "env/andes/base_env.py",
+      "line": 61,
+      "title": "参数平滑 + 通信故障建模",
+      "description": "`N_SUBSTEPS=5`：每个控制步内分5小段渐变 GENCLS 参数，防止 ANDES TDS 因突变发散（ANDES 仿真稳定性的核心技巧）。`COMM_FAIL_PROB=0.1`：通信链路随机丢包。`comm_delay_steps` 支持通信延迟。**Gotcha**：分段推进前必须清除 `tds.busted`，否则 TDS 会在已损坏状态继续推进。"
+    },
+    {
+      "directory": "env/simulink",
+      "title": "环境层：Simulink 后端（训练台）",
+      "description": "`kundur_simulink_env.py` 和 `ne39_simulink_env.py` 包装 `SimulinkBridge`，提供与 ANDES 环境相同的 `step()/reset()` 接口。Simulink 是高保真电磁暂态仿真，训练慢但最接近实机部署。"
+    },
+    {
+      "file": "engine/simulink_bridge.py",
+      "line": 22,
+      "title": "BridgeConfig — Simulink 场景参数合约",
+      "description": "`@dataclass(frozen=True)` 的 `BridgeConfig` 定义了每个场景的 Simulink 接线参数：模型名、路径模板（M0/D0 Constant block、omega/vabc/iabc ToWorkspace 信号）、系统基值。**Gotcha**：`m_var_template` 必须与 `.slx` 中 Constant block 的 Value 字段完全匹配，不匹配会静默写入错误变量。"
+    },
+    {
+      "file": "engine/matlab_session.py",
+      "line": 38,
+      "title": "L1 MatlabSession — MATLAB Engine 单例",
+      "description": "以 `session_id` 为键的单例，懒加载 `matlab.engine`（防止僵尸进程挂起），被动重连（失败时才重连，无心跳），首连自动 `addpath(vsg_helpers/)`。所有 MATLAB 调用走 `call()` 方法，记录 DEBUG 级耗时日志。**Implication**：这层屏蔽了 MATLAB 进程的生命周期复杂性，上层只需 `MatlabSession.get().call(...)`。"
+    },
+    {
+      "file": "vsg_helpers/vsg_step_and_read.m",
+      "line": 1,
+      "title": "L2 MATLAB：核心协同仿真函数",
+      "description": "每个控制步仅做 1 次 IPC 调用：批量 `set_param` 写 M0/D0 → `sim()` 推进 dt → 批量读 omega/vabc/iabc 工作空间变量。这是整个 Simulink 训练吞吐量的瓶颈点。其他 `vsg_*.m` 辅助函数：`vsg_run_quiet`（吞噪声输出）、`vsg_check_params`（参数范围审计）、`vsg_batch_query`（批量查参数）。"
+    },
+    {
+      "file": "engine/mcp_server.py",
+      "line": 1,
+      "title": "MCP Server — Claude 控制平面入口",
+      "description": "基于 `FastMCP` 的 Python MCP 服务器，暴露约 20 个工作流级工具给 Claude。架构意图：底层 `mcp_simulink_tools.py` 的所有函数可 import，但只有精选子集注册到 MCP（防止工具选择混乱）。工具分组：模型生命周期（load/create/close）、结构查看（block tree/ports/connections）、参数操作（query/set/patch_and_verify）、诊断（compile/step/solver_audit）、**Harness 高层任务**（scenario_status/model_inspect/diagnose/report/train_smoke）。"
+    },
+    {
+      "file": "engine/harness_registry.py",
+      "line": 9,
+      "title": "Harness Registry — 场景注册表",
+      "description": "`_REGISTRY` 将 `\"kundur\"` / `\"ne39\"` 映射到 `ScenarioSpec`（模型名、.slx 路径、训练脚本入口）。`resolve_scenario()` 在解析时验证 .slx 文件和训练脚本是否存在，提前失败而非运行时错误。**Implication**：任何新场景只需在此注册，所有 Harness 工具自动可用。"
+    },
+    {
+      "file": "engine/harness_reference.py",
+      "line": 1,
+      "title": "Harness Reference — 真正的 Source of Truth",
+      "description": "比 CLAUDE.md 更权威：读取 `scenarios/{kundur,ne39}/harness_reference.json`，其中的 `reference_items` 列表定义了每个场景的「已知良好状态」（must_match / warn_if_missing / informational 三级）。`harness_model_diagnose` 等任务对比实际 MATLAB 查询结果与此基准，产生修复提示。**Gotcha**：CLAUDE.md 与 harness 冲突时，永远以 harness_reference.json 为准。"
+    },
+    {
+      "file": "engine/harness_tasks.py",
+      "line": 1,
+      "title": "Harness Tasks — 工作流编排层",
+      "description": "连接 MCP 工具与底层 Simulink 工具的编排层。关键任务：`harness_scenario_status`（场景健康检查）、`harness_model_inspect`（精简模型检查 + 可选重操作）、`harness_model_diagnose`（对照 reference 诊断 + repair_hints）、`harness_model_report`（综合报告）、`harness_train_smoke_start` + `poll`（异步训练冒烟测试，规避 MCP 超时）。"
+    },
+    {
+      "file": "utils/monitor.py",
+      "line": 33,
+      "title": "TrainingMonitor — 领域级训练诊断",
+      "description": "`TrainingMonitor` 在训练循环中检测 10+ 类领域特定异常：奖励幅度异常、动作坍缩/饱和、奖励高原/发散、TDS 失败率过高、频率越界、各 agent 奖励离散度、loss 爆炸、早停。区别于通用 RL 监控：所有阈值都对应电力系统物理量（如 `threshold_hz=2.0` 对应频率越界 ±2Hz）。"
+    },
+    {
+      "directory": "scenarios",
+      "title": "Scenarios — 训练与评估脚本",
+      "description": "每个场景独立目录：`scenarios/kundur/`（train_andes/ode/simulink.py + evaluate_*.py + config_simulink.py + simulink_models/）、`scenarios/new_england/`（同构）。脚本按后端分离是刻意设计——ANDES 用 WSL Python，Simulink 用 Windows MATLAB Engine，两者运行环境不同，统一到同一 CLI 会引入不必要耦合。"
+    },
+    {
+      "title": "架构全图",
+      "description": "**数据流**：`train_*.py` → `MultiAgentManager.select_actions()` → `Env.step(actions)` → (`AndesBaseEnv`/`SimulinkBridge`) → (`ANDES TDS`/`vsg_step_and_read.m`) → `(obs, reward, done)` → `manager.store_transitions()` → `manager.update()` → `TrainingMonitor.log()`\n\n**控制平面**（Claude 辅助建模）：`MCP Server` → `Harness Tasks` → `mcp_simulink_tools` → `MatlabSession.call()` → `vsg_*.m`\n\n**三层定位**：ANDES = 实验台（快，纯Python），Simulink = 训练台（高保真，MATLAB），ODE = 辅助快速测试。"
+    }
+  ]
+}

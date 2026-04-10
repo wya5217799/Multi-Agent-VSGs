@@ -1,0 +1,22 @@
+{
+  "task": "scenario_status",
+  "scenario_id": "kundur",
+  "run_id": "verify-scenario-status",
+  "status": "ok",
+  "started_at": "2026-04-05T15:01:14.848680+00:00",
+  "finished_at": "2026-04-05T15:01:14.849904+00:00",
+  "inputs": {
+    "goal": "verify harness",
+    "requested_tasks": [
+      "scenario_status"
+    ]
+  },
+  "summary": [],
+  "artifacts": [],
+  "failures": [],
+  "resolved_model_name": "kundur_vsg",
+  "resolved_model_dir": "scenarios\\kundur\\simulink_models",
+  "resolved_train_entry": "scenarios\\kundur\\train_simulink.py",
+  "supported": true,
+  "notes": []
+}

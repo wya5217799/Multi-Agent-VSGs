@@ -1,0 +1,22 @@
+{
+  "task": "train_smoke_start",
+  "scenario_id": "ne39",
+  "run_id": "ne39_phang_fix_smoke_20260410c",
+  "status": "running",
+  "started_at": "2026-04-10T05:16:09.574817+00:00",
+  "finished_at": "2026-04-10T05:16:09.588330+00:00",
+  "inputs": {
+    "episodes": 1,
+    "mode": "simulink"
+  },
+  "summary": [
+    "smoke_start: pid=33004, episodes=1, mode=simulink — poll to check completion"
+  ],
+  "artifacts": [],
+  "failures": [],
+  "command": "C:\\Users\\27443\\miniconda3\\envs\\andes_env\\python.exe \"C:\\Users\\27443\\Desktop\\Multi-Agent  VSGs\\scenarios\\new_england\\train_simulink.py\" --mode simulink --episodes 1 --checkpoint-dir \"C:\\Users\\27443\\Desktop\\Multi-Agent  VSGs\\results\\sim_ne39\\harness_smoke\\ne39_phang_fix_smoke_20260410c\\checkpoints\" --log-file \"C:\\Users\\27443\\Desktop\\Multi-Agent  VSGs\\results\\sim_ne39\\harness_smoke\\ne39_phang_fix_smoke_20260410c\\logs\\training_log.json\"",
+  "pid": 33004,
+  "smoke_started": true,
+  "stdout_path": "C:\\Users\\27443\\Desktop\\Multi-Agent  VSGs\\results\\harness\\ne39\\ne39_phang_fix_smoke_20260410c\\train_smoke_stdout.log",
+  "stderr_path": "C:\\Users\\27443\\Desktop\\Multi-Agent  VSGs\\results\\harness\\ne39\\ne39_phang_fix_smoke_20260410c\\train_smoke_stderr.log"
+}

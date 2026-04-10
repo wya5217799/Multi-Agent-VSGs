@@ -1,0 +1,32 @@
+{
+  "task": "model_report",
+  "scenario_id": "kundur",
+  "run_id": "kundur_v6",
+  "status": "ok",
+  "started_at": "2026-04-07T18:23:23.567181+00:00",
+  "finished_at": "2026-04-07T18:23:23.576636+00:00",
+  "inputs": {
+    "include_summary_md": true
+  },
+  "summary": [
+    "run_report: status=ok, tasks=1, blocked=0, findings=0"
+  ],
+  "artifacts": [
+    "C:\\Users\\27443\\Desktop\\Multi-Agent  VSGs\\results\\harness\\kundur\\kundur_v6\\summary.md"
+  ],
+  "failures": [],
+  "run_status": "ok",
+  "completed_tasks": [
+    "scenario_status"
+  ],
+  "blocked_tasks": [],
+  "key_findings": [],
+  "next_actions": [
+    "Run train_smoke"
+  ],
+  "memory_hints": {
+    "should_write_devlog": false,
+    "should_write_decision": false,
+    "reason": []
+  }
+}

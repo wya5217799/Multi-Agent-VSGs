@@ -1,0 +1,3302 @@
+============================================================
+ ANDES MADRL Training — 2000 episodes
+============================================================
+Time step reduced to zero. Convergence is not likely.
+Simulation terminated at t=2.5471 s.
+[Monitor] Ep 9 | Reward: -84.1 (r_f: 47.4%, r_h: 24.5%, r_d: 28.1%)
+          Actions mu: [0.08, -0.01, 0.11, -0.00]  std: [0.57, 0.56, 0.62, 0.54]
+          TDS fails: 1/10 (10.0%) | Freq peak: 0.39 Hz
+  Ep 10/2000 | Avg Reward: -89.0 | Steps: 461 | Time: 16s
+[Monitor] Calibration complete (20 episodes).
+          Reward baseline: mu=-115.1, std=102.3 -> magnitude range: [-422, 192]
+          Action std baseline: 0.57 -> collapse threshold: 0.057
+          TDS failure baseline: 5.0% -> alert threshold: 30.0%
+[Monitor] Ep 19 | Reward: -148.2 (r_f: 79.0%, r_h: 8.7%, r_d: 12.3%)
+          Actions mu: [0.10, -0.05, 0.02, 0.07]  std: [0.56, 0.61, 0.56, 0.60]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.58 Hz
+  Ep 20/2000 | Avg Reward: -141.1 | Steps: 961 | Time: 33s
+Time step reduced to zero. Convergence is not likely.
+Simulation terminated at t=2.3396 s.
+Time step reduced to zero. Convergence is not likely.
+Simulation terminated at t=2.2588 s.
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 25
+  'r_f' is only 49.5% of total reward (threshold: 50%). Breakdown: r_f: 49.5%, r_h: 23.5%, r_d: 27.0%
+[Monitor] Ep 29 | Reward: -83.5 (r_f: 51.6%, r_h: 23.9%, r_d: 24.5%)
+          Actions mu: [-0.03, 0.02, -0.03, 0.03]  std: [0.58, 0.55, 0.62, 0.58]
+          TDS fails: 2/10 (20.0%) | Freq peak: 0.52 Hz
+  Ep 30/2000 | Avg Reward: -141.0 | Steps: 1380 | Time: 70s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 31
+  'r_f' is only 37.6% of total reward (threshold: 50%). Breakdown: r_f: 37.6%, r_h: 31.8%, r_d: 30.6%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 32
+  'r_f' is only 46.4% of total reward (threshold: 50%). Breakdown: r_f: 46.4%, r_h: 29.1%, r_d: 24.6%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 37
+  'r_f' is only 20.8% of total reward (threshold: 50%). Breakdown: r_f: 20.8%, r_h: 33.6%, r_d: 45.6%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 38
+  'r_f' is only 26.7% of total reward (threshold: 50%). Breakdown: r_f: 26.7%, r_h: 42.1%, r_d: 31.2%
+[Monitor] Ep 39 | Reward: -71.1 (r_f: 55.0%, r_h: 16.2%, r_d: 28.8%)
+          Actions mu: [-0.04, 0.01, -0.02, 0.00]  std: [0.59, 0.57, 0.59, 0.51]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.49 Hz
+  Ep 40/2000 | Avg Reward: -87.1 | Steps: 1880 | Time: 117s
+[Monitor] Ep 49 | Reward: -156.0 (r_f: 82.6%, r_h: 7.2%, r_d: 10.1%)
+          Actions mu: [-0.05, 0.10, 0.14, -0.08]  std: [0.56, 0.58, 0.55, 0.55]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.44 Hz
+  Ep 50/2000 | Avg Reward: -116.1 | Steps: 2380 | Time: 159s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 50
+  'r_f' is only 40.7% of total reward (threshold: 50%). Breakdown: r_f: 40.7%, r_h: 29.2%, r_d: 30.1%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 51
+  'r_f' is only 46.4% of total reward (threshold: 50%). Breakdown: r_f: 46.4%, r_h: 29.4%, r_d: 24.2%
+Time step reduced to zero. Convergence is not likely.
+Simulation terminated at t=2.5068 s.
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 55
+  'r_f' is only 48.2% of total reward (threshold: 50%). Breakdown: r_f: 48.2%, r_h: 30.4%, r_d: 21.5%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 56
+  'r_f' is only 49.1% of total reward (threshold: 50%). Breakdown: r_f: 49.1%, r_h: 25.6%, r_d: 25.4%
+[Monitor] Ep 59 | Reward: -76.2 (r_f: 62.9%, r_h: 23.9%, r_d: 13.1%)
+          Actions mu: [0.01, 0.02, -0.02, 0.02]  std: [0.62, 0.58, 0.56, 0.55]
+          TDS fails: 1/10 (10.0%) | Freq peak: 0.44 Hz
+  Ep 60/2000 | Avg Reward: -86.9 | Steps: 2841 | Time: 198s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 60
+  'r_f' is only 39.9% of total reward (threshold: 50%). Breakdown: r_f: 39.9%, r_h: 26.7%, r_d: 33.4%
+Time step reduced to zero. Convergence is not likely.
+Simulation terminated at t=2.3862 s.
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 64
+  'r_f' is only 42.9% of total reward (threshold: 50%). Breakdown: r_f: 42.9%, r_h: 27.7%, r_d: 29.4%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 65
+  'r_f' is only 45.1% of total reward (threshold: 50%). Breakdown: r_f: 45.1%, r_h: 25.7%, r_d: 29.2%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 66
+  'r_f' is only 41.0% of total reward (threshold: 50%). Breakdown: r_f: 41.0%, r_h: 23.0%, r_d: 36.0%
+[Monitor] Ep 69 | Reward: -64.8 (r_f: 53.3%, r_h: 26.9%, r_d: 19.8%)
+          Actions mu: [-0.02, -0.01, 0.11, 0.01]  std: [0.55, 0.53, 0.53, 0.57]
+          TDS fails: 1/10 (10.0%) | Freq peak: 0.51 Hz
+  Ep 70/2000 | Avg Reward: -87.6 | Steps: 3301 | Time: 239s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 70
+  'r_f' is only 33.9% of total reward (threshold: 50%). Breakdown: r_f: 33.9%, r_h: 35.4%, r_d: 30.7%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 71
+  'r_f' is only 44.7% of total reward (threshold: 50%). Breakdown: r_f: 44.7%, r_h: 31.1%, r_d: 24.2%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 72
+  'r_f' is only 47.1% of total reward (threshold: 50%). Breakdown: r_f: 47.1%, r_h: 25.6%, r_d: 27.3%
+Time step reduced to zero. Convergence is not likely.
+Simulation terminated at t=2.4285 s.
+Time step reduced to zero. Convergence is not likely.
+Simulation terminated at t=2.4438 s.
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 77
+  'r_f' is only 49.9% of total reward (threshold: 50%). Breakdown: r_f: 49.9%, r_h: 16.1%, r_d: 34.0%
+[Monitor] Ep 79 | Reward: -72.4 (r_f: 54.7%, r_h: 22.2%, r_d: 23.1%)
+          Actions mu: [-0.05, 0.03, 0.06, -0.04]  std: [0.60, 0.54, 0.53, 0.53]
+          TDS fails: 2/10 (20.0%) | Freq peak: 0.39 Hz
+  Ep 80/2000 | Avg Reward: -98.2 | Steps: 3721 | Time: 277s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 80
+  'r_f' is only 39.7% of total reward (threshold: 50%). Breakdown: r_f: 39.7%, r_h: 33.2%, r_d: 27.0%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 81
+  'r_f' is only 41.2% of total reward (threshold: 50%). Breakdown: r_f: 41.2%, r_h: 26.6%, r_d: 32.2%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 84
+  'r_f' is only 39.5% of total reward (threshold: 50%). Breakdown: r_f: 39.5%, r_h: 34.2%, r_d: 26.2%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 88
+  'r_f' is only 45.0% of total reward (threshold: 50%). Breakdown: r_f: 45.0%, r_h: 25.0%, r_d: 30.1%
+[Monitor] Ep 89 | Reward: -68.3 (r_f: 54.8%, r_h: 19.3%, r_d: 25.9%)
+          Actions mu: [0.01, 0.13, -0.03, -0.01]  std: [0.55, 0.56, 0.56, 0.52]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.38 Hz
+  Ep 90/2000 | Avg Reward: -75.0 | Steps: 4221 | Time: 316s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 93
+  'r_f' is only 41.4% of total reward (threshold: 50%). Breakdown: r_f: 41.4%, r_h: 25.1%, r_d: 33.5%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 94
+  'r_f' is only 49.3% of total reward (threshold: 50%). Breakdown: r_f: 49.3%, r_h: 21.4%, r_d: 29.3%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 95
+  'r_f' is only 44.8% of total reward (threshold: 50%). Breakdown: r_f: 44.8%, r_h: 29.9%, r_d: 25.2%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 97
+  'r_f' is only 27.4% of total reward (threshold: 50%). Breakdown: r_f: 27.4%, r_h: 35.5%, r_d: 37.1%
+[Monitor] Ep 99 | Reward: -95.7 (r_f: 61.8%, r_h: 19.8%, r_d: 18.4%)
+          Actions mu: [0.12, 0.12, 0.02, 0.15]  std: [0.53, 0.50, 0.59, 0.58]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.46 Hz
+  Ep 100/2000 | Avg Reward: -81.7 | Steps: 4721 | Time: 358s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 100
+  'r_f' is only 45.8% of total reward (threshold: 50%). Breakdown: r_f: 45.8%, r_h: 30.2%, r_d: 24.0%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 102
+  'r_f' is only 32.1% of total reward (threshold: 50%). Breakdown: r_f: 32.1%, r_h: 31.5%, r_d: 36.4%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 105
+  'r_f' is only 46.0% of total reward (threshold: 50%). Breakdown: r_f: 46.0%, r_h: 22.6%, r_d: 31.4%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 107
+  'r_f' is only 38.2% of total reward (threshold: 50%). Breakdown: r_f: 38.2%, r_h: 34.7%, r_d: 27.0%
+[Monitor] Ep 109 | Reward: -94.1 (r_f: 70.3%, r_h: 14.5%, r_d: 15.2%)
+          Actions mu: [-0.02, 0.06, 0.10, -0.01]  std: [0.57, 0.55, 0.54, 0.52]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.46 Hz
+  Ep 110/2000 | Avg Reward: -74.5 | Steps: 5221 | Time: 398s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 113
+  'r_f' is only 30.6% of total reward (threshold: 50%). Breakdown: r_f: 30.6%, r_h: 34.5%, r_d: 34.9%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 114
+  'r_f' is only 25.6% of total reward (threshold: 50%). Breakdown: r_f: 25.6%, r_h: 32.3%, r_d: 42.1%
+Time step reduced to zero. Convergence is not likely.
+Simulation terminated at t=2.5843 s.
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 117
+  'r_f' is only 47.6% of total reward (threshold: 50%). Breakdown: r_f: 47.6%, r_h: 29.9%, r_d: 22.5%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 118
+  'r_f' is only 44.9% of total reward (threshold: 50%). Breakdown: r_f: 44.9%, r_h: 20.8%, r_d: 34.3%
+[Monitor] Ep 119 | Reward: -86.9 (r_f: 68.0%, r_h: 15.1%, r_d: 16.9%)
+          Actions mu: [-0.07, 0.07, 0.05, 0.09]  std: [0.62, 0.51, 0.52, 0.53]
+          TDS fails: 1/10 (10.0%) | Freq peak: 0.39 Hz
+  Ep 120/2000 | Avg Reward: -79.7 | Steps: 5682 | Time: 439s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 121
+  'r_f' is only 45.3% of total reward (threshold: 50%). Breakdown: r_f: 45.3%, r_h: 24.2%, r_d: 30.5%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 124
+  'r_f' is only 44.8% of total reward (threshold: 50%). Breakdown: r_f: 44.8%, r_h: 26.4%, r_d: 28.9%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 126
+  'r_f' is only 44.2% of total reward (threshold: 50%). Breakdown: r_f: 44.2%, r_h: 27.7%, r_d: 28.1%
+[Monitor] Ep 129 | Reward: -122.6 (r_f: 77.5%, r_h: 8.0%, r_d: 14.5%)
+          Actions mu: [-0.04, 0.15, 0.01, 0.11]  std: [0.59, 0.53, 0.54, 0.54]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.40 Hz
+  Ep 130/2000 | Avg Reward: -78.2 | Steps: 6182 | Time: 481s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 130
+  'r_f' is only 48.8% of total reward (threshold: 50%). Breakdown: r_f: 48.8%, r_h: 20.9%, r_d: 30.3%
+Time step reduced to zero. Convergence is not likely.
+Simulation terminated at t=2.4937 s.
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 134
+  'r_f' is only 45.2% of total reward (threshold: 50%). Breakdown: r_f: 45.2%, r_h: 27.4%, r_d: 27.5%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 138
+  'r_f' is only 44.2% of total reward (threshold: 50%). Breakdown: r_f: 44.2%, r_h: 24.2%, r_d: 31.6%
+[Monitor] Ep 139 | Reward: -83.6 (r_f: 68.0%, r_h: 16.4%, r_d: 15.5%)
+          Actions mu: [-0.03, 0.16, 0.03, 0.09]  std: [0.51, 0.49, 0.48, 0.49]
+          TDS fails: 1/10 (10.0%) | Freq peak: 0.38 Hz
+  Ep 140/2000 | Avg Reward: -82.1 | Steps: 6642 | Time: 517s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 142
+  'r_f' is only 46.2% of total reward (threshold: 50%). Breakdown: r_f: 46.2%, r_h: 33.1%, r_d: 20.6%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 146
+  'r_f' is only 40.8% of total reward (threshold: 50%). Breakdown: r_f: 40.8%, r_h: 24.7%, r_d: 34.5%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 147
+  'r_f' is only 43.0% of total reward (threshold: 50%). Breakdown: r_f: 43.0%, r_h: 34.5%, r_d: 22.5%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 148
+  'r_f' is only 48.4% of total reward (threshold: 50%). Breakdown: r_f: 48.4%, r_h: 25.4%, r_d: 26.3%
+[Monitor] Ep 149 | Reward: -55.6 (r_f: 47.3%, r_h: 28.7%, r_d: 23.9%)
+          Actions mu: [0.08, 0.09, 0.00, -0.01]  std: [0.46, 0.49, 0.50, 0.48]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.36 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 149
+  'r_f' is only 47.3% of total reward (threshold: 50%). Breakdown: r_f: 47.3%, r_h: 28.7%, r_d: 23.9%
+  Ep 150/2000 | Avg Reward: -61.6 | Steps: 7142 | Time: 559s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 150
+  'r_f' is only 49.9% of total reward (threshold: 50%). Breakdown: r_f: 49.9%, r_h: 23.4%, r_d: 26.7%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 151
+  'r_f' is only 45.3% of total reward (threshold: 50%). Breakdown: r_f: 45.3%, r_h: 26.0%, r_d: 28.6%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 153
+  'r_f' is only 49.4% of total reward (threshold: 50%). Breakdown: r_f: 49.4%, r_h: 27.5%, r_d: 23.1%
+Time step reduced to zero. Convergence is not likely.
+Simulation terminated at t=2.5713 s.
+Time step reduced to zero. Convergence is not likely.
+Simulation terminated at t=2.4944 s.
+[Monitor] Ep 159 | Reward: -47.3 (r_f: 44.2%, r_h: 21.6%, r_d: 34.2%)
+          Actions mu: [-0.06, 0.05, 0.08, 0.01]  std: [0.51, 0.47, 0.48, 0.50]
+          TDS fails: 2/10 (20.0%) | Freq peak: 0.42 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 159
+  'r_f' is only 44.2% of total reward (threshold: 50%). Breakdown: r_f: 44.2%, r_h: 21.6%, r_d: 34.2%
+  Ep 160/2000 | Avg Reward: -87.6 | Steps: 7563 | Time: 597s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 161
+  'r_f' is only 45.9% of total reward (threshold: 50%). Breakdown: r_f: 45.9%, r_h: 24.3%, r_d: 29.8%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 162
+  'r_f' is only 45.0% of total reward (threshold: 50%). Breakdown: r_f: 45.0%, r_h: 22.0%, r_d: 33.0%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 163
+  'r_f' is only 48.9% of total reward (threshold: 50%). Breakdown: r_f: 48.9%, r_h: 28.4%, r_d: 22.8%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 165
+  'r_f' is only 40.5% of total reward (threshold: 50%). Breakdown: r_f: 40.5%, r_h: 25.7%, r_d: 33.9%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 168
+  'r_f' is only 40.6% of total reward (threshold: 50%). Breakdown: r_f: 40.6%, r_h: 24.5%, r_d: 34.9%
+[Monitor] Ep 169 | Reward: -45.1 (r_f: 32.1%, r_h: 32.9%, r_d: 35.0%)
+          Actions mu: [0.03, 0.03, -0.01, 0.02]  std: [0.54, 0.48, 0.47, 0.50]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.35 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 169
+  'r_f' is only 32.1% of total reward (threshold: 50%). Breakdown: r_f: 32.1%, r_h: 32.9%, r_d: 35.0%
+  Ep 170/2000 | Avg Reward: -50.2 | Steps: 8063 | Time: 637s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 170
+  'r_f' is only 36.7% of total reward (threshold: 50%). Breakdown: r_f: 36.7%, r_h: 34.9%, r_d: 28.4%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 171
+  'r_f' is only 48.0% of total reward (threshold: 50%). Breakdown: r_f: 48.0%, r_h: 29.4%, r_d: 22.6%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 172
+  'r_f' is only 36.0% of total reward (threshold: 50%). Breakdown: r_f: 36.0%, r_h: 28.3%, r_d: 35.7%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 173
+  'r_f' is only 36.9% of total reward (threshold: 50%). Breakdown: r_f: 36.9%, r_h: 34.6%, r_d: 28.5%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 178
+  'r_f' is only 49.0% of total reward (threshold: 50%). Breakdown: r_f: 49.0%, r_h: 24.1%, r_d: 27.0%
+[Monitor] Ep 179 | Reward: -36.1 (r_f: 49.2%, r_h: 27.6%, r_d: 23.2%)
+          Actions mu: [0.07, -0.00, -0.06, 0.05]  std: [0.52, 0.44, 0.43, 0.43]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.34 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 179
+  'r_f' is only 49.2% of total reward (threshold: 50%). Breakdown: r_f: 49.2%, r_h: 27.6%, r_d: 23.2%
+  Ep 180/2000 | Avg Reward: -43.5 | Steps: 8563 | Time: 678s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 180
+  'r_f' is only 40.7% of total reward (threshold: 50%). Breakdown: r_f: 40.7%, r_h: 24.2%, r_d: 35.1%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 181
+  'r_f' is only 49.3% of total reward (threshold: 50%). Breakdown: r_f: 49.3%, r_h: 23.5%, r_d: 27.2%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 182
+  'r_f' is only 40.0% of total reward (threshold: 50%). Breakdown: r_f: 40.0%, r_h: 22.4%, r_d: 37.6%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 184
+  'r_f' is only 49.9% of total reward (threshold: 50%). Breakdown: r_f: 49.9%, r_h: 24.7%, r_d: 25.5%
+[Monitor] Ep 189 | Reward: -46.6 (r_f: 47.9%, r_h: 27.2%, r_d: 24.9%)
+          Actions mu: [0.07, 0.24, 0.02, 0.05]  std: [0.45, 0.43, 0.51, 0.46]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.40 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 189
+  'r_f' is only 47.9% of total reward (threshold: 50%). Breakdown: r_f: 47.9%, r_h: 27.2%, r_d: 24.9%
+  Ep 190/2000 | Avg Reward: -51.2 | Steps: 9063 | Time: 721s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 192
+  'r_f' is only 42.6% of total reward (threshold: 50%). Breakdown: r_f: 42.6%, r_h: 25.9%, r_d: 31.4%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 198
+  'r_f' is only 40.6% of total reward (threshold: 50%). Breakdown: r_f: 40.6%, r_h: 24.9%, r_d: 34.5%
+[Monitor] Ep 199 | Reward: -33.4 (r_f: 40.0%, r_h: 25.0%, r_d: 34.9%)
+          Actions mu: [0.20, 0.05, -0.02, -0.01]  std: [0.44, 0.49, 0.33, 0.38]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.32 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 199
+  'r_f' is only 40.0% of total reward (threshold: 50%). Breakdown: r_f: 40.0%, r_h: 25.0%, r_d: 34.9%
+  Ep 200/2000 | Avg Reward: -46.4 | Steps: 9563 | Time: 762s
+Time step reduced to zero. Convergence is not likely.
+Simulation terminated at t=2.5027 s.
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 208
+  'r_f' is only 34.6% of total reward (threshold: 50%). Breakdown: r_f: 34.6%, r_h: 28.6%, r_d: 36.8%
+[Monitor] Ep 209 | Reward: -48.1 (r_f: 53.6%, r_h: 23.4%, r_d: 23.0%)
+          Actions mu: [-0.12, 0.15, -0.03, 0.16]  std: [0.47, 0.45, 0.55, 0.47]
+          TDS fails: 1/10 (10.0%) | Freq peak: 0.41 Hz
+  Ep 210/2000 | Avg Reward: -70.0 | Steps: 10024 | Time: 804s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 212
+  'r_f' is only 43.8% of total reward (threshold: 50%). Breakdown: r_f: 43.8%, r_h: 25.5%, r_d: 30.6%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 213
+  'r_f' is only 47.5% of total reward (threshold: 50%). Breakdown: r_f: 47.5%, r_h: 25.3%, r_d: 27.2%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 218
+  'r_f' is only 30.0% of total reward (threshold: 50%). Breakdown: r_f: 30.0%, r_h: 17.8%, r_d: 52.2%
+[Monitor] Ep 219 | Reward: -34.6 (r_f: 50.1%, r_h: 25.1%, r_d: 24.8%)
+          Actions mu: [0.30, 0.20, -0.02, -0.05]  std: [0.43, 0.39, 0.33, 0.45]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.45 Hz
+  Ep 220/2000 | Avg Reward: -48.3 | Steps: 10524 | Time: 847s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 220
+  'r_f' is only 40.6% of total reward (threshold: 50%). Breakdown: r_f: 40.6%, r_h: 16.1%, r_d: 43.3%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 222
+  'r_f' is only 45.2% of total reward (threshold: 50%). Breakdown: r_f: 45.2%, r_h: 27.1%, r_d: 27.7%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 224
+  'r_f' is only 49.6% of total reward (threshold: 50%). Breakdown: r_f: 49.6%, r_h: 26.4%, r_d: 24.0%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 225
+  'r_f' is only 35.0% of total reward (threshold: 50%). Breakdown: r_f: 35.0%, r_h: 26.4%, r_d: 38.7%
+[Monitor] Ep 229 | Reward: -58.8 (r_f: 70.7%, r_h: 15.6%, r_d: 13.7%)
+          Actions mu: [-0.05, 0.05, 0.10, 0.06]  std: [0.41, 0.45, 0.50, 0.43]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.36 Hz
+  Ep 230/2000 | Avg Reward: -42.5 | Steps: 11024 | Time: 889s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 230
+  'r_f' is only 42.2% of total reward (threshold: 50%). Breakdown: r_f: 42.2%, r_h: 31.4%, r_d: 26.5%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 231
+  'r_f' is only 42.8% of total reward (threshold: 50%). Breakdown: r_f: 42.8%, r_h: 24.7%, r_d: 32.5%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 233
+  'r_f' is only 31.6% of total reward (threshold: 50%). Breakdown: r_f: 31.6%, r_h: 26.3%, r_d: 42.1%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 234
+  'r_f' is only 41.4% of total reward (threshold: 50%). Breakdown: r_f: 41.4%, r_h: 16.8%, r_d: 41.8%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 235
+  'r_f' is only 44.8% of total reward (threshold: 50%). Breakdown: r_f: 44.8%, r_h: 18.7%, r_d: 36.5%
+[Monitor] Ep 239 | Reward: -61.1 (r_f: 67.5%, r_h: 10.1%, r_d: 22.4%)
+          Actions mu: [0.29, 0.23, 0.15, -0.18]  std: [0.40, 0.48, 0.38, 0.45]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.36 Hz
+  Ep 240/2000 | Avg Reward: -35.0 | Steps: 11524 | Time: 939s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 241
+  'r_f' is only 34.4% of total reward (threshold: 50%). Breakdown: r_f: 34.4%, r_h: 13.3%, r_d: 52.3%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 243
+  'r_f' is only 49.5% of total reward (threshold: 50%). Breakdown: r_f: 49.5%, r_h: 28.4%, r_d: 22.1%
+[Monitor] Ep 249 | Reward: -23.5 (r_f: 14.5%, r_h: 26.8%, r_d: 58.7%)
+          Actions mu: [0.47, 0.15, 0.03, -0.06]  std: [0.22, 0.34, 0.43, 0.28]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.34 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 249
+  'r_f' is only 14.5% of total reward (threshold: 50%). Breakdown: r_f: 14.5%, r_h: 26.8%, r_d: 58.7%
+  Ep 250/2000 | Avg Reward: -28.3 | Steps: 12024 | Time: 988s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 252
+  'r_f' is only 48.5% of total reward (threshold: 50%). Breakdown: r_f: 48.5%, r_h: 23.6%, r_d: 27.9%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 253
+  'r_f' is only 48.6% of total reward (threshold: 50%). Breakdown: r_f: 48.6%, r_h: 42.6%, r_d: 8.8%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 255
+  'r_f' is only 39.1% of total reward (threshold: 50%). Breakdown: r_f: 39.1%, r_h: 35.5%, r_d: 25.4%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 256
+  'r_f' is only 40.4% of total reward (threshold: 50%). Breakdown: r_f: 40.4%, r_h: 33.2%, r_d: 26.4%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 258
+  'r_f' is only 36.9% of total reward (threshold: 50%). Breakdown: r_f: 36.9%, r_h: 34.7%, r_d: 28.4%
+[Monitor] Ep 259 | Reward: -27.3 (r_f: 49.9%, r_h: 39.3%, r_d: 10.9%)
+          Actions mu: [0.35, 0.10, -0.03, 0.02]  std: [0.29, 0.33, 0.21, 0.26]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.39 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 259
+  'r_f' is only 49.9% of total reward (threshold: 50%). Breakdown: r_f: 49.9%, r_h: 39.3%, r_d: 10.9%
+  Ep 260/2000 | Avg Reward: -34.9 | Steps: 12524 | Time: 1032s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 263
+  'r_f' is only 34.8% of total reward (threshold: 50%). Breakdown: r_f: 34.8%, r_h: 28.8%, r_d: 36.4%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 266
+  'r_f' is only 25.1% of total reward (threshold: 50%). Breakdown: r_f: 25.1%, r_h: 13.4%, r_d: 61.4%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 268
+  'r_f' is only 46.4% of total reward (threshold: 50%). Breakdown: r_f: 46.4%, r_h: 33.6%, r_d: 20.0%
+[Monitor] Ep 269 | Reward: -30.3 (r_f: 50.3%, r_h: 24.5%, r_d: 25.1%)
+          Actions mu: [0.23, 0.19, 0.05, -0.09]  std: [0.40, 0.42, 0.33, 0.34]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.38 Hz
+  Ep 270/2000 | Avg Reward: -42.0 | Steps: 13024 | Time: 1081s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 270
+  'r_f' is only 36.3% of total reward (threshold: 50%). Breakdown: r_f: 36.3%, r_h: 11.4%, r_d: 52.4%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 272
+  'r_f' is only 47.7% of total reward (threshold: 50%). Breakdown: r_f: 47.7%, r_h: 29.5%, r_d: 22.7%
+[Monitor] Ep 279 | Reward: -57.0 (r_f: 51.0%, r_h: 26.6%, r_d: 22.4%)
+          Actions mu: [-0.06, 0.09, 0.07, 0.09]  std: [0.43, 0.52, 0.50, 0.48]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.45 Hz
+  Ep 280/2000 | Avg Reward: -38.8 | Steps: 13524 | Time: 1130s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 280
+  'r_f' is only 46.1% of total reward (threshold: 50%). Breakdown: r_f: 46.1%, r_h: 36.3%, r_d: 17.6%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 283
+  'r_f' is only 48.8% of total reward (threshold: 50%). Breakdown: r_f: 48.8%, r_h: 40.6%, r_d: 10.5%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 284
+  'r_f' is only 48.2% of total reward (threshold: 50%). Breakdown: r_f: 48.2%, r_h: 31.2%, r_d: 20.6%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 285
+  'r_f' is only 36.9% of total reward (threshold: 50%). Breakdown: r_f: 36.9%, r_h: 35.0%, r_d: 28.1%
+[Monitor] Ep 289 | Reward: -25.0 (r_f: 46.0%, r_h: 40.7%, r_d: 13.3%)
+          Actions mu: [0.35, -0.01, -0.05, 0.12]  std: [0.29, 0.32, 0.26, 0.23]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.37 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 289
+  'r_f' is only 46.0% of total reward (threshold: 50%). Breakdown: r_f: 46.0%, r_h: 40.7%, r_d: 13.3%
+  Ep 290/2000 | Avg Reward: -35.4 | Steps: 14024 | Time: 1177s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 291
+  'r_f' is only 45.1% of total reward (threshold: 50%). Breakdown: r_f: 45.1%, r_h: 37.4%, r_d: 17.5%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 293
+  'r_f' is only 42.3% of total reward (threshold: 50%). Breakdown: r_f: 42.3%, r_h: 40.2%, r_d: 17.5%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 294
+  'r_f' is only 36.1% of total reward (threshold: 50%). Breakdown: r_f: 36.1%, r_h: 8.7%, r_d: 55.3%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 295
+  'r_f' is only 48.8% of total reward (threshold: 50%). Breakdown: r_f: 48.8%, r_h: 36.8%, r_d: 14.4%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 297
+  'r_f' is only 45.0% of total reward (threshold: 50%). Breakdown: r_f: 45.0%, r_h: 22.8%, r_d: 32.2%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 298
+  'r_f' is only 42.1% of total reward (threshold: 50%). Breakdown: r_f: 42.1%, r_h: 33.4%, r_d: 24.5%
+[Monitor] Ep 299 | Reward: -38.6 (r_f: 37.7%, r_h: 35.7%, r_d: 26.6%)
+          Actions mu: [-0.07, -0.21, 0.05, 0.05]  std: [0.28, 0.37, 0.54, 0.39]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.39 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 299
+  'r_f' is only 37.7% of total reward (threshold: 50%). Breakdown: r_f: 37.7%, r_h: 35.7%, r_d: 26.6%
+  Ep 300/2000 | Avg Reward: -34.4 | Steps: 14524 | Time: 1220s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 301
+  'r_f' is only 45.6% of total reward (threshold: 50%). Breakdown: r_f: 45.6%, r_h: 9.1%, r_d: 45.3%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 306
+  'r_f' is only 32.8% of total reward (threshold: 50%). Breakdown: r_f: 32.8%, r_h: 44.4%, r_d: 22.8%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 308
+  'r_f' is only 42.3% of total reward (threshold: 50%). Breakdown: r_f: 42.3%, r_h: 32.8%, r_d: 25.0%
+[Monitor] Ep 309 | Reward: -33.3 (r_f: 42.8%, r_h: 18.3%, r_d: 39.0%)
+          Actions mu: [-0.02, -0.24, 0.35, 0.11]  std: [0.37, 0.42, 0.28, 0.29]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.30 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 309
+  'r_f' is only 42.8% of total reward (threshold: 50%). Breakdown: r_f: 42.8%, r_h: 18.3%, r_d: 39.0%
+  Ep 310/2000 | Avg Reward: -36.0 | Steps: 15024 | Time: 1266s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 310
+  'r_f' is only 41.5% of total reward (threshold: 50%). Breakdown: r_f: 41.5%, r_h: 35.1%, r_d: 23.4%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 313
+  'r_f' is only 37.0% of total reward (threshold: 50%). Breakdown: r_f: 37.0%, r_h: 35.7%, r_d: 27.3%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 314
+  'r_f' is only 40.7% of total reward (threshold: 50%). Breakdown: r_f: 40.7%, r_h: 41.9%, r_d: 17.3%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 317
+  'r_f' is only 47.0% of total reward (threshold: 50%). Breakdown: r_f: 47.0%, r_h: 33.4%, r_d: 19.7%
+[Monitor] Ep 319 | Reward: -49.7 (r_f: 66.1%, r_h: 18.3%, r_d: 15.6%)
+          Actions mu: [0.23, 0.13, 0.05, 0.03]  std: [0.39, 0.34, 0.46, 0.41]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.36 Hz
+  Ep 320/2000 | Avg Reward: -35.3 | Steps: 15524 | Time: 1309s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 320
+  'r_f' is only 49.4% of total reward (threshold: 50%). Breakdown: r_f: 49.4%, r_h: 21.0%, r_d: 29.6%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 321
+  'r_f' is only 45.2% of total reward (threshold: 50%). Breakdown: r_f: 45.2%, r_h: 39.7%, r_d: 15.1%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 323
+  'r_f' is only 41.1% of total reward (threshold: 50%). Breakdown: r_f: 41.1%, r_h: 18.3%, r_d: 40.6%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 324
+  'r_f' is only 33.0% of total reward (threshold: 50%). Breakdown: r_f: 33.0%, r_h: 41.7%, r_d: 25.4%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 328
+  'r_f' is only 44.8% of total reward (threshold: 50%). Breakdown: r_f: 44.8%, r_h: 11.1%, r_d: 44.1%
+[Monitor] Ep 329 | Reward: -65.4 (r_f: 52.5%, r_h: 25.3%, r_d: 22.2%)
+          Actions mu: [0.34, 0.16, -0.05, 0.30]  std: [0.37, 0.44, 0.47, 0.27]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.41 Hz
+  Ep 330/2000 | Avg Reward: -48.8 | Steps: 16024 | Time: 1354s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 330
+  'r_f' is only 43.9% of total reward (threshold: 50%). Breakdown: r_f: 43.9%, r_h: 19.2%, r_d: 36.9%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 331
+  'r_f' is only 36.9% of total reward (threshold: 50%). Breakdown: r_f: 36.9%, r_h: 20.0%, r_d: 43.0%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 333
+  'r_f' is only 46.7% of total reward (threshold: 50%). Breakdown: r_f: 46.7%, r_h: 25.9%, r_d: 27.4%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 334
+  'r_f' is only 48.4% of total reward (threshold: 50%). Breakdown: r_f: 48.4%, r_h: 30.5%, r_d: 21.1%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 336
+  'r_f' is only 41.6% of total reward (threshold: 50%). Breakdown: r_f: 41.6%, r_h: 18.1%, r_d: 40.3%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 337
+  'r_f' is only 22.5% of total reward (threshold: 50%). Breakdown: r_f: 22.5%, r_h: 51.0%, r_d: 26.5%
+[Monitor] Ep 339 | Reward: -65.5 (r_f: 63.2%, r_h: 16.0%, r_d: 20.8%)
+          Actions mu: [0.13, 0.10, 0.13, 0.09]  std: [0.47, 0.52, 0.47, 0.40]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.41 Hz
+  Ep 340/2000 | Avg Reward: -44.9 | Steps: 16524 | Time: 1397s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 340
+  'r_f' is only 32.4% of total reward (threshold: 50%). Breakdown: r_f: 32.4%, r_h: 48.3%, r_d: 19.4%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 341
+  'r_f' is only 32.8% of total reward (threshold: 50%). Breakdown: r_f: 32.8%, r_h: 33.5%, r_d: 33.7%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 342
+  'r_f' is only 48.6% of total reward (threshold: 50%). Breakdown: r_f: 48.6%, r_h: 33.5%, r_d: 17.9%
+[Monitor] Ep 349 | Reward: -32.2 (r_f: 48.9%, r_h: 24.3%, r_d: 26.9%)
+          Actions mu: [0.14, 0.14, 0.01, 0.11]  std: [0.44, 0.49, 0.37, 0.36]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.42 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 349
+  'r_f' is only 48.9% of total reward (threshold: 50%). Breakdown: r_f: 48.9%, r_h: 24.3%, r_d: 26.9%
+  Ep 350/2000 | Avg Reward: -34.6 | Steps: 17024 | Time: 1442s
+[Monitor] Ep 359 | Reward: -33.8 (r_f: 51.6%, r_h: 19.2%, r_d: 29.2%)
+          Actions mu: [-0.23, -0.10, 0.10, 0.02]  std: [0.55, 0.41, 0.41, 0.33]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.39 Hz
+  Ep 360/2000 | Avg Reward: -45.7 | Steps: 17524 | Time: 1484s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 365
+  'r_f' is only 31.0% of total reward (threshold: 50%). Breakdown: r_f: 31.0%, r_h: 59.2%, r_d: 9.8%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 367
+  'r_f' is only 27.7% of total reward (threshold: 50%). Breakdown: r_f: 27.7%, r_h: 45.4%, r_d: 26.9%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 368
+  'r_f' is only 41.0% of total reward (threshold: 50%). Breakdown: r_f: 41.0%, r_h: 38.5%, r_d: 20.5%
+[Monitor] Ep 369 | Reward: -34.9 (r_f: 39.4%, r_h: 29.4%, r_d: 31.2%)
+          Actions mu: [0.19, 0.00, -0.01, 0.04]  std: [0.44, 0.53, 0.37, 0.36]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.42 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 369
+  'r_f' is only 39.4% of total reward (threshold: 50%). Breakdown: r_f: 39.4%, r_h: 29.4%, r_d: 31.2%
+  Ep 370/2000 | Avg Reward: -39.1 | Steps: 18024 | Time: 1529s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 371
+  'r_f' is only 40.2% of total reward (threshold: 50%). Breakdown: r_f: 40.2%, r_h: 34.3%, r_d: 25.5%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 373
+  'r_f' is only 47.4% of total reward (threshold: 50%). Breakdown: r_f: 47.4%, r_h: 25.8%, r_d: 26.7%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 375
+  'r_f' is only 42.4% of total reward (threshold: 50%). Breakdown: r_f: 42.4%, r_h: 21.4%, r_d: 36.2%
+[Monitor] Ep 379 | Reward: -26.5 (r_f: 31.6%, r_h: 48.8%, r_d: 19.6%)
+          Actions mu: [0.28, 0.15, -0.34, 0.18]  std: [0.40, 0.33, 0.16, 0.22]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.40 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 379
+  'r_f' is only 31.6% of total reward (threshold: 50%). Breakdown: r_f: 31.6%, r_h: 48.8%, r_d: 19.6%
+  Ep 380/2000 | Avg Reward: -46.3 | Steps: 18524 | Time: 1572s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 383
+  'r_f' is only 40.3% of total reward (threshold: 50%). Breakdown: r_f: 40.3%, r_h: 38.5%, r_d: 21.2%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 388
+  'r_f' is only 13.8% of total reward (threshold: 50%). Breakdown: r_f: 13.8%, r_h: 55.1%, r_d: 31.0%
+[Monitor] Ep 389 | Reward: -71.7 (r_f: 70.0%, r_h: 17.4%, r_d: 12.6%)
+          Actions mu: [0.22, -0.01, 0.05, 0.05]  std: [0.42, 0.39, 0.53, 0.44]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.40 Hz
+  Ep 390/2000 | Avg Reward: -40.2 | Steps: 19024 | Time: 1617s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 391
+  'r_f' is only 34.2% of total reward (threshold: 50%). Breakdown: r_f: 34.2%, r_h: 28.3%, r_d: 37.5%
+[Monitor] Ep 399 | Reward: -52.0 (r_f: 61.6%, r_h: 20.7%, r_d: 17.6%)
+          Actions mu: [0.22, -0.08, 0.05, 0.18]  std: [0.46, 0.39, 0.43, 0.41]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.39 Hz
+  Ep 400/2000 | Avg Reward: -50.4 | Steps: 19524 | Time: 1661s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 401
+  'r_f' is only 44.1% of total reward (threshold: 50%). Breakdown: r_f: 44.1%, r_h: 27.6%, r_d: 28.3%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 402
+  'r_f' is only 49.3% of total reward (threshold: 50%). Breakdown: r_f: 49.3%, r_h: 17.6%, r_d: 33.1%
+[Monitor] Ep 409 | Reward: -46.6 (r_f: 57.3%, r_h: 15.5%, r_d: 27.1%)
+          Actions mu: [0.24, 0.02, 0.01, 0.06]  std: [0.38, 0.31, 0.50, 0.44]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.41 Hz
+  Ep 410/2000 | Avg Reward: -33.8 | Steps: 20024 | Time: 1704s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 410
+  'r_f' is only 45.2% of total reward (threshold: 50%). Breakdown: r_f: 45.2%, r_h: 16.7%, r_d: 38.1%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 414
+  'r_f' is only 37.3% of total reward (threshold: 50%). Breakdown: r_f: 37.3%, r_h: 29.0%, r_d: 33.7%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 415
+  'r_f' is only 45.7% of total reward (threshold: 50%). Breakdown: r_f: 45.7%, r_h: 35.4%, r_d: 18.9%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 416
+  'r_f' is only 36.2% of total reward (threshold: 50%). Breakdown: r_f: 36.2%, r_h: 30.8%, r_d: 33.0%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 418
+  'r_f' is only 48.2% of total reward (threshold: 50%). Breakdown: r_f: 48.2%, r_h: 30.4%, r_d: 21.4%
+[Monitor] Ep 419 | Reward: -27.8 (r_f: 56.7%, r_h: 24.1%, r_d: 19.3%)
+          Actions mu: [-0.15, -0.02, 0.10, 0.02]  std: [0.45, 0.38, 0.42, 0.35]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.42 Hz
+  Ep 420/2000 | Avg Reward: -35.3 | Steps: 20524 | Time: 1748s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 422
+  'r_f' is only 43.5% of total reward (threshold: 50%). Breakdown: r_f: 43.5%, r_h: 18.2%, r_d: 38.2%
+[Monitor] Ep 429 | Reward: -30.5 (r_f: 46.2%, r_h: 42.7%, r_d: 11.1%)
+          Actions mu: [0.27, 0.21, 0.01, 0.05]  std: [0.33, 0.31, 0.34, 0.27]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.42 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 429
+  'r_f' is only 46.2% of total reward (threshold: 50%). Breakdown: r_f: 46.2%, r_h: 42.7%, r_d: 11.1%
+  Ep 430/2000 | Avg Reward: -30.3 | Steps: 21024 | Time: 1792s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 430
+  'r_f' is only 45.8% of total reward (threshold: 50%). Breakdown: r_f: 45.8%, r_h: 30.0%, r_d: 24.1%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 431
+  'r_f' is only 49.2% of total reward (threshold: 50%). Breakdown: r_f: 49.2%, r_h: 15.0%, r_d: 35.8%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 433
+  'r_f' is only 47.5% of total reward (threshold: 50%). Breakdown: r_f: 47.5%, r_h: 22.4%, r_d: 30.0%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 436
+  'r_f' is only 44.4% of total reward (threshold: 50%). Breakdown: r_f: 44.4%, r_h: 25.7%, r_d: 29.9%
+[Monitor] Ep 439 | Reward: -47.1 (r_f: 45.0%, r_h: 6.6%, r_d: 48.3%)
+          Actions mu: [-0.06, 0.02, 0.38, 0.23]  std: [0.38, 0.41, 0.33, 0.47]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.35 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 439
+  'r_f' is only 45.0% of total reward (threshold: 50%). Breakdown: r_f: 45.0%, r_h: 6.6%, r_d: 48.3%
+  Ep 440/2000 | Avg Reward: -33.6 | Steps: 21524 | Time: 1838s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 440
+  'r_f' is only 46.7% of total reward (threshold: 50%). Breakdown: r_f: 46.7%, r_h: 14.9%, r_d: 38.4%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 441
+  'r_f' is only 38.3% of total reward (threshold: 50%). Breakdown: r_f: 38.3%, r_h: 35.8%, r_d: 25.8%
+Time step reduced to zero. Convergence is not likely.
+Simulation terminated at t=2.5478 s.
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 445
+  'r_f' is only 49.9% of total reward (threshold: 50%). Breakdown: r_f: 49.9%, r_h: 11.0%, r_d: 39.1%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 446
+  'r_f' is only 48.9% of total reward (threshold: 50%). Breakdown: r_f: 48.9%, r_h: 43.0%, r_d: 8.1%
+Time step reduced to zero. Convergence is not likely.
+Simulation terminated at t=2.4298 s.
+[Monitor] Ep 449 | Reward: -211.1 (r_f: 66.7%, r_h: 10.2%, r_d: 23.0%)
+          Actions mu: [-0.04, 0.24, -0.09, 0.03]  std: [0.29, 0.47, 0.55, 0.35]
+          TDS fails: 2/10 (20.0%) | Freq peak: 0.39 Hz
+  Ep 450/2000 | Avg Reward: -71.0 | Steps: 21945 | Time: 1879s
+[Monitor] Ep 459 | Reward: -37.3 (r_f: 74.0%, r_h: 12.7%, r_d: 13.3%)
+          Actions mu: [-0.08, -0.09, 0.07, -0.02]  std: [0.33, 0.43, 0.49, 0.39]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.42 Hz
+  Ep 460/2000 | Avg Reward: -37.1 | Steps: 22445 | Time: 1926s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 460
+  'r_f' is only 41.8% of total reward (threshold: 50%). Breakdown: r_f: 41.8%, r_h: 31.3%, r_d: 27.0%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 465
+  'r_f' is only 46.3% of total reward (threshold: 50%). Breakdown: r_f: 46.3%, r_h: 22.6%, r_d: 31.2%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 466
+  'r_f' is only 46.7% of total reward (threshold: 50%). Breakdown: r_f: 46.7%, r_h: 14.8%, r_d: 38.5%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 468
+  'r_f' is only 24.0% of total reward (threshold: 50%). Breakdown: r_f: 24.0%, r_h: 40.1%, r_d: 36.0%
+[Monitor] Ep 469 | Reward: -28.1 (r_f: 58.7%, r_h: 14.6%, r_d: 26.7%)
+          Actions mu: [-0.01, -0.17, 0.10, -0.01]  std: [0.34, 0.38, 0.40, 0.33]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.35 Hz
+  Ep 470/2000 | Avg Reward: -37.6 | Steps: 22945 | Time: 1974s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 470
+  'r_f' is only 38.2% of total reward (threshold: 50%). Breakdown: r_f: 38.2%, r_h: 24.8%, r_d: 37.0%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 473
+  'r_f' is only 45.1% of total reward (threshold: 50%). Breakdown: r_f: 45.1%, r_h: 13.4%, r_d: 41.5%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 474
+  'r_f' is only 42.8% of total reward (threshold: 50%). Breakdown: r_f: 42.8%, r_h: 31.2%, r_d: 26.0%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 476
+  'r_f' is only 46.7% of total reward (threshold: 50%). Breakdown: r_f: 46.7%, r_h: 31.7%, r_d: 21.6%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 477
+  'r_f' is only 48.4% of total reward (threshold: 50%). Breakdown: r_f: 48.4%, r_h: 33.7%, r_d: 17.8%
+[Monitor] Ep 479 | Reward: -20.0 (r_f: 43.9%, r_h: 32.6%, r_d: 23.4%)
+          Actions mu: [-0.23, -0.31, 0.20, 0.48]  std: [0.24, 0.37, 0.30, 0.30]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.35 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 479
+  'r_f' is only 43.9% of total reward (threshold: 50%). Breakdown: r_f: 43.9%, r_h: 32.6%, r_d: 23.4%
+  Ep 480/2000 | Avg Reward: -30.2 | Steps: 23445 | Time: 2038s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 480
+  'r_f' is only 43.3% of total reward (threshold: 50%). Breakdown: r_f: 43.3%, r_h: 35.7%, r_d: 21.0%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 481
+  'r_f' is only 49.2% of total reward (threshold: 50%). Breakdown: r_f: 49.2%, r_h: 32.6%, r_d: 18.2%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 482
+  'r_f' is only 47.9% of total reward (threshold: 50%). Breakdown: r_f: 47.9%, r_h: 30.6%, r_d: 21.5%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 484
+  'r_f' is only 44.4% of total reward (threshold: 50%). Breakdown: r_f: 44.4%, r_h: 38.1%, r_d: 17.4%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 485
+  'r_f' is only 40.0% of total reward (threshold: 50%). Breakdown: r_f: 40.0%, r_h: 24.4%, r_d: 35.6%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 486
+  'r_f' is only 38.5% of total reward (threshold: 50%). Breakdown: r_f: 38.5%, r_h: 18.7%, r_d: 42.8%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 488
+  'r_f' is only 47.9% of total reward (threshold: 50%). Breakdown: r_f: 47.9%, r_h: 17.6%, r_d: 34.5%
+[Monitor] Ep 489 | Reward: -49.9 (r_f: 74.1%, r_h: 15.3%, r_d: 10.6%)
+          Actions mu: [0.05, 0.05, 0.03, -0.01]  std: [0.29, 0.48, 0.44, 0.39]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.39 Hz
+  Ep 490/2000 | Avg Reward: -29.8 | Steps: 23945 | Time: 2101s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 490
+  'r_f' is only 41.3% of total reward (threshold: 50%). Breakdown: r_f: 41.3%, r_h: 42.8%, r_d: 15.9%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 493
+  'r_f' is only 47.8% of total reward (threshold: 50%). Breakdown: r_f: 47.8%, r_h: 20.8%, r_d: 31.5%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 495
+  'r_f' is only 45.2% of total reward (threshold: 50%). Breakdown: r_f: 45.2%, r_h: 25.7%, r_d: 29.1%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 496
+  'r_f' is only 37.0% of total reward (threshold: 50%). Breakdown: r_f: 37.0%, r_h: 49.1%, r_d: 13.9%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 498
+  'r_f' is only 21.6% of total reward (threshold: 50%). Breakdown: r_f: 21.6%, r_h: 41.5%, r_d: 36.9%
+[Monitor] Ep 499 | Reward: -25.6 (r_f: 44.8%, r_h: 17.9%, r_d: 37.2%)
+          Actions mu: [0.04, -0.27, 0.15, -0.06]  std: [0.33, 0.42, 0.38, 0.29]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.38 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 499
+  'r_f' is only 44.8% of total reward (threshold: 50%). Breakdown: r_f: 44.8%, r_h: 17.9%, r_d: 37.2%
+  Ep 500/2000 | Avg Reward: -34.8 | Steps: 24445 | Time: 2161s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 500
+  'r_f' is only 31.4% of total reward (threshold: 50%). Breakdown: r_f: 31.4%, r_h: 40.5%, r_d: 28.1%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 502
+  'r_f' is only 46.3% of total reward (threshold: 50%). Breakdown: r_f: 46.3%, r_h: 38.9%, r_d: 14.7%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 503
+  'r_f' is only 34.1% of total reward (threshold: 50%). Breakdown: r_f: 34.1%, r_h: 12.7%, r_d: 53.2%
+[Monitor] Ep 509 | Reward: -24.0 (r_f: 41.5%, r_h: 17.1%, r_d: 41.4%)
+          Actions mu: [0.02, -0.32, 0.17, -0.07]  std: [0.35, 0.37, 0.32, 0.27]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.36 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 509
+  'r_f' is only 41.5% of total reward (threshold: 50%). Breakdown: r_f: 41.5%, r_h: 17.1%, r_d: 41.4%
+  Ep 510/2000 | Avg Reward: -32.8 | Steps: 24945 | Time: 2224s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 510
+  'r_f' is only 49.1% of total reward (threshold: 50%). Breakdown: r_f: 49.1%, r_h: 35.7%, r_d: 15.2%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 513
+  'r_f' is only 14.8% of total reward (threshold: 50%). Breakdown: r_f: 14.8%, r_h: 59.9%, r_d: 25.3%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 516
+  'r_f' is only 42.4% of total reward (threshold: 50%). Breakdown: r_f: 42.4%, r_h: 12.6%, r_d: 45.0%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 517
+  'r_f' is only 45.9% of total reward (threshold: 50%). Breakdown: r_f: 45.9%, r_h: 22.9%, r_d: 31.2%
+[Monitor] Ep 519 | Reward: -33.9 (r_f: 53.7%, r_h: 11.4%, r_d: 34.9%)
+          Actions mu: [0.10, -0.05, 0.29, -0.14]  std: [0.37, 0.43, 0.31, 0.48]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.34 Hz
+  Ep 520/2000 | Avg Reward: -30.1 | Steps: 25445 | Time: 2296s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 520
+  'r_f' is only 38.8% of total reward (threshold: 50%). Breakdown: r_f: 38.8%, r_h: 20.0%, r_d: 41.2%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 521
+  'r_f' is only 44.5% of total reward (threshold: 50%). Breakdown: r_f: 44.5%, r_h: 34.3%, r_d: 21.2%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 522
+  'r_f' is only 48.4% of total reward (threshold: 50%). Breakdown: r_f: 48.4%, r_h: 29.1%, r_d: 22.6%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 527
+  'r_f' is only 43.1% of total reward (threshold: 50%). Breakdown: r_f: 43.1%, r_h: 11.9%, r_d: 45.0%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 528
+  'r_f' is only 43.8% of total reward (threshold: 50%). Breakdown: r_f: 43.8%, r_h: 22.6%, r_d: 33.6%
+[Monitor] Ep 529 | Reward: -33.2 (r_f: 60.5%, r_h: 15.9%, r_d: 23.7%)
+          Actions mu: [0.06, -0.20, 0.22, -0.09]  std: [0.36, 0.42, 0.30, 0.46]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.38 Hz
+  Ep 530/2000 | Avg Reward: -34.0 | Steps: 25945 | Time: 2346s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 531
+  'r_f' is only 48.3% of total reward (threshold: 50%). Breakdown: r_f: 48.3%, r_h: 20.0%, r_d: 31.6%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 534
+  'r_f' is only 47.2% of total reward (threshold: 50%). Breakdown: r_f: 47.2%, r_h: 38.0%, r_d: 14.8%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 538
+  'r_f' is only 25.0% of total reward (threshold: 50%). Breakdown: r_f: 25.0%, r_h: 65.5%, r_d: 9.5%
+[Monitor] Ep 539 | Reward: -26.7 (r_f: 45.6%, r_h: 11.5%, r_d: 42.8%)
+          Actions mu: [-0.08, -0.30, 0.21, -0.12]  std: [0.30, 0.36, 0.30, 0.24]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.37 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 539
+  'r_f' is only 45.6% of total reward (threshold: 50%). Breakdown: r_f: 45.6%, r_h: 11.5%, r_d: 42.8%
+  Ep 540/2000 | Avg Reward: -31.4 | Steps: 26445 | Time: 2407s
+Time step reduced to zero. Convergence is not likely.
+Simulation terminated at t=2.4966 s.
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 543
+  'r_f' is only 47.2% of total reward (threshold: 50%). Breakdown: r_f: 47.2%, r_h: 39.2%, r_d: 13.6%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 547
+  'r_f' is only 46.0% of total reward (threshold: 50%). Breakdown: r_f: 46.0%, r_h: 14.2%, r_d: 39.8%
+[Monitor] Ep 549 | Reward: -17.3 (r_f: 55.2%, r_h: 31.6%, r_d: 13.2%)
+          Actions mu: [0.23, -0.03, -0.00, 0.21]  std: [0.36, 0.27, 0.25, 0.25]
+          TDS fails: 1/10 (10.0%) | Freq peak: 0.45 Hz
+  Ep 550/2000 | Avg Reward: -47.4 | Steps: 26905 | Time: 2472s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 554
+  'r_f' is only 48.5% of total reward (threshold: 50%). Breakdown: r_f: 48.5%, r_h: 18.2%, r_d: 33.2%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 556
+  'r_f' is only 42.8% of total reward (threshold: 50%). Breakdown: r_f: 42.8%, r_h: 36.6%, r_d: 20.6%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 558
+  'r_f' is only 43.6% of total reward (threshold: 50%). Breakdown: r_f: 43.6%, r_h: 45.9%, r_d: 10.5%
+[Monitor] Ep 559 | Reward: -24.0 (r_f: 39.4%, r_h: 12.5%, r_d: 48.1%)
+          Actions mu: [-0.08, -0.32, 0.22, -0.12]  std: [0.29, 0.35, 0.27, 0.21]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.41 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 559
+  'r_f' is only 39.4% of total reward (threshold: 50%). Breakdown: r_f: 39.4%, r_h: 12.5%, r_d: 48.1%
+  Ep 560/2000 | Avg Reward: -28.2 | Steps: 27405 | Time: 2534s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 560
+  'r_f' is only 44.1% of total reward (threshold: 50%). Breakdown: r_f: 44.1%, r_h: 20.1%, r_d: 35.8%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 562
+  'r_f' is only 27.2% of total reward (threshold: 50%). Breakdown: r_f: 27.2%, r_h: 62.4%, r_d: 10.5%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 563
+  'r_f' is only 41.2% of total reward (threshold: 50%). Breakdown: r_f: 41.2%, r_h: 37.6%, r_d: 21.2%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 564
+  'r_f' is only 10.0% of total reward (threshold: 50%). Breakdown: r_f: 10.0%, r_h: 43.4%, r_d: 46.6%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 565
+  'r_f' is only 41.8% of total reward (threshold: 50%). Breakdown: r_f: 41.8%, r_h: 34.4%, r_d: 23.8%
+Time step reduced to zero. Convergence is not likely.
+Simulation terminated at t=2.4469 s.
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 568
+  'r_f' is only 31.2% of total reward (threshold: 50%). Breakdown: r_f: 31.2%, r_h: 39.9%, r_d: 28.9%
+[Monitor] Ep 569 | Reward: -34.6 (r_f: 45.5%, r_h: 33.0%, r_d: 21.5%)
+          Actions mu: [-0.29, -0.14, 0.09, 0.32]  std: [0.33, 0.46, 0.50, 0.39]
+          TDS fails: 1/10 (10.0%) | Freq peak: 0.38 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 569
+  'r_f' is only 45.5% of total reward (threshold: 50%). Breakdown: r_f: 45.5%, r_h: 33.0%, r_d: 21.5%
+  Ep 570/2000 | Avg Reward: -46.2 | Steps: 27865 | Time: 2589s
+Time step reduced to zero. Convergence is not likely.
+Simulation terminated at t=2.4631 s.
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 574
+  'r_f' is only 42.5% of total reward (threshold: 50%). Breakdown: r_f: 42.5%, r_h: 16.0%, r_d: 41.5%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 576
+  'r_f' is only 45.6% of total reward (threshold: 50%). Breakdown: r_f: 45.6%, r_h: 21.1%, r_d: 33.3%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 578
+  'r_f' is only 46.7% of total reward (threshold: 50%). Breakdown: r_f: 46.7%, r_h: 25.2%, r_d: 28.1%
+[Monitor] Ep 579 | Reward: -19.3 (r_f: 34.2%, r_h: 19.1%, r_d: 46.7%)
+          Actions mu: [0.09, -0.01, 0.19, 0.05]  std: [0.32, 0.39, 0.18, 0.32]
+          TDS fails: 1/10 (10.0%) | Freq peak: 0.38 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 579
+  'r_f' is only 34.2% of total reward (threshold: 50%). Breakdown: r_f: 34.2%, r_h: 19.1%, r_d: 46.7%
+  Ep 580/2000 | Avg Reward: -46.8 | Steps: 28325 | Time: 2644s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 580
+  'r_f' is only 47.3% of total reward (threshold: 50%). Breakdown: r_f: 47.3%, r_h: 32.7%, r_d: 20.0%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 582
+  'r_f' is only 32.8% of total reward (threshold: 50%). Breakdown: r_f: 32.8%, r_h: 55.1%, r_d: 12.1%
+[Monitor] Ep 589 | Reward: -20.5 (r_f: 48.8%, r_h: 13.4%, r_d: 37.7%)
+          Actions mu: [-0.03, -0.28, 0.18, 0.04]  std: [0.26, 0.39, 0.29, 0.33]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.34 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 589
+  'r_f' is only 48.8% of total reward (threshold: 50%). Breakdown: r_f: 48.8%, r_h: 13.4%, r_d: 37.7%
+  Ep 590/2000 | Avg Reward: -29.2 | Steps: 28825 | Time: 2702s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 590
+  'r_f' is only 42.1% of total reward (threshold: 50%). Breakdown: r_f: 42.1%, r_h: 30.5%, r_d: 27.4%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 594
+  'r_f' is only 36.2% of total reward (threshold: 50%). Breakdown: r_f: 36.2%, r_h: 51.0%, r_d: 12.8%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 595
+  'r_f' is only 49.8% of total reward (threshold: 50%). Breakdown: r_f: 49.8%, r_h: 32.8%, r_d: 17.5%
+[Monitor] Ep 599 | Reward: -51.8 (r_f: 65.8%, r_h: 14.6%, r_d: 19.6%)
+          Actions mu: [0.12, 0.09, -0.01, 0.36]  std: [0.36, 0.33, 0.41, 0.33]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.35 Hz
+  Ep 600/2000 | Avg Reward: -32.2 | Steps: 29325 | Time: 2762s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 602
+  'r_f' is only 46.6% of total reward (threshold: 50%). Breakdown: r_f: 46.6%, r_h: 21.5%, r_d: 32.0%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 604
+  'r_f' is only 41.3% of total reward (threshold: 50%). Breakdown: r_f: 41.3%, r_h: 37.6%, r_d: 21.1%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 605
+  'r_f' is only 45.3% of total reward (threshold: 50%). Breakdown: r_f: 45.3%, r_h: 21.5%, r_d: 33.2%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 606
+  'r_f' is only 46.6% of total reward (threshold: 50%). Breakdown: r_f: 46.6%, r_h: 15.8%, r_d: 37.6%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 607
+  'r_f' is only 49.7% of total reward (threshold: 50%). Breakdown: r_f: 49.7%, r_h: 23.9%, r_d: 26.3%
+[Monitor] Ep 609 | Reward: -53.8 (r_f: 70.7%, r_h: 17.0%, r_d: 12.3%)
+          Actions mu: [0.26, 0.07, 0.03, 0.14]  std: [0.35, 0.36, 0.35, 0.41]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.34 Hz
+  Ep 610/2000 | Avg Reward: -29.3 | Steps: 29825 | Time: 2812s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 611
+  'r_f' is only 40.9% of total reward (threshold: 50%). Breakdown: r_f: 40.9%, r_h: 38.9%, r_d: 20.2%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 612
+  'r_f' is only 47.7% of total reward (threshold: 50%). Breakdown: r_f: 47.7%, r_h: 22.9%, r_d: 29.4%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 613
+  'r_f' is only 46.2% of total reward (threshold: 50%). Breakdown: r_f: 46.2%, r_h: 44.3%, r_d: 9.5%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 614
+  'r_f' is only 34.3% of total reward (threshold: 50%). Breakdown: r_f: 34.3%, r_h: 34.6%, r_d: 31.1%
+Time step reduced to zero. Convergence is not likely.
+Simulation terminated at t=2.6355 s.
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 616
+  'r_f' is only 48.8% of total reward (threshold: 50%). Breakdown: r_f: 48.8%, r_h: 42.2%, r_d: 9.0%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 618
+  'r_f' is only 46.7% of total reward (threshold: 50%). Breakdown: r_f: 46.7%, r_h: 28.0%, r_d: 25.2%
+[Monitor] Ep 619 | Reward: -29.2 (r_f: 62.4%, r_h: 17.3%, r_d: 20.3%)
+          Actions mu: [0.13, 0.02, -0.07, 0.11]  std: [0.36, 0.27, 0.35, 0.29]
+          TDS fails: 1/10 (10.0%) | Freq peak: 0.34 Hz
+  Ep 620/2000 | Avg Reward: -46.0 | Steps: 30286 | Time: 2866s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 620
+  'r_f' is only 44.3% of total reward (threshold: 50%). Breakdown: r_f: 44.3%, r_h: 45.5%, r_d: 10.1%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 622
+  'r_f' is only 48.6% of total reward (threshold: 50%). Breakdown: r_f: 48.6%, r_h: 25.3%, r_d: 26.2%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 628
+  'r_f' is only 44.3% of total reward (threshold: 50%). Breakdown: r_f: 44.3%, r_h: 23.8%, r_d: 31.9%
+[Monitor] Ep 629 | Reward: -31.3 (r_f: 49.8%, r_h: 32.7%, r_d: 17.5%)
+          Actions mu: [0.25, -0.02, 0.10, 0.09]  std: [0.36, 0.38, 0.37, 0.38]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.35 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 629
+  'r_f' is only 49.8% of total reward (threshold: 50%). Breakdown: r_f: 49.8%, r_h: 32.7%, r_d: 17.5%
+  Ep 630/2000 | Avg Reward: -32.9 | Steps: 30786 | Time: 2929s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 634
+  'r_f' is only 40.0% of total reward (threshold: 50%). Breakdown: r_f: 40.0%, r_h: 33.5%, r_d: 26.5%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 635
+  'r_f' is only 47.1% of total reward (threshold: 50%). Breakdown: r_f: 47.1%, r_h: 18.2%, r_d: 34.7%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 637
+  'r_f' is only 40.8% of total reward (threshold: 50%). Breakdown: r_f: 40.8%, r_h: 36.9%, r_d: 22.2%
+[Monitor] Ep 639 | Reward: -34.0 (r_f: 67.6%, r_h: 19.9%, r_d: 12.5%)
+          Actions mu: [0.24, 0.02, 0.04, 0.05]  std: [0.33, 0.32, 0.37, 0.36]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.40 Hz
+  Ep 640/2000 | Avg Reward: -38.4 | Steps: 31286 | Time: 2989s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 644
+  'r_f' is only 14.6% of total reward (threshold: 50%). Breakdown: r_f: 14.6%, r_h: 36.5%, r_d: 48.9%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 647
+  'r_f' is only 45.1% of total reward (threshold: 50%). Breakdown: r_f: 45.1%, r_h: 39.4%, r_d: 15.4%
+[Monitor] Ep 649 | Reward: -24.1 (r_f: 48.3%, r_h: 28.0%, r_d: 23.8%)
+          Actions mu: [0.07, 0.01, 0.13, -0.04]  std: [0.48, 0.27, 0.37, 0.35]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.39 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 649
+  'r_f' is only 48.3% of total reward (threshold: 50%). Breakdown: r_f: 48.3%, r_h: 28.0%, r_d: 23.8%
+  Ep 650/2000 | Avg Reward: -31.4 | Steps: 31786 | Time: 3035s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 651
+  'r_f' is only 46.7% of total reward (threshold: 50%). Breakdown: r_f: 46.7%, r_h: 17.4%, r_d: 36.0%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 654
+  'r_f' is only 32.2% of total reward (threshold: 50%). Breakdown: r_f: 32.2%, r_h: 16.0%, r_d: 51.9%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 657
+  'r_f' is only 49.8% of total reward (threshold: 50%). Breakdown: r_f: 49.8%, r_h: 16.5%, r_d: 33.7%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 658
+  'r_f' is only 44.9% of total reward (threshold: 50%). Breakdown: r_f: 44.9%, r_h: 28.1%, r_d: 27.0%
+[Monitor] Ep 659 | Reward: -23.4 (r_f: 46.2%, r_h: 27.2%, r_d: 26.6%)
+          Actions mu: [0.05, -0.02, 0.06, -0.13]  std: [0.33, 0.43, 0.42, 0.35]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.38 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 659
+  'r_f' is only 46.2% of total reward (threshold: 50%). Breakdown: r_f: 46.2%, r_h: 27.2%, r_d: 26.6%
+  Ep 660/2000 | Avg Reward: -26.2 | Steps: 32286 | Time: 3097s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 660
+  'r_f' is only 49.0% of total reward (threshold: 50%). Breakdown: r_f: 49.0%, r_h: 32.9%, r_d: 18.1%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 663
+  'r_f' is only 46.5% of total reward (threshold: 50%). Breakdown: r_f: 46.5%, r_h: 41.3%, r_d: 12.2%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 665
+  'r_f' is only 43.2% of total reward (threshold: 50%). Breakdown: r_f: 43.2%, r_h: 35.6%, r_d: 21.2%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 666
+  'r_f' is only 47.2% of total reward (threshold: 50%). Breakdown: r_f: 47.2%, r_h: 34.8%, r_d: 17.9%
+[Monitor] Ep 669 | Reward: -23.0 (r_f: 47.1%, r_h: 18.4%, r_d: 34.5%)
+          Actions mu: [0.03, -0.30, 0.20, -0.04]  std: [0.28, 0.43, 0.24, 0.28]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.36 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 669
+  'r_f' is only 47.1% of total reward (threshold: 50%). Breakdown: r_f: 47.1%, r_h: 18.4%, r_d: 34.5%
+  Ep 670/2000 | Avg Reward: -35.1 | Steps: 32786 | Time: 3147s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 672
+  'r_f' is only 45.8% of total reward (threshold: 50%). Breakdown: r_f: 45.8%, r_h: 20.8%, r_d: 33.4%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 673
+  'r_f' is only 44.6% of total reward (threshold: 50%). Breakdown: r_f: 44.6%, r_h: 39.5%, r_d: 16.0%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 675
+  'r_f' is only 42.0% of total reward (threshold: 50%). Breakdown: r_f: 42.0%, r_h: 21.9%, r_d: 36.1%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 676
+  'r_f' is only 48.4% of total reward (threshold: 50%). Breakdown: r_f: 48.4%, r_h: 16.9%, r_d: 34.7%
+[Monitor] Ep 679 | Reward: -33.1 (r_f: 61.5%, r_h: 21.2%, r_d: 17.2%)
+          Actions mu: [0.28, 0.03, 0.02, 0.03]  std: [0.31, 0.30, 0.33, 0.32]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.41 Hz
+  Ep 680/2000 | Avg Reward: -25.8 | Steps: 33286 | Time: 3200s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 682
+  'r_f' is only 49.0% of total reward (threshold: 50%). Breakdown: r_f: 49.0%, r_h: 36.0%, r_d: 15.0%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 683
+  'r_f' is only 48.8% of total reward (threshold: 50%). Breakdown: r_f: 48.8%, r_h: 16.8%, r_d: 34.4%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 684
+  'r_f' is only 47.5% of total reward (threshold: 50%). Breakdown: r_f: 47.5%, r_h: 33.5%, r_d: 18.9%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 685
+  'r_f' is only 39.4% of total reward (threshold: 50%). Breakdown: r_f: 39.4%, r_h: 32.2%, r_d: 28.5%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 687
+  'r_f' is only 37.2% of total reward (threshold: 50%). Breakdown: r_f: 37.2%, r_h: 35.3%, r_d: 27.5%
+[Monitor] Ep 689 | Reward: -62.0 (r_f: 55.6%, r_h: 9.8%, r_d: 34.6%)
+          Actions mu: [0.22, -0.02, 0.24, 0.27]  std: [0.39, 0.44, 0.39, 0.33]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.38 Hz
+  Ep 690/2000 | Avg Reward: -35.5 | Steps: 33786 | Time: 3251s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 690
+  'r_f' is only 42.9% of total reward (threshold: 50%). Breakdown: r_f: 42.9%, r_h: 14.9%, r_d: 42.2%
+Time step reduced to zero. Convergence is not likely.
+Simulation terminated at t=2.4242 s.
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 693
+  'r_f' is only 39.8% of total reward (threshold: 50%). Breakdown: r_f: 39.8%, r_h: 38.6%, r_d: 21.6%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 698
+  'r_f' is only 34.0% of total reward (threshold: 50%). Breakdown: r_f: 34.0%, r_h: 43.9%, r_d: 22.1%
+[Monitor] Ep 699 | Reward: -34.2 (r_f: 65.5%, r_h: 16.9%, r_d: 17.6%)
+          Actions mu: [0.26, -0.04, 0.06, 0.15]  std: [0.36, 0.31, 0.33, 0.33]
+          TDS fails: 1/10 (10.0%) | Freq peak: 0.39 Hz
+  Ep 700/2000 | Avg Reward: -45.8 | Steps: 34246 | Time: 3315s
+Time step reduced to zero. Convergence is not likely.
+Simulation terminated at t=2.5989 s.
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 705
+  'r_f' is only 45.1% of total reward (threshold: 50%). Breakdown: r_f: 45.1%, r_h: 19.9%, r_d: 35.0%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 707
+  'r_f' is only 43.1% of total reward (threshold: 50%). Breakdown: r_f: 43.1%, r_h: 18.7%, r_d: 38.2%
+[Monitor] Ep 709 | Reward: -36.8 (r_f: 60.9%, r_h: 20.0%, r_d: 19.1%)
+          Actions mu: [0.22, -0.06, -0.04, 0.26]  std: [0.38, 0.30, 0.36, 0.28]
+          TDS fails: 1/10 (10.0%) | Freq peak: 0.38 Hz
+  Ep 710/2000 | Avg Reward: -49.4 | Steps: 34707 | Time: 3377s
+Time step reduced to zero. Convergence is not likely.
+Simulation terminated at t=2.5579 s.
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 715
+  'r_f' is only 46.9% of total reward (threshold: 50%). Breakdown: r_f: 46.9%, r_h: 18.7%, r_d: 34.4%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 717
+  'r_f' is only 46.6% of total reward (threshold: 50%). Breakdown: r_f: 46.6%, r_h: 21.0%, r_d: 32.4%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 718
+  'r_f' is only 48.1% of total reward (threshold: 50%). Breakdown: r_f: 48.1%, r_h: 19.3%, r_d: 32.7%
+[Monitor] Ep 719 | Reward: -21.9 (r_f: 56.6%, r_h: 20.2%, r_d: 23.2%)
+          Actions mu: [0.09, -0.26, 0.11, 0.02]  std: [0.31, 0.37, 0.36, 0.34]
+          TDS fails: 1/10 (10.0%) | Freq peak: 0.39 Hz
+  Ep 720/2000 | Avg Reward: -44.4 | Steps: 35168 | Time: 3428s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 723
+  'r_f' is only 45.8% of total reward (threshold: 50%). Breakdown: r_f: 45.8%, r_h: 21.0%, r_d: 33.2%
+[Monitor] Ep 729 | Reward: -39.0 (r_f: 59.8%, r_h: 19.7%, r_d: 20.5%)
+          Actions mu: [0.27, -0.04, 0.02, 0.11]  std: [0.34, 0.32, 0.35, 0.39]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.33 Hz
+  Ep 730/2000 | Avg Reward: -29.4 | Steps: 35668 | Time: 3484s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 730
+  'r_f' is only 47.7% of total reward (threshold: 50%). Breakdown: r_f: 47.7%, r_h: 33.0%, r_d: 19.4%
+[Monitor] Ep 739 | Reward: -27.5 (r_f: 51.0%, r_h: 23.1%, r_d: 26.0%)
+          Actions mu: [0.02, 0.05, -0.05, 0.11]  std: [0.27, 0.29, 0.36, 0.30]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.35 Hz
+  Ep 740/2000 | Avg Reward: -36.1 | Steps: 36168 | Time: 3541s
+[Monitor] Ep 749 | Reward: -25.4 (r_f: 43.7%, r_h: 17.3%, r_d: 39.0%)
+          Actions mu: [0.04, -0.27, 0.17, -0.05]  std: [0.24, 0.38, 0.25, 0.31]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.38 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 749
+  'r_f' is only 43.7% of total reward (threshold: 50%). Breakdown: r_f: 43.7%, r_h: 17.3%, r_d: 39.0%
+  Ep 750/2000 | Avg Reward: -36.6 | Steps: 36668 | Time: 3602s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 750
+  'r_f' is only 43.0% of total reward (threshold: 50%). Breakdown: r_f: 43.0%, r_h: 17.6%, r_d: 39.4%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 753
+  'r_f' is only 42.8% of total reward (threshold: 50%). Breakdown: r_f: 42.8%, r_h: 23.5%, r_d: 33.7%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 756
+  'r_f' is only 44.4% of total reward (threshold: 50%). Breakdown: r_f: 44.4%, r_h: 33.0%, r_d: 22.5%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 758
+  'r_f' is only 35.7% of total reward (threshold: 50%). Breakdown: r_f: 35.7%, r_h: 46.0%, r_d: 18.3%
+[Monitor] Ep 759 | Reward: -24.4 (r_f: 57.0%, r_h: 25.4%, r_d: 17.6%)
+          Actions mu: [0.27, -0.10, -0.10, 0.17]  std: [0.35, 0.29, 0.29, 0.32]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.36 Hz
+  Ep 760/2000 | Avg Reward: -29.7 | Steps: 37168 | Time: 3671s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 760
+  'r_f' is only 44.9% of total reward (threshold: 50%). Breakdown: r_f: 44.9%, r_h: 30.3%, r_d: 24.8%
+Time step reduced to zero. Convergence is not likely.
+Simulation terminated at t=2.4330 s.
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 763
+  'r_f' is only 48.8% of total reward (threshold: 50%). Breakdown: r_f: 48.8%, r_h: 36.1%, r_d: 15.1%
+[Monitor] Ep 769 | Reward: -25.1 (r_f: 58.5%, r_h: 12.9%, r_d: 28.6%)
+          Actions mu: [0.06, -0.14, 0.28, -0.27]  std: [0.37, 0.40, 0.23, 0.30]
+          TDS fails: 1/10 (10.0%) | Freq peak: 0.38 Hz
+  Ep 770/2000 | Avg Reward: -45.0 | Steps: 37628 | Time: 3727s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 771
+  'r_f' is only 43.0% of total reward (threshold: 50%). Breakdown: r_f: 43.0%, r_h: 38.6%, r_d: 18.3%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 772
+  'r_f' is only 36.7% of total reward (threshold: 50%). Breakdown: r_f: 36.7%, r_h: 18.3%, r_d: 45.0%
+[Monitor] Ep 779 | Reward: -20.7 (r_f: 47.4%, r_h: 17.9%, r_d: 34.7%)
+          Actions mu: [0.07, -0.22, 0.10, -0.05]  std: [0.30, 0.37, 0.30, 0.29]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.41 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 779
+  'r_f' is only 47.4% of total reward (threshold: 50%). Breakdown: r_f: 47.4%, r_h: 17.9%, r_d: 34.7%
+  Ep 780/2000 | Avg Reward: -31.7 | Steps: 38128 | Time: 3787s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 782
+  'r_f' is only 44.5% of total reward (threshold: 50%). Breakdown: r_f: 44.5%, r_h: 29.6%, r_d: 26.0%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 783
+  'r_f' is only 45.5% of total reward (threshold: 50%). Breakdown: r_f: 45.5%, r_h: 39.5%, r_d: 14.9%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 786
+  'r_f' is only 34.7% of total reward (threshold: 50%). Breakdown: r_f: 34.7%, r_h: 49.6%, r_d: 15.6%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 787
+  'r_f' is only 46.0% of total reward (threshold: 50%). Breakdown: r_f: 46.0%, r_h: 13.5%, r_d: 40.5%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 788
+  'r_f' is only 46.2% of total reward (threshold: 50%). Breakdown: r_f: 46.2%, r_h: 40.5%, r_d: 13.3%
+[Monitor] Ep 789 | Reward: -17.4 (r_f: 48.3%, r_h: 32.8%, r_d: 19.0%)
+          Actions mu: [0.22, -0.05, 0.15, -0.05]  std: [0.31, 0.29, 0.25, 0.26]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.37 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 789
+  'r_f' is only 48.3% of total reward (threshold: 50%). Breakdown: r_f: 48.3%, r_h: 32.8%, r_d: 19.0%
+  Ep 790/2000 | Avg Reward: -26.2 | Steps: 38628 | Time: 3836s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 790
+  'r_f' is only 46.7% of total reward (threshold: 50%). Breakdown: r_f: 46.7%, r_h: 15.2%, r_d: 38.1%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 791
+  'r_f' is only 43.6% of total reward (threshold: 50%). Breakdown: r_f: 43.6%, r_h: 23.5%, r_d: 32.9%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 796
+  'r_f' is only 42.6% of total reward (threshold: 50%). Breakdown: r_f: 42.6%, r_h: 12.8%, r_d: 44.6%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 798
+  'r_f' is only 45.5% of total reward (threshold: 50%). Breakdown: r_f: 45.5%, r_h: 15.4%, r_d: 39.1%
+[Monitor] Ep 799 | Reward: -38.2 (r_f: 65.0%, r_h: 20.3%, r_d: 14.7%)
+          Actions mu: [0.23, 0.01, -0.06, 0.15]  std: [0.36, 0.33, 0.36, 0.34]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.35 Hz
+  Ep 800/2000 | Avg Reward: -29.2 | Steps: 39128 | Time: 3907s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 801
+  'r_f' is only 39.3% of total reward (threshold: 50%). Breakdown: r_f: 39.3%, r_h: 28.5%, r_d: 32.1%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 802
+  'r_f' is only 41.5% of total reward (threshold: 50%). Breakdown: r_f: 41.5%, r_h: 17.5%, r_d: 41.1%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 804
+  'r_f' is only 44.9% of total reward (threshold: 50%). Breakdown: r_f: 44.9%, r_h: 23.5%, r_d: 31.6%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 805
+  'r_f' is only 46.9% of total reward (threshold: 50%). Breakdown: r_f: 46.9%, r_h: 37.5%, r_d: 15.6%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 806
+  'r_f' is only 13.9% of total reward (threshold: 50%). Breakdown: r_f: 13.9%, r_h: 17.4%, r_d: 68.7%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 807
+  'r_f' is only 27.0% of total reward (threshold: 50%). Breakdown: r_f: 27.0%, r_h: 43.4%, r_d: 29.7%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 808
+  'r_f' is only 47.9% of total reward (threshold: 50%). Breakdown: r_f: 47.9%, r_h: 24.2%, r_d: 27.9%
+[Monitor] Ep 809 | Reward: -26.5 (r_f: 57.6%, r_h: 21.8%, r_d: 20.6%)
+          Actions mu: [0.04, -0.11, 0.04, -0.03]  std: [0.34, 0.45, 0.31, 0.39]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.42 Hz
+  Ep 810/2000 | Avg Reward: -23.0 | Steps: 39628 | Time: 3970s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 811
+  'r_f' is only 25.2% of total reward (threshold: 50%). Breakdown: r_f: 25.2%, r_h: 15.5%, r_d: 59.3%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 814
+  'r_f' is only 46.7% of total reward (threshold: 50%). Breakdown: r_f: 46.7%, r_h: 37.3%, r_d: 15.9%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 817
+  'r_f' is only 45.0% of total reward (threshold: 50%). Breakdown: r_f: 45.0%, r_h: 34.9%, r_d: 20.1%
+[Monitor] Ep 819 | Reward: -21.3 (r_f: 50.5%, r_h: 30.0%, r_d: 19.5%)
+          Actions mu: [0.26, -0.14, 0.13, 0.05]  std: [0.33, 0.33, 0.35, 0.32]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.38 Hz
+  Ep 820/2000 | Avg Reward: -27.8 | Steps: 40128 | Time: 4027s
+[Monitor] Ep 829 | Reward: -19.5 (r_f: 26.7%, r_h: 33.4%, r_d: 39.9%)
+          Actions mu: [0.25, -0.12, -0.04, 0.18]  std: [0.33, 0.32, 0.39, 0.35]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.31 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 829
+  'r_f' is only 26.7% of total reward (threshold: 50%). Breakdown: r_f: 26.7%, r_h: 33.4%, r_d: 39.9%
+  Ep 830/2000 | Avg Reward: -29.1 | Steps: 40628 | Time: 4083s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 831
+  'r_f' is only 49.2% of total reward (threshold: 50%). Breakdown: r_f: 49.2%, r_h: 17.6%, r_d: 33.3%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 834
+  'r_f' is only 44.7% of total reward (threshold: 50%). Breakdown: r_f: 44.7%, r_h: 36.0%, r_d: 19.3%
+[Monitor] Ep 839 | Reward: -30.2 (r_f: 53.8%, r_h: 21.0%, r_d: 25.2%)
+          Actions mu: [0.26, -0.02, -0.02, 0.17]  std: [0.33, 0.38, 0.36, 0.36]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.37 Hz
+  Ep 840/2000 | Avg Reward: -29.8 | Steps: 41128 | Time: 4149s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 840
+  'r_f' is only 47.1% of total reward (threshold: 50%). Breakdown: r_f: 47.1%, r_h: 14.7%, r_d: 38.2%
+Time step reduced to zero. Convergence is not likely.
+Simulation terminated at t=2.4177 s.
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 845
+  'r_f' is only 47.2% of total reward (threshold: 50%). Breakdown: r_f: 47.2%, r_h: 21.7%, r_d: 31.1%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 846
+  'r_f' is only 39.8% of total reward (threshold: 50%). Breakdown: r_f: 39.8%, r_h: 39.9%, r_d: 20.4%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 848
+  'r_f' is only 37.4% of total reward (threshold: 50%). Breakdown: r_f: 37.4%, r_h: 39.4%, r_d: 23.2%
+[Monitor] Ep 849 | Reward: -21.5 (r_f: 41.0%, r_h: 32.6%, r_d: 26.3%)
+          Actions mu: [0.30, -0.18, 0.22, -0.03]  std: [0.29, 0.38, 0.30, 0.30]
+          TDS fails: 1/10 (10.0%) | Freq peak: 0.39 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 849
+  'r_f' is only 41.0% of total reward (threshold: 50%). Breakdown: r_f: 41.0%, r_h: 32.6%, r_d: 26.3%
+  Ep 850/2000 | Avg Reward: -47.2 | Steps: 41588 | Time: 4195s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 856
+  'r_f' is only 42.2% of total reward (threshold: 50%). Breakdown: r_f: 42.2%, r_h: 19.0%, r_d: 38.8%
+[Monitor] Ep 859 | Reward: -40.3 (r_f: 68.9%, r_h: 13.3%, r_d: 17.8%)
+          Actions mu: [0.04, -0.07, 0.02, -0.06]  std: [0.33, 0.43, 0.38, 0.34]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.37 Hz
+  Ep 860/2000 | Avg Reward: -29.7 | Steps: 42088 | Time: 4254s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 865
+  'r_f' is only 45.6% of total reward (threshold: 50%). Breakdown: r_f: 45.6%, r_h: 24.1%, r_d: 30.3%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 867
+  'r_f' is only 46.8% of total reward (threshold: 50%). Breakdown: r_f: 46.8%, r_h: 23.4%, r_d: 29.8%
+[Monitor] Ep 869 | Reward: -36.8 (r_f: 59.2%, r_h: 24.0%, r_d: 16.8%)
+          Actions mu: [0.25, -0.02, 0.04, 0.07]  std: [0.38, 0.36, 0.37, 0.36]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.36 Hz
+  Ep 870/2000 | Avg Reward: -35.0 | Steps: 42588 | Time: 4316s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 871
+  'r_f' is only 38.5% of total reward (threshold: 50%). Breakdown: r_f: 38.5%, r_h: 42.0%, r_d: 19.5%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 872
+  'r_f' is only 40.3% of total reward (threshold: 50%). Breakdown: r_f: 40.3%, r_h: 17.4%, r_d: 42.3%
+[Monitor] Ep 879 | Reward: -15.1 (r_f: 51.2%, r_h: 29.7%, r_d: 19.1%)
+          Actions mu: [0.06, -0.10, -0.13, 0.11]  std: [0.22, 0.36, 0.28, 0.34]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.37 Hz
+  Ep 880/2000 | Avg Reward: -30.9 | Steps: 43088 | Time: 4372s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 882
+  'r_f' is only 48.3% of total reward (threshold: 50%). Breakdown: r_f: 48.3%, r_h: 21.2%, r_d: 30.6%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 886
+  'r_f' is only 48.8% of total reward (threshold: 50%). Breakdown: r_f: 48.8%, r_h: 26.0%, r_d: 25.3%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 888
+  'r_f' is only 40.9% of total reward (threshold: 50%). Breakdown: r_f: 40.9%, r_h: 29.2%, r_d: 30.0%
+[Monitor] Ep 889 | Reward: -29.4 (r_f: 65.8%, r_h: 16.5%, r_d: 17.7%)
+          Actions mu: [0.14, -0.15, 0.04, 0.18]  std: [0.40, 0.28, 0.40, 0.31]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.38 Hz
+  Ep 890/2000 | Avg Reward: -27.2 | Steps: 43588 | Time: 4429s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 897
+  'r_f' is only 48.6% of total reward (threshold: 50%). Breakdown: r_f: 48.6%, r_h: 23.1%, r_d: 28.3%
+[Monitor] Ep 899 | Reward: -17.4 (r_f: 29.8%, r_h: 30.3%, r_d: 39.9%)
+          Actions mu: [0.22, -0.12, 0.04, 0.18]  std: [0.32, 0.41, 0.33, 0.35]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.38 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 899
+  'r_f' is only 29.8% of total reward (threshold: 50%). Breakdown: r_f: 29.8%, r_h: 30.3%, r_d: 39.9%
+  Ep 900/2000 | Avg Reward: -35.8 | Steps: 44088 | Time: 4480s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 901
+  'r_f' is only 49.4% of total reward (threshold: 50%). Breakdown: r_f: 49.4%, r_h: 24.0%, r_d: 26.6%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 902
+  'r_f' is only 48.4% of total reward (threshold: 50%). Breakdown: r_f: 48.4%, r_h: 24.3%, r_d: 27.3%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 905
+  'r_f' is only 43.8% of total reward (threshold: 50%). Breakdown: r_f: 43.8%, r_h: 28.0%, r_d: 28.3%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 906
+  'r_f' is only 49.1% of total reward (threshold: 50%). Breakdown: r_f: 49.1%, r_h: 30.9%, r_d: 20.1%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 907
+  'r_f' is only 49.3% of total reward (threshold: 50%). Breakdown: r_f: 49.3%, r_h: 12.7%, r_d: 38.0%
+[Monitor] Ep 909 | Reward: -18.5 (r_f: 49.9%, r_h: 19.7%, r_d: 30.4%)
+          Actions mu: [-0.01, -0.30, 0.28, -0.33]  std: [0.29, 0.35, 0.23, 0.28]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.37 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 909
+  'r_f' is only 49.9% of total reward (threshold: 50%). Breakdown: r_f: 49.9%, r_h: 19.7%, r_d: 30.4%
+  Ep 910/2000 | Avg Reward: -27.4 | Steps: 44588 | Time: 4539s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 913
+  'r_f' is only 30.1% of total reward (threshold: 50%). Breakdown: r_f: 30.1%, r_h: 16.4%, r_d: 53.5%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 914
+  'r_f' is only 45.0% of total reward (threshold: 50%). Breakdown: r_f: 45.0%, r_h: 26.7%, r_d: 28.3%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 918
+  'r_f' is only 46.8% of total reward (threshold: 50%). Breakdown: r_f: 46.8%, r_h: 31.4%, r_d: 21.8%
+[Monitor] Ep 919 | Reward: -27.0 (r_f: 51.3%, r_h: 34.1%, r_d: 14.6%)
+          Actions mu: [0.30, -0.03, -0.08, 0.05]  std: [0.30, 0.33, 0.31, 0.27]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.35 Hz
+  Ep 920/2000 | Avg Reward: -31.6 | Steps: 45088 | Time: 4592s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 921
+  'r_f' is only 45.0% of total reward (threshold: 50%). Breakdown: r_f: 45.0%, r_h: 31.6%, r_d: 23.4%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 927
+  'r_f' is only 42.4% of total reward (threshold: 50%). Breakdown: r_f: 42.4%, r_h: 18.2%, r_d: 39.4%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 928
+  'r_f' is only 45.9% of total reward (threshold: 50%). Breakdown: r_f: 45.9%, r_h: 32.0%, r_d: 22.1%
+[Monitor] Ep 929 | Reward: -25.7 (r_f: 44.6%, r_h: 30.8%, r_d: 24.5%)
+          Actions mu: [0.30, 0.05, -0.09, 0.21]  std: [0.29, 0.36, 0.27, 0.28]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.36 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 929
+  'r_f' is only 44.6% of total reward (threshold: 50%). Breakdown: r_f: 44.6%, r_h: 30.8%, r_d: 24.5%
+  Ep 930/2000 | Avg Reward: -26.3 | Steps: 45588 | Time: 4656s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 930
+  'r_f' is only 47.9% of total reward (threshold: 50%). Breakdown: r_f: 47.9%, r_h: 25.4%, r_d: 26.7%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 934
+  'r_f' is only 45.0% of total reward (threshold: 50%). Breakdown: r_f: 45.0%, r_h: 19.0%, r_d: 36.0%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 936
+  'r_f' is only 39.5% of total reward (threshold: 50%). Breakdown: r_f: 39.5%, r_h: 21.5%, r_d: 39.1%
+[Monitor] Ep 939 | Reward: -34.1 (r_f: 76.9%, r_h: 11.9%, r_d: 11.2%)
+          Actions mu: [0.14, -0.14, 0.04, 0.15]  std: [0.44, 0.34, 0.35, 0.38]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.35 Hz
+  Ep 940/2000 | Avg Reward: -31.2 | Steps: 46088 | Time: 4711s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 946
+  'r_f' is only 39.7% of total reward (threshold: 50%). Breakdown: r_f: 39.7%, r_h: 39.8%, r_d: 20.5%
+[Monitor] Ep 949 | Reward: -36.7 (r_f: 64.0%, r_h: 15.3%, r_d: 20.7%)
+          Actions mu: [0.03, -0.10, 0.06, -0.05]  std: [0.31, 0.43, 0.39, 0.37]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.34 Hz
+  Ep 950/2000 | Avg Reward: -30.4 | Steps: 46588 | Time: 4761s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 957
+  'r_f' is only 48.5% of total reward (threshold: 50%). Breakdown: r_f: 48.5%, r_h: 23.3%, r_d: 28.2%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 958
+  'r_f' is only 48.4% of total reward (threshold: 50%). Breakdown: r_f: 48.4%, r_h: 27.5%, r_d: 24.1%
+[Monitor] Ep 959 | Reward: -15.8 (r_f: 58.7%, r_h: 15.6%, r_d: 25.7%)
+          Actions mu: [-0.13, -0.12, 0.29, 0.01]  std: [0.26, 0.33, 0.23, 0.27]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.36 Hz
+  Ep 960/2000 | Avg Reward: -31.3 | Steps: 47088 | Time: 4817s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 965
+  'r_f' is only 45.0% of total reward (threshold: 50%). Breakdown: r_f: 45.0%, r_h: 25.7%, r_d: 29.2%
+[Monitor] Ep 969 | Reward: -16.8 (r_f: 51.7%, r_h: 21.4%, r_d: 27.0%)
+          Actions mu: [-0.01, 0.03, -0.13, 0.13]  std: [0.22, 0.32, 0.26, 0.30]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.36 Hz
+  Ep 970/2000 | Avg Reward: -32.7 | Steps: 47588 | Time: 4878s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 971
+  'r_f' is only 42.9% of total reward (threshold: 50%). Breakdown: r_f: 42.9%, r_h: 15.6%, r_d: 41.6%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 977
+  'r_f' is only 49.9% of total reward (threshold: 50%). Breakdown: r_f: 49.9%, r_h: 22.5%, r_d: 27.6%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 978
+  'r_f' is only 24.1% of total reward (threshold: 50%). Breakdown: r_f: 24.1%, r_h: 13.5%, r_d: 62.4%
+[Monitor] Ep 979 | Reward: -26.7 (r_f: 53.6%, r_h: 34.6%, r_d: 11.8%)
+          Actions mu: [0.32, -0.00, -0.06, 0.05]  std: [0.29, 0.33, 0.28, 0.30]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.35 Hz
+  Ep 980/2000 | Avg Reward: -32.1 | Steps: 48088 | Time: 4930s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 981
+  'r_f' is only 44.7% of total reward (threshold: 50%). Breakdown: r_f: 44.7%, r_h: 30.6%, r_d: 24.7%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 982
+  'r_f' is only 46.6% of total reward (threshold: 50%). Breakdown: r_f: 46.6%, r_h: 20.1%, r_d: 33.3%
+[Monitor] Ep 989 | Reward: -49.2 (r_f: 70.2%, r_h: 18.1%, r_d: 11.7%)
+          Actions mu: [0.04, -0.01, 0.12, 0.01]  std: [0.35, 0.44, 0.37, 0.42]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.39 Hz
+  Ep 990/2000 | Avg Reward: -36.4 | Steps: 48588 | Time: 4990s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 990
+  'r_f' is only 45.5% of total reward (threshold: 50%). Breakdown: r_f: 45.5%, r_h: 20.9%, r_d: 33.6%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 992
+  'r_f' is only 35.3% of total reward (threshold: 50%). Breakdown: r_f: 35.3%, r_h: 40.4%, r_d: 24.3%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 993
+  'r_f' is only 45.0% of total reward (threshold: 50%). Breakdown: r_f: 45.0%, r_h: 17.7%, r_d: 37.4%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 994
+  'r_f' is only 49.8% of total reward (threshold: 50%). Breakdown: r_f: 49.8%, r_h: 17.2%, r_d: 33.0%
+[Monitor] Ep 999 | Reward: -24.0 (r_f: 56.1%, r_h: 23.3%, r_d: 20.7%)
+          Actions mu: [0.04, -0.24, 0.15, 0.02]  std: [0.32, 0.37, 0.34, 0.34]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.35 Hz
+  Ep 1000/2000 | Avg Reward: -25.4 | Steps: 49088 | Time: 5040s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1003
+  'r_f' is only 47.4% of total reward (threshold: 50%). Breakdown: r_f: 47.4%, r_h: 18.6%, r_d: 33.9%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1004
+  'r_f' is only 30.5% of total reward (threshold: 50%). Breakdown: r_f: 30.5%, r_h: 41.9%, r_d: 27.7%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1005
+  'r_f' is only 48.5% of total reward (threshold: 50%). Breakdown: r_f: 48.5%, r_h: 23.7%, r_d: 27.8%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1006
+  'r_f' is only 40.7% of total reward (threshold: 50%). Breakdown: r_f: 40.7%, r_h: 22.1%, r_d: 37.2%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1008
+  'r_f' is only 48.0% of total reward (threshold: 50%). Breakdown: r_f: 48.0%, r_h: 23.4%, r_d: 28.7%
+[Monitor] Ep 1009 | Reward: -24.7 (r_f: 37.0%, r_h: 23.8%, r_d: 39.3%)
+          Actions mu: [-0.01, -0.29, 0.21, -0.05]  std: [0.29, 0.34, 0.27, 0.32]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.37 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1009
+  'r_f' is only 37.0% of total reward (threshold: 50%). Breakdown: r_f: 37.0%, r_h: 23.8%, r_d: 39.3%
+  Ep 1010/2000 | Avg Reward: -28.4 | Steps: 49588 | Time: 5107s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1011
+  'r_f' is only 48.0% of total reward (threshold: 50%). Breakdown: r_f: 48.0%, r_h: 26.5%, r_d: 25.5%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1013
+  'r_f' is only 48.4% of total reward (threshold: 50%). Breakdown: r_f: 48.4%, r_h: 22.5%, r_d: 29.1%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1014
+  'r_f' is only 45.2% of total reward (threshold: 50%). Breakdown: r_f: 45.2%, r_h: 24.4%, r_d: 30.3%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1018
+  'r_f' is only 41.0% of total reward (threshold: 50%). Breakdown: r_f: 41.0%, r_h: 22.8%, r_d: 36.2%
+[Monitor] Ep 1019 | Reward: -26.8 (r_f: 49.8%, r_h: 29.9%, r_d: 20.4%)
+          Actions mu: [0.04, -0.19, 0.14, 0.01]  std: [0.37, 0.40, 0.35, 0.34]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.34 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1019
+  'r_f' is only 49.8% of total reward (threshold: 50%). Breakdown: r_f: 49.8%, r_h: 29.9%, r_d: 20.4%
+  Ep 1020/2000 | Avg Reward: -29.8 | Steps: 50088 | Time: 5166s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1020
+  'r_f' is only 42.2% of total reward (threshold: 50%). Breakdown: r_f: 42.2%, r_h: 26.2%, r_d: 31.6%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1021
+  'r_f' is only 48.6% of total reward (threshold: 50%). Breakdown: r_f: 48.6%, r_h: 33.1%, r_d: 18.3%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1023
+  'r_f' is only 42.7% of total reward (threshold: 50%). Breakdown: r_f: 42.7%, r_h: 25.4%, r_d: 32.0%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1025
+  'r_f' is only 36.7% of total reward (threshold: 50%). Breakdown: r_f: 36.7%, r_h: 34.0%, r_d: 29.3%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1026
+  'r_f' is only 45.1% of total reward (threshold: 50%). Breakdown: r_f: 45.1%, r_h: 33.0%, r_d: 21.9%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1028
+  'r_f' is only 40.9% of total reward (threshold: 50%). Breakdown: r_f: 40.9%, r_h: 46.1%, r_d: 13.0%
+[Monitor] Ep 1029 | Reward: -57.5 (r_f: 63.9%, r_h: 16.9%, r_d: 19.2%)
+          Actions mu: [0.24, 0.02, 0.08, 0.10]  std: [0.42, 0.37, 0.41, 0.43]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.37 Hz
+  Ep 1030/2000 | Avg Reward: -30.2 | Steps: 50588 | Time: 5226s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1031
+  'r_f' is only 41.4% of total reward (threshold: 50%). Breakdown: r_f: 41.4%, r_h: 27.3%, r_d: 31.3%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1035
+  'r_f' is only 37.4% of total reward (threshold: 50%). Breakdown: r_f: 37.4%, r_h: 20.7%, r_d: 41.8%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1036
+  'r_f' is only 37.2% of total reward (threshold: 50%). Breakdown: r_f: 37.2%, r_h: 20.6%, r_d: 42.2%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1037
+  'r_f' is only 49.7% of total reward (threshold: 50%). Breakdown: r_f: 49.7%, r_h: 30.2%, r_d: 20.0%
+[Monitor] Ep 1039 | Reward: -56.5 (r_f: 61.1%, r_h: 16.4%, r_d: 22.5%)
+          Actions mu: [0.26, 0.03, 0.11, 0.14]  std: [0.44, 0.35, 0.43, 0.42]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.39 Hz
+  Ep 1040/2000 | Avg Reward: -32.8 | Steps: 51088 | Time: 5283s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1040
+  'r_f' is only 48.3% of total reward (threshold: 50%). Breakdown: r_f: 48.3%, r_h: 25.6%, r_d: 26.0%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1042
+  'r_f' is only 30.1% of total reward (threshold: 50%). Breakdown: r_f: 30.1%, r_h: 43.5%, r_d: 26.4%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1044
+  'r_f' is only 44.2% of total reward (threshold: 50%). Breakdown: r_f: 44.2%, r_h: 23.8%, r_d: 32.0%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1045
+  'r_f' is only 42.8% of total reward (threshold: 50%). Breakdown: r_f: 42.8%, r_h: 36.5%, r_d: 20.7%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1046
+  'r_f' is only 36.6% of total reward (threshold: 50%). Breakdown: r_f: 36.6%, r_h: 17.7%, r_d: 45.7%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1047
+  'r_f' is only 42.5% of total reward (threshold: 50%). Breakdown: r_f: 42.5%, r_h: 33.6%, r_d: 23.9%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1048
+  'r_f' is only 48.1% of total reward (threshold: 50%). Breakdown: r_f: 48.1%, r_h: 25.5%, r_d: 26.4%
+[Monitor] Ep 1049 | Reward: -26.3 (r_f: 48.5%, r_h: 28.2%, r_d: 23.3%)
+          Actions mu: [0.19, -0.01, -0.01, -0.01]  std: [0.25, 0.30, 0.36, 0.23]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.32 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1049
+  'r_f' is only 48.5% of total reward (threshold: 50%). Breakdown: r_f: 48.5%, r_h: 28.2%, r_d: 23.3%
+  Ep 1050/2000 | Avg Reward: -24.1 | Steps: 51588 | Time: 5326s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1053
+  'r_f' is only 39.1% of total reward (threshold: 50%). Breakdown: r_f: 39.1%, r_h: 30.2%, r_d: 30.7%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1055
+  'r_f' is only 40.3% of total reward (threshold: 50%). Breakdown: r_f: 40.3%, r_h: 29.7%, r_d: 30.0%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1057
+  'r_f' is only 44.8% of total reward (threshold: 50%). Breakdown: r_f: 44.8%, r_h: 33.9%, r_d: 21.3%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1058
+  'r_f' is only 40.0% of total reward (threshold: 50%). Breakdown: r_f: 40.0%, r_h: 28.4%, r_d: 31.6%
+[Monitor] Ep 1059 | Reward: -23.2 (r_f: 39.1%, r_h: 23.2%, r_d: 37.8%)
+          Actions mu: [-0.06, -0.28, 0.21, -0.05]  std: [0.29, 0.35, 0.26, 0.26]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.36 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1059
+  'r_f' is only 39.1% of total reward (threshold: 50%). Breakdown: r_f: 39.1%, r_h: 23.2%, r_d: 37.8%
+  Ep 1060/2000 | Avg Reward: -25.1 | Steps: 52088 | Time: 5367s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1060
+  'r_f' is only 47.8% of total reward (threshold: 50%). Breakdown: r_f: 47.8%, r_h: 20.0%, r_d: 32.1%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1061
+  'r_f' is only 47.1% of total reward (threshold: 50%). Breakdown: r_f: 47.1%, r_h: 27.7%, r_d: 25.2%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1067
+  'r_f' is only 42.0% of total reward (threshold: 50%). Breakdown: r_f: 42.0%, r_h: 35.1%, r_d: 22.9%
+[Monitor] Ep 1069 | Reward: -29.9 (r_f: 51.1%, r_h: 28.2%, r_d: 20.7%)
+          Actions mu: [0.06, -0.14, 0.13, 0.04]  std: [0.34, 0.43, 0.38, 0.35]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.39 Hz
+  Ep 1070/2000 | Avg Reward: -28.2 | Steps: 52588 | Time: 5417s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1071
+  'r_f' is only 40.9% of total reward (threshold: 50%). Breakdown: r_f: 40.9%, r_h: 27.6%, r_d: 31.5%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1072
+  'r_f' is only 38.1% of total reward (threshold: 50%). Breakdown: r_f: 38.1%, r_h: 38.9%, r_d: 23.0%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1073
+  'r_f' is only 44.8% of total reward (threshold: 50%). Breakdown: r_f: 44.8%, r_h: 26.1%, r_d: 29.1%
+[Monitor] Ep 1079 | Reward: -25.4 (r_f: 45.3%, r_h: 30.4%, r_d: 24.3%)
+          Actions mu: [0.34, 0.02, -0.05, 0.24]  std: [0.31, 0.30, 0.27, 0.28]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.35 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1079
+  'r_f' is only 45.3% of total reward (threshold: 50%). Breakdown: r_f: 45.3%, r_h: 30.4%, r_d: 24.3%
+  Ep 1080/2000 | Avg Reward: -25.0 | Steps: 53088 | Time: 5473s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1081
+  'r_f' is only 38.7% of total reward (threshold: 50%). Breakdown: r_f: 38.7%, r_h: 20.9%, r_d: 40.4%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1083
+  'r_f' is only 48.8% of total reward (threshold: 50%). Breakdown: r_f: 48.8%, r_h: 23.2%, r_d: 27.9%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1085
+  'r_f' is only 38.0% of total reward (threshold: 50%). Breakdown: r_f: 38.0%, r_h: 35.8%, r_d: 26.1%
+[Monitor] Ep 1089 | Reward: -12.0 (r_f: 50.8%, r_h: 25.1%, r_d: 24.1%)
+          Actions mu: [-0.22, -0.25, 0.22, 0.35]  std: [0.14, 0.36, 0.30, 0.20]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.31 Hz
+  Ep 1090/2000 | Avg Reward: -25.8 | Steps: 53588 | Time: 5517s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1090
+  'r_f' is only 45.7% of total reward (threshold: 50%). Breakdown: r_f: 45.7%, r_h: 34.5%, r_d: 19.8%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1092
+  'r_f' is only 41.2% of total reward (threshold: 50%). Breakdown: r_f: 41.2%, r_h: 34.6%, r_d: 24.2%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1093
+  'r_f' is only 48.9% of total reward (threshold: 50%). Breakdown: r_f: 48.9%, r_h: 25.3%, r_d: 25.8%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1094
+  'r_f' is only 47.6% of total reward (threshold: 50%). Breakdown: r_f: 47.6%, r_h: 19.5%, r_d: 32.9%
+[Monitor] Ep 1099 | Reward: -39.2 (r_f: 55.3%, r_h: 18.9%, r_d: 25.8%)
+          Actions mu: [0.30, -0.04, -0.03, 0.17]  std: [0.28, 0.33, 0.38, 0.37]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.42 Hz
+  Ep 1100/2000 | Avg Reward: -34.3 | Steps: 54088 | Time: 5578s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1101
+  'r_f' is only 37.7% of total reward (threshold: 50%). Breakdown: r_f: 37.7%, r_h: 26.7%, r_d: 35.5%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1103
+  'r_f' is only 43.1% of total reward (threshold: 50%). Breakdown: r_f: 43.1%, r_h: 34.7%, r_d: 22.2%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1104
+  'r_f' is only 39.1% of total reward (threshold: 50%). Breakdown: r_f: 39.1%, r_h: 25.7%, r_d: 35.2%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1106
+  'r_f' is only 38.3% of total reward (threshold: 50%). Breakdown: r_f: 38.3%, r_h: 32.6%, r_d: 29.1%
+[Monitor] Ep 1109 | Reward: -20.9 (r_f: 42.9%, r_h: 29.3%, r_d: 27.8%)
+          Actions mu: [-0.05, -0.25, 0.21, -0.00]  std: [0.28, 0.34, 0.34, 0.28]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.35 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1109
+  'r_f' is only 42.9% of total reward (threshold: 50%). Breakdown: r_f: 42.9%, r_h: 29.3%, r_d: 27.8%
+  Ep 1110/2000 | Avg Reward: -25.0 | Steps: 54588 | Time: 5628s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1111
+  'r_f' is only 29.2% of total reward (threshold: 50%). Breakdown: r_f: 29.2%, r_h: 34.5%, r_d: 36.3%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1112
+  'r_f' is only 39.5% of total reward (threshold: 50%). Breakdown: r_f: 39.5%, r_h: 45.7%, r_d: 14.8%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1113
+  'r_f' is only 41.0% of total reward (threshold: 50%). Breakdown: r_f: 41.0%, r_h: 16.8%, r_d: 42.2%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1114
+  'r_f' is only 43.6% of total reward (threshold: 50%). Breakdown: r_f: 43.6%, r_h: 17.4%, r_d: 39.0%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1118
+  'r_f' is only 47.7% of total reward (threshold: 50%). Breakdown: r_f: 47.7%, r_h: 25.1%, r_d: 27.2%
+[Monitor] Ep 1119 | Reward: -25.7 (r_f: 58.1%, r_h: 19.7%, r_d: 22.2%)
+          Actions mu: [0.07, -0.14, 0.13, 0.04]  std: [0.27, 0.41, 0.38, 0.33]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.38 Hz
+  Ep 1120/2000 | Avg Reward: -26.5 | Steps: 55088 | Time: 5686s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1126
+  'r_f' is only 49.4% of total reward (threshold: 50%). Breakdown: r_f: 49.4%, r_h: 20.7%, r_d: 30.0%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1128
+  'r_f' is only 42.9% of total reward (threshold: 50%). Breakdown: r_f: 42.9%, r_h: 18.2%, r_d: 39.0%
+[Monitor] Ep 1129 | Reward: -29.6 (r_f: 58.5%, r_h: 18.9%, r_d: 22.6%)
+          Actions mu: [-0.02, -0.20, 0.10, 0.07]  std: [0.30, 0.40, 0.39, 0.35]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.36 Hz
+  Ep 1130/2000 | Avg Reward: -36.1 | Steps: 55588 | Time: 5738s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1130
+  'r_f' is only 25.2% of total reward (threshold: 50%). Breakdown: r_f: 25.2%, r_h: 40.7%, r_d: 34.2%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1133
+  'r_f' is only 44.2% of total reward (threshold: 50%). Breakdown: r_f: 44.2%, r_h: 26.7%, r_d: 29.1%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1134
+  'r_f' is only 23.7% of total reward (threshold: 50%). Breakdown: r_f: 23.7%, r_h: 18.0%, r_d: 58.3%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1136
+  'r_f' is only 43.3% of total reward (threshold: 50%). Breakdown: r_f: 43.3%, r_h: 31.6%, r_d: 25.0%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1137
+  'r_f' is only 46.2% of total reward (threshold: 50%). Breakdown: r_f: 46.2%, r_h: 12.3%, r_d: 41.5%
+[Monitor] Ep 1139 | Reward: -54.8 (r_f: 69.4%, r_h: 11.6%, r_d: 19.0%)
+          Actions mu: [0.23, 0.01, -0.04, 0.21]  std: [0.42, 0.37, 0.42, 0.32]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.37 Hz
+  Ep 1140/2000 | Avg Reward: -26.3 | Steps: 56088 | Time: 5791s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1141
+  'r_f' is only 48.5% of total reward (threshold: 50%). Breakdown: r_f: 48.5%, r_h: 37.8%, r_d: 13.7%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1144
+  'r_f' is only 35.6% of total reward (threshold: 50%). Breakdown: r_f: 35.6%, r_h: 38.4%, r_d: 26.1%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1145
+  'r_f' is only 49.5% of total reward (threshold: 50%). Breakdown: r_f: 49.5%, r_h: 19.1%, r_d: 31.4%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1147
+  'r_f' is only 35.6% of total reward (threshold: 50%). Breakdown: r_f: 35.6%, r_h: 39.4%, r_d: 24.9%
+[Monitor] Ep 1149 | Reward: -33.9 (r_f: 25.5%, r_h: 10.3%, r_d: 64.2%)
+          Actions mu: [0.36, -0.04, -0.05, 0.31]  std: [0.30, 0.38, 0.35, 0.28]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.37 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1149
+  'r_f' is only 25.5% of total reward (threshold: 50%). Breakdown: r_f: 25.5%, r_h: 10.3%, r_d: 64.2%
+  Ep 1150/2000 | Avg Reward: -26.6 | Steps: 56588 | Time: 5841s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1155
+  'r_f' is only 43.2% of total reward (threshold: 50%). Breakdown: r_f: 43.2%, r_h: 19.2%, r_d: 37.6%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1158
+  'r_f' is only 44.3% of total reward (threshold: 50%). Breakdown: r_f: 44.3%, r_h: 19.0%, r_d: 36.7%
+[Monitor] Ep 1159 | Reward: -52.0 (r_f: 73.8%, r_h: 14.1%, r_d: 12.2%)
+          Actions mu: [0.12, 0.06, 0.01, 0.12]  std: [0.39, 0.37, 0.32, 0.33]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.37 Hz
+  Ep 1160/2000 | Avg Reward: -32.0 | Steps: 57088 | Time: 5893s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1162
+  'r_f' is only 49.9% of total reward (threshold: 50%). Breakdown: r_f: 49.9%, r_h: 20.5%, r_d: 29.6%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1163
+  'r_f' is only 42.6% of total reward (threshold: 50%). Breakdown: r_f: 42.6%, r_h: 20.3%, r_d: 37.1%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1164
+  'r_f' is only 36.8% of total reward (threshold: 50%). Breakdown: r_f: 36.8%, r_h: 20.4%, r_d: 42.8%
+[Monitor] Ep 1169 | Reward: -64.4 (r_f: 69.8%, r_h: 11.7%, r_d: 18.6%)
+          Actions mu: [0.25, -0.01, 0.03, 0.21]  std: [0.44, 0.38, 0.42, 0.38]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.35 Hz
+  Ep 1170/2000 | Avg Reward: -33.5 | Steps: 57588 | Time: 5944s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1170
+  'r_f' is only 26.7% of total reward (threshold: 50%). Breakdown: r_f: 26.7%, r_h: 33.0%, r_d: 40.3%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1171
+  'r_f' is only 43.1% of total reward (threshold: 50%). Breakdown: r_f: 43.1%, r_h: 20.5%, r_d: 36.4%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1174
+  'r_f' is only 47.8% of total reward (threshold: 50%). Breakdown: r_f: 47.8%, r_h: 25.1%, r_d: 27.1%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1178
+  'r_f' is only 47.5% of total reward (threshold: 50%). Breakdown: r_f: 47.5%, r_h: 27.4%, r_d: 25.1%
+[Monitor] Ep 1179 | Reward: -20.1 (r_f: 54.0%, r_h: 19.1%, r_d: 26.9%)
+          Actions mu: [0.03, -0.25, 0.19, -0.00]  std: [0.26, 0.37, 0.27, 0.30]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.38 Hz
+  Ep 1180/2000 | Avg Reward: -22.0 | Steps: 58088 | Time: 6000s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1180
+  'r_f' is only 38.2% of total reward (threshold: 50%). Breakdown: r_f: 38.2%, r_h: 15.8%, r_d: 46.0%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1181
+  'r_f' is only 23.0% of total reward (threshold: 50%). Breakdown: r_f: 23.0%, r_h: 11.5%, r_d: 65.4%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1182
+  'r_f' is only 48.1% of total reward (threshold: 50%). Breakdown: r_f: 48.1%, r_h: 27.5%, r_d: 24.4%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1184
+  'r_f' is only 49.3% of total reward (threshold: 50%). Breakdown: r_f: 49.3%, r_h: 20.0%, r_d: 30.7%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1187
+  'r_f' is only 43.6% of total reward (threshold: 50%). Breakdown: r_f: 43.6%, r_h: 21.2%, r_d: 35.1%
+[Monitor] Ep 1189 | Reward: -13.3 (r_f: 57.4%, r_h: 15.3%, r_d: 27.3%)
+          Actions mu: [-0.07, -0.09, 0.30, -0.01]  std: [0.26, 0.29, 0.21, 0.27]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.35 Hz
+  Ep 1190/2000 | Avg Reward: -29.2 | Steps: 58588 | Time: 6048s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1192
+  'r_f' is only 49.4% of total reward (threshold: 50%). Breakdown: r_f: 49.4%, r_h: 14.5%, r_d: 36.2%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1196
+  'r_f' is only 46.1% of total reward (threshold: 50%). Breakdown: r_f: 46.1%, r_h: 18.0%, r_d: 36.0%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1198
+  'r_f' is only 40.6% of total reward (threshold: 50%). Breakdown: r_f: 40.6%, r_h: 26.8%, r_d: 32.6%
+[Monitor] Ep 1199 | Reward: -36.9 (r_f: 56.2%, r_h: 23.2%, r_d: 20.7%)
+          Actions mu: [0.15, 0.03, 0.08, 0.07]  std: [0.50, 0.32, 0.44, 0.35]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.40 Hz
+  Ep 1200/2000 | Avg Reward: -27.1 | Steps: 59088 | Time: 6108s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1201
+  'r_f' is only 37.0% of total reward (threshold: 50%). Breakdown: r_f: 37.0%, r_h: 35.0%, r_d: 28.1%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1207
+  'r_f' is only 47.6% of total reward (threshold: 50%). Breakdown: r_f: 47.6%, r_h: 20.9%, r_d: 31.5%
+[Monitor] Ep 1209 | Reward: -44.2 (r_f: 61.3%, r_h: 15.0%, r_d: 23.7%)
+          Actions mu: [0.35, -0.07, -0.00, 0.10]  std: [0.32, 0.31, 0.42, 0.36]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.41 Hz
+  Ep 1210/2000 | Avg Reward: -32.9 | Steps: 59588 | Time: 6162s
+[Monitor] Ep 1219 | Reward: -25.1 (r_f: 63.1%, r_h: 20.1%, r_d: 16.7%)
+          Actions mu: [0.22, -0.28, -0.00, 0.18]  std: [0.31, 0.31, 0.29, 0.33]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.37 Hz
+  Ep 1220/2000 | Avg Reward: -29.5 | Steps: 60088 | Time: 6216s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1220
+  'r_f' is only 42.3% of total reward (threshold: 50%). Breakdown: r_f: 42.3%, r_h: 26.0%, r_d: 31.7%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1221
+  'r_f' is only 42.3% of total reward (threshold: 50%). Breakdown: r_f: 42.3%, r_h: 16.1%, r_d: 41.6%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1222
+  'r_f' is only 41.7% of total reward (threshold: 50%). Breakdown: r_f: 41.7%, r_h: 24.5%, r_d: 33.8%
+[Monitor] Ep 1229 | Reward: -16.9 (r_f: 47.7%, r_h: 26.7%, r_d: 25.6%)
+          Actions mu: [-0.27, -0.20, 0.12, 0.41]  std: [0.19, 0.39, 0.36, 0.22]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.35 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1229
+  'r_f' is only 47.7% of total reward (threshold: 50%). Breakdown: r_f: 47.7%, r_h: 26.7%, r_d: 25.6%
+  Ep 1230/2000 | Avg Reward: -28.2 | Steps: 60588 | Time: 6259s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1232
+  'r_f' is only 33.9% of total reward (threshold: 50%). Breakdown: r_f: 33.9%, r_h: 30.9%, r_d: 35.2%
+[Monitor] Ep 1239 | Reward: -21.9 (r_f: 46.7%, r_h: 27.3%, r_d: 26.0%)
+          Actions mu: [0.02, -0.09, 0.11, 0.04]  std: [0.27, 0.41, 0.37, 0.32]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.42 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1239
+  'r_f' is only 46.7% of total reward (threshold: 50%). Breakdown: r_f: 46.7%, r_h: 27.3%, r_d: 26.0%
+  Ep 1240/2000 | Avg Reward: -28.9 | Steps: 61088 | Time: 6315s
+Time step reduced to zero. Convergence is not likely.
+Simulation terminated at t=2.5120 s.
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1241
+  'r_f' is only 47.2% of total reward (threshold: 50%). Breakdown: r_f: 47.2%, r_h: 33.0%, r_d: 19.8%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1242
+  'r_f' is only 46.1% of total reward (threshold: 50%). Breakdown: r_f: 46.1%, r_h: 23.9%, r_d: 30.1%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1244
+  'r_f' is only 48.4% of total reward (threshold: 50%). Breakdown: r_f: 48.4%, r_h: 28.6%, r_d: 23.1%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1247
+  'r_f' is only 24.8% of total reward (threshold: 50%). Breakdown: r_f: 24.8%, r_h: 61.4%, r_d: 13.8%
+[Monitor] Ep 1249 | Reward: -32.1 (r_f: 53.1%, r_h: 21.6%, r_d: 25.4%)
+          Actions mu: [0.33, -0.05, -0.07, 0.21]  std: [0.34, 0.34, 0.33, 0.31]
+          TDS fails: 1/10 (10.0%) | Freq peak: 0.40 Hz
+  Ep 1250/2000 | Avg Reward: -40.0 | Steps: 61549 | Time: 6363s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1250
+  'r_f' is only 47.8% of total reward (threshold: 50%). Breakdown: r_f: 47.8%, r_h: 21.2%, r_d: 31.0%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1251
+  'r_f' is only 49.7% of total reward (threshold: 50%). Breakdown: r_f: 49.7%, r_h: 19.5%, r_d: 30.8%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1252
+  'r_f' is only 36.6% of total reward (threshold: 50%). Breakdown: r_f: 36.6%, r_h: 32.9%, r_d: 30.5%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1253
+  'r_f' is only 45.3% of total reward (threshold: 50%). Breakdown: r_f: 45.3%, r_h: 29.8%, r_d: 24.9%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1257
+  'r_f' is only 28.6% of total reward (threshold: 50%). Breakdown: r_f: 28.6%, r_h: 22.9%, r_d: 48.5%
+[Monitor] Ep 1259 | Reward: -17.3 (r_f: 32.8%, r_h: 23.4%, r_d: 43.8%)
+          Actions mu: [0.08, 0.03, 0.01, 0.02]  std: [0.27, 0.36, 0.35, 0.31]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.32 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1259
+  'r_f' is only 32.8% of total reward (threshold: 50%). Breakdown: r_f: 32.8%, r_h: 23.4%, r_d: 43.8%
+  Ep 1260/2000 | Avg Reward: -24.3 | Steps: 62049 | Time: 6416s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1261
+  'r_f' is only 37.3% of total reward (threshold: 50%). Breakdown: r_f: 37.3%, r_h: 35.5%, r_d: 27.3%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1268
+  'r_f' is only 46.0% of total reward (threshold: 50%). Breakdown: r_f: 46.0%, r_h: 28.3%, r_d: 25.6%
+[Monitor] Ep 1269 | Reward: -29.2 (r_f: 64.7%, r_h: 15.0%, r_d: 20.3%)
+          Actions mu: [0.02, -0.18, 0.08, 0.12]  std: [0.32, 0.39, 0.35, 0.36]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.36 Hz
+  Ep 1270/2000 | Avg Reward: -30.9 | Steps: 62549 | Time: 6469s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1272
+  'r_f' is only 23.7% of total reward (threshold: 50%). Breakdown: r_f: 23.7%, r_h: 11.1%, r_d: 65.3%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1273
+  'r_f' is only 46.2% of total reward (threshold: 50%). Breakdown: r_f: 46.2%, r_h: 15.7%, r_d: 38.1%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1275
+  'r_f' is only 46.5% of total reward (threshold: 50%). Breakdown: r_f: 46.5%, r_h: 23.5%, r_d: 30.0%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1276
+  'r_f' is only 45.7% of total reward (threshold: 50%). Breakdown: r_f: 45.7%, r_h: 23.7%, r_d: 30.6%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1277
+  'r_f' is only 37.7% of total reward (threshold: 50%). Breakdown: r_f: 37.7%, r_h: 18.8%, r_d: 43.5%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1278
+  'r_f' is only 43.4% of total reward (threshold: 50%). Breakdown: r_f: 43.4%, r_h: 18.8%, r_d: 37.9%
+[Monitor] Ep 1279 | Reward: -20.2 (r_f: 56.4%, r_h: 22.5%, r_d: 21.0%)
+          Actions mu: [-0.21, -0.07, 0.09, 0.23]  std: [0.25, 0.39, 0.38, 0.25]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.40 Hz
+  Ep 1280/2000 | Avg Reward: -24.4 | Steps: 63049 | Time: 6527s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1280
+  'r_f' is only 45.1% of total reward (threshold: 50%). Breakdown: r_f: 45.1%, r_h: 26.4%, r_d: 28.5%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1284
+  'r_f' is only 37.6% of total reward (threshold: 50%). Breakdown: r_f: 37.6%, r_h: 34.6%, r_d: 27.8%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1288
+  'r_f' is only 41.8% of total reward (threshold: 50%). Breakdown: r_f: 41.8%, r_h: 23.8%, r_d: 34.4%
+[Monitor] Ep 1289 | Reward: -18.0 (r_f: 42.6%, r_h: 22.2%, r_d: 35.2%)
+          Actions mu: [-0.08, -0.28, 0.25, -0.00]  std: [0.24, 0.33, 0.28, 0.25]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.39 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1289
+  'r_f' is only 42.6% of total reward (threshold: 50%). Breakdown: r_f: 42.6%, r_h: 22.2%, r_d: 35.2%
+  Ep 1290/2000 | Avg Reward: -25.6 | Steps: 63549 | Time: 6580s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1291
+  'r_f' is only 24.5% of total reward (threshold: 50%). Breakdown: r_f: 24.5%, r_h: 48.2%, r_d: 27.2%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1292
+  'r_f' is only 44.8% of total reward (threshold: 50%). Breakdown: r_f: 44.8%, r_h: 18.3%, r_d: 36.9%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1294
+  'r_f' is only 47.7% of total reward (threshold: 50%). Breakdown: r_f: 47.7%, r_h: 25.4%, r_d: 26.9%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1295
+  'r_f' is only 47.2% of total reward (threshold: 50%). Breakdown: r_f: 47.2%, r_h: 20.1%, r_d: 32.7%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1296
+  'r_f' is only 40.8% of total reward (threshold: 50%). Breakdown: r_f: 40.8%, r_h: 26.7%, r_d: 32.4%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1298
+  'r_f' is only 31.5% of total reward (threshold: 50%). Breakdown: r_f: 31.5%, r_h: 33.5%, r_d: 35.0%
+[Monitor] Ep 1299 | Reward: -15.5 (r_f: 53.1%, r_h: 24.8%, r_d: 22.1%)
+          Actions mu: [0.24, -0.21, -0.05, 0.06]  std: [0.36, 0.27, 0.23, 0.28]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.30 Hz
+  Ep 1300/2000 | Avg Reward: -21.4 | Steps: 64049 | Time: 6630s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1305
+  'r_f' is only 41.2% of total reward (threshold: 50%). Breakdown: r_f: 41.2%, r_h: 14.6%, r_d: 44.1%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1306
+  'r_f' is only 46.9% of total reward (threshold: 50%). Breakdown: r_f: 46.9%, r_h: 25.1%, r_d: 28.0%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1308
+  'r_f' is only 33.2% of total reward (threshold: 50%). Breakdown: r_f: 33.2%, r_h: 47.2%, r_d: 19.6%
+[Monitor] Ep 1309 | Reward: -37.0 (r_f: 51.1%, r_h: 26.1%, r_d: 22.8%)
+          Actions mu: [0.37, 0.02, 0.01, 0.25]  std: [0.32, 0.34, 0.36, 0.32]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.39 Hz
+  Ep 1310/2000 | Avg Reward: -31.1 | Steps: 64549 | Time: 6690s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1313
+  'r_f' is only 45.5% of total reward (threshold: 50%). Breakdown: r_f: 45.5%, r_h: 32.4%, r_d: 22.1%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1318
+  'r_f' is only 39.8% of total reward (threshold: 50%). Breakdown: r_f: 39.8%, r_h: 30.9%, r_d: 29.2%
+[Monitor] Ep 1319 | Reward: -42.9 (r_f: 62.2%, r_h: 19.4%, r_d: 18.4%)
+          Actions mu: [0.33, -0.02, -0.02, 0.24]  std: [0.35, 0.33, 0.39, 0.30]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.41 Hz
+  Ep 1320/2000 | Avg Reward: -33.7 | Steps: 65049 | Time: 6745s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1323
+  'r_f' is only 34.6% of total reward (threshold: 50%). Breakdown: r_f: 34.6%, r_h: 34.6%, r_d: 30.8%
+[Monitor] Ep 1329 | Reward: -31.4 (r_f: 57.0%, r_h: 23.5%, r_d: 19.5%)
+          Actions mu: [0.15, 0.08, -0.03, 0.17]  std: [0.23, 0.27, 0.33, 0.33]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.33 Hz
+  Ep 1330/2000 | Avg Reward: -28.2 | Steps: 65549 | Time: 6814s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1331
+  'r_f' is only 27.5% of total reward (threshold: 50%). Breakdown: r_f: 27.5%, r_h: 26.4%, r_d: 46.1%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1333
+  'r_f' is only 33.5% of total reward (threshold: 50%). Breakdown: r_f: 33.5%, r_h: 28.6%, r_d: 37.9%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1334
+  'r_f' is only 39.4% of total reward (threshold: 50%). Breakdown: r_f: 39.4%, r_h: 19.9%, r_d: 40.6%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1336
+  'r_f' is only 32.9% of total reward (threshold: 50%). Breakdown: r_f: 32.9%, r_h: 45.1%, r_d: 22.0%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1338
+  'r_f' is only 48.7% of total reward (threshold: 50%). Breakdown: r_f: 48.7%, r_h: 18.7%, r_d: 32.6%
+[Monitor] Ep 1339 | Reward: -25.4 (r_f: 49.6%, r_h: 26.0%, r_d: 24.3%)
+          Actions mu: [0.05, -0.19, 0.14, 0.05]  std: [0.30, 0.41, 0.33, 0.35]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.34 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1339
+  'r_f' is only 49.6% of total reward (threshold: 50%). Breakdown: r_f: 49.6%, r_h: 26.0%, r_d: 24.3%
+  Ep 1340/2000 | Avg Reward: -27.6 | Steps: 66049 | Time: 6874s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1340
+  'r_f' is only 29.0% of total reward (threshold: 50%). Breakdown: r_f: 29.0%, r_h: 23.1%, r_d: 47.9%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1347
+  'r_f' is only 49.8% of total reward (threshold: 50%). Breakdown: r_f: 49.8%, r_h: 25.6%, r_d: 24.6%
+[Monitor] Ep 1349 | Reward: -29.7 (r_f: 57.8%, r_h: 32.6%, r_d: 9.6%)
+          Actions mu: [0.31, 0.01, -0.02, 0.05]  std: [0.30, 0.29, 0.34, 0.36]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.41 Hz
+  Ep 1350/2000 | Avg Reward: -32.8 | Steps: 66549 | Time: 6919s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1350
+  'r_f' is only 49.3% of total reward (threshold: 50%). Breakdown: r_f: 49.3%, r_h: 28.4%, r_d: 22.3%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1351
+  'r_f' is only 34.8% of total reward (threshold: 50%). Breakdown: r_f: 34.8%, r_h: 33.9%, r_d: 31.3%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1353
+  'r_f' is only 24.7% of total reward (threshold: 50%). Breakdown: r_f: 24.7%, r_h: 41.7%, r_d: 33.6%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1356
+  'r_f' is only 49.2% of total reward (threshold: 50%). Breakdown: r_f: 49.2%, r_h: 42.3%, r_d: 8.6%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1358
+  'r_f' is only 30.8% of total reward (threshold: 50%). Breakdown: r_f: 30.8%, r_h: 48.8%, r_d: 20.4%
+[Monitor] Ep 1359 | Reward: -25.7 (r_f: 49.9%, r_h: 15.5%, r_d: 34.6%)
+          Actions mu: [-0.06, -0.29, 0.16, 0.06]  std: [0.29, 0.37, 0.35, 0.32]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.36 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1359
+  'r_f' is only 49.9% of total reward (threshold: 50%). Breakdown: r_f: 49.9%, r_h: 15.5%, r_d: 34.6%
+  Ep 1360/2000 | Avg Reward: -26.1 | Steps: 67049 | Time: 6968s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1360
+  'r_f' is only 31.5% of total reward (threshold: 50%). Breakdown: r_f: 31.5%, r_h: 39.9%, r_d: 28.6%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1363
+  'r_f' is only 41.7% of total reward (threshold: 50%). Breakdown: r_f: 41.7%, r_h: 41.3%, r_d: 17.0%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1366
+  'r_f' is only 33.1% of total reward (threshold: 50%). Breakdown: r_f: 33.1%, r_h: 25.9%, r_d: 41.0%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1368
+  'r_f' is only 44.7% of total reward (threshold: 50%). Breakdown: r_f: 44.7%, r_h: 32.7%, r_d: 22.6%
+[Monitor] Ep 1369 | Reward: -23.1 (r_f: 49.9%, r_h: 17.5%, r_d: 32.6%)
+          Actions mu: [-0.03, -0.28, 0.16, 0.05]  std: [0.25, 0.42, 0.37, 0.34]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.37 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1369
+  'r_f' is only 49.9% of total reward (threshold: 50%). Breakdown: r_f: 49.9%, r_h: 17.5%, r_d: 32.6%
+  Ep 1370/2000 | Avg Reward: -32.5 | Steps: 67549 | Time: 7018s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1372
+  'r_f' is only 42.5% of total reward (threshold: 50%). Breakdown: r_f: 42.5%, r_h: 18.9%, r_d: 38.6%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1373
+  'r_f' is only 44.8% of total reward (threshold: 50%). Breakdown: r_f: 44.8%, r_h: 35.0%, r_d: 20.2%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1375
+  'r_f' is only 49.2% of total reward (threshold: 50%). Breakdown: r_f: 49.2%, r_h: 27.9%, r_d: 22.9%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1376
+  'r_f' is only 41.4% of total reward (threshold: 50%). Breakdown: r_f: 41.4%, r_h: 29.4%, r_d: 29.1%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1378
+  'r_f' is only 46.7% of total reward (threshold: 50%). Breakdown: r_f: 46.7%, r_h: 42.8%, r_d: 10.5%
+[Monitor] Ep 1379 | Reward: -22.1 (r_f: 47.3%, r_h: 28.5%, r_d: 24.2%)
+          Actions mu: [0.03, -0.08, 0.11, 0.01]  std: [0.30, 0.45, 0.36, 0.31]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.36 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1379
+  'r_f' is only 47.3% of total reward (threshold: 50%). Breakdown: r_f: 47.3%, r_h: 28.5%, r_d: 24.2%
+  Ep 1380/2000 | Avg Reward: -23.8 | Steps: 68049 | Time: 7083s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1381
+  'r_f' is only 43.2% of total reward (threshold: 50%). Breakdown: r_f: 43.2%, r_h: 24.3%, r_d: 32.5%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1383
+  'r_f' is only 32.7% of total reward (threshold: 50%). Breakdown: r_f: 32.7%, r_h: 31.9%, r_d: 35.5%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1386
+  'r_f' is only 38.6% of total reward (threshold: 50%). Breakdown: r_f: 38.6%, r_h: 28.8%, r_d: 32.6%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1387
+  'r_f' is only 41.1% of total reward (threshold: 50%). Breakdown: r_f: 41.1%, r_h: 30.6%, r_d: 28.2%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1388
+  'r_f' is only 43.3% of total reward (threshold: 50%). Breakdown: r_f: 43.3%, r_h: 39.1%, r_d: 17.6%
+[Monitor] Ep 1389 | Reward: -22.6 (r_f: 48.8%, r_h: 21.2%, r_d: 30.0%)
+          Actions mu: [0.03, -0.11, 0.11, 0.03]  std: [0.30, 0.43, 0.38, 0.33]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.32 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1389
+  'r_f' is only 48.8% of total reward (threshold: 50%). Breakdown: r_f: 48.8%, r_h: 21.2%, r_d: 30.0%
+  Ep 1390/2000 | Avg Reward: -28.2 | Steps: 68549 | Time: 7138s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1390
+  'r_f' is only 50.0% of total reward (threshold: 50%). Breakdown: r_f: 50.0%, r_h: 20.0%, r_d: 30.0%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1393
+  'r_f' is only 25.8% of total reward (threshold: 50%). Breakdown: r_f: 25.8%, r_h: 38.8%, r_d: 35.4%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1394
+  'r_f' is only 35.0% of total reward (threshold: 50%). Breakdown: r_f: 35.0%, r_h: 37.5%, r_d: 27.5%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1395
+  'r_f' is only 23.3% of total reward (threshold: 50%). Breakdown: r_f: 23.3%, r_h: 10.4%, r_d: 66.3%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1396
+  'r_f' is only 48.4% of total reward (threshold: 50%). Breakdown: r_f: 48.4%, r_h: 24.0%, r_d: 27.5%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1398
+  'r_f' is only 38.3% of total reward (threshold: 50%). Breakdown: r_f: 38.3%, r_h: 32.2%, r_d: 29.5%
+[Monitor] Ep 1399 | Reward: -21.7 (r_f: 45.9%, r_h: 26.1%, r_d: 28.0%)
+          Actions mu: [0.07, -0.22, 0.16, 0.08]  std: [0.29, 0.38, 0.40, 0.35]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.39 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1399
+  'r_f' is only 45.9% of total reward (threshold: 50%). Breakdown: r_f: 45.9%, r_h: 26.1%, r_d: 28.0%
+  Ep 1400/2000 | Avg Reward: -28.8 | Steps: 69049 | Time: 7197s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1400
+  'r_f' is only 35.3% of total reward (threshold: 50%). Breakdown: r_f: 35.3%, r_h: 37.3%, r_d: 27.5%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1403
+  'r_f' is only 33.7% of total reward (threshold: 50%). Breakdown: r_f: 33.7%, r_h: 29.1%, r_d: 37.2%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1404
+  'r_f' is only 23.3% of total reward (threshold: 50%). Breakdown: r_f: 23.3%, r_h: 7.7%, r_d: 68.9%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1405
+  'r_f' is only 38.0% of total reward (threshold: 50%). Breakdown: r_f: 38.0%, r_h: 26.6%, r_d: 35.3%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1406
+  'r_f' is only 30.9% of total reward (threshold: 50%). Breakdown: r_f: 30.9%, r_h: 28.3%, r_d: 40.8%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1407
+  'r_f' is only 42.9% of total reward (threshold: 50%). Breakdown: r_f: 42.9%, r_h: 23.8%, r_d: 33.3%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1408
+  'r_f' is only 37.4% of total reward (threshold: 50%). Breakdown: r_f: 37.4%, r_h: 37.8%, r_d: 24.8%
+[Monitor] Ep 1409 | Reward: -21.9 (r_f: 57.2%, r_h: 23.1%, r_d: 19.7%)
+          Actions mu: [0.09, -0.10, 0.09, 0.05]  std: [0.31, 0.42, 0.37, 0.38]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.34 Hz
+  Ep 1410/2000 | Avg Reward: -27.5 | Steps: 69549 | Time: 7248s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1410
+  'r_f' is only 26.3% of total reward (threshold: 50%). Breakdown: r_f: 26.3%, r_h: 37.4%, r_d: 36.3%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1414
+  'r_f' is only 45.5% of total reward (threshold: 50%). Breakdown: r_f: 45.5%, r_h: 27.6%, r_d: 26.9%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1415
+  'r_f' is only 43.2% of total reward (threshold: 50%). Breakdown: r_f: 43.2%, r_h: 25.2%, r_d: 31.6%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1417
+  'r_f' is only 45.8% of total reward (threshold: 50%). Breakdown: r_f: 45.8%, r_h: 19.8%, r_d: 34.5%
+[Monitor] Ep 1419 | Reward: -34.5 (r_f: 62.6%, r_h: 26.2%, r_d: 11.1%)
+          Actions mu: [0.28, 0.03, -0.05, 0.13]  std: [0.34, 0.31, 0.34, 0.35]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.33 Hz
+  Ep 1420/2000 | Avg Reward: -31.4 | Steps: 70049 | Time: 7305s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1421
+  'r_f' is only 30.2% of total reward (threshold: 50%). Breakdown: r_f: 30.2%, r_h: 40.3%, r_d: 29.5%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1423
+  'r_f' is only 49.6% of total reward (threshold: 50%). Breakdown: r_f: 49.6%, r_h: 24.9%, r_d: 25.6%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1424
+  'r_f' is only 30.2% of total reward (threshold: 50%). Breakdown: r_f: 30.2%, r_h: 35.9%, r_d: 33.9%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1427
+  'r_f' is only 26.9% of total reward (threshold: 50%). Breakdown: r_f: 26.9%, r_h: 50.2%, r_d: 22.9%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1428
+  'r_f' is only 32.8% of total reward (threshold: 50%). Breakdown: r_f: 32.8%, r_h: 24.8%, r_d: 42.4%
+[Monitor] Ep 1429 | Reward: -23.7 (r_f: 31.6%, r_h: 44.2%, r_d: 24.3%)
+          Actions mu: [0.35, -0.07, 0.24, 0.06]  std: [0.27, 0.24, 0.33, 0.31]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.43 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1429
+  'r_f' is only 31.6% of total reward (threshold: 50%). Breakdown: r_f: 31.6%, r_h: 44.2%, r_d: 24.3%
+  Ep 1430/2000 | Avg Reward: -30.1 | Steps: 70549 | Time: 7365s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1433
+  'r_f' is only 42.1% of total reward (threshold: 50%). Breakdown: r_f: 42.1%, r_h: 21.5%, r_d: 36.4%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1436
+  'r_f' is only 32.9% of total reward (threshold: 50%). Breakdown: r_f: 32.9%, r_h: 16.9%, r_d: 50.2%
+[Monitor] Ep 1439 | Reward: -35.2 (r_f: 61.4%, r_h: 19.5%, r_d: 19.1%)
+          Actions mu: [-0.00, -0.15, 0.31, -0.31]  std: [0.31, 0.43, 0.28, 0.28]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.35 Hz
+  Ep 1440/2000 | Avg Reward: -29.8 | Steps: 71049 | Time: 7419s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1441
+  'r_f' is only 49.9% of total reward (threshold: 50%). Breakdown: r_f: 49.9%, r_h: 34.5%, r_d: 15.6%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1444
+  'r_f' is only 40.8% of total reward (threshold: 50%). Breakdown: r_f: 40.8%, r_h: 47.4%, r_d: 11.8%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1445
+  'r_f' is only 47.9% of total reward (threshold: 50%). Breakdown: r_f: 47.9%, r_h: 29.9%, r_d: 22.2%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1446
+  'r_f' is only 38.4% of total reward (threshold: 50%). Breakdown: r_f: 38.4%, r_h: 25.6%, r_d: 36.1%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1447
+  'r_f' is only 40.3% of total reward (threshold: 50%). Breakdown: r_f: 40.3%, r_h: 7.8%, r_d: 51.8%
+[Monitor] Ep 1449 | Reward: -111.0 (r_f: 80.1%, r_h: 9.2%, r_d: 10.7%)
+          Actions mu: [0.28, -0.06, 0.04, 0.18]  std: [0.39, 0.34, 0.46, 0.42]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.42 Hz
+  Ep 1450/2000 | Avg Reward: -38.7 | Steps: 71549 | Time: 7488s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1452
+  'r_f' is only 46.9% of total reward (threshold: 50%). Breakdown: r_f: 46.9%, r_h: 31.0%, r_d: 22.1%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1456
+  'r_f' is only 30.9% of total reward (threshold: 50%). Breakdown: r_f: 30.9%, r_h: 16.9%, r_d: 52.2%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1457
+  'r_f' is only 39.3% of total reward (threshold: 50%). Breakdown: r_f: 39.3%, r_h: 14.4%, r_d: 46.3%
+[Monitor] Ep 1459 | Reward: -78.6 (r_f: 77.6%, r_h: 11.7%, r_d: 10.7%)
+          Actions mu: [0.18, 0.08, 0.08, 0.21]  std: [0.49, 0.39, 0.36, 0.41]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.42 Hz
+  Ep 1460/2000 | Avg Reward: -35.9 | Steps: 72049 | Time: 7546s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1461
+  'r_f' is only 47.1% of total reward (threshold: 50%). Breakdown: r_f: 47.1%, r_h: 21.6%, r_d: 31.3%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1464
+  'r_f' is only 33.6% of total reward (threshold: 50%). Breakdown: r_f: 33.6%, r_h: 16.2%, r_d: 50.1%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1465
+  'r_f' is only 47.2% of total reward (threshold: 50%). Breakdown: r_f: 47.2%, r_h: 26.9%, r_d: 25.9%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1466
+  'r_f' is only 39.0% of total reward (threshold: 50%). Breakdown: r_f: 39.0%, r_h: 47.2%, r_d: 13.7%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1467
+  'r_f' is only 35.7% of total reward (threshold: 50%). Breakdown: r_f: 35.7%, r_h: 27.8%, r_d: 36.5%
+[Monitor] Ep 1469 | Reward: -21.3 (r_f: 45.9%, r_h: 46.9%, r_d: 7.2%)
+          Actions mu: [0.33, 0.06, -0.05, 0.05]  std: [0.30, 0.34, 0.26, 0.28]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.35 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1469
+  'r_f' is only 45.9% of total reward (threshold: 50%). Breakdown: r_f: 45.9%, r_h: 46.9%, r_d: 7.2%
+  Ep 1470/2000 | Avg Reward: -26.6 | Steps: 72549 | Time: 7597s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1474
+  'r_f' is only 44.3% of total reward (threshold: 50%). Breakdown: r_f: 44.3%, r_h: 25.5%, r_d: 30.2%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1476
+  'r_f' is only 43.4% of total reward (threshold: 50%). Breakdown: r_f: 43.4%, r_h: 26.6%, r_d: 30.1%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1477
+  'r_f' is only 39.0% of total reward (threshold: 50%). Breakdown: r_f: 39.0%, r_h: 33.7%, r_d: 27.3%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1478
+  'r_f' is only 44.0% of total reward (threshold: 50%). Breakdown: r_f: 44.0%, r_h: 29.1%, r_d: 26.8%
+[Monitor] Ep 1479 | Reward: -24.6 (r_f: 49.0%, r_h: 37.6%, r_d: 13.4%)
+          Actions mu: [0.29, 0.08, -0.02, 0.06]  std: [0.34, 0.32, 0.27, 0.29]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.38 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1479
+  'r_f' is only 49.0% of total reward (threshold: 50%). Breakdown: r_f: 49.0%, r_h: 37.6%, r_d: 13.4%
+  Ep 1480/2000 | Avg Reward: -28.0 | Steps: 73049 | Time: 7649s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1480
+  'r_f' is only 48.8% of total reward (threshold: 50%). Breakdown: r_f: 48.8%, r_h: 23.7%, r_d: 27.5%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1483
+  'r_f' is only 11.4% of total reward (threshold: 50%). Breakdown: r_f: 11.4%, r_h: 18.0%, r_d: 70.6%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1484
+  'r_f' is only 35.7% of total reward (threshold: 50%). Breakdown: r_f: 35.7%, r_h: 33.2%, r_d: 31.1%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1485
+  'r_f' is only 33.1% of total reward (threshold: 50%). Breakdown: r_f: 33.1%, r_h: 39.0%, r_d: 27.9%
+[Monitor] Ep 1489 | Reward: -24.1 (r_f: 47.9%, r_h: 23.7%, r_d: 28.4%)
+          Actions mu: [-0.06, -0.29, 0.19, 0.12]  std: [0.30, 0.35, 0.30, 0.34]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.36 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1489
+  'r_f' is only 47.9% of total reward (threshold: 50%). Breakdown: r_f: 47.9%, r_h: 23.7%, r_d: 28.4%
+  Ep 1490/2000 | Avg Reward: -28.7 | Steps: 73549 | Time: 7715s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1490
+  'r_f' is only 49.1% of total reward (threshold: 50%). Breakdown: r_f: 49.1%, r_h: 22.2%, r_d: 28.7%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1494
+  'r_f' is only 34.5% of total reward (threshold: 50%). Breakdown: r_f: 34.5%, r_h: 31.1%, r_d: 34.4%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1496
+  'r_f' is only 37.2% of total reward (threshold: 50%). Breakdown: r_f: 37.2%, r_h: 33.7%, r_d: 29.1%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1498
+  'r_f' is only 39.2% of total reward (threshold: 50%). Breakdown: r_f: 39.2%, r_h: 34.2%, r_d: 26.6%
+[Monitor] Ep 1499 | Reward: -21.3 (r_f: 45.8%, r_h: 33.0%, r_d: 21.2%)
+          Actions mu: [-0.07, -0.29, 0.22, 0.09]  std: [0.26, 0.33, 0.30, 0.27]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.40 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1499
+  'r_f' is only 45.8% of total reward (threshold: 50%). Breakdown: r_f: 45.8%, r_h: 33.0%, r_d: 21.2%
+  Ep 1500/2000 | Avg Reward: -33.3 | Steps: 74049 | Time: 7779s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1501
+  'r_f' is only 46.4% of total reward (threshold: 50%). Breakdown: r_f: 46.4%, r_h: 25.4%, r_d: 28.2%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1503
+  'r_f' is only 39.6% of total reward (threshold: 50%). Breakdown: r_f: 39.6%, r_h: 42.4%, r_d: 18.1%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1508
+  'r_f' is only 43.4% of total reward (threshold: 50%). Breakdown: r_f: 43.4%, r_h: 35.4%, r_d: 21.2%
+[Monitor] Ep 1509 | Reward: -15.9 (r_f: 53.3%, r_h: 18.0%, r_d: 28.7%)
+          Actions mu: [-0.10, -0.05, 0.33, 0.10]  std: [0.28, 0.29, 0.25, 0.28]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.37 Hz
+  Ep 1510/2000 | Avg Reward: -27.4 | Steps: 74549 | Time: 7836s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1510
+  'r_f' is only 44.8% of total reward (threshold: 50%). Breakdown: r_f: 44.8%, r_h: 22.6%, r_d: 32.6%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1511
+  'r_f' is only 47.0% of total reward (threshold: 50%). Breakdown: r_f: 47.0%, r_h: 26.1%, r_d: 26.9%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1513
+  'r_f' is only 49.9% of total reward (threshold: 50%). Breakdown: r_f: 49.9%, r_h: 28.1%, r_d: 22.0%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1516
+  'r_f' is only 47.1% of total reward (threshold: 50%). Breakdown: r_f: 47.1%, r_h: 39.7%, r_d: 13.3%
+Time step reduced to zero. Convergence is not likely.
+Simulation terminated at t=2.5979 s.
+[Monitor] Ep 1519 | Reward: -20.5 (r_f: 39.1%, r_h: 38.9%, r_d: 22.0%)
+          Actions mu: [0.38, 0.01, -0.05, 0.14]  std: [0.29, 0.33, 0.27, 0.30]
+          TDS fails: 1/10 (10.0%) | Freq peak: 0.40 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1519
+  'r_f' is only 39.1% of total reward (threshold: 50%). Breakdown: r_f: 39.1%, r_h: 38.9%, r_d: 22.0%
+  Ep 1520/2000 | Avg Reward: -49.2 | Steps: 75010 | Time: 7884s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1520
+  'r_f' is only 26.9% of total reward (threshold: 50%). Breakdown: r_f: 26.9%, r_h: 36.5%, r_d: 36.6%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1522
+  'r_f' is only 39.2% of total reward (threshold: 50%). Breakdown: r_f: 39.2%, r_h: 43.6%, r_d: 17.2%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1523
+  'r_f' is only 36.9% of total reward (threshold: 50%). Breakdown: r_f: 36.9%, r_h: 31.5%, r_d: 31.6%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1524
+  'r_f' is only 47.7% of total reward (threshold: 50%). Breakdown: r_f: 47.7%, r_h: 27.4%, r_d: 25.0%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1526
+  'r_f' is only 38.7% of total reward (threshold: 50%). Breakdown: r_f: 38.7%, r_h: 41.6%, r_d: 19.7%
+[Monitor] Ep 1529 | Reward: -20.7 (r_f: 56.9%, r_h: 34.2%, r_d: 8.9%)
+          Actions mu: [0.30, 0.08, -0.07, -0.05]  std: [0.26, 0.31, 0.23, 0.27]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.38 Hz
+  Ep 1530/2000 | Avg Reward: -28.6 | Steps: 75510 | Time: 7943s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1530
+  'r_f' is only 30.9% of total reward (threshold: 50%). Breakdown: r_f: 30.9%, r_h: 38.3%, r_d: 30.8%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1533
+  'r_f' is only 43.3% of total reward (threshold: 50%). Breakdown: r_f: 43.3%, r_h: 41.2%, r_d: 15.5%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1535
+  'r_f' is only 26.2% of total reward (threshold: 50%). Breakdown: r_f: 26.2%, r_h: 41.9%, r_d: 31.9%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1537
+  'r_f' is only 47.9% of total reward (threshold: 50%). Breakdown: r_f: 47.9%, r_h: 36.5%, r_d: 15.6%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1538
+  'r_f' is only 38.2% of total reward (threshold: 50%). Breakdown: r_f: 38.2%, r_h: 26.3%, r_d: 35.4%
+[Monitor] Ep 1539 | Reward: -19.5 (r_f: 46.4%, r_h: 30.4%, r_d: 23.2%)
+          Actions mu: [0.27, -0.19, -0.07, 0.02]  std: [0.34, 0.27, 0.22, 0.30]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.36 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1539
+  'r_f' is only 46.4% of total reward (threshold: 50%). Breakdown: r_f: 46.4%, r_h: 30.4%, r_d: 23.2%
+  Ep 1540/2000 | Avg Reward: -29.5 | Steps: 76010 | Time: 8002s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1542
+  'r_f' is only 44.0% of total reward (threshold: 50%). Breakdown: r_f: 44.0%, r_h: 33.3%, r_d: 22.6%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1543
+  'r_f' is only 48.2% of total reward (threshold: 50%). Breakdown: r_f: 48.2%, r_h: 27.7%, r_d: 24.1%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1544
+  'r_f' is only 44.1% of total reward (threshold: 50%). Breakdown: r_f: 44.1%, r_h: 25.9%, r_d: 30.0%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1547
+  'r_f' is only 47.4% of total reward (threshold: 50%). Breakdown: r_f: 47.4%, r_h: 28.3%, r_d: 24.3%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1548
+  'r_f' is only 40.3% of total reward (threshold: 50%). Breakdown: r_f: 40.3%, r_h: 28.4%, r_d: 31.3%
+[Monitor] Ep 1549 | Reward: -55.0 (r_f: 68.2%, r_h: 6.9%, r_d: 24.9%)
+          Actions mu: [0.32, -0.20, 0.02, 0.25]  std: [0.41, 0.36, 0.28, 0.34]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.39 Hz
+  Ep 1550/2000 | Avg Reward: -33.3 | Steps: 76510 | Time: 8057s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1550
+  'r_f' is only 21.1% of total reward (threshold: 50%). Breakdown: r_f: 21.1%, r_h: 43.8%, r_d: 35.1%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1556
+  'r_f' is only 45.4% of total reward (threshold: 50%). Breakdown: r_f: 45.4%, r_h: 26.9%, r_d: 27.7%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1557
+  'r_f' is only 48.5% of total reward (threshold: 50%). Breakdown: r_f: 48.5%, r_h: 21.7%, r_d: 29.8%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1558
+  'r_f' is only 45.2% of total reward (threshold: 50%). Breakdown: r_f: 45.2%, r_h: 22.8%, r_d: 32.0%
+[Monitor] Ep 1559 | Reward: -27.4 (r_f: 42.6%, r_h: 25.8%, r_d: 31.6%)
+          Actions mu: [0.31, -0.00, 0.01, 0.23]  std: [0.36, 0.30, 0.38, 0.32]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.40 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1559
+  'r_f' is only 42.6% of total reward (threshold: 50%). Breakdown: r_f: 42.6%, r_h: 25.8%, r_d: 31.6%
+  Ep 1560/2000 | Avg Reward: -29.6 | Steps: 77010 | Time: 8117s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1560
+  'r_f' is only 47.0% of total reward (threshold: 50%). Breakdown: r_f: 47.0%, r_h: 31.9%, r_d: 21.1%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1563
+  'r_f' is only 42.1% of total reward (threshold: 50%). Breakdown: r_f: 42.1%, r_h: 23.3%, r_d: 34.5%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1566
+  'r_f' is only 39.9% of total reward (threshold: 50%). Breakdown: r_f: 39.9%, r_h: 34.7%, r_d: 25.4%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1567
+  'r_f' is only 43.8% of total reward (threshold: 50%). Breakdown: r_f: 43.8%, r_h: 22.9%, r_d: 33.3%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1568
+  'r_f' is only 22.6% of total reward (threshold: 50%). Breakdown: r_f: 22.6%, r_h: 59.9%, r_d: 17.5%
+[Monitor] Ep 1569 | Reward: -23.8 (r_f: 52.1%, r_h: 22.2%, r_d: 25.8%)
+          Actions mu: [-0.02, -0.17, 0.01, 0.01]  std: [0.33, 0.35, 0.25, 0.29]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.36 Hz
+  Ep 1570/2000 | Avg Reward: -30.2 | Steps: 77510 | Time: 8167s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1570
+  'r_f' is only 19.2% of total reward (threshold: 50%). Breakdown: r_f: 19.2%, r_h: 10.1%, r_d: 70.7%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1574
+  'r_f' is only 41.5% of total reward (threshold: 50%). Breakdown: r_f: 41.5%, r_h: 19.8%, r_d: 38.7%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1575
+  'r_f' is only 28.1% of total reward (threshold: 50%). Breakdown: r_f: 28.1%, r_h: 35.3%, r_d: 36.7%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1577
+  'r_f' is only 41.9% of total reward (threshold: 50%). Breakdown: r_f: 41.9%, r_h: 30.3%, r_d: 27.8%
+[Monitor] Ep 1579 | Reward: -29.8 (r_f: 23.9%, r_h: 31.6%, r_d: 44.5%)
+          Actions mu: [0.39, -0.01, 0.05, 0.32]  std: [0.30, 0.28, 0.41, 0.24]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.40 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1579
+  'r_f' is only 23.9% of total reward (threshold: 50%). Breakdown: r_f: 23.9%, r_h: 31.6%, r_d: 44.5%
+  Ep 1580/2000 | Avg Reward: -31.7 | Steps: 78010 | Time: 8219s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1581
+  'r_f' is only 28.8% of total reward (threshold: 50%). Breakdown: r_f: 28.8%, r_h: 45.8%, r_d: 25.4%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1582
+  'r_f' is only 22.5% of total reward (threshold: 50%). Breakdown: r_f: 22.5%, r_h: 47.8%, r_d: 29.7%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1584
+  'r_f' is only 49.9% of total reward (threshold: 50%). Breakdown: r_f: 49.9%, r_h: 36.2%, r_d: 13.9%
+[Monitor] Ep 1589 | Reward: -18.9 (r_f: 38.7%, r_h: 44.2%, r_d: 17.1%)
+          Actions mu: [0.36, 0.02, -0.06, 0.21]  std: [0.28, 0.34, 0.27, 0.29]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.39 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1589
+  'r_f' is only 38.7% of total reward (threshold: 50%). Breakdown: r_f: 38.7%, r_h: 44.2%, r_d: 17.1%
+  Ep 1590/2000 | Avg Reward: -29.4 | Steps: 78510 | Time: 8263s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1591
+  'r_f' is only 24.2% of total reward (threshold: 50%). Breakdown: r_f: 24.2%, r_h: 31.8%, r_d: 44.0%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1592
+  'r_f' is only 28.1% of total reward (threshold: 50%). Breakdown: r_f: 28.1%, r_h: 59.4%, r_d: 12.5%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1593
+  'r_f' is only 41.1% of total reward (threshold: 50%). Breakdown: r_f: 41.1%, r_h: 29.5%, r_d: 29.4%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1594
+  'r_f' is only 28.1% of total reward (threshold: 50%). Breakdown: r_f: 28.1%, r_h: 19.5%, r_d: 52.4%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1596
+  'r_f' is only 27.8% of total reward (threshold: 50%). Breakdown: r_f: 27.8%, r_h: 28.1%, r_d: 44.1%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1597
+  'r_f' is only 36.1% of total reward (threshold: 50%). Breakdown: r_f: 36.1%, r_h: 42.6%, r_d: 21.2%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1598
+  'r_f' is only 42.5% of total reward (threshold: 50%). Breakdown: r_f: 42.5%, r_h: 27.8%, r_d: 29.7%
+[Monitor] Ep 1599 | Reward: -25.1 (r_f: 45.9%, r_h: 25.9%, r_d: 28.2%)
+          Actions mu: [-0.03, -0.29, 0.18, 0.14]  std: [0.26, 0.35, 0.27, 0.34]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.30 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1599
+  'r_f' is only 45.9% of total reward (threshold: 50%). Breakdown: r_f: 45.9%, r_h: 25.9%, r_d: 28.2%
+  Ep 1600/2000 | Avg Reward: -21.7 | Steps: 79010 | Time: 8315s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1602
+  'r_f' is only 26.3% of total reward (threshold: 50%). Breakdown: r_f: 26.3%, r_h: 31.3%, r_d: 42.4%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1603
+  'r_f' is only 47.4% of total reward (threshold: 50%). Breakdown: r_f: 47.4%, r_h: 22.4%, r_d: 30.2%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1604
+  'r_f' is only 36.0% of total reward (threshold: 50%). Breakdown: r_f: 36.0%, r_h: 32.0%, r_d: 32.0%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1605
+  'r_f' is only 36.2% of total reward (threshold: 50%). Breakdown: r_f: 36.2%, r_h: 21.6%, r_d: 42.1%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1606
+  'r_f' is only 45.3% of total reward (threshold: 50%). Breakdown: r_f: 45.3%, r_h: 21.4%, r_d: 33.3%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1608
+  'r_f' is only 40.3% of total reward (threshold: 50%). Breakdown: r_f: 40.3%, r_h: 32.5%, r_d: 27.2%
+[Monitor] Ep 1609 | Reward: -19.7 (r_f: 49.0%, r_h: 40.1%, r_d: 10.9%)
+          Actions mu: [0.37, 0.03, -0.08, 0.07]  std: [0.27, 0.36, 0.28, 0.32]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.36 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1609
+  'r_f' is only 49.0% of total reward (threshold: 50%). Breakdown: r_f: 49.0%, r_h: 40.1%, r_d: 10.9%
+  Ep 1610/2000 | Avg Reward: -29.9 | Steps: 79510 | Time: 8357s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1611
+  'r_f' is only 44.1% of total reward (threshold: 50%). Breakdown: r_f: 44.1%, r_h: 44.8%, r_d: 11.1%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1615
+  'r_f' is only 48.7% of total reward (threshold: 50%). Breakdown: r_f: 48.7%, r_h: 29.2%, r_d: 22.1%
+Time step reduced to zero. Convergence is not likely.
+Simulation terminated at t=2.3851 s.
+[Monitor] Ep 1619 | Reward: -23.9 (r_f: 37.3%, r_h: 19.2%, r_d: 43.5%)
+          Actions mu: [0.34, -0.28, -0.01, 0.27]  std: [0.34, 0.26, 0.23, 0.33]
+          TDS fails: 1/10 (10.0%) | Freq peak: 0.43 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1619
+  'r_f' is only 37.3% of total reward (threshold: 50%). Breakdown: r_f: 37.3%, r_h: 19.2%, r_d: 43.5%
+  Ep 1620/2000 | Avg Reward: -47.7 | Steps: 79970 | Time: 8399s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1622
+  'r_f' is only 39.6% of total reward (threshold: 50%). Breakdown: r_f: 39.6%, r_h: 25.1%, r_d: 35.2%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1623
+  'r_f' is only 30.8% of total reward (threshold: 50%). Breakdown: r_f: 30.8%, r_h: 32.3%, r_d: 36.9%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1624
+  'r_f' is only 37.8% of total reward (threshold: 50%). Breakdown: r_f: 37.8%, r_h: 53.1%, r_d: 9.1%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1626
+  'r_f' is only 32.5% of total reward (threshold: 50%). Breakdown: r_f: 32.5%, r_h: 38.3%, r_d: 29.1%
+[Monitor] Ep 1629 | Reward: -34.7 (r_f: 63.6%, r_h: 24.2%, r_d: 12.2%)
+          Actions mu: [0.24, 0.04, -0.11, 0.04]  std: [0.38, 0.39, 0.31, 0.32]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.39 Hz
+  Ep 1630/2000 | Avg Reward: -30.7 | Steps: 80470 | Time: 8448s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1634
+  'r_f' is only 38.6% of total reward (threshold: 50%). Breakdown: r_f: 38.6%, r_h: 47.7%, r_d: 13.6%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1635
+  'r_f' is only 39.1% of total reward (threshold: 50%). Breakdown: r_f: 39.1%, r_h: 16.7%, r_d: 44.2%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1636
+  'r_f' is only 48.0% of total reward (threshold: 50%). Breakdown: r_f: 48.0%, r_h: 29.4%, r_d: 22.5%
+[Monitor] Ep 1639 | Reward: -20.7 (r_f: 51.6%, r_h: 27.3%, r_d: 21.2%)
+          Actions mu: [0.01, -0.20, 0.12, 0.07]  std: [0.28, 0.43, 0.34, 0.34]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.39 Hz
+  Ep 1640/2000 | Avg Reward: -30.5 | Steps: 80970 | Time: 8503s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1640
+  'r_f' is only 49.6% of total reward (threshold: 50%). Breakdown: r_f: 49.6%, r_h: 16.2%, r_d: 34.1%
+[Monitor] Ep 1649 | Reward: -27.6 (r_f: 57.2%, r_h: 21.4%, r_d: 21.4%)
+          Actions mu: [-0.19, -0.20, 0.06, 0.30]  std: [0.25, 0.41, 0.43, 0.29]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.43 Hz
+  Ep 1650/2000 | Avg Reward: -31.5 | Steps: 81470 | Time: 8556s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1651
+  'r_f' is only 26.1% of total reward (threshold: 50%). Breakdown: r_f: 26.1%, r_h: 46.7%, r_d: 27.2%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1653
+  'r_f' is only 36.3% of total reward (threshold: 50%). Breakdown: r_f: 36.3%, r_h: 26.6%, r_d: 37.1%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1656
+  'r_f' is only 43.7% of total reward (threshold: 50%). Breakdown: r_f: 43.7%, r_h: 36.9%, r_d: 19.4%
+[Monitor] Ep 1659 | Reward: -36.2 (r_f: 58.7%, r_h: 19.0%, r_d: 22.3%)
+          Actions mu: [0.24, 0.07, -0.05, 0.21]  std: [0.38, 0.32, 0.28, 0.32]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.37 Hz
+  Ep 1660/2000 | Avg Reward: -28.7 | Steps: 81970 | Time: 8602s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1660
+  'r_f' is only 45.7% of total reward (threshold: 50%). Breakdown: r_f: 45.7%, r_h: 28.5%, r_d: 25.8%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1662
+  'r_f' is only 14.5% of total reward (threshold: 50%). Breakdown: r_f: 14.5%, r_h: 8.7%, r_d: 76.7%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1664
+  'r_f' is only 26.9% of total reward (threshold: 50%). Breakdown: r_f: 26.9%, r_h: 7.8%, r_d: 65.2%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1665
+  'r_f' is only 44.2% of total reward (threshold: 50%). Breakdown: r_f: 44.2%, r_h: 32.5%, r_d: 23.3%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1666
+  'r_f' is only 20.1% of total reward (threshold: 50%). Breakdown: r_f: 20.1%, r_h: 37.3%, r_d: 42.6%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1668
+  'r_f' is only 32.8% of total reward (threshold: 50%). Breakdown: r_f: 32.8%, r_h: 11.2%, r_d: 56.0%
+[Monitor] Ep 1669 | Reward: -25.1 (r_f: 43.7%, r_h: 25.5%, r_d: 30.8%)
+          Actions mu: [0.18, -0.11, -0.08, 0.01]  std: [0.42, 0.34, 0.26, 0.27]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.37 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1669
+  'r_f' is only 43.7% of total reward (threshold: 50%). Breakdown: r_f: 43.7%, r_h: 25.5%, r_d: 30.8%
+  Ep 1670/2000 | Avg Reward: -27.9 | Steps: 82470 | Time: 8654s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1670
+  'r_f' is only 33.1% of total reward (threshold: 50%). Breakdown: r_f: 33.1%, r_h: 36.9%, r_d: 30.0%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1671
+  'r_f' is only 24.8% of total reward (threshold: 50%). Breakdown: r_f: 24.8%, r_h: 34.6%, r_d: 40.6%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1673
+  'r_f' is only 27.1% of total reward (threshold: 50%). Breakdown: r_f: 27.1%, r_h: 28.6%, r_d: 44.4%
+[Monitor] Ep 1679 | Reward: -57.2 (r_f: 57.9%, r_h: 6.9%, r_d: 35.3%)
+          Actions mu: [0.28, 0.04, -0.03, 0.34]  std: [0.43, 0.35, 0.35, 0.33]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.41 Hz
+  Ep 1680/2000 | Avg Reward: -32.9 | Steps: 82970 | Time: 8694s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1683
+  'r_f' is only 49.7% of total reward (threshold: 50%). Breakdown: r_f: 49.7%, r_h: 35.6%, r_d: 14.7%
+[Monitor] Ep 1689 | Reward: -60.5 (r_f: 66.6%, r_h: 14.0%, r_d: 19.5%)
+          Actions mu: [0.19, 0.04, 0.01, 0.28]  std: [0.41, 0.34, 0.43, 0.38]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.38 Hz
+  Ep 1690/2000 | Avg Reward: -31.4 | Steps: 83470 | Time: 8750s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1691
+  'r_f' is only 38.3% of total reward (threshold: 50%). Breakdown: r_f: 38.3%, r_h: 40.4%, r_d: 21.3%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1694
+  'r_f' is only 42.2% of total reward (threshold: 50%). Breakdown: r_f: 42.2%, r_h: 34.8%, r_d: 23.0%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1696
+  'r_f' is only 45.4% of total reward (threshold: 50%). Breakdown: r_f: 45.4%, r_h: 27.9%, r_d: 26.7%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1697
+  'r_f' is only 28.2% of total reward (threshold: 50%). Breakdown: r_f: 28.2%, r_h: 33.7%, r_d: 38.1%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1698
+  'r_f' is only 43.1% of total reward (threshold: 50%). Breakdown: r_f: 43.1%, r_h: 21.0%, r_d: 35.8%
+[Monitor] Ep 1699 | Reward: -20.3 (r_f: 45.7%, r_h: 33.1%, r_d: 21.2%)
+          Actions mu: [-0.09, -0.27, 0.27, 0.11]  std: [0.23, 0.34, 0.32, 0.29]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.34 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1699
+  'r_f' is only 45.7% of total reward (threshold: 50%). Breakdown: r_f: 45.7%, r_h: 33.1%, r_d: 21.2%
+  Ep 1700/2000 | Avg Reward: -24.6 | Steps: 83970 | Time: 8808s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1702
+  'r_f' is only 38.4% of total reward (threshold: 50%). Breakdown: r_f: 38.4%, r_h: 32.8%, r_d: 28.8%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1704
+  'r_f' is only 45.4% of total reward (threshold: 50%). Breakdown: r_f: 45.4%, r_h: 23.1%, r_d: 31.5%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1706
+  'r_f' is only 31.1% of total reward (threshold: 50%). Breakdown: r_f: 31.1%, r_h: 36.5%, r_d: 32.5%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1707
+  'r_f' is only 39.7% of total reward (threshold: 50%). Breakdown: r_f: 39.7%, r_h: 33.0%, r_d: 27.3%
+[Monitor] Ep 1709 | Reward: -29.8 (r_f: 51.3%, r_h: 25.9%, r_d: 22.8%)
+          Actions mu: [-0.02, -0.23, 0.08, 0.19]  std: [0.35, 0.43, 0.36, 0.37]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.39 Hz
+  Ep 1710/2000 | Avg Reward: -32.1 | Steps: 84470 | Time: 8859s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1713
+  'r_f' is only 34.4% of total reward (threshold: 50%). Breakdown: r_f: 34.4%, r_h: 23.8%, r_d: 41.8%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1715
+  'r_f' is only 48.8% of total reward (threshold: 50%). Breakdown: r_f: 48.8%, r_h: 19.8%, r_d: 31.3%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1716
+  'r_f' is only 26.4% of total reward (threshold: 50%). Breakdown: r_f: 26.4%, r_h: 30.5%, r_d: 43.1%
+[Monitor] Ep 1719 | Reward: -23.4 (r_f: 28.9%, r_h: 37.0%, r_d: 34.1%)
+          Actions mu: [0.35, -0.00, -0.06, 0.33]  std: [0.30, 0.30, 0.30, 0.29]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.35 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1719
+  'r_f' is only 28.9% of total reward (threshold: 50%). Breakdown: r_f: 28.9%, r_h: 37.0%, r_d: 34.1%
+  Ep 1720/2000 | Avg Reward: -27.8 | Steps: 84970 | Time: 8913s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1720
+  'r_f' is only 44.1% of total reward (threshold: 50%). Breakdown: r_f: 44.1%, r_h: 28.3%, r_d: 27.6%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1723
+  'r_f' is only 47.4% of total reward (threshold: 50%). Breakdown: r_f: 47.4%, r_h: 27.5%, r_d: 25.0%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1725
+  'r_f' is only 47.5% of total reward (threshold: 50%). Breakdown: r_f: 47.5%, r_h: 27.8%, r_d: 24.7%
+[Monitor] Ep 1729 | Reward: -24.8 (r_f: 53.1%, r_h: 31.1%, r_d: 15.8%)
+          Actions mu: [-0.07, -0.24, 0.24, 0.11]  std: [0.25, 0.34, 0.30, 0.29]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.37 Hz
+  Ep 1730/2000 | Avg Reward: -31.4 | Steps: 85470 | Time: 8975s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1730
+  'r_f' is only 33.7% of total reward (threshold: 50%). Breakdown: r_f: 33.7%, r_h: 26.7%, r_d: 39.6%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1731
+  'r_f' is only 45.7% of total reward (threshold: 50%). Breakdown: r_f: 45.7%, r_h: 38.9%, r_d: 15.4%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1734
+  'r_f' is only 27.7% of total reward (threshold: 50%). Breakdown: r_f: 27.7%, r_h: 12.3%, r_d: 60.1%
+[Monitor] Ep 1739 | Reward: -33.3 (r_f: 60.9%, r_h: 23.6%, r_d: 15.5%)
+          Actions mu: [0.29, 0.05, -0.03, 0.18]  std: [0.35, 0.34, 0.37, 0.29]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.38 Hz
+  Ep 1740/2000 | Avg Reward: -30.4 | Steps: 85970 | Time: 9043s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1740
+  'r_f' is only 48.4% of total reward (threshold: 50%). Breakdown: r_f: 48.4%, r_h: 24.1%, r_d: 27.5%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1745
+  'r_f' is only 39.2% of total reward (threshold: 50%). Breakdown: r_f: 39.2%, r_h: 31.2%, r_d: 29.6%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1746
+  'r_f' is only 45.5% of total reward (threshold: 50%). Breakdown: r_f: 45.5%, r_h: 28.9%, r_d: 25.7%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1747
+  'r_f' is only 49.1% of total reward (threshold: 50%). Breakdown: r_f: 49.1%, r_h: 14.7%, r_d: 36.1%
+[Monitor] Ep 1749 | Reward: -24.1 (r_f: 54.1%, r_h: 34.4%, r_d: 11.5%)
+          Actions mu: [0.30, 0.07, -0.07, 0.01]  std: [0.33, 0.32, 0.28, 0.27]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.38 Hz
+  Ep 1750/2000 | Avg Reward: -33.8 | Steps: 86470 | Time: 9091s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1752
+  'r_f' is only 42.2% of total reward (threshold: 50%). Breakdown: r_f: 42.2%, r_h: 31.2%, r_d: 26.6%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1754
+  'r_f' is only 42.3% of total reward (threshold: 50%). Breakdown: r_f: 42.3%, r_h: 25.4%, r_d: 32.3%
+Time step reduced to zero. Convergence is not likely.
+Simulation terminated at t=2.5809 s.
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1756
+  'r_f' is only 48.3% of total reward (threshold: 50%). Breakdown: r_f: 48.3%, r_h: 28.7%, r_d: 23.0%
+[Monitor] Ep 1759 | Reward: -16.3 (r_f: 44.2%, r_h: 21.2%, r_d: 34.6%)
+          Actions mu: [-0.09, -0.30, 0.29, -0.23]  std: [0.29, 0.31, 0.21, 0.25]
+          TDS fails: 1/10 (10.0%) | Freq peak: 0.39 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1759
+  'r_f' is only 44.2% of total reward (threshold: 50%). Breakdown: r_f: 44.2%, r_h: 21.2%, r_d: 34.6%
+  Ep 1760/2000 | Avg Reward: -45.2 | Steps: 86931 | Time: 9148s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1764
+  'r_f' is only 30.7% of total reward (threshold: 50%). Breakdown: r_f: 30.7%, r_h: 44.4%, r_d: 25.0%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1765
+  'r_f' is only 27.4% of total reward (threshold: 50%). Breakdown: r_f: 27.4%, r_h: 39.3%, r_d: 33.3%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1766
+  'r_f' is only 46.9% of total reward (threshold: 50%). Breakdown: r_f: 46.9%, r_h: 30.0%, r_d: 23.1%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1768
+  'r_f' is only 45.2% of total reward (threshold: 50%). Breakdown: r_f: 45.2%, r_h: 25.5%, r_d: 29.2%
+[Monitor] Ep 1769 | Reward: -50.9 (r_f: 66.1%, r_h: 15.5%, r_d: 18.5%)
+          Actions mu: [0.25, -0.01, 0.01, 0.29]  std: [0.43, 0.42, 0.34, 0.35]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.35 Hz
+  Ep 1770/2000 | Avg Reward: -31.3 | Steps: 87431 | Time: 9211s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1770
+  'r_f' is only 45.8% of total reward (threshold: 50%). Breakdown: r_f: 45.8%, r_h: 34.6%, r_d: 19.6%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1771
+  'r_f' is only 41.8% of total reward (threshold: 50%). Breakdown: r_f: 41.8%, r_h: 31.0%, r_d: 27.2%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1772
+  'r_f' is only 45.0% of total reward (threshold: 50%). Breakdown: r_f: 45.0%, r_h: 30.2%, r_d: 24.8%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1773
+  'r_f' is only 47.5% of total reward (threshold: 50%). Breakdown: r_f: 47.5%, r_h: 12.9%, r_d: 39.6%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1774
+  'r_f' is only 45.4% of total reward (threshold: 50%). Breakdown: r_f: 45.4%, r_h: 33.1%, r_d: 21.4%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1776
+  'r_f' is only 42.9% of total reward (threshold: 50%). Breakdown: r_f: 42.9%, r_h: 29.2%, r_d: 27.9%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1777
+  'r_f' is only 25.8% of total reward (threshold: 50%). Breakdown: r_f: 25.8%, r_h: 17.1%, r_d: 57.1%
+[Monitor] Ep 1779 | Reward: -24.8 (r_f: 41.1%, r_h: 32.2%, r_d: 26.8%)
+          Actions mu: [-0.04, -0.27, 0.14, 0.15]  std: [0.30, 0.36, 0.32, 0.34]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.38 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1779
+  'r_f' is only 41.1% of total reward (threshold: 50%). Breakdown: r_f: 41.1%, r_h: 32.2%, r_d: 26.8%
+  Ep 1780/2000 | Avg Reward: -28.2 | Steps: 87931 | Time: 9280s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1780
+  'r_f' is only 36.4% of total reward (threshold: 50%). Breakdown: r_f: 36.4%, r_h: 23.4%, r_d: 40.2%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1784
+  'r_f' is only 49.9% of total reward (threshold: 50%). Breakdown: r_f: 49.9%, r_h: 24.4%, r_d: 25.6%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1787
+  'r_f' is only 37.4% of total reward (threshold: 50%). Breakdown: r_f: 37.4%, r_h: 33.8%, r_d: 28.8%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1788
+  'r_f' is only 44.2% of total reward (threshold: 50%). Breakdown: r_f: 44.2%, r_h: 31.3%, r_d: 24.5%
+[Monitor] Ep 1789 | Reward: -29.9 (r_f: 57.3%, r_h: 15.6%, r_d: 27.1%)
+          Actions mu: [0.04, -0.16, 0.19, -0.41]  std: [0.32, 0.45, 0.32, 0.29]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.41 Hz
+  Ep 1790/2000 | Avg Reward: -29.7 | Steps: 88431 | Time: 9322s
+Time step reduced to zero. Convergence is not likely.
+Simulation terminated at t=2.6012 s.
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1793
+  'r_f' is only 31.0% of total reward (threshold: 50%). Breakdown: r_f: 31.0%, r_h: 38.4%, r_d: 30.6%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1796
+  'r_f' is only 28.3% of total reward (threshold: 50%). Breakdown: r_f: 28.3%, r_h: 32.2%, r_d: 39.5%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1797
+  'r_f' is only 31.3% of total reward (threshold: 50%). Breakdown: r_f: 31.3%, r_h: 34.8%, r_d: 33.9%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1798
+  'r_f' is only 40.2% of total reward (threshold: 50%). Breakdown: r_f: 40.2%, r_h: 26.1%, r_d: 33.7%
+[Monitor] Ep 1799 | Reward: -29.8 (r_f: 63.9%, r_h: 22.3%, r_d: 13.8%)
+          Actions mu: [0.26, 0.07, -0.02, -0.01]  std: [0.33, 0.36, 0.31, 0.29]
+          TDS fails: 1/10 (10.0%) | Freq peak: 0.39 Hz
+  Ep 1800/2000 | Avg Reward: -49.3 | Steps: 88892 | Time: 9372s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1800
+  'r_f' is only 47.6% of total reward (threshold: 50%). Breakdown: r_f: 47.6%, r_h: 27.3%, r_d: 25.1%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1801
+  'r_f' is only 49.1% of total reward (threshold: 50%). Breakdown: r_f: 49.1%, r_h: 34.4%, r_d: 16.5%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1803
+  'r_f' is only 34.9% of total reward (threshold: 50%). Breakdown: r_f: 34.9%, r_h: 46.4%, r_d: 18.7%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1808
+  'r_f' is only 45.6% of total reward (threshold: 50%). Breakdown: r_f: 45.6%, r_h: 27.8%, r_d: 26.6%
+[Monitor] Ep 1809 | Reward: -21.3 (r_f: 46.3%, r_h: 26.2%, r_d: 27.5%)
+          Actions mu: [0.11, -0.06, 0.02, 0.12]  std: [0.16, 0.22, 0.36, 0.32]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.41 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1809
+  'r_f' is only 46.3% of total reward (threshold: 50%). Breakdown: r_f: 46.3%, r_h: 26.2%, r_d: 27.5%
+  Ep 1810/2000 | Avg Reward: -33.9 | Steps: 89392 | Time: 9430s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1810
+  'r_f' is only 35.6% of total reward (threshold: 50%). Breakdown: r_f: 35.6%, r_h: 44.2%, r_d: 20.1%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1811
+  'r_f' is only 48.3% of total reward (threshold: 50%). Breakdown: r_f: 48.3%, r_h: 31.6%, r_d: 20.1%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1815
+  'r_f' is only 46.4% of total reward (threshold: 50%). Breakdown: r_f: 46.4%, r_h: 30.7%, r_d: 22.9%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1816
+  'r_f' is only 43.6% of total reward (threshold: 50%). Breakdown: r_f: 43.6%, r_h: 23.8%, r_d: 32.6%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1817
+  'r_f' is only 45.8% of total reward (threshold: 50%). Breakdown: r_f: 45.8%, r_h: 31.8%, r_d: 22.5%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1818
+  'r_f' is only 22.7% of total reward (threshold: 50%). Breakdown: r_f: 22.7%, r_h: 46.4%, r_d: 30.9%
+[Monitor] Ep 1819 | Reward: -15.5 (r_f: 39.8%, r_h: 24.3%, r_d: 35.9%)
+          Actions mu: [-0.08, -0.06, 0.35, 0.11]  std: [0.31, 0.26, 0.18, 0.32]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.43 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1819
+  'r_f' is only 39.8% of total reward (threshold: 50%). Breakdown: r_f: 39.8%, r_h: 24.3%, r_d: 35.9%
+  Ep 1820/2000 | Avg Reward: -26.2 | Steps: 89892 | Time: 9480s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1822
+  'r_f' is only 33.5% of total reward (threshold: 50%). Breakdown: r_f: 33.5%, r_h: 10.8%, r_d: 55.7%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1825
+  'r_f' is only 47.0% of total reward (threshold: 50%). Breakdown: r_f: 47.0%, r_h: 30.2%, r_d: 22.9%
+[Monitor] Ep 1829 | Reward: -32.0 (r_f: 58.0%, r_h: 25.2%, r_d: 16.8%)
+          Actions mu: [0.27, 0.01, 0.00, 0.12]  std: [0.32, 0.34, 0.40, 0.34]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.40 Hz
+  Ep 1830/2000 | Avg Reward: -34.9 | Steps: 90392 | Time: 9543s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1830
+  'r_f' is only 49.6% of total reward (threshold: 50%). Breakdown: r_f: 49.6%, r_h: 31.8%, r_d: 18.6%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1832
+  'r_f' is only 43.2% of total reward (threshold: 50%). Breakdown: r_f: 43.2%, r_h: 16.8%, r_d: 40.0%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1834
+  'r_f' is only 43.3% of total reward (threshold: 50%). Breakdown: r_f: 43.3%, r_h: 33.6%, r_d: 23.2%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1837
+  'r_f' is only 37.0% of total reward (threshold: 50%). Breakdown: r_f: 37.0%, r_h: 43.3%, r_d: 19.8%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1838
+  'r_f' is only 32.8% of total reward (threshold: 50%). Breakdown: r_f: 32.8%, r_h: 41.5%, r_d: 25.6%
+[Monitor] Ep 1839 | Reward: -24.6 (r_f: 46.7%, r_h: 21.4%, r_d: 31.8%)
+          Actions mu: [0.02, -0.15, 0.25, -0.32]  std: [0.31, 0.44, 0.31, 0.35]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.32 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1839
+  'r_f' is only 46.7% of total reward (threshold: 50%). Breakdown: r_f: 46.7%, r_h: 21.4%, r_d: 31.8%
+  Ep 1840/2000 | Avg Reward: -26.4 | Steps: 90892 | Time: 9587s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1840
+  'r_f' is only 42.4% of total reward (threshold: 50%). Breakdown: r_f: 42.4%, r_h: 23.0%, r_d: 34.6%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1841
+  'r_f' is only 43.6% of total reward (threshold: 50%). Breakdown: r_f: 43.6%, r_h: 35.9%, r_d: 20.5%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1842
+  'r_f' is only 33.0% of total reward (threshold: 50%). Breakdown: r_f: 33.0%, r_h: 23.5%, r_d: 43.5%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1846
+  'r_f' is only 49.0% of total reward (threshold: 50%). Breakdown: r_f: 49.0%, r_h: 32.3%, r_d: 18.7%
+[Monitor] Ep 1849 | Reward: -36.8 (r_f: 71.0%, r_h: 19.0%, r_d: 10.0%)
+          Actions mu: [0.20, 0.04, 0.07, -0.08]  std: [0.34, 0.36, 0.37, 0.34]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.34 Hz
+  Ep 1850/2000 | Avg Reward: -30.5 | Steps: 91392 | Time: 9654s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1851
+  'r_f' is only 40.2% of total reward (threshold: 50%). Breakdown: r_f: 40.2%, r_h: 36.9%, r_d: 22.9%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1852
+  'r_f' is only 46.7% of total reward (threshold: 50%). Breakdown: r_f: 46.7%, r_h: 28.5%, r_d: 24.8%
+Time step reduced to zero. Convergence is not likely.
+Simulation terminated at t=2.4469 s.
+Time step reduced to zero. Convergence is not likely.
+Simulation terminated at t=2.5009 s.
+[Monitor] Ep 1859 | Reward: -24.5 (r_f: 43.1%, r_h: 33.0%, r_d: 23.9%)
+          Actions mu: [0.00, -0.29, 0.14, 0.21]  std: [0.30, 0.37, 0.37, 0.36]
+          TDS fails: 2/10 (20.0%) | Freq peak: 0.41 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1859
+  'r_f' is only 43.1% of total reward (threshold: 50%). Breakdown: r_f: 43.1%, r_h: 33.0%, r_d: 23.9%
+  Ep 1860/2000 | Avg Reward: -76.2 | Steps: 91813 | Time: 9702s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1861
+  'r_f' is only 40.2% of total reward (threshold: 50%). Breakdown: r_f: 40.2%, r_h: 28.8%, r_d: 31.0%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1862
+  'r_f' is only 32.3% of total reward (threshold: 50%). Breakdown: r_f: 32.3%, r_h: 44.8%, r_d: 23.0%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1864
+  'r_f' is only 46.0% of total reward (threshold: 50%). Breakdown: r_f: 46.0%, r_h: 24.7%, r_d: 29.3%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1866
+  'r_f' is only 36.7% of total reward (threshold: 50%). Breakdown: r_f: 36.7%, r_h: 37.2%, r_d: 26.1%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1867
+  'r_f' is only 45.2% of total reward (threshold: 50%). Breakdown: r_f: 45.2%, r_h: 24.0%, r_d: 30.8%
+[Monitor] Ep 1869 | Reward: -17.8 (r_f: 31.0%, r_h: 12.2%, r_d: 56.8%)
+          Actions mu: [0.34, -0.26, 0.03, 0.36]  std: [0.27, 0.28, 0.18, 0.26]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.35 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1869
+  'r_f' is only 31.0% of total reward (threshold: 50%). Breakdown: r_f: 31.0%, r_h: 12.2%, r_d: 56.8%
+  Ep 1870/2000 | Avg Reward: -27.8 | Steps: 92313 | Time: 9754s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1870
+  'r_f' is only 39.1% of total reward (threshold: 50%). Breakdown: r_f: 39.1%, r_h: 32.4%, r_d: 28.5%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1872
+  'r_f' is only 9.1% of total reward (threshold: 50%). Breakdown: r_f: 9.1%, r_h: 12.4%, r_d: 78.6%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1873
+  'r_f' is only 45.1% of total reward (threshold: 50%). Breakdown: r_f: 45.1%, r_h: 29.9%, r_d: 25.0%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1874
+  'r_f' is only 42.9% of total reward (threshold: 50%). Breakdown: r_f: 42.9%, r_h: 34.2%, r_d: 22.8%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1875
+  'r_f' is only 45.3% of total reward (threshold: 50%). Breakdown: r_f: 45.3%, r_h: 28.6%, r_d: 26.1%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1876
+  'r_f' is only 48.3% of total reward (threshold: 50%). Breakdown: r_f: 48.3%, r_h: 39.0%, r_d: 12.7%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1877
+  'r_f' is only 46.5% of total reward (threshold: 50%). Breakdown: r_f: 46.5%, r_h: 23.8%, r_d: 29.7%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1878
+  'r_f' is only 39.8% of total reward (threshold: 50%). Breakdown: r_f: 39.8%, r_h: 39.9%, r_d: 20.3%
+Time step reduced to zero. Convergence is not likely.
+Simulation terminated at t=2.3880 s.
+[Monitor] Ep 1879 | Reward: -212.3 (r_f: 86.2%, r_h: 10.1%, r_d: 3.7%)
+          Actions mu: [-0.17, 0.03, -0.09, 0.25]  std: [0.40, 0.45, 0.44, 0.28]
+          TDS fails: 1/10 (10.0%) | Freq peak: 0.40 Hz
+  Ep 1880/2000 | Avg Reward: -47.2 | Steps: 92773 | Time: 9798s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1881
+  'r_f' is only 27.0% of total reward (threshold: 50%). Breakdown: r_f: 27.0%, r_h: 25.5%, r_d: 47.6%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1883
+  'r_f' is only 26.6% of total reward (threshold: 50%). Breakdown: r_f: 26.6%, r_h: 30.7%, r_d: 42.7%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1886
+  'r_f' is only 47.1% of total reward (threshold: 50%). Breakdown: r_f: 47.1%, r_h: 33.9%, r_d: 19.0%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1887
+  'r_f' is only 40.3% of total reward (threshold: 50%). Breakdown: r_f: 40.3%, r_h: 45.2%, r_d: 14.4%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1888
+  'r_f' is only 40.0% of total reward (threshold: 50%). Breakdown: r_f: 40.0%, r_h: 36.4%, r_d: 23.6%
+[Monitor] Ep 1889 | Reward: -28.6 (r_f: 48.8%, r_h: 30.6%, r_d: 20.7%)
+          Actions mu: [-0.05, -0.28, 0.18, 0.17]  std: [0.32, 0.38, 0.34, 0.35]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.37 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1889
+  'r_f' is only 48.8% of total reward (threshold: 50%). Breakdown: r_f: 48.8%, r_h: 30.6%, r_d: 20.7%
+  Ep 1890/2000 | Avg Reward: -29.7 | Steps: 93273 | Time: 9847s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1890
+  'r_f' is only 44.7% of total reward (threshold: 50%). Breakdown: r_f: 44.7%, r_h: 39.9%, r_d: 15.4%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1892
+  'r_f' is only 21.3% of total reward (threshold: 50%). Breakdown: r_f: 21.3%, r_h: 13.2%, r_d: 65.5%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1894
+  'r_f' is only 48.6% of total reward (threshold: 50%). Breakdown: r_f: 48.6%, r_h: 40.7%, r_d: 10.7%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1895
+  'r_f' is only 42.0% of total reward (threshold: 50%). Breakdown: r_f: 42.0%, r_h: 31.2%, r_d: 26.8%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1896
+  'r_f' is only 19.4% of total reward (threshold: 50%). Breakdown: r_f: 19.4%, r_h: 47.3%, r_d: 33.3%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1897
+  'r_f' is only 47.6% of total reward (threshold: 50%). Breakdown: r_f: 47.6%, r_h: 30.9%, r_d: 21.5%
+[Monitor] Ep 1899 | Reward: -18.8 (r_f: 54.1%, r_h: 25.7%, r_d: 20.1%)
+          Actions mu: [-0.21, -0.24, 0.11, 0.34]  std: [0.26, 0.40, 0.37, 0.24]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.32 Hz
+  Ep 1900/2000 | Avg Reward: -31.7 | Steps: 93773 | Time: 9892s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1900
+  'r_f' is only 39.8% of total reward (threshold: 50%). Breakdown: r_f: 39.8%, r_h: 35.2%, r_d: 24.9%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1901
+  'r_f' is only 43.9% of total reward (threshold: 50%). Breakdown: r_f: 43.9%, r_h: 31.6%, r_d: 24.5%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1905
+  'r_f' is only 36.8% of total reward (threshold: 50%). Breakdown: r_f: 36.8%, r_h: 23.9%, r_d: 39.3%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1907
+  'r_f' is only 48.4% of total reward (threshold: 50%). Breakdown: r_f: 48.4%, r_h: 20.3%, r_d: 31.3%
+[Monitor] Ep 1909 | Reward: -40.6 (r_f: 56.0%, r_h: 22.2%, r_d: 21.8%)
+          Actions mu: [0.27, 0.03, -0.02, 0.32]  std: [0.41, 0.35, 0.39, 0.32]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.43 Hz
+  Ep 1910/2000 | Avg Reward: -30.6 | Steps: 94273 | Time: 9949s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1910
+  'r_f' is only 47.2% of total reward (threshold: 50%). Breakdown: r_f: 47.2%, r_h: 20.6%, r_d: 32.2%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1912
+  'r_f' is only 34.8% of total reward (threshold: 50%). Breakdown: r_f: 34.8%, r_h: 35.0%, r_d: 30.2%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1915
+  'r_f' is only 37.8% of total reward (threshold: 50%). Breakdown: r_f: 37.8%, r_h: 30.3%, r_d: 31.9%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1918
+  'r_f' is only 41.3% of total reward (threshold: 50%). Breakdown: r_f: 41.3%, r_h: 18.4%, r_d: 40.3%
+[Monitor] Ep 1919 | Reward: -19.2 (r_f: 57.4%, r_h: 25.3%, r_d: 17.3%)
+          Actions mu: [-0.11, -0.26, 0.24, 0.15]  std: [0.23, 0.33, 0.33, 0.25]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.39 Hz
+  Ep 1920/2000 | Avg Reward: -34.5 | Steps: 94773 | Time: 9998s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1921
+  'r_f' is only 46.2% of total reward (threshold: 50%). Breakdown: r_f: 46.2%, r_h: 31.8%, r_d: 22.0%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1922
+  'r_f' is only 44.4% of total reward (threshold: 50%). Breakdown: r_f: 44.4%, r_h: 30.2%, r_d: 25.4%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1925
+  'r_f' is only 40.5% of total reward (threshold: 50%). Breakdown: r_f: 40.5%, r_h: 22.9%, r_d: 36.5%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1926
+  'r_f' is only 48.2% of total reward (threshold: 50%). Breakdown: r_f: 48.2%, r_h: 27.6%, r_d: 24.1%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1927
+  'r_f' is only 26.7% of total reward (threshold: 50%). Breakdown: r_f: 26.7%, r_h: 55.9%, r_d: 17.4%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1928
+  'r_f' is only 40.6% of total reward (threshold: 50%). Breakdown: r_f: 40.6%, r_h: 37.4%, r_d: 22.0%
+[Monitor] Ep 1929 | Reward: -24.7 (r_f: 35.8%, r_h: 41.0%, r_d: 23.2%)
+          Actions mu: [-0.04, -0.29, 0.20, 0.17]  std: [0.27, 0.34, 0.33, 0.29]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.46 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1929
+  'r_f' is only 35.8% of total reward (threshold: 50%). Breakdown: r_f: 35.8%, r_h: 41.0%, r_d: 23.2%
+  Ep 1930/2000 | Avg Reward: -28.7 | Steps: 95273 | Time: 10054s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1931
+  'r_f' is only 33.5% of total reward (threshold: 50%). Breakdown: r_f: 33.5%, r_h: 14.7%, r_d: 51.7%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1932
+  'r_f' is only 46.9% of total reward (threshold: 50%). Breakdown: r_f: 46.9%, r_h: 15.9%, r_d: 37.2%
+[Monitor] Ep 1939 | Reward: -15.8 (r_f: 43.8%, r_h: 29.6%, r_d: 26.6%)
+          Actions mu: [0.25, -0.17, -0.10, 0.06]  std: [0.35, 0.34, 0.16, 0.29]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.39 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1939
+  'r_f' is only 43.8% of total reward (threshold: 50%). Breakdown: r_f: 43.8%, r_h: 29.6%, r_d: 26.6%
+  Ep 1940/2000 | Avg Reward: -28.7 | Steps: 95773 | Time: 10106s
+Time step reduced to zero. Convergence is not likely.
+Simulation terminated at t=2.5940 s.
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1941
+  'r_f' is only 44.0% of total reward (threshold: 50%). Breakdown: r_f: 44.0%, r_h: 35.3%, r_d: 20.7%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1943
+  'r_f' is only 36.6% of total reward (threshold: 50%). Breakdown: r_f: 36.6%, r_h: 31.1%, r_d: 32.3%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1945
+  'r_f' is only 30.4% of total reward (threshold: 50%). Breakdown: r_f: 30.4%, r_h: 5.7%, r_d: 63.9%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1946
+  'r_f' is only 43.9% of total reward (threshold: 50%). Breakdown: r_f: 43.9%, r_h: 15.0%, r_d: 41.1%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1948
+  'r_f' is only 33.2% of total reward (threshold: 50%). Breakdown: r_f: 33.2%, r_h: 41.0%, r_d: 25.7%
+[Monitor] Ep 1949 | Reward: -29.1 (r_f: 45.2%, r_h: 40.7%, r_d: 14.1%)
+          Actions mu: [0.09, -0.13, 0.06, 0.20]  std: [0.34, 0.43, 0.37, 0.36]
+          TDS fails: 1/10 (10.0%) | Freq peak: 0.34 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1949
+  'r_f' is only 45.2% of total reward (threshold: 50%). Breakdown: r_f: 45.2%, r_h: 40.7%, r_d: 14.1%
+  Ep 1950/2000 | Avg Reward: -45.6 | Steps: 96234 | Time: 10153s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1950
+  'r_f' is only 29.0% of total reward (threshold: 50%). Breakdown: r_f: 29.0%, r_h: 61.9%, r_d: 9.1%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1951
+  'r_f' is only 35.6% of total reward (threshold: 50%). Breakdown: r_f: 35.6%, r_h: 37.6%, r_d: 26.8%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1952
+  'r_f' is only 44.8% of total reward (threshold: 50%). Breakdown: r_f: 44.8%, r_h: 32.0%, r_d: 23.2%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1953
+  'r_f' is only 35.6% of total reward (threshold: 50%). Breakdown: r_f: 35.6%, r_h: 42.1%, r_d: 22.2%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1955
+  'r_f' is only 46.5% of total reward (threshold: 50%). Breakdown: r_f: 46.5%, r_h: 20.2%, r_d: 33.3%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1956
+  'r_f' is only 49.7% of total reward (threshold: 50%). Breakdown: r_f: 49.7%, r_h: 24.8%, r_d: 25.6%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1957
+  'r_f' is only 44.4% of total reward (threshold: 50%). Breakdown: r_f: 44.4%, r_h: 17.0%, r_d: 38.6%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1958
+  'r_f' is only 25.3% of total reward (threshold: 50%). Breakdown: r_f: 25.3%, r_h: 45.5%, r_d: 29.2%
+[Monitor] Ep 1959 | Reward: -20.9 (r_f: 46.2%, r_h: 34.9%, r_d: 18.9%)
+          Actions mu: [0.33, 0.09, -0.07, 0.12]  std: [0.30, 0.29, 0.28, 0.26]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.37 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1959
+  'r_f' is only 46.2% of total reward (threshold: 50%). Breakdown: r_f: 46.2%, r_h: 34.9%, r_d: 18.9%
+  Ep 1960/2000 | Avg Reward: -24.0 | Steps: 96734 | Time: 10203s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1962
+  'r_f' is only 41.8% of total reward (threshold: 50%). Breakdown: r_f: 41.8%, r_h: 16.8%, r_d: 41.4%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1963
+  'r_f' is only 34.5% of total reward (threshold: 50%). Breakdown: r_f: 34.5%, r_h: 24.6%, r_d: 40.8%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1964
+  'r_f' is only 42.5% of total reward (threshold: 50%). Breakdown: r_f: 42.5%, r_h: 32.5%, r_d: 25.0%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1965
+  'r_f' is only 42.4% of total reward (threshold: 50%). Breakdown: r_f: 42.4%, r_h: 26.2%, r_d: 31.4%
+[Monitor] Ep 1969 | Reward: -24.0 (r_f: 31.7%, r_h: 42.5%, r_d: 25.8%)
+          Actions mu: [-0.02, -0.28, 0.19, 0.14]  std: [0.26, 0.38, 0.37, 0.33]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.38 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1969
+  'r_f' is only 31.7% of total reward (threshold: 50%). Breakdown: r_f: 31.7%, r_h: 42.5%, r_d: 25.8%
+  Ep 1970/2000 | Avg Reward: -31.6 | Steps: 97234 | Time: 10255s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1971
+  'r_f' is only 41.0% of total reward (threshold: 50%). Breakdown: r_f: 41.0%, r_h: 37.1%, r_d: 21.9%
+Time step reduced to zero. Convergence is not likely.
+Simulation terminated at t=2.5065 s.
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1973
+  'r_f' is only 36.9% of total reward (threshold: 50%). Breakdown: r_f: 36.9%, r_h: 38.7%, r_d: 24.4%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1974
+  'r_f' is only 42.9% of total reward (threshold: 50%). Breakdown: r_f: 42.9%, r_h: 34.0%, r_d: 23.2%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1975
+  'r_f' is only 34.3% of total reward (threshold: 50%). Breakdown: r_f: 34.3%, r_h: 22.2%, r_d: 43.4%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1976
+  'r_f' is only 41.9% of total reward (threshold: 50%). Breakdown: r_f: 41.9%, r_h: 36.8%, r_d: 21.4%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1977
+  'r_f' is only 40.7% of total reward (threshold: 50%). Breakdown: r_f: 40.7%, r_h: 26.3%, r_d: 33.0%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1978
+  'r_f' is only 21.7% of total reward (threshold: 50%). Breakdown: r_f: 21.7%, r_h: 37.0%, r_d: 41.3%
+[Monitor] Ep 1979 | Reward: -43.8 (r_f: 51.7%, r_h: 18.4%, r_d: 30.0%)
+          Actions mu: [0.09, -0.07, 0.21, -0.29]  std: [0.36, 0.46, 0.33, 0.45]
+          TDS fails: 1/10 (10.0%) | Freq peak: 0.37 Hz
+  Ep 1980/2000 | Avg Reward: -45.2 | Steps: 97695 | Time: 10306s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1981
+  'r_f' is only 46.9% of total reward (threshold: 50%). Breakdown: r_f: 46.9%, r_h: 33.9%, r_d: 19.2%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1982
+  'r_f' is only 38.9% of total reward (threshold: 50%). Breakdown: r_f: 38.9%, r_h: 36.6%, r_d: 24.5%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1983
+  'r_f' is only 46.5% of total reward (threshold: 50%). Breakdown: r_f: 46.5%, r_h: 16.9%, r_d: 36.6%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1987
+  'r_f' is only 43.4% of total reward (threshold: 50%). Breakdown: r_f: 43.4%, r_h: 38.3%, r_d: 18.3%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1988
+  'r_f' is only 26.6% of total reward (threshold: 50%). Breakdown: r_f: 26.6%, r_h: 24.2%, r_d: 49.2%
+[Monitor] Ep 1989 | Reward: -39.8 (r_f: 61.5%, r_h: 16.5%, r_d: 22.0%)
+          Actions mu: [0.27, -0.00, 0.05, 0.24]  std: [0.34, 0.32, 0.37, 0.32]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.28 Hz
+  Ep 1990/2000 | Avg Reward: -29.1 | Steps: 98195 | Time: 10356s
+Time step reduced to zero. Convergence is not likely.
+Simulation terminated at t=2.4989 s.
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1992
+  'r_f' is only 37.8% of total reward (threshold: 50%). Breakdown: r_f: 37.8%, r_h: 28.5%, r_d: 33.7%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1993
+  'r_f' is only 42.2% of total reward (threshold: 50%). Breakdown: r_f: 42.2%, r_h: 27.9%, r_d: 29.9%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1994
+  'r_f' is only 33.2% of total reward (threshold: 50%). Breakdown: r_f: 33.2%, r_h: 38.2%, r_d: 28.6%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1995
+  'r_f' is only 34.8% of total reward (threshold: 50%). Breakdown: r_f: 34.8%, r_h: 20.7%, r_d: 44.5%
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1998
+  'r_f' is only 43.7% of total reward (threshold: 50%). Breakdown: r_f: 43.7%, r_h: 35.5%, r_d: 20.8%
+[Monitor] Ep 1999 | Reward: -40.8 (r_f: 59.8%, r_h: 28.0%, r_d: 12.2%)
+          Actions mu: [0.10, -0.10, 0.04, 0.17]  std: [0.37, 0.44, 0.42, 0.43]
+          TDS fails: 1/10 (10.0%) | Freq peak: 0.39 Hz
+  Ep 2000/2000 | Avg Reward: -48.0 | Steps: 98655 | Time: 10405s
+
+[Monitor] === Training Summary ===
+  Episodes: 2000 | Calibration: complete
+  Reward:   -59 (ep 0) -> -41 (ep 1999)
+  Best:     -9 @ ep 1316 | Worst: -504 @ ep 17
+
+  Checks triggered:
+    reward_component_ratio       [!] WARN  @ ep 25    (803 times)
+
+  TDS failures: 34/2000 (1.7%)
+  Freq peak deviation: 0.58 Hz (ep 17)
+
+
+Training log saved to results/andes_models_fixed/training_log.json
+Training curves saved to results/figures/andes_training_curves.png
+
+Total time: 10404s
+Done!

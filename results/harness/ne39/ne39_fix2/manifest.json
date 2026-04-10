@@ -1,0 +1,9 @@
+{
+  "run_id": "ne39_fix2",
+  "scenario_id": "ne39",
+  "goal": "Verify ne39 scenario is ready for training with SDI clear fix (ne39_fix2)",
+  "requested_tasks": [
+    "scenario_status"
+  ],
+  "created_at": "2026-04-07T19:12:50.773553+00:00"
+}

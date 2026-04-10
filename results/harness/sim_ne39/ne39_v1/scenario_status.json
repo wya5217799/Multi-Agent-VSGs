@@ -1,0 +1,25 @@
+{
+  "task": "scenario_status",
+  "scenario_id": "sim_ne39",
+  "run_id": "ne39_v1",
+  "status": "failed",
+  "started_at": "2026-04-07T08:18:29.066679+00:00",
+  "finished_at": "2026-04-07T08:18:29.066679+00:00",
+  "inputs": {
+    "goal": "NE39 FastRestart co-simulation pipeline ready for RL training. Smoke test passed: warmup + 1 step, omega stable [0.95,1.05]. patch_ne39_faststart applied, vsg_warmup/vsg_step_and_read rewritten for FastRestart, bridge updated for 2-return signature + delta/Pe feedback loop.",
+    "requested_tasks": [
+      "scenario_status"
+    ]
+  },
+  "summary": [],
+  "artifacts": [],
+  "failures": [
+    {
+      "failure_class": "contract_error",
+      "message": "Unsupported scenario_id. Expected one of: kundur, ne39",
+      "detail": {}
+    }
+  ],
+  "supported": false,
+  "notes": []
+}

@@ -1,0 +1,512 @@
+============================================================
+ ANDES MADRL Training — 2000 episodes
+============================================================
+  [Monitor] New best reward: -42.4 @ ep 0
+  [Monitor] New best reward: -31.2 @ ep 1
+[Monitor] Ep 9 | Reward: -44.4 (r_f: 19.8%, r_h: 40.9%, r_d: 39.3%)
+          Actions mu: [-0.01, 0.02, -0.01, 0.00]  std: [0.59, 0.55, 0.58, 0.54]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.33 Hz
+          Per-agent rewards: [a0: -11.6, a1: -11.7, a2: -11.0, a3: -10.1]
+          SAC: mean critic_loss: 2.320, mean alpha: 0.997
+  Ep 10/2000 | Avg Reward: -42.4 | Steps: 500 | Time: 99s
+[Monitor] Calibration complete (20 episodes).
+          Reward baseline: mu=-45.3, std=8.0 -> magnitude range: [-69, -21]
+          Action std baseline: 0.58 -> collapse threshold: 0.058
+          TDS failure baseline: 0.0% -> alert threshold: 30.0%
+[Monitor] Ep 19 | Reward: -37.2 (r_f: 23.5%, r_h: 45.6%, r_d: 30.8%)
+          Actions mu: [0.03, 0.09, 0.04, 0.02]  std: [0.57, 0.58, 0.60, 0.61]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.42 Hz
+          Per-agent rewards: [a0: -9.7, a1: -9.5, a2: -9.6, a3: -8.5]
+          SAC: mean critic_loss: 0.409, mean alpha: 0.968
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 19
+  'r_f' is only 23.5% of total reward (threshold: 50%). Breakdown: r_f: 23.5%, r_h: 45.6%, r_d: 30.8%
+  Ep 20/2000 | Avg Reward: -48.2 | Steps: 1000 | Time: 197s
+[Monitor] Ep 29 | Reward: -43.5 (r_f: 23.5%, r_h: 33.2%, r_d: 43.3%)
+          Actions mu: [0.05, -0.03, -0.03, -0.03]  std: [0.58, 0.61, 0.58, 0.57]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.46 Hz
+          Per-agent rewards: [a0: -11.1, a1: -11.7, a2: -10.7, a3: -10.0]
+          SAC: mean critic_loss: 0.165, mean alpha: 0.939
+  Ep 30/2000 | Avg Reward: -46.1 | Steps: 1500 | Time: 296s
+[Monitor] Ep 39 | Reward: -47.6 (r_f: 12.4%, r_h: 44.0%, r_d: 43.6%)
+          Actions mu: [0.04, 0.02, 0.07, -0.02]  std: [0.57, 0.60, 0.53, 0.63]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.45 Hz
+          Per-agent rewards: [a0: -12.1, a1: -12.0, a2: -12.4, a3: -11.1]
+          SAC: mean critic_loss: 0.230, mean alpha: 0.911
+  Ep 40/2000 | Avg Reward: -46.5 | Steps: 2000 | Time: 395s
+[Monitor] Ep 49 | Reward: -65.2 (r_f: 41.0%, r_h: 23.3%, r_d: 35.7%)
+          Actions mu: [-0.02, 0.07, 0.09, -0.04]  std: [0.65, 0.56, 0.63, 0.63]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.41 Hz
+          Per-agent rewards: [a0: -12.1, a1: -18.3, a2: -16.6, a3: -18.2]
+          SAC: mean critic_loss: 0.279, mean alpha: 0.884
+  Ep 50/2000 | Avg Reward: -52.1 | Steps: 2500 | Time: 496s
+  [Monitor] New best reward: -31.0 @ ep 52
+[Monitor] Ep 59 | Reward: -35.9 (r_f: 19.0%, r_h: 37.2%, r_d: 43.9%)
+          Actions mu: [-0.00, -0.03, 0.04, 0.10]  std: [0.57, 0.58, 0.59, 0.58]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.40 Hz
+          Per-agent rewards: [a0: -9.1, a1: -9.2, a2: -9.5, a3: -8.1]
+          SAC: mean critic_loss: 0.597, mean alpha: 0.858
+  Ep 60/2000 | Avg Reward: -41.5 | Steps: 3000 | Time: 597s
+[Monitor] Ep 69 | Reward: -36.0 (r_f: 19.6%, r_h: 40.9%, r_d: 39.5%)
+          Actions mu: [0.06, 0.05, 0.00, 0.10]  std: [0.60, 0.61, 0.55, 0.52]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.41 Hz
+          Per-agent rewards: [a0: -9.2, a1: -9.2, a2: -9.0, a3: -8.5]
+          SAC: mean critic_loss: 0.887, mean alpha: 0.833
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 69
+  'r_f' is only 19.6% of total reward (threshold: 50%). Breakdown: r_f: 19.6%, r_h: 40.9%, r_d: 39.5%
+  Ep 70/2000 | Avg Reward: -46.0 | Steps: 3500 | Time: 698s
+[Monitor] Ep 79 | Reward: -53.6 (r_f: 15.3%, r_h: 35.3%, r_d: 49.5%)
+          Actions mu: [0.04, -0.03, -0.01, 0.02]  std: [0.56, 0.58, 0.61, 0.61]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.37 Hz
+          Per-agent rewards: [a0: -13.7, a1: -13.9, a2: -14.0, a3: -12.0]
+          SAC: mean critic_loss: 0.543, mean alpha: 0.808
+  Ep 80/2000 | Avg Reward: -40.8 | Steps: 4000 | Time: 799s
+[Monitor] Ep 89 | Reward: -37.0 (r_f: 11.1%, r_h: 43.5%, r_d: 45.3%)
+          Actions mu: [-0.02, 0.04, 0.03, -0.04]  std: [0.56, 0.54, 0.57, 0.56]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.35 Hz
+          Per-agent rewards: [a0: -10.5, a1: -9.4, a2: -8.3, a3: -8.8]
+          SAC: mean critic_loss: 0.553, mean alpha: 0.784
+  Ep 90/2000 | Avg Reward: -42.4 | Steps: 4500 | Time: 901s
+[Monitor] Ep 99 | Reward: -31.5 (r_f: 12.0%, r_h: 40.3%, r_d: 47.6%)
+          Actions mu: [-0.01, -0.05, 0.01, -0.03]  std: [0.58, 0.63, 0.56, 0.56]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.39 Hz
+          Per-agent rewards: [a0: -7.5, a1: -7.9, a2: -8.3, a3: -7.8]
+          SAC: mean critic_loss: 0.928, mean alpha: 0.761
+  Ep 100/2000 | Avg Reward: -44.6 | Steps: 5000 | Time: 1005s
+[Monitor] Ep 109 | Reward: -61.6 (r_f: 39.4%, r_h: 30.7%, r_d: 29.9%)
+          Actions mu: [-0.05, 0.09, 0.10, -0.01]  std: [0.58, 0.57, 0.56, 0.55]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.45 Hz
+          Per-agent rewards: [a0: -14.1, a1: -17.4, a2: -17.6, a3: -12.6]
+          SAC: mean critic_loss: 0.470, mean alpha: 0.738
+  Ep 110/2000 | Avg Reward: -52.1 | Steps: 5500 | Time: 1107s
+[Monitor] Ep 119 | Reward: -42.8 (r_f: 28.5%, r_h: 46.5%, r_d: 25.0%)
+          Actions mu: [0.03, 0.05, -0.03, -0.02]  std: [0.63, 0.58, 0.63, 0.58]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.36 Hz
+          Per-agent rewards: [a0: -9.7, a1: -10.3, a2: -11.5, a3: -11.3]
+          SAC: mean critic_loss: 0.442, mean alpha: 0.717
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 119
+  'r_f' is only 28.5% of total reward (threshold: 50%). Breakdown: r_f: 28.5%, r_h: 46.5%, r_d: 25.0%
+  Ep 120/2000 | Avg Reward: -44.4 | Steps: 6000 | Time: 1212s
+  [Monitor] New best reward: -25.3 @ ep 124
+[Monitor] Ep 129 | Reward: -60.3 (r_f: 39.3%, r_h: 32.8%, r_d: 27.9%)
+          Actions mu: [0.08, 0.06, 0.02, -0.05]  std: [0.58, 0.61, 0.60, 0.55]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.41 Hz
+          Per-agent rewards: [a0: -15.7, a1: -13.1, a2: -15.6, a3: -15.9]
+          SAC: mean critic_loss: 1.204, mean alpha: 0.695
+  Ep 130/2000 | Avg Reward: -44.9 | Steps: 6500 | Time: 1315s
+[Monitor] Ep 139 | Reward: -46.3 (r_f: 31.1%, r_h: 25.5%, r_d: 43.4%)
+          Actions mu: [-0.00, -0.03, 0.02, 0.05]  std: [0.57, 0.62, 0.59, 0.59]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.43 Hz
+          Per-agent rewards: [a0: -9.4, a1: -12.3, a2: -13.0, a3: -11.6]
+          SAC: mean critic_loss: 1.226, mean alpha: 0.675
+  Ep 140/2000 | Avg Reward: -47.5 | Steps: 7000 | Time: 1413s
+[Monitor] Ep 149 | Reward: -46.9 (r_f: 25.8%, r_h: 34.3%, r_d: 39.9%)
+          Actions mu: [-0.01, 0.02, 0.06, -0.06]  std: [0.60, 0.54, 0.59, 0.54]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.34 Hz
+          Per-agent rewards: [a0: -11.8, a1: -12.3, a2: -11.8, a3: -10.9]
+          SAC: mean critic_loss: 2.197, mean alpha: 0.655
+  Ep 150/2000 | Avg Reward: -42.7 | Steps: 7500 | Time: 1516s
+[Monitor] Ep 159 | Reward: -35.0 (r_f: 14.6%, r_h: 47.4%, r_d: 38.0%)
+          Actions mu: [0.10, -0.01, 0.03, 0.07]  std: [0.57, 0.61, 0.55, 0.60]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.40 Hz
+          Per-agent rewards: [a0: -9.0, a1: -9.1, a2: -8.7, a3: -8.3]
+          SAC: mean critic_loss: 1.392, mean alpha: 0.636
+  Ep 160/2000 | Avg Reward: -41.7 | Steps: 8000 | Time: 1626s
+[Monitor] Ep 169 | Reward: -41.6 (r_f: 15.7%, r_h: 34.1%, r_d: 50.2%)
+          Actions mu: [0.03, 0.06, 0.04, -0.02]  std: [0.62, 0.57, 0.59, 0.64]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.39 Hz
+          Per-agent rewards: [a0: -10.7, a1: -10.8, a2: -10.5, a3: -9.6]
+          SAC: mean critic_loss: 3.414, mean alpha: 0.617
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 169
+  'r_f' is only 15.7% of total reward (threshold: 50%). Breakdown: r_f: 15.7%, r_h: 34.1%, r_d: 50.2%
+  Ep 170/2000 | Avg Reward: -40.8 | Steps: 8500 | Time: 1728s
+[Monitor] Ep 179 | Reward: -50.1 (r_f: 12.4%, r_h: 48.6%, r_d: 39.0%)
+          Actions mu: [0.09, 0.05, -0.03, 0.11]  std: [0.58, 0.62, 0.60, 0.61]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.32 Hz
+          Per-agent rewards: [a0: -12.7, a1: -12.9, a2: -12.3, a3: -12.2]
+          SAC: mean critic_loss: 1.698, mean alpha: 0.599
+  Ep 180/2000 | Avg Reward: -44.5 | Steps: 9000 | Time: 1827s
+[Monitor] Ep 189 | Reward: -54.5 (r_f: 24.1%, r_h: 43.1%, r_d: 32.8%)
+          Actions mu: [-0.01, -0.00, -0.05, 0.12]  std: [0.58, 0.60, 0.62, 0.57]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.39 Hz
+          Per-agent rewards: [a0: -14.1, a1: -14.3, a2: -13.0, a3: -13.1]
+          SAC: mean critic_loss: 1.150, mean alpha: 0.581
+  Ep 190/2000 | Avg Reward: -46.0 | Steps: 9500 | Time: 1927s
+[Monitor] Ep 199 | Reward: -36.6 (r_f: 17.3%, r_h: 39.3%, r_d: 43.4%)
+          Actions mu: [-0.04, 0.06, 0.03, -0.11]  std: [0.52, 0.58, 0.59, 0.60]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.44 Hz
+          Per-agent rewards: [a0: -9.1, a1: -9.4, a2: -9.3, a3: -8.8]
+          SAC: mean critic_loss: 0.793, mean alpha: 0.564
+  Ep 200/2000 | Avg Reward: -43.8 | Steps: 10000 | Time: 2026s
+[Monitor] Ep 209 | Reward: -44.6 (r_f: 26.5%, r_h: 36.3%, r_d: 37.2%)
+          Actions mu: [0.04, -0.12, 0.08, -0.08]  std: [0.59, 0.61, 0.55, 0.56]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.44 Hz
+          Per-agent rewards: [a0: -11.7, a1: -11.9, a2: -11.7, a3: -9.3]
+          SAC: mean critic_loss: 0.196, mean alpha: 0.547
+  Ep 210/2000 | Avg Reward: -42.6 | Steps: 10500 | Time: 2128s
+[Monitor] Ep 219 | Reward: -39.5 (r_f: 21.5%, r_h: 40.7%, r_d: 37.8%)
+          Actions mu: [-0.09, 0.00, -0.04, 0.00]  std: [0.54, 0.58, 0.59, 0.54]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.40 Hz
+          Per-agent rewards: [a0: -9.6, a1: -10.2, a2: -9.8, a3: -9.9]
+          SAC: mean critic_loss: 1.988, mean alpha: 0.531
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 219
+  'r_f' is only 21.5% of total reward (threshold: 50%). Breakdown: r_f: 21.5%, r_h: 40.7%, r_d: 37.8%
+  Ep 220/2000 | Avg Reward: -44.6 | Steps: 11000 | Time: 2226s
+[Monitor] Ep 229 | Reward: -59.7 (r_f: 41.1%, r_h: 29.9%, r_d: 29.0%)
+          Actions mu: [-0.04, -0.10, -0.05, -0.11]  std: [0.55, 0.57, 0.59, 0.60]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.38 Hz
+          Per-agent rewards: [a0: -16.4, a1: -12.5, a2: -16.9, a3: -13.9]
+          SAC: mean critic_loss: 2.492, mean alpha: 0.515
+  Ep 230/2000 | Avg Reward: -47.9 | Steps: 11500 | Time: 2324s
+[Monitor] Ep 239 | Reward: -67.2 (r_f: 41.7%, r_h: 29.5%, r_d: 28.8%)
+          Actions mu: [0.03, -0.04, -0.01, -0.06]  std: [0.56, 0.59, 0.59, 0.58]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.41 Hz
+          Per-agent rewards: [a0: -14.0, a1: -18.7, a2: -17.0, a3: -17.5]
+          SAC: mean critic_loss: 4.394, mean alpha: 0.500
+  Ep 240/2000 | Avg Reward: -44.7 | Steps: 12000 | Time: 2432s
+[Monitor] Ep 249 | Reward: -40.9 (r_f: 5.5%, r_h: 55.9%, r_d: 38.6%)
+          Actions mu: [0.02, -0.01, 0.09, 0.06]  std: [0.61, 0.57, 0.56, 0.54]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.33 Hz
+          Per-agent rewards: [a0: -10.2, a1: -10.7, a2: -10.4, a3: -9.7]
+          SAC: mean critic_loss: 3.004, mean alpha: 0.485
+  Ep 250/2000 | Avg Reward: -38.8 | Steps: 12500 | Time: 2547s
+[Monitor] Ep 259 | Reward: -32.9 (r_f: 15.1%, r_h: 37.0%, r_d: 47.9%)
+          Actions mu: [0.01, -0.08, -0.04, 0.11]  std: [0.56, 0.54, 0.62, 0.57]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.34 Hz
+          Per-agent rewards: [a0: -8.5, a1: -8.3, a2: -8.5, a3: -7.6]
+          SAC: mean critic_loss: 2.227, mean alpha: 0.471
+  Ep 260/2000 | Avg Reward: -40.2 | Steps: 13000 | Time: 2662s
+[Monitor] Ep 269 | Reward: -39.7 (r_f: 19.5%, r_h: 47.1%, r_d: 33.4%)
+          Actions mu: [-0.03, -0.08, -0.05, 0.07]  std: [0.58, 0.52, 0.53, 0.60]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.41 Hz
+          Per-agent rewards: [a0: -10.2, a1: -10.4, a2: -10.1, a3: -9.0]
+          SAC: mean critic_loss: 2.261, mean alpha: 0.457
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 269
+  'r_f' is only 19.5% of total reward (threshold: 50%). Breakdown: r_f: 19.5%, r_h: 47.1%, r_d: 33.4%
+  Ep 270/2000 | Avg Reward: -45.1 | Steps: 13500 | Time: 2775s
+[Monitor] Ep 279 | Reward: -39.8 (r_f: 22.3%, r_h: 37.4%, r_d: 40.3%)
+          Actions mu: [0.08, 0.04, -0.00, 0.11]  std: [0.62, 0.58, 0.57, 0.60]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.39 Hz
+          Per-agent rewards: [a0: -10.3, a1: -10.3, a2: -10.2, a3: -9.0]
+          SAC: mean critic_loss: 1.758, mean alpha: 0.444
+  Ep 280/2000 | Avg Reward: -45.4 | Steps: 14000 | Time: 2891s
+[Monitor] Ep 289 | Reward: -39.4 (r_f: 10.4%, r_h: 41.6%, r_d: 48.0%)
+          Actions mu: [-0.04, 0.03, -0.06, 0.03]  std: [0.55, 0.55, 0.54, 0.61]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.37 Hz
+          Per-agent rewards: [a0: -10.2, a1: -10.3, a2: -9.4, a3: -9.5]
+          SAC: mean critic_loss: 4.508, mean alpha: 0.430
+  Ep 290/2000 | Avg Reward: -44.4 | Steps: 14500 | Time: 3003s
+[Monitor] Ep 299 | Reward: -52.2 (r_f: 23.4%, r_h: 36.4%, r_d: 40.1%)
+          Actions mu: [-0.04, 0.02, -0.01, -0.06]  std: [0.58, 0.55, 0.60, 0.61]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.45 Hz
+          Per-agent rewards: [a0: -15.3, a1: -11.7, a2: -11.9, a3: -13.3]
+          SAC: mean critic_loss: 2.395, mean alpha: 0.418
+  Ep 300/2000 | Avg Reward: -43.7 | Steps: 15000 | Time: 3104s
+[Monitor] Ep 309 | Reward: -34.8 (r_f: 16.2%, r_h: 34.9%, r_d: 48.9%)
+          Actions mu: [-0.07, 0.04, 0.06, 0.12]  std: [0.54, 0.58, 0.58, 0.57]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.35 Hz
+          Per-agent rewards: [a0: -8.0, a1: -9.9, a2: -9.4, a3: -7.4]
+          SAC: mean critic_loss: 2.540, mean alpha: 0.405
+  Ep 310/2000 | Avg Reward: -43.6 | Steps: 15500 | Time: 3205s
+[Monitor] Ep 319 | Reward: -47.9 (r_f: 31.8%, r_h: 30.7%, r_d: 37.6%)
+          Actions mu: [0.04, 0.03, 0.07, 0.07]  std: [0.55, 0.58, 0.55, 0.59]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.37 Hz
+          Per-agent rewards: [a0: -11.8, a1: -12.8, a2: -11.1, a3: -12.2]
+          SAC: mean critic_loss: 1.867, mean alpha: 0.393
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 319
+  'r_f' is only 31.8% of total reward (threshold: 50%). Breakdown: r_f: 31.8%, r_h: 30.7%, r_d: 37.6%
+  Ep 320/2000 | Avg Reward: -43.2 | Steps: 16000 | Time: 3308s
+[Monitor] Ep 329 | Reward: -53.8 (r_f: 31.5%, r_h: 36.7%, r_d: 31.7%)
+          Actions mu: [-0.06, -0.08, 0.02, -0.01]  std: [0.58, 0.54, 0.59, 0.54]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.38 Hz
+          Per-agent rewards: [a0: -10.9, a1: -14.3, a2: -16.1, a3: -12.5]
+          SAC: mean critic_loss: 3.178, mean alpha: 0.382
+  Ep 330/2000 | Avg Reward: -47.0 | Steps: 16500 | Time: 3409s
+[Monitor] Ep 339 | Reward: -60.2 (r_f: 27.4%, r_h: 33.2%, r_d: 39.4%)
+          Actions mu: [0.06, -0.04, -0.06, 0.10]  std: [0.60, 0.59, 0.59, 0.59]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.37 Hz
+          Per-agent rewards: [a0: -16.7, a1: -13.1, a2: -16.2, a3: -14.1]
+          SAC: mean critic_loss: 2.288, mean alpha: 0.371
+  Ep 340/2000 | Avg Reward: -48.6 | Steps: 17000 | Time: 3507s
+[Monitor] Ep 349 | Reward: -38.0 (r_f: 10.4%, r_h: 53.5%, r_d: 36.0%)
+          Actions mu: [0.04, 0.06, -0.13, -0.02]  std: [0.57, 0.59, 0.56, 0.58]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.34 Hz
+          Per-agent rewards: [a0: -9.5, a1: -9.7, a2: -9.4, a3: -9.3]
+          SAC: mean critic_loss: 1.621, mean alpha: 0.360
+  Ep 350/2000 | Avg Reward: -40.0 | Steps: 17500 | Time: 3608s
+[Monitor] Ep 359 | Reward: -36.8 (r_f: 9.9%, r_h: 52.9%, r_d: 37.2%)
+          Actions mu: [0.05, 0.04, 0.03, 0.11]  std: [0.59, 0.58, 0.59, 0.57]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.32 Hz
+          Per-agent rewards: [a0: -8.7, a1: -9.4, a2: -9.8, a3: -9.0]
+          SAC: mean critic_loss: 3.464, mean alpha: 0.349
+  Ep 360/2000 | Avg Reward: -42.3 | Steps: 18000 | Time: 3712s
+[Monitor] Ep 369 | Reward: -39.0 (r_f: 14.0%, r_h: 39.5%, r_d: 46.4%)
+          Actions mu: [0.03, 0.00, -0.01, -0.02]  std: [0.56, 0.61, 0.56, 0.57]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.40 Hz
+          Per-agent rewards: [a0: -9.9, a1: -10.1, a2: -10.1, a3: -9.0]
+          SAC: mean critic_loss: 1.769, mean alpha: 0.339
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 369
+  'r_f' is only 14.0% of total reward (threshold: 50%). Breakdown: r_f: 14.0%, r_h: 39.5%, r_d: 46.4%
+  Ep 370/2000 | Avg Reward: -45.9 | Steps: 18500 | Time: 3819s
+[Monitor] Ep 379 | Reward: -42.4 (r_f: 9.8%, r_h: 45.9%, r_d: 44.3%)
+          Actions mu: [0.03, -0.01, 0.04, 0.06]  std: [0.58, 0.60, 0.54, 0.60]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.54 Hz
+          Per-agent rewards: [a0: -11.9, a1: -11.0, a2: -9.6, a3: -10.0]
+          SAC: mean critic_loss: 2.588, mean alpha: 0.329
+  Ep 380/2000 | Avg Reward: -47.0 | Steps: 19000 | Time: 3924s
+[Monitor] Ep 389 | Reward: -55.0 (r_f: 40.1%, r_h: 29.3%, r_d: 30.6%)
+          Actions mu: [-0.00, 0.09, -0.02, -0.08]  std: [0.57, 0.63, 0.54, 0.56]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.39 Hz
+          Per-agent rewards: [a0: -14.1, a1: -12.7, a2: -14.7, a3: -13.5]
+          SAC: mean critic_loss: 2.019, mean alpha: 0.319
+  Ep 390/2000 | Avg Reward: -42.6 | Steps: 19500 | Time: 4025s
+[Monitor] Ep 399 | Reward: -54.7 (r_f: 37.6%, r_h: 25.8%, r_d: 36.6%)
+          Actions mu: [0.00, 0.03, 0.02, -0.13]  std: [0.57, 0.56, 0.57, 0.58]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.35 Hz
+          Per-agent rewards: [a0: -10.9, a1: -15.0, a2: -14.2, a3: -14.5]
+          SAC: mean critic_loss: 0.956, mean alpha: 0.310
+  Ep 400/2000 | Avg Reward: -47.5 | Steps: 20000 | Time: 4128s
+[Monitor] Ep 409 | Reward: -40.6 (r_f: 30.6%, r_h: 24.3%, r_d: 45.0%)
+          Actions mu: [-0.06, -0.03, 0.09, -0.03]  std: [0.60, 0.55, 0.60, 0.52]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.38 Hz
+          Per-agent rewards: [a0: -9.8, a1: -11.0, a2: -10.5, a3: -9.3]
+          SAC: mean critic_loss: 4.904, mean alpha: 0.300
+  Ep 410/2000 | Avg Reward: -39.5 | Steps: 20500 | Time: 4232s
+[Monitor] Ep 419 | Reward: -47.7 (r_f: 13.4%, r_h: 42.5%, r_d: 44.0%)
+          Actions mu: [0.10, -0.02, 0.07, -0.03]  std: [0.59, 0.53, 0.57, 0.55]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.41 Hz
+          Per-agent rewards: [a0: -10.8, a1: -12.1, a2: -13.6, a3: -11.2]
+          SAC: mean critic_loss: 2.803, mean alpha: 0.292
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 419
+  'r_f' is only 13.4% of total reward (threshold: 50%). Breakdown: r_f: 13.4%, r_h: 42.5%, r_d: 44.0%
+  Ep 420/2000 | Avg Reward: -43.0 | Steps: 21000 | Time: 4336s
+[Monitor] Ep 429 | Reward: -41.2 (r_f: 16.4%, r_h: 39.0%, r_d: 44.6%)
+          Actions mu: [-0.12, -0.05, -0.05, -0.03]  std: [0.56, 0.58, 0.59, 0.61]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.41 Hz
+          Per-agent rewards: [a0: -10.8, a1: -10.8, a2: -10.0, a3: -9.6]
+          SAC: mean critic_loss: 4.634, mean alpha: 0.283
+  Ep 430/2000 | Avg Reward: -41.7 | Steps: 21500 | Time: 4437s
+[Monitor] Ep 439 | Reward: -48.2 (r_f: 14.3%, r_h: 40.8%, r_d: 44.9%)
+          Actions mu: [0.06, 0.09, -0.00, -0.01]  std: [0.60, 0.53, 0.55, 0.58]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.32 Hz
+          Per-agent rewards: [a0: -12.4, a1: -13.0, a2: -12.1, a3: -10.6]
+          SAC: mean critic_loss: 3.422, mean alpha: 0.275
+  Ep 440/2000 | Avg Reward: -44.8 | Steps: 22000 | Time: 4535s
+[Monitor] Ep 449 | Reward: -48.9 (r_f: 27.4%, r_h: 35.1%, r_d: 37.5%)
+          Actions mu: [0.04, 0.02, 0.01, 0.03]  std: [0.56, 0.58, 0.57, 0.56]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.44 Hz
+          Per-agent rewards: [a0: -11.8, a1: -14.0, a2: -14.0, a3: -9.1]
+          SAC: mean critic_loss: 1.816, mean alpha: 0.266
+  Ep 450/2000 | Avg Reward: -40.7 | Steps: 22500 | Time: 4633s
+[Monitor] Ep 459 | Reward: -44.4 (r_f: 26.8%, r_h: 29.8%, r_d: 43.4%)
+          Actions mu: [-0.01, 0.15, 0.06, 0.05]  std: [0.60, 0.57, 0.54, 0.57]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.41 Hz
+          Per-agent rewards: [a0: -12.0, a1: -9.9, a2: -12.1, a3: -10.3]
+          SAC: mean critic_loss: 1.584, mean alpha: 0.259
+  Ep 460/2000 | Avg Reward: -45.6 | Steps: 23000 | Time: 4732s
+[Monitor] Ep 469 | Reward: -43.1 (r_f: 25.5%, r_h: 35.2%, r_d: 39.3%)
+          Actions mu: [0.08, 0.05, -0.07, -0.06]  std: [0.56, 0.58, 0.57, 0.56]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.36 Hz
+          Per-agent rewards: [a0: -11.5, a1: -9.1, a2: -11.6, a3: -10.9]
+          SAC: mean critic_loss: 2.491, mean alpha: 0.251
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 469
+  'r_f' is only 25.5% of total reward (threshold: 50%). Breakdown: r_f: 25.5%, r_h: 35.2%, r_d: 39.3%
+  Ep 470/2000 | Avg Reward: -39.3 | Steps: 23500 | Time: 4833s
+[Monitor] Ep 479 | Reward: -35.0 (r_f: 11.9%, r_h: 38.6%, r_d: 49.5%)
+          Actions mu: [-0.06, 0.07, -0.03, -0.05]  std: [0.56, 0.57, 0.56, 0.55]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.32 Hz
+          Per-agent rewards: [a0: -8.2, a1: -9.4, a2: -9.5, a3: -7.9]
+          SAC: mean critic_loss: 2.395, mean alpha: 0.244
+  Ep 480/2000 | Avg Reward: -41.5 | Steps: 24000 | Time: 4931s
+[Monitor] Ep 489 | Reward: -49.8 (r_f: 24.6%, r_h: 37.7%, r_d: 37.7%)
+          Actions mu: [0.04, 0.05, 0.01, 0.03]  std: [0.61, 0.60, 0.55, 0.59]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.38 Hz
+          Per-agent rewards: [a0: -11.6, a1: -12.6, a2: -13.2, a3: -12.3]
+          SAC: mean critic_loss: 0.968, mean alpha: 0.236
+  Ep 490/2000 | Avg Reward: -42.2 | Steps: 24500 | Time: 5034s
+[Monitor] Ep 499 | Reward: -47.0 (r_f: 23.6%, r_h: 33.6%, r_d: 42.7%)
+          Actions mu: [0.08, 0.11, -0.10, -0.06]  std: [0.57, 0.56, 0.55, 0.57]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.37 Hz
+          Per-agent rewards: [a0: -11.9, a1: -12.4, a2: -12.9, a3: -9.8]
+          SAC: mean critic_loss: 0.936, mean alpha: 0.229
+  Ep 500/2000 | Avg Reward: -43.5 | Steps: 25000 | Time: 5135s
+[Monitor] Ep 509 | Reward: -35.1 (r_f: 27.7%, r_h: 42.6%, r_d: 29.7%)
+          Actions mu: [0.01, -0.02, 0.02, 0.09]  std: [0.57, 0.58, 0.55, 0.56]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.38 Hz
+          Per-agent rewards: [a0: -9.3, a1: -9.4, a2: -8.6, a3: -7.9]
+          SAC: mean critic_loss: 1.647, mean alpha: 0.223
+  Ep 510/2000 | Avg Reward: -40.5 | Steps: 25500 | Time: 5234s
+[Monitor] Ep 519 | Reward: -35.5 (r_f: 20.1%, r_h: 42.8%, r_d: 37.1%)
+          Actions mu: [-0.03, -0.01, 0.02, 0.02]  std: [0.58, 0.55, 0.54, 0.51]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.35 Hz
+          Per-agent rewards: [a0: -9.3, a1: -9.5, a2: -8.3, a3: -8.4]
+          SAC: mean critic_loss: 1.765, mean alpha: 0.216
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 519
+  'r_f' is only 20.1% of total reward (threshold: 50%). Breakdown: r_f: 20.1%, r_h: 42.8%, r_d: 37.1%
+  Ep 520/2000 | Avg Reward: -37.5 | Steps: 26000 | Time: 5350s
+[Monitor] Ep 529 | Reward: -32.9 (r_f: 13.1%, r_h: 52.8%, r_d: 34.1%)
+          Actions mu: [-0.12, 0.02, -0.05, 0.01]  std: [0.53, 0.49, 0.47, 0.60]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.40 Hz
+          Per-agent rewards: [a0: -9.0, a1: -8.5, a2: -7.7, a3: -7.8]
+          SAC: mean critic_loss: 2.050, mean alpha: 0.210
+  Ep 530/2000 | Avg Reward: -38.8 | Steps: 26500 | Time: 5484s
+[Monitor] Ep 539 | Reward: -39.4 (r_f: 19.4%, r_h: 44.8%, r_d: 35.8%)
+          Actions mu: [0.15, -0.01, -0.09, -0.04]  std: [0.57, 0.54, 0.56, 0.58]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.38 Hz
+          Per-agent rewards: [a0: -10.1, a1: -10.4, a2: -10.0, a3: -8.9]
+          SAC: mean critic_loss: 0.421, mean alpha: 0.204
+  Ep 540/2000 | Avg Reward: -40.9 | Steps: 27000 | Time: 5614s
+[Monitor] Ep 549 | Reward: -33.0 (r_f: 14.6%, r_h: 41.8%, r_d: 43.5%)
+          Actions mu: [-0.07, -0.08, -0.06, 0.07]  std: [0.51, 0.49, 0.54, 0.61]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.35 Hz
+          Per-agent rewards: [a0: -8.4, a1: -8.6, a2: -8.2, a3: -7.7]
+          SAC: mean critic_loss: 2.149, mean alpha: 0.198
+  Ep 550/2000 | Avg Reward: -37.4 | Steps: 27500 | Time: 5742s
+[Monitor] Ep 559 | Reward: -39.5 (r_f: 24.4%, r_h: 37.3%, r_d: 38.2%)
+          Actions mu: [0.10, -0.02, 0.08, -0.12]  std: [0.58, 0.57, 0.55, 0.52]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.43 Hz
+          Per-agent rewards: [a0: -10.5, a1: -10.4, a2: -9.9, a3: -8.6]
+          SAC: mean critic_loss: 1.273, mean alpha: 0.192
+  Ep 560/2000 | Avg Reward: -39.0 | Steps: 28000 | Time: 5864s
+[Monitor] Ep 569 | Reward: -37.5 (r_f: 31.6%, r_h: 30.0%, r_d: 38.3%)
+          Actions mu: [0.06, -0.01, 0.06, -0.02]  std: [0.55, 0.57, 0.52, 0.52]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.38 Hz
+          Per-agent rewards: [a0: -7.4, a1: -7.9, a2: -11.9, a3: -10.3]
+          SAC: mean critic_loss: 3.260, mean alpha: 0.186
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 569
+  'r_f' is only 31.6% of total reward (threshold: 50%). Breakdown: r_f: 31.6%, r_h: 30.0%, r_d: 38.3%
+  Ep 570/2000 | Avg Reward: -37.6 | Steps: 28500 | Time: 5968s
+[Monitor] Ep 579 | Reward: -29.2 (r_f: 11.6%, r_h: 46.0%, r_d: 42.4%)
+          Actions mu: [0.02, 0.11, 0.00, 0.02]  std: [0.54, 0.56, 0.49, 0.55]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.35 Hz
+          Per-agent rewards: [a0: -7.9, a1: -7.3, a2: -6.6, a3: -7.3]
+          SAC: mean critic_loss: 2.448, mean alpha: 0.181
+  Ep 580/2000 | Avg Reward: -38.6 | Steps: 29000 | Time: 6073s
+[Monitor] Ep 589 | Reward: -46.6 (r_f: 12.4%, r_h: 43.4%, r_d: 44.2%)
+          Actions mu: [0.03, 0.07, 0.01, 0.08]  std: [0.55, 0.54, 0.55, 0.57]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.45 Hz
+          Per-agent rewards: [a0: -11.8, a1: -11.7, a2: -11.9, a3: -11.2]
+          SAC: mean critic_loss: 2.562, mean alpha: 0.175
+  Ep 590/2000 | Avg Reward: -44.9 | Steps: 29500 | Time: 6176s
+[Monitor] Ep 599 | Reward: -48.3 (r_f: 26.8%, r_h: 29.4%, r_d: 43.8%)
+          Actions mu: [0.16, -0.05, 0.11, 0.01]  std: [0.51, 0.58, 0.56, 0.51]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.41 Hz
+          Per-agent rewards: [a0: -15.8, a1: -9.9, a2: -8.8, a3: -13.8]
+          SAC: mean critic_loss: 0.175, mean alpha: 0.170
+  Ep 600/2000 | Avg Reward: -45.7 | Steps: 30000 | Time: 6277s
+[Monitor] Ep 609 | Reward: -45.0 (r_f: 37.6%, r_h: 37.4%, r_d: 25.0%)
+          Actions mu: [0.15, -0.03, -0.06, -0.04]  std: [0.51, 0.54, 0.56, 0.51]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.41 Hz
+          Per-agent rewards: [a0: -12.1, a1: -10.4, a2: -11.6, a3: -11.0]
+          SAC: mean critic_loss: 2.350, mean alpha: 0.165
+  Ep 610/2000 | Avg Reward: -42.4 | Steps: 30500 | Time: 6379s
+[Monitor] Ep 619 | Reward: -35.9 (r_f: 9.3%, r_h: 44.0%, r_d: 46.7%)
+          Actions mu: [0.06, -0.01, -0.00, 0.03]  std: [0.55, 0.55, 0.60, 0.55]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.35 Hz
+          Per-agent rewards: [a0: -9.9, a1: -9.1, a2: -8.2, a3: -8.7]
+          SAC: mean critic_loss: 0.997, mean alpha: 0.160
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 619
+  'r_f' is only 9.3% of total reward (threshold: 50%). Breakdown: r_f: 9.3%, r_h: 44.0%, r_d: 46.7%
+  Ep 620/2000 | Avg Reward: -36.4 | Steps: 31000 | Time: 6483s
+
+[!] [Monitor] WARNING: early_stopping @ Ep 624
+  No improvement >2.0% for 500 episodes (patience: 500).
+  Best reward: -25.3 @ ep 124.
+  Current: -33.5. Consider stopping or adjusting hyperparameters.
+[Monitor] Ep 629 | Reward: -36.1 (r_f: 17.8%, r_h: 44.1%, r_d: 38.1%)
+          Actions mu: [0.09, -0.07, 0.08, 0.07]  std: [0.57, 0.52, 0.52, 0.51]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.35 Hz
+          Per-agent rewards: [a0: -9.5, a1: -9.0, a2: -8.8, a3: -8.9]
+          SAC: mean critic_loss: 1.231, mean alpha: 0.156
+  Ep 630/2000 | Avg Reward: -40.2 | Steps: 31500 | Time: 6588s
+[Monitor] Ep 639 | Reward: -40.3 (r_f: 26.2%, r_h: 37.7%, r_d: 36.0%)
+          Actions mu: [0.12, 0.10, 0.09, 0.01]  std: [0.56, 0.58, 0.56, 0.59]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.37 Hz
+          Per-agent rewards: [a0: -9.2, a1: -11.0, a2: -9.8, a3: -10.2]
+          SAC: mean critic_loss: 2.099, mean alpha: 0.151
+  Ep 640/2000 | Avg Reward: -42.9 | Steps: 32000 | Time: 6691s
+[Monitor] Ep 649 | Reward: -32.5 (r_f: 14.8%, r_h: 36.0%, r_d: 49.2%)
+          Actions mu: [0.07, -0.00, 0.09, -0.06]  std: [0.56, 0.57, 0.50, 0.55]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.39 Hz
+          Per-agent rewards: [a0: -7.4, a1: -8.5, a2: -8.9, a3: -7.7]
+          SAC: mean critic_loss: 2.034, mean alpha: 0.146
+  Ep 650/2000 | Avg Reward: -41.5 | Steps: 32500 | Time: 6793s
+  [Monitor] New best reward: -24.9 @ ep 654
+[Monitor] Ep 659 | Reward: -39.3 (r_f: 30.8%, r_h: 34.4%, r_d: 34.8%)
+          Actions mu: [0.13, -0.05, 0.01, 0.07]  std: [0.57, 0.55, 0.52, 0.59]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.39 Hz
+          Per-agent rewards: [a0: -10.4, a1: -10.4, a2: -9.5, a3: -9.0]
+          SAC: mean critic_loss: 1.071, mean alpha: 0.142
+  Ep 660/2000 | Avg Reward: -38.8 | Steps: 33000 | Time: 6896s
+[Monitor] Ep 669 | Reward: -33.6 (r_f: 14.6%, r_h: 43.5%, r_d: 41.9%)
+          Actions mu: [0.00, 0.12, 0.05, -0.01]  std: [0.54, 0.55, 0.55, 0.53]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.38 Hz
+          Per-agent rewards: [a0: -8.5, a1: -8.5, a2: -8.5, a3: -8.1]
+          SAC: mean critic_loss: 1.164, mean alpha: 0.138
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 669
+  'r_f' is only 14.6% of total reward (threshold: 50%). Breakdown: r_f: 14.6%, r_h: 43.5%, r_d: 41.9%
+  Ep 670/2000 | Avg Reward: -41.7 | Steps: 33500 | Time: 6999s
+
+[!] [Monitor] WARNING: early_stopping @ Ep 674
+  No improvement >2.0% for 550 episodes (patience: 500).
+  Best reward: -25.3 @ ep 124.
+  Current: -39.3. Consider stopping or adjusting hyperparameters.
+[Monitor] Ep 679 | Reward: -39.5 (r_f: 21.9%, r_h: 31.3%, r_d: 46.8%)
+          Actions mu: [0.13, -0.04, 0.11, -0.02]  std: [0.58, 0.55, 0.55, 0.56]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.40 Hz
+          Per-agent rewards: [a0: -9.7, a1: -10.2, a2: -9.9, a3: -9.7]
+          SAC: mean critic_loss: 1.261, mean alpha: 0.134
+  Ep 680/2000 | Avg Reward: -39.5 | Steps: 34000 | Time: 7100s
+[Monitor] Ep 689 | Reward: -54.8 (r_f: 42.7%, r_h: 23.0%, r_d: 34.3%)
+          Actions mu: [-0.00, -0.06, 0.02, 0.02]  std: [0.58, 0.54, 0.56, 0.53]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.38 Hz
+          Per-agent rewards: [a0: -13.0, a1: -17.3, a2: -13.3, a3: -11.1]
+          SAC: mean critic_loss: 1.480, mean alpha: 0.130
+  Ep 690/2000 | Avg Reward: -42.9 | Steps: 34500 | Time: 7203s
+[Monitor] Ep 699 | Reward: -42.1 (r_f: 34.0%, r_h: 30.8%, r_d: 35.2%)
+          Actions mu: [-0.06, 0.06, -0.02, 0.09]  std: [0.55, 0.54, 0.53, 0.55]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.40 Hz
+          Per-agent rewards: [a0: -8.2, a1: -11.7, a2: -10.8, a3: -11.4]
+          SAC: mean critic_loss: 0.580, mean alpha: 0.126
+  Ep 700/2000 | Avg Reward: -41.6 | Steps: 35000 | Time: 7306s
+[Monitor] Ep 709 | Reward: -38.9 (r_f: 33.4%, r_h: 27.0%, r_d: 39.6%)
+          Actions mu: [-0.03, 0.01, -0.07, 0.03]  std: [0.53, 0.52, 0.50, 0.56]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.44 Hz
+          Per-agent rewards: [a0: -10.0, a1: -10.1, a2: -10.3, a3: -8.4]
+          SAC: mean critic_loss: 0.609, mean alpha: 0.122
+  Ep 710/2000 | Avg Reward: -46.2 | Steps: 35500 | Time: 7408s
+[Monitor] Ep 719 | Reward: -42.2 (r_f: 17.2%, r_h: 30.3%, r_d: 52.5%)
+          Actions mu: [0.05, -0.05, 0.14, 0.06]  std: [0.59, 0.51, 0.53, 0.60]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.36 Hz
+          Per-agent rewards: [a0: -9.6, a1: -10.9, a2: -11.2, a3: -10.5]
+          SAC: mean critic_loss: 0.268, mean alpha: 0.119
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 719
+  'r_f' is only 17.2% of total reward (threshold: 50%). Breakdown: r_f: 17.2%, r_h: 30.3%, r_d: 52.5%
+  Ep 720/2000 | Avg Reward: -37.9 | Steps: 36000 | Time: 7510s
+
+[!] [Monitor] WARNING: early_stopping @ Ep 724
+  No improvement >2.0% for 600 episodes (patience: 500).
+  Best reward: -25.3 @ ep 124.
+  Current: -54.2. Consider stopping or adjusting hyperparameters.
+[Monitor] Ep 729 | Reward: -44.2 (r_f: 37.5%, r_h: 28.4%, r_d: 34.1%)
+          Actions mu: [-0.12, 0.03, 0.14, 0.13]  std: [0.56, 0.53, 0.57, 0.53]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.34 Hz
+          Per-agent rewards: [a0: -8.4, a1: -12.4, a2: -11.7, a3: -11.6]
+          SAC: mean critic_loss: 1.452, mean alpha: 0.115
+  Ep 730/2000 | Avg Reward: -42.0 | Steps: 36500 | Time: 7610s
+[Monitor] Ep 739 | Reward: -38.6 (r_f: 24.2%, r_h: 38.7%, r_d: 37.1%)
+          Actions mu: [0.03, -0.00, 0.14, 0.17]  std: [0.56, 0.52, 0.57, 0.55]

@@ -1,0 +1,17 @@
+{
+  "episode_rewards": [
+    -27396.673811912537
+  ],
+  "eval_rewards": [],
+  "critic_losses": [],
+  "policy_losses": [],
+  "alphas": [],
+  "physics_summary": [
+    {
+      "max_freq_dev_hz": 11.10586743518693,
+      "mean_freq_dev_hz": 5.196667591107994,
+      "settled": false,
+      "max_power_swing": 2.6663592606063347
+    }
+  ]
+}

@@ -1,0 +1,921 @@
+============================================================
+ ANDES MADRL Training — 2000 episodes
+============================================================
+[Monitor] Ep 9 | Reward: -83.6 (r_f: 58.2%, r_h: 13.9%, r_d: 27.9%)
+          Actions mu: [-0.03, -0.03, 0.09, 0.05]  std: [0.57, 0.54, 0.53, 0.54]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.41 Hz
+  Ep 10/2000 | Avg Reward: -101.5 | Steps: 500 | Time: 21s
+[Monitor] Calibration complete (20 episodes).
+          Reward baseline: mu=-119.4, std=62.8 -> magnitude range: [-308, 69]
+          Action std baseline: 0.57 -> collapse threshold: 0.057
+          TDS failure baseline: 0.0% -> alert threshold: 30.0%
+[Monitor] Ep 19 | Reward: -155.5 (r_f: 73.7%, r_h: 13.7%, r_d: 12.6%)
+          Actions mu: [-0.04, -0.03, 0.06, 0.04]  std: [0.61, 0.58, 0.58, 0.61]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.47 Hz
+  Ep 20/2000 | Avg Reward: -137.2 | Steps: 1000 | Time: 43s
+[Monitor] Ep 29 | Reward: -142.5 (r_f: 74.9%, r_h: 12.0%, r_d: 13.1%)
+          Actions mu: [-0.13, 0.04, 0.08, 0.01]  std: [0.59, 0.58, 0.62, 0.53]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.57 Hz
+  Ep 30/2000 | Avg Reward: -154.5 | Steps: 1500 | Time: 120s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 38
+  'r_f' is only 46.4% of total reward (threshold: 50%). Breakdown: r_f: 46.4%, r_h: 32.2%, r_d: 21.4%
+[Monitor] Ep 39 | Reward: -99.6 (r_f: 63.8%, r_h: 16.7%, r_d: 19.5%)
+          Actions mu: [-0.06, 0.07, 0.02, 0.02]  std: [0.53, 0.57, 0.60, 0.56]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.58 Hz
+  Ep 40/2000 | Avg Reward: -152.9 | Steps: 2000 | Time: 192s
+[Monitor] Ep 49 | Reward: -120.9 (r_f: 64.6%, r_h: 15.1%, r_d: 20.4%)
+          Actions mu: [0.05, -0.14, 0.08, -0.08]  std: [0.56, 0.58, 0.58, 0.54]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.53 Hz
+  Ep 50/2000 | Avg Reward: -132.7 | Steps: 2500 | Time: 258s
+[Monitor] Ep 59 | Reward: -105.8 (r_f: 69.1%, r_h: 19.9%, r_d: 11.0%)
+          Actions mu: [0.06, -0.00, 0.04, 0.07]  std: [0.53, 0.59, 0.56, 0.56]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.44 Hz
+  Ep 60/2000 | Avg Reward: -89.1 | Steps: 3000 | Time: 349s
+[Monitor] Ep 69 | Reward: -69.0 (r_f: 55.4%, r_h: 23.3%, r_d: 21.3%)
+          Actions mu: [0.01, -0.06, 0.10, 0.02]  std: [0.53, 0.57, 0.53, 0.51]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.48 Hz
+  Ep 70/2000 | Avg Reward: -94.0 | Steps: 3500 | Time: 443s
+[Monitor] Ep 79 | Reward: -74.8 (r_f: 67.2%, r_h: 15.7%, r_d: 17.1%)
+          Actions mu: [0.03, 0.14, -0.00, 0.09]  std: [0.54, 0.54, 0.57, 0.53]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.43 Hz
+  Ep 80/2000 | Avg Reward: -76.5 | Steps: 4000 | Time: 549s
+[Monitor] Ep 89 | Reward: -56.5 (r_f: 53.0%, r_h: 25.9%, r_d: 21.1%)
+          Actions mu: [-0.02, -0.06, -0.00, -0.05]  std: [0.55, 0.51, 0.53, 0.54]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.46 Hz
+  Ep 90/2000 | Avg Reward: -84.0 | Steps: 4500 | Time: 665s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 97
+  'r_f' is only 32.5% of total reward (threshold: 50%). Breakdown: r_f: 32.5%, r_h: 32.6%, r_d: 34.9%
+[Monitor] Ep 99 | Reward: -65.3 (r_f: 42.1%, r_h: 30.7%, r_d: 27.2%)
+          Actions mu: [0.01, 0.04, -0.08, -0.06]  std: [0.58, 0.55, 0.56, 0.56]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.47 Hz
+  Ep 100/2000 | Avg Reward: -81.2 | Steps: 5000 | Time: 783s
+[Monitor] Ep 109 | Reward: -69.3 (r_f: 60.2%, r_h: 17.6%, r_d: 22.2%)
+          Actions mu: [-0.09, 0.02, 0.04, -0.00]  std: [0.49, 0.59, 0.52, 0.51]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.50 Hz
+  Ep 110/2000 | Avg Reward: -75.9 | Steps: 5500 | Time: 943s
+[Monitor] Ep 119 | Reward: -84.7 (r_f: 69.9%, r_h: 16.1%, r_d: 14.0%)
+          Actions mu: [0.07, 0.01, -0.09, -0.06]  std: [0.53, 0.50, 0.47, 0.49]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.45 Hz
+  Ep 120/2000 | Avg Reward: -64.0 | Steps: 6000 | Time: 1062s
+[Monitor] Ep 129 | Reward: -124.2 (r_f: 81.6%, r_h: 7.1%, r_d: 11.3%)
+          Actions mu: [-0.08, -0.00, -0.05, -0.02]  std: [0.48, 0.54, 0.46, 0.52]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.47 Hz
+  Ep 130/2000 | Avg Reward: -72.6 | Steps: 6500 | Time: 1120s
+[Monitor] Ep 139 | Reward: -85.7 (r_f: 62.3%, r_h: 19.0%, r_d: 18.7%)
+          Actions mu: [-0.03, 0.09, 0.12, 0.01]  std: [0.54, 0.51, 0.56, 0.53]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.43 Hz
+  Ep 140/2000 | Avg Reward: -62.6 | Steps: 7000 | Time: 1205s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 147
+  'r_f' is only 44.2% of total reward (threshold: 50%). Breakdown: r_f: 44.2%, r_h: 23.2%, r_d: 32.6%
+[Monitor] Ep 149 | Reward: -84.2 (r_f: 68.3%, r_h: 17.4%, r_d: 14.3%)
+          Actions mu: [0.01, 0.01, -0.02, 0.08]  std: [0.46, 0.51, 0.49, 0.51]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.43 Hz
+  Ep 150/2000 | Avg Reward: -60.9 | Steps: 7500 | Time: 1313s
+[Monitor] Ep 159 | Reward: -45.5 (r_f: 37.6%, r_h: 26.7%, r_d: 35.8%)
+          Actions mu: [-0.02, 0.03, 0.06, 0.01]  std: [0.48, 0.50, 0.47, 0.49]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.41 Hz
+  Ep 160/2000 | Avg Reward: -58.6 | Steps: 8000 | Time: 1394s
+[Monitor] Ep 169 | Reward: -52.6 (r_f: 49.0%, r_h: 23.0%, r_d: 28.0%)
+          Actions mu: [-0.16, 0.14, 0.05, 0.06]  std: [0.48, 0.45, 0.48, 0.47]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.38 Hz
+  Ep 170/2000 | Avg Reward: -56.6 | Steps: 8500 | Time: 1444s
+[Monitor] Ep 179 | Reward: -37.0 (r_f: 53.7%, r_h: 19.6%, r_d: 26.7%)
+          Actions mu: [-0.28, 0.08, 0.16, 0.13]  std: [0.38, 0.41, 0.45, 0.42]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.37 Hz
+  Ep 180/2000 | Avg Reward: -48.4 | Steps: 9000 | Time: 1486s
+[Monitor] Ep 189 | Reward: -62.1 (r_f: 60.3%, r_h: 24.4%, r_d: 15.3%)
+          Actions mu: [0.03, -0.10, 0.12, 0.07]  std: [0.44, 0.58, 0.46, 0.48]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.46 Hz
+  Ep 190/2000 | Avg Reward: -50.9 | Steps: 9500 | Time: 1528s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 198
+  'r_f' is only 34.9% of total reward (threshold: 50%). Breakdown: r_f: 34.9%, r_h: 34.0%, r_d: 31.1%
+[Monitor] Ep 199 | Reward: -36.4 (r_f: 52.4%, r_h: 18.5%, r_d: 29.2%)
+          Actions mu: [-0.17, 0.22, 0.08, 0.08]  std: [0.42, 0.34, 0.39, 0.37]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.39 Hz
+  Ep 200/2000 | Avg Reward: -48.7 | Steps: 10000 | Time: 1575s
+[Monitor] Ep 209 | Reward: -58.3 (r_f: 64.3%, r_h: 19.9%, r_d: 15.7%)
+          Actions mu: [0.04, -0.08, 0.07, 0.07]  std: [0.38, 0.55, 0.46, 0.48]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.45 Hz
+  Ep 210/2000 | Avg Reward: -64.7 | Steps: 10500 | Time: 1626s
+[Monitor] Ep 219 | Reward: -29.6 (r_f: 53.1%, r_h: 13.9%, r_d: 33.0%)
+          Actions mu: [-0.29, 0.20, 0.10, 0.15]  std: [0.33, 0.39, 0.34, 0.35]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.45 Hz
+  Ep 220/2000 | Avg Reward: -50.3 | Steps: 11000 | Time: 1687s
+[Monitor] Ep 229 | Reward: -60.8 (r_f: 67.3%, r_h: 13.7%, r_d: 19.0%)
+          Actions mu: [0.07, -0.15, 0.04, 0.15]  std: [0.39, 0.49, 0.43, 0.46]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.38 Hz
+  Ep 230/2000 | Avg Reward: -44.9 | Steps: 11500 | Time: 1735s
+[Monitor] Ep 239 | Reward: -68.7 (r_f: 77.9%, r_h: 10.2%, r_d: 12.0%)
+          Actions mu: [-0.11, 0.04, 0.06, 0.12]  std: [0.51, 0.47, 0.41, 0.47]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.42 Hz
+  Ep 240/2000 | Avg Reward: -48.8 | Steps: 12000 | Time: 1776s
+[Monitor] Ep 249 | Reward: -32.0 (r_f: 50.0%, r_h: 27.8%, r_d: 22.2%)
+          Actions mu: [-0.38, 0.20, 0.43, 0.10]  std: [0.42, 0.36, 0.31, 0.35]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.33 Hz
+  Ep 250/2000 | Avg Reward: -36.8 | Steps: 12500 | Time: 1817s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 255
+  'r_f' is only 47.9% of total reward (threshold: 50%). Breakdown: r_f: 47.9%, r_h: 15.7%, r_d: 36.4%
+[Monitor] Ep 259 | Reward: -33.8 (r_f: 66.3%, r_h: 12.5%, r_d: 21.2%)
+          Actions mu: [-0.40, 0.20, 0.16, 0.12]  std: [0.31, 0.35, 0.31, 0.40]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.43 Hz
+  Ep 260/2000 | Avg Reward: -40.6 | Steps: 13000 | Time: 1858s
+[Monitor] Ep 269 | Reward: -32.0 (r_f: 57.9%, r_h: 15.8%, r_d: 26.3%)
+          Actions mu: [-0.25, 0.18, 0.06, 0.04]  std: [0.42, 0.45, 0.30, 0.29]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.45 Hz
+  Ep 270/2000 | Avg Reward: -46.2 | Steps: 13500 | Time: 1907s
+[Monitor] Ep 279 | Reward: -78.8 (r_f: 74.4%, r_h: 14.3%, r_d: 11.3%)
+          Actions mu: [0.06, 0.02, -0.01, 0.01]  std: [0.37, 0.56, 0.47, 0.42]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.47 Hz
+  Ep 280/2000 | Avg Reward: -56.0 | Steps: 14000 | Time: 1952s
+[Monitor] Ep 289 | Reward: -36.2 (r_f: 73.9%, r_h: 7.4%, r_d: 18.7%)
+          Actions mu: [-0.28, 0.26, 0.07, 0.05]  std: [0.34, 0.35, 0.29, 0.33]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.41 Hz
+  Ep 290/2000 | Avg Reward: -41.7 | Steps: 14500 | Time: 1999s
+[Monitor] Ep 299 | Reward: -48.5 (r_f: 58.7%, r_h: 19.3%, r_d: 22.0%)
+          Actions mu: [0.01, -0.25, -0.19, 0.09]  std: [0.44, 0.49, 0.44, 0.41]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.47 Hz
+  Ep 300/2000 | Avg Reward: -46.9 | Steps: 15000 | Time: 2045s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 306
+  'r_f' is only 35.8% of total reward (threshold: 50%). Breakdown: r_f: 35.8%, r_h: 28.6%, r_d: 35.6%
+[Monitor] Ep 309 | Reward: -41.0 (r_f: 49.7%, r_h: 18.4%, r_d: 31.9%)
+          Actions mu: [-0.03, -0.09, 0.39, 0.28]  std: [0.39, 0.52, 0.50, 0.26]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.32 Hz
+  Ep 310/2000 | Avg Reward: -43.4 | Steps: 15500 | Time: 2088s
+[Monitor] Ep 319 | Reward: -47.5 (r_f: 79.4%, r_h: 9.5%, r_d: 11.1%)
+          Actions mu: [-0.25, 0.11, 0.11, 0.15]  std: [0.42, 0.40, 0.37, 0.38]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.40 Hz
+  Ep 320/2000 | Avg Reward: -36.3 | Steps: 16000 | Time: 2132s
+[Monitor] Ep 329 | Reward: -48.7 (r_f: 73.1%, r_h: 19.9%, r_d: 7.1%)
+          Actions mu: [-0.24, 0.15, 0.07, 0.09]  std: [0.46, 0.43, 0.33, 0.39]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.45 Hz
+  Ep 330/2000 | Avg Reward: -46.9 | Steps: 16500 | Time: 2178s
+[Monitor] Ep 339 | Reward: -90.8 (r_f: 75.5%, r_h: 14.2%, r_d: 10.3%)
+          Actions mu: [-0.03, -0.11, -0.05, 0.13]  std: [0.44, 0.53, 0.45, 0.43]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.47 Hz
+  Ep 340/2000 | Avg Reward: -46.9 | Steps: 17000 | Time: 2225s
+[Monitor] Ep 349 | Reward: -34.9 (r_f: 64.2%, r_h: 16.9%, r_d: 18.9%)
+          Actions mu: [-0.10, 0.14, -0.06, 0.12]  std: [0.47, 0.42, 0.31, 0.29]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.50 Hz
+  Ep 350/2000 | Avg Reward: -37.4 | Steps: 17500 | Time: 2269s
+[Monitor] Ep 359 | Reward: -31.6 (r_f: 45.9%, r_h: 36.3%, r_d: 17.8%)
+          Actions mu: [-0.31, -0.15, 0.15, 0.29]  std: [0.33, 0.51, 0.45, 0.29]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.37 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 359
+  'r_f' is only 45.9% of total reward (threshold: 50%). Breakdown: r_f: 45.9%, r_h: 36.3%, r_d: 17.8%
+  Ep 360/2000 | Avg Reward: -40.2 | Steps: 18000 | Time: 2312s
+[Monitor] Ep 369 | Reward: -28.8 (r_f: 66.8%, r_h: 13.9%, r_d: 19.2%)
+          Actions mu: [-0.00, 0.12, -0.09, 0.09]  std: [0.44, 0.37, 0.32, 0.32]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.42 Hz
+  Ep 370/2000 | Avg Reward: -41.5 | Steps: 18500 | Time: 2357s
+[Monitor] Ep 379 | Reward: -31.9 (r_f: 30.1%, r_h: 19.2%, r_d: 50.7%)
+          Actions mu: [-0.22, 0.35, 0.26, 0.30]  std: [0.32, 0.28, 0.38, 0.24]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.45 Hz
+  Ep 380/2000 | Avg Reward: -46.2 | Steps: 19000 | Time: 2404s
+[Monitor] Ep 389 | Reward: -73.9 (r_f: 78.5%, r_h: 12.4%, r_d: 9.2%)
+          Actions mu: [-0.06, 0.13, 0.01, 0.26]  std: [0.46, 0.37, 0.32, 0.38]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.40 Hz
+  Ep 390/2000 | Avg Reward: -34.5 | Steps: 19500 | Time: 2461s
+[Monitor] Ep 399 | Reward: -48.1 (r_f: 71.3%, r_h: 13.2%, r_d: 15.5%)
+          Actions mu: [-0.17, 0.12, 0.11, 0.14]  std: [0.42, 0.43, 0.33, 0.40]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.37 Hz
+  Ep 400/2000 | Avg Reward: -42.7 | Steps: 20000 | Time: 2507s
+[Monitor] Ep 409 | Reward: -38.9 (r_f: 63.6%, r_h: 15.0%, r_d: 21.4%)
+          Actions mu: [-0.28, 0.20, 0.18, 0.21]  std: [0.28, 0.34, 0.26, 0.32]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.38 Hz
+  Ep 410/2000 | Avg Reward: -35.2 | Steps: 20500 | Time: 2556s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 414
+  'r_f' is only 41.1% of total reward (threshold: 50%). Breakdown: r_f: 41.1%, r_h: 29.9%, r_d: 29.0%
+[Monitor] Ep 419 | Reward: -33.8 (r_f: 43.3%, r_h: 21.9%, r_d: 34.8%)
+          Actions mu: [-0.17, -0.22, 0.05, 0.17]  std: [0.41, 0.48, 0.39, 0.38]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.46 Hz
+  Ep 420/2000 | Avg Reward: -37.0 | Steps: 21000 | Time: 2604s
+[Monitor] Ep 429 | Reward: -27.6 (r_f: 64.7%, r_h: 11.9%, r_d: 23.4%)
+          Actions mu: [-0.36, 0.26, 0.24, 0.21]  std: [0.26, 0.29, 0.23, 0.25]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.47 Hz
+  Ep 430/2000 | Avg Reward: -35.9 | Steps: 21500 | Time: 2648s
+[Monitor] Ep 439 | Reward: -40.8 (r_f: 55.9%, r_h: 25.9%, r_d: 18.2%)
+          Actions mu: [-0.13, -0.03, 0.17, 0.32]  std: [0.28, 0.40, 0.52, 0.32]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.38 Hz
+  Ep 440/2000 | Avg Reward: -36.9 | Steps: 22000 | Time: 2692s
+[Monitor] Ep 449 | Reward: -63.3 (r_f: 66.8%, r_h: 15.9%, r_d: 17.3%)
+          Actions mu: [-0.26, 0.04, -0.09, 0.11]  std: [0.61, 0.39, 0.46, 0.43]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.49 Hz
+  Ep 450/2000 | Avg Reward: -43.7 | Steps: 22500 | Time: 2737s
+[Monitor] Ep 459 | Reward: -32.8 (r_f: 66.9%, r_h: 16.6%, r_d: 16.6%)
+          Actions mu: [0.01, -0.08, 0.04, 0.19]  std: [0.36, 0.34, 0.38, 0.32]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.45 Hz
+  Ep 460/2000 | Avg Reward: -38.7 | Steps: 23000 | Time: 2782s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 468
+  'r_f' is only 31.0% of total reward (threshold: 50%). Breakdown: r_f: 31.0%, r_h: 16.0%, r_d: 53.0%
+[Monitor] Ep 469 | Reward: -38.4 (r_f: 61.5%, r_h: 24.0%, r_d: 14.5%)
+          Actions mu: [-0.07, -0.07, 0.16, 0.11]  std: [0.41, 0.34, 0.40, 0.34]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.43 Hz
+  Ep 470/2000 | Avg Reward: -39.4 | Steps: 23500 | Time: 2824s
+[Monitor] Ep 479 | Reward: -27.7 (r_f: 70.2%, r_h: 16.8%, r_d: 13.0%)
+          Actions mu: [-0.50, -0.01, 0.17, 0.24]  std: [0.30, 0.34, 0.40, 0.25]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.37 Hz
+  Ep 480/2000 | Avg Reward: -30.2 | Steps: 24000 | Time: 2868s
+[Monitor] Ep 489 | Reward: -53.8 (r_f: 76.9%, r_h: 10.7%, r_d: 12.5%)
+          Actions mu: [-0.01, 0.05, 0.04, 0.16]  std: [0.30, 0.40, 0.48, 0.37]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.39 Hz
+  Ep 490/2000 | Avg Reward: -30.8 | Steps: 24500 | Time: 2911s
+[Monitor] Ep 499 | Reward: -31.7 (r_f: 75.2%, r_h: 10.5%, r_d: 14.3%)
+          Actions mu: [-0.19, 0.04, 0.07, 0.23]  std: [0.31, 0.37, 0.38, 0.29]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.49 Hz
+  Ep 500/2000 | Avg Reward: -40.0 | Steps: 25000 | Time: 2954s
+[Monitor] Ep 509 | Reward: -37.4 (r_f: 60.8%, r_h: 21.2%, r_d: 17.9%)
+          Actions mu: [-0.22, -0.10, 0.17, 0.27]  std: [0.39, 0.35, 0.36, 0.25]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.40 Hz
+  Ep 510/2000 | Avg Reward: -35.0 | Steps: 25500 | Time: 2998s
+[Monitor] Ep 519 | Reward: -34.2 (r_f: 45.4%, r_h: 39.0%, r_d: 15.7%)
+          Actions mu: [0.01, -0.04, -0.44, 0.16]  std: [0.34, 0.42, 0.40, 0.32]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.40 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 519
+  'r_f' is only 45.4% of total reward (threshold: 50%). Breakdown: r_f: 45.4%, r_h: 39.0%, r_d: 15.7%
+  Ep 520/2000 | Avg Reward: -31.7 | Steps: 26000 | Time: 3045s
+[Monitor] Ep 529 | Reward: -23.0 (r_f: 52.8%, r_h: 35.4%, r_d: 11.9%)
+          Actions mu: [-0.13, -0.11, 0.07, 0.23]  std: [0.35, 0.34, 0.53, 0.29]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.42 Hz
+  Ep 530/2000 | Avg Reward: -37.9 | Steps: 26500 | Time: 3095s
+[Monitor] Ep 539 | Reward: -29.2 (r_f: 66.5%, r_h: 12.4%, r_d: 21.1%)
+          Actions mu: [-0.36, -0.14, 0.26, 0.24]  std: [0.33, 0.32, 0.31, 0.26]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.48 Hz
+  Ep 540/2000 | Avg Reward: -39.9 | Steps: 27000 | Time: 3147s
+[Monitor] Ep 549 | Reward: -29.7 (r_f: 63.5%, r_h: 13.5%, r_d: 23.0%)
+          Actions mu: [-0.20, 0.25, -0.00, 0.20]  std: [0.34, 0.30, 0.31, 0.26]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.50 Hz
+  Ep 550/2000 | Avg Reward: -30.8 | Steps: 27500 | Time: 3194s
+[Monitor] Ep 559 | Reward: -27.2 (r_f: 67.4%, r_h: 13.6%, r_d: 19.0%)
+          Actions mu: [-0.37, -0.09, 0.20, 0.27]  std: [0.27, 0.37, 0.36, 0.22]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.48 Hz
+  Ep 560/2000 | Avg Reward: -34.4 | Steps: 28000 | Time: 3240s
+[Monitor] Ep 569 | Reward: -29.4 (r_f: 55.3%, r_h: 19.9%, r_d: 24.8%)
+          Actions mu: [-0.45, 0.03, -0.07, 0.06]  std: [0.22, 0.35, 0.37, 0.34]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.43 Hz
+  Ep 570/2000 | Avg Reward: -25.6 | Steps: 28500 | Time: 3288s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 574
+  'r_f' is only 47.5% of total reward (threshold: 50%). Breakdown: r_f: 47.5%, r_h: 20.0%, r_d: 32.6%
+[Monitor] Ep 579 | Reward: -33.0 (r_f: 51.0%, r_h: 31.5%, r_d: 17.5%)
+          Actions mu: [-0.07, -0.18, -0.12, 0.17]  std: [0.34, 0.43, 0.32, 0.31]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.37 Hz
+  Ep 580/2000 | Avg Reward: -30.2 | Steps: 29000 | Time: 3332s
+[Monitor] Ep 589 | Reward: -34.8 (r_f: 64.9%, r_h: 20.1%, r_d: 15.0%)
+          Actions mu: [-0.28, -0.13, 0.21, 0.24]  std: [0.36, 0.37, 0.35, 0.26]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.39 Hz
+  Ep 590/2000 | Avg Reward: -32.7 | Steps: 29500 | Time: 3376s
+[Monitor] Ep 599 | Reward: -45.7 (r_f: 48.8%, r_h: 21.8%, r_d: 29.4%)
+          Actions mu: [-0.15, 0.34, -0.10, 0.01]  std: [0.34, 0.41, 0.54, 0.38]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.37 Hz
+  Ep 600/2000 | Avg Reward: -36.3 | Steps: 30000 | Time: 3419s
+[Monitor] Ep 609 | Reward: -63.5 (r_f: 85.9%, r_h: 8.1%, r_d: 6.0%)
+          Actions mu: [-0.18, 0.13, -0.02, 0.08]  std: [0.43, 0.37, 0.34, 0.37]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.41 Hz
+  Ep 610/2000 | Avg Reward: -33.2 | Steps: 30500 | Time: 3465s
+[Monitor] Ep 619 | Reward: -17.3 (r_f: 53.8%, r_h: 18.1%, r_d: 28.1%)
+          Actions mu: [-0.18, 0.28, -0.09, 0.18]  std: [0.40, 0.37, 0.28, 0.29]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.38 Hz
+  Ep 620/2000 | Avg Reward: -23.0 | Steps: 31000 | Time: 3512s
+[Monitor] Ep 629 | Reward: -23.5 (r_f: 65.0%, r_h: 13.3%, r_d: 21.7%)
+          Actions mu: [-0.12, 0.21, -0.10, 0.07]  std: [0.34, 0.31, 0.30, 0.32]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.40 Hz
+  Ep 630/2000 | Avg Reward: -39.0 | Steps: 31500 | Time: 3558s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 634
+  'r_f' is only 49.3% of total reward (threshold: 50%). Breakdown: r_f: 49.3%, r_h: 22.2%, r_d: 28.5%
+[Monitor] Ep 639 | Reward: -40.2 (r_f: 73.8%, r_h: 12.5%, r_d: 13.7%)
+          Actions mu: [-0.34, 0.15, 0.04, 0.17]  std: [0.23, 0.36, 0.30, 0.39]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.42 Hz
+  Ep 640/2000 | Avg Reward: -37.4 | Steps: 32000 | Time: 3601s
+[Monitor] Ep 649 | Reward: -20.1 (r_f: 46.9%, r_h: 25.8%, r_d: 27.3%)
+          Actions mu: [-0.22, -0.26, 0.07, 0.26]  std: [0.40, 0.36, 0.34, 0.28]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.46 Hz
+  Ep 650/2000 | Avg Reward: -34.0 | Steps: 32500 | Time: 3643s
+[Monitor] Ep 659 | Reward: -26.4 (r_f: 62.0%, r_h: 17.7%, r_d: 20.3%)
+          Actions mu: [0.02, -0.06, -0.09, 0.17]  std: [0.34, 0.36, 0.33, 0.38]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.42 Hz
+  Ep 660/2000 | Avg Reward: -25.9 | Steps: 33000 | Time: 3685s
+[Monitor] Ep 669 | Reward: -29.2 (r_f: 62.3%, r_h: 20.8%, r_d: 17.0%)
+          Actions mu: [-0.23, -0.04, 0.16, 0.28]  std: [0.34, 0.34, 0.36, 0.22]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.42 Hz
+  Ep 670/2000 | Avg Reward: -36.2 | Steps: 33500 | Time: 3727s
+[Monitor] Ep 679 | Reward: -29.5 (r_f: 77.6%, r_h: 10.2%, r_d: 12.1%)
+          Actions mu: [-0.36, 0.18, 0.09, 0.22]  std: [0.21, 0.31, 0.28, 0.30]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.40 Hz
+  Ep 680/2000 | Avg Reward: -27.5 | Steps: 34000 | Time: 3771s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 685
+  'r_f' is only 45.5% of total reward (threshold: 50%). Breakdown: r_f: 45.5%, r_h: 23.5%, r_d: 31.0%
+[Monitor] Ep 689 | Reward: -68.2 (r_f: 80.8%, r_h: 8.6%, r_d: 10.6%)
+          Actions mu: [-0.21, 0.07, 0.04, 0.08]  std: [0.32, 0.38, 0.35, 0.31]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.45 Hz
+  Ep 690/2000 | Avg Reward: -37.3 | Steps: 34500 | Time: 3813s
+[Monitor] Ep 699 | Reward: -41.4 (r_f: 74.6%, r_h: 12.9%, r_d: 12.5%)
+          Actions mu: [-0.28, 0.12, 0.04, 0.15]  std: [0.30, 0.37, 0.34, 0.38]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.43 Hz
+  Ep 700/2000 | Avg Reward: -32.5 | Steps: 35000 | Time: 3858s
+[Monitor] Ep 709 | Reward: -37.8 (r_f: 76.2%, r_h: 7.5%, r_d: 16.3%)
+          Actions mu: [-0.22, 0.20, -0.01, 0.19]  std: [0.39, 0.29, 0.30, 0.31]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.45 Hz
+  Ep 710/2000 | Avg Reward: -33.9 | Steps: 35500 | Time: 3905s
+[Monitor] Ep 719 | Reward: -28.3 (r_f: 61.3%, r_h: 24.9%, r_d: 13.9%)
+          Actions mu: [-0.23, -0.05, 0.16, 0.24]  std: [0.31, 0.33, 0.37, 0.32]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.45 Hz
+  Ep 720/2000 | Avg Reward: -30.3 | Steps: 36000 | Time: 3952s
+[Monitor] Ep 729 | Reward: -43.8 (r_f: 79.5%, r_h: 8.5%, r_d: 12.1%)
+          Actions mu: [-0.29, 0.15, 0.05, 0.15]  std: [0.32, 0.38, 0.31, 0.36]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.39 Hz
+  Ep 730/2000 | Avg Reward: -32.9 | Steps: 36500 | Time: 3997s
+[Monitor] Ep 739 | Reward: -27.8 (r_f: 54.1%, r_h: 27.4%, r_d: 18.5%)
+          Actions mu: [-0.32, 0.27, 0.05, 0.14]  std: [0.25, 0.31, 0.31, 0.34]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.39 Hz
+  Ep 740/2000 | Avg Reward: -37.1 | Steps: 37000 | Time: 4044s
+[Monitor] Ep 749 | Reward: -18.1 (r_f: 61.8%, r_h: 19.7%, r_d: 18.5%)
+          Actions mu: [-0.25, -0.08, 0.14, 0.28]  std: [0.37, 0.28, 0.29, 0.23]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.43 Hz
+  Ep 750/2000 | Avg Reward: -41.1 | Steps: 37500 | Time: 4090s
+[Monitor] Ep 759 | Reward: -18.4 (r_f: 68.8%, r_h: 12.4%, r_d: 18.8%)
+          Actions mu: [-0.31, 0.25, -0.00, 0.19]  std: [0.27, 0.31, 0.26, 0.23]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.41 Hz
+  Ep 760/2000 | Avg Reward: -31.2 | Steps: 38000 | Time: 4137s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 767
+  'r_f' is only 49.6% of total reward (threshold: 50%). Breakdown: r_f: 49.6%, r_h: 33.3%, r_d: 17.0%
+[Monitor] Ep 769 | Reward: -20.3 (r_f: 54.8%, r_h: 26.5%, r_d: 18.7%)
+          Actions mu: [-0.07, -0.09, 0.19, 0.17]  std: [0.33, 0.35, 0.37, 0.24]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.42 Hz
+  Ep 770/2000 | Avg Reward: -30.8 | Steps: 38500 | Time: 4183s
+[Monitor] Ep 779 | Reward: -24.2 (r_f: 66.5%, r_h: 17.4%, r_d: 16.1%)
+          Actions mu: [-0.15, -0.05, 0.08, 0.23]  std: [0.36, 0.31, 0.33, 0.27]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.39 Hz
+  Ep 780/2000 | Avg Reward: -35.4 | Steps: 39000 | Time: 4228s
+[Monitor] Ep 789 | Reward: -29.3 (r_f: 68.0%, r_h: 15.0%, r_d: 17.1%)
+          Actions mu: [-0.37, -0.20, 0.14, 0.26]  std: [0.33, 0.33, 0.37, 0.27]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.39 Hz
+  Ep 790/2000 | Avg Reward: -26.5 | Steps: 39500 | Time: 4275s
+[Monitor] Ep 799 | Reward: -35.5 (r_f: 67.8%, r_h: 18.0%, r_d: 14.2%)
+          Actions mu: [-0.26, 0.26, 0.04, 0.20]  std: [0.35, 0.32, 0.31, 0.32]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.39 Hz
+  Ep 800/2000 | Avg Reward: -31.7 | Steps: 40000 | Time: 4320s
+[Monitor] Ep 809 | Reward: -22.4 (r_f: 65.2%, r_h: 18.4%, r_d: 16.5%)
+          Actions mu: [-0.08, 0.00, 0.03, 0.18]  std: [0.29, 0.37, 0.33, 0.30]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.45 Hz
+  Ep 810/2000 | Avg Reward: -23.6 | Steps: 40500 | Time: 4367s
+[Monitor] Ep 819 | Reward: -32.3 (r_f: 55.7%, r_h: 14.3%, r_d: 30.0%)
+          Actions mu: [-0.34, -0.20, 0.11, 0.25]  std: [0.27, 0.31, 0.40, 0.31]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.41 Hz
+  Ep 820/2000 | Avg Reward: -31.1 | Steps: 41000 | Time: 4413s
+[Monitor] Ep 829 | Reward: -20.3 (r_f: 42.5%, r_h: 26.4%, r_d: 31.1%)
+          Actions mu: [-0.20, 0.18, -0.21, 0.08]  std: [0.31, 0.47, 0.21, 0.26]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.34 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 829
+  'r_f' is only 42.5% of total reward (threshold: 50%). Breakdown: r_f: 42.5%, r_h: 26.4%, r_d: 31.1%
+  Ep 830/2000 | Avg Reward: -29.2 | Steps: 41500 | Time: 4459s
+[Monitor] Ep 839 | Reward: -22.5 (r_f: 70.7%, r_h: 15.2%, r_d: 14.2%)
+          Actions mu: [-0.18, 0.12, -0.06, 0.12]  std: [0.37, 0.38, 0.28, 0.25]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.42 Hz
+  Ep 840/2000 | Avg Reward: -35.2 | Steps: 42000 | Time: 4503s
+[Monitor] Ep 849 | Reward: -24.5 (r_f: 61.3%, r_h: 19.6%, r_d: 19.1%)
+          Actions mu: [-0.36, -0.21, 0.19, 0.24]  std: [0.29, 0.29, 0.36, 0.30]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.42 Hz
+  Ep 850/2000 | Avg Reward: -28.1 | Steps: 42500 | Time: 4549s
+[Monitor] Ep 859 | Reward: -51.5 (r_f: 71.1%, r_h: 18.6%, r_d: 10.4%)
+          Actions mu: [-0.04, -0.01, 0.06, 0.18]  std: [0.33, 0.36, 0.38, 0.40]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.41 Hz
+  Ep 860/2000 | Avg Reward: -34.7 | Steps: 43000 | Time: 4596s
+[Monitor] Ep 869 | Reward: -34.6 (r_f: 70.4%, r_h: 14.5%, r_d: 15.1%)
+          Actions mu: [-0.39, 0.16, 0.09, 0.25]  std: [0.26, 0.36, 0.30, 0.30]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.41 Hz
+  Ep 870/2000 | Avg Reward: -40.3 | Steps: 43500 | Time: 4642s
+[Monitor] Ep 879 | Reward: -17.2 (r_f: 56.3%, r_h: 18.3%, r_d: 25.3%)
+          Actions mu: [-0.25, 0.21, -0.01, 0.14]  std: [0.39, 0.34, 0.25, 0.21]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.38 Hz
+  Ep 880/2000 | Avg Reward: -29.3 | Steps: 44000 | Time: 4688s
+[Monitor] Ep 889 | Reward: -32.2 (r_f: 66.0%, r_h: 16.3%, r_d: 17.7%)
+          Actions mu: [-0.28, 0.19, -0.06, 0.17]  std: [0.32, 0.35, 0.28, 0.33]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.38 Hz
+  Ep 890/2000 | Avg Reward: -29.5 | Steps: 44500 | Time: 4734s
+[Monitor] Ep 899 | Reward: -31.3 (r_f: 60.2%, r_h: 12.9%, r_d: 26.9%)
+          Actions mu: [-0.08, 0.23, -0.17, 0.11]  std: [0.40, 0.44, 0.22, 0.24]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.40 Hz
+  Ep 900/2000 | Avg Reward: -36.8 | Steps: 45000 | Time: 4781s
+[Monitor] Ep 909 | Reward: -27.9 (r_f: 56.3%, r_h: 22.8%, r_d: 20.9%)
+          Actions mu: [-0.14, -0.02, 0.19, 0.32]  std: [0.30, 0.30, 0.31, 0.25]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.39 Hz
+  Ep 910/2000 | Avg Reward: -31.1 | Steps: 45500 | Time: 4827s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 913
+  'r_f' is only 44.9% of total reward (threshold: 50%). Breakdown: r_f: 44.9%, r_h: 27.2%, r_d: 27.9%
+[Monitor] Ep 919 | Reward: -21.7 (r_f: 69.6%, r_h: 13.7%, r_d: 16.7%)
+          Actions mu: [-0.35, 0.21, 0.08, 0.20]  std: [0.30, 0.31, 0.26, 0.24]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.41 Hz
+  Ep 920/2000 | Avg Reward: -32.9 | Steps: 46000 | Time: 4874s
+[Monitor] Ep 929 | Reward: -26.5 (r_f: 62.1%, r_h: 12.5%, r_d: 25.4%)
+          Actions mu: [-0.19, 0.16, -0.05, 0.12]  std: [0.37, 0.36, 0.30, 0.23]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.38 Hz
+  Ep 930/2000 | Avg Reward: -26.9 | Steps: 46500 | Time: 4919s
+[Monitor] Ep 939 | Reward: -41.2 (r_f: 72.4%, r_h: 13.7%, r_d: 14.0%)
+          Actions mu: [-0.21, 0.20, -0.03, 0.16]  std: [0.32, 0.40, 0.30, 0.34]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.47 Hz
+  Ep 940/2000 | Avg Reward: -36.4 | Steps: 47000 | Time: 4965s
+[Monitor] Ep 949 | Reward: -60.3 (r_f: 69.2%, r_h: 15.2%, r_d: 15.5%)
+          Actions mu: [-0.01, -0.02, 0.01, 0.04]  std: [0.35, 0.37, 0.42, 0.44]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.44 Hz
+  Ep 950/2000 | Avg Reward: -33.4 | Steps: 47500 | Time: 5009s
+[Monitor] Ep 959 | Reward: -18.1 (r_f: 54.1%, r_h: 29.7%, r_d: 16.2%)
+          Actions mu: [-0.31, -0.15, 0.16, 0.24]  std: [0.30, 0.35, 0.17, 0.25]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.40 Hz
+  Ep 960/2000 | Avg Reward: -33.4 | Steps: 48000 | Time: 5049s
+[Monitor] Ep 969 | Reward: -30.2 (r_f: 37.7%, r_h: 27.4%, r_d: 34.8%)
+          Actions mu: [-0.20, 0.21, -0.07, 0.16]  std: [0.40, 0.37, 0.25, 0.21]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.37 Hz
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 969
+  'r_f' is only 37.7% of total reward (threshold: 50%). Breakdown: r_f: 37.7%, r_h: 27.4%, r_d: 34.8%
+  Ep 970/2000 | Avg Reward: -33.0 | Steps: 48500 | Time: 5094s
+[Monitor] Ep 979 | Reward: -17.0 (r_f: 66.4%, r_h: 13.9%, r_d: 19.7%)
+          Actions mu: [-0.38, 0.21, 0.09, 0.19]  std: [0.25, 0.32, 0.24, 0.22]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.41 Hz
+  Ep 980/2000 | Avg Reward: -33.1 | Steps: 49000 | Time: 5141s
+[Monitor] Ep 989 | Reward: -75.5 (r_f: 70.5%, r_h: 20.8%, r_d: 8.7%)
+          Actions mu: [-0.03, 0.01, 0.03, 0.20]  std: [0.41, 0.35, 0.39, 0.44]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.42 Hz
+  Ep 990/2000 | Avg Reward: -43.1 | Steps: 49500 | Time: 5186s
+[Monitor] Ep 999 | Reward: -33.4 (r_f: 58.4%, r_h: 22.1%, r_d: 19.4%)
+          Actions mu: [-0.13, -0.07, 0.05, 0.30]  std: [0.31, 0.30, 0.34, 0.31]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.46 Hz
+  Ep 1000/2000 | Avg Reward: -30.0 | Steps: 50000 | Time: 5232s
+[Monitor] Ep 1009 | Reward: -19.3 (r_f: 54.3%, r_h: 27.1%, r_d: 18.6%)
+          Actions mu: [-0.22, -0.10, 0.16, 0.28]  std: [0.28, 0.34, 0.33, 0.27]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.34 Hz
+  Ep 1010/2000 | Avg Reward: -26.9 | Steps: 50500 | Time: 5278s
+[Monitor] Ep 1019 | Reward: -43.3 (r_f: 60.7%, r_h: 27.4%, r_d: 11.9%)
+          Actions mu: [-0.09, -0.05, 0.11, 0.26]  std: [0.34, 0.31, 0.37, 0.33]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.34 Hz
+  Ep 1020/2000 | Avg Reward: -32.2 | Steps: 51000 | Time: 5325s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1020
+  'r_f' is only 46.6% of total reward (threshold: 50%). Breakdown: r_f: 46.6%, r_h: 31.8%, r_d: 21.6%
+[Monitor] Ep 1029 | Reward: -51.0 (r_f: 82.3%, r_h: 8.9%, r_d: 8.8%)
+          Actions mu: [-0.14, 0.09, -0.06, 0.08]  std: [0.37, 0.40, 0.35, 0.32]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.44 Hz
+  Ep 1030/2000 | Avg Reward: -32.4 | Steps: 51500 | Time: 5370s
+[Monitor] Ep 1039 | Reward: -68.6 (r_f: 83.0%, r_h: 9.2%, r_d: 7.8%)
+          Actions mu: [-0.10, 0.08, -0.02, 0.09]  std: [0.41, 0.41, 0.39, 0.35]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.44 Hz
+  Ep 1040/2000 | Avg Reward: -37.3 | Steps: 52000 | Time: 5415s
+[Monitor] Ep 1049 | Reward: -28.9 (r_f: 59.5%, r_h: 22.6%, r_d: 18.0%)
+          Actions mu: [-0.38, 0.17, 0.12, 0.16]  std: [0.30, 0.33, 0.27, 0.30]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.36 Hz
+  Ep 1050/2000 | Avg Reward: -26.8 | Steps: 52500 | Time: 5461s
+[Monitor] Ep 1059 | Reward: -18.4 (r_f: 52.3%, r_h: 26.7%, r_d: 21.0%)
+          Actions mu: [-0.29, -0.12, 0.17, 0.29]  std: [0.27, 0.34, 0.32, 0.24]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.41 Hz
+  Ep 1060/2000 | Avg Reward: -28.5 | Steps: 53000 | Time: 5509s
+[Monitor] Ep 1069 | Reward: -31.3 (r_f: 63.5%, r_h: 23.8%, r_d: 12.7%)
+          Actions mu: [-0.05, -0.07, 0.06, 0.28]  std: [0.32, 0.34, 0.34, 0.37]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.43 Hz
+  Ep 1070/2000 | Avg Reward: -30.4 | Steps: 53500 | Time: 5554s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1073
+  'r_f' is only 37.2% of total reward (threshold: 50%). Breakdown: r_f: 37.2%, r_h: 24.1%, r_d: 38.7%
+[Monitor] Ep 1079 | Reward: -20.8 (r_f: 70.9%, r_h: 9.8%, r_d: 19.3%)
+          Actions mu: [-0.21, 0.20, -0.13, 0.13]  std: [0.34, 0.34, 0.24, 0.23]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.37 Hz
+  Ep 1080/2000 | Avg Reward: -29.8 | Steps: 54000 | Time: 5601s
+[Monitor] Ep 1089 | Reward: -14.0 (r_f: 46.6%, r_h: 31.3%, r_d: 22.0%)
+          Actions mu: [-0.54, -0.08, 0.22, 0.32]  std: [0.21, 0.34, 0.33, 0.19]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.34 Hz
+  Ep 1090/2000 | Avg Reward: -27.5 | Steps: 54500 | Time: 5646s
+[Monitor] Ep 1099 | Reward: -49.3 (r_f: 76.7%, r_h: 14.4%, r_d: 8.9%)
+          Actions mu: [-0.26, 0.14, 0.04, 0.16]  std: [0.36, 0.36, 0.36, 0.30]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.41 Hz
+  Ep 1100/2000 | Avg Reward: -31.4 | Steps: 55000 | Time: 5693s
+[Monitor] Ep 1109 | Reward: -28.1 (r_f: 61.6%, r_h: 21.8%, r_d: 16.6%)
+          Actions mu: [-0.29, -0.05, 0.20, 0.24]  std: [0.31, 0.31, 0.33, 0.30]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.37 Hz
+  Ep 1110/2000 | Avg Reward: -27.3 | Steps: 55500 | Time: 5739s
+[Monitor] Ep 1119 | Reward: -34.0 (r_f: 58.0%, r_h: 26.4%, r_d: 15.6%)
+          Actions mu: [-0.02, 0.07, 0.06, 0.23]  std: [0.37, 0.34, 0.28, 0.37]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.41 Hz
+  Ep 1120/2000 | Avg Reward: -24.8 | Steps: 56000 | Time: 5785s
+[Monitor] Ep 1129 | Reward: -34.6 (r_f: 61.1%, r_h: 22.7%, r_d: 16.2%)
+          Actions mu: [-0.03, 0.02, 0.03, 0.18]  std: [0.31, 0.29, 0.37, 0.35]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.41 Hz
+  Ep 1130/2000 | Avg Reward: -38.3 | Steps: 56500 | Time: 5830s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1130
+  'r_f' is only 31.9% of total reward (threshold: 50%). Breakdown: r_f: 31.9%, r_h: 33.9%, r_d: 34.2%
+[Monitor] Ep 1139 | Reward: -47.9 (r_f: 83.2%, r_h: 5.7%, r_d: 11.1%)
+          Actions mu: [-0.17, 0.18, -0.04, 0.14]  std: [0.37, 0.37, 0.32, 0.31]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.38 Hz
+  Ep 1140/2000 | Avg Reward: -30.2 | Steps: 57000 | Time: 5876s
+[Monitor] Ep 1149 | Reward: -20.9 (r_f: 56.3%, r_h: 18.6%, r_d: 25.0%)
+          Actions mu: [-0.25, 0.20, 0.20, 0.11]  std: [0.34, 0.34, 0.32, 0.25]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.40 Hz
+  Ep 1150/2000 | Avg Reward: -26.6 | Steps: 57500 | Time: 5922s
+[Monitor] Ep 1159 | Reward: -29.3 (r_f: 75.6%, r_h: 14.3%, r_d: 10.2%)
+          Actions mu: [-0.35, 0.22, 0.07, 0.17]  std: [0.24, 0.31, 0.28, 0.26]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.39 Hz
+  Ep 1160/2000 | Avg Reward: -33.1 | Steps: 58000 | Time: 5967s
+[Monitor] Ep 1169 | Reward: -59.3 (r_f: 84.0%, r_h: 8.4%, r_d: 7.6%)
+          Actions mu: [-0.14, 0.06, -0.06, 0.10]  std: [0.40, 0.39, 0.36, 0.34]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.39 Hz
+  Ep 1170/2000 | Avg Reward: -33.8 | Steps: 58500 | Time: 6013s
+[Monitor] Ep 1179 | Reward: -23.0 (r_f: 54.2%, r_h: 25.0%, r_d: 20.9%)
+          Actions mu: [-0.11, -0.02, 0.09, 0.26]  std: [0.32, 0.32, 0.32, 0.29]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.40 Hz
+  Ep 1180/2000 | Avg Reward: -23.2 | Steps: 59000 | Time: 6058s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1183
+  'r_f' is only 49.6% of total reward (threshold: 50%). Breakdown: r_f: 49.6%, r_h: 27.9%, r_d: 22.5%
+[Monitor] Ep 1189 | Reward: -24.5 (r_f: 56.0%, r_h: 28.3%, r_d: 15.6%)
+          Actions mu: [-0.29, -0.21, 0.17, 0.35]  std: [0.34, 0.31, 0.18, 0.23]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.37 Hz
+  Ep 1190/2000 | Avg Reward: -26.6 | Steps: 59500 | Time: 6104s
+[Monitor] Ep 1199 | Reward: -47.5 (r_f: 52.7%, r_h: 17.8%, r_d: 29.5%)
+          Actions mu: [-0.07, -0.33, -0.04, 0.09]  std: [0.36, 0.38, 0.39, 0.40]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.42 Hz
+  Ep 1200/2000 | Avg Reward: -32.8 | Steps: 60000 | Time: 6149s
+[Monitor] Ep 1209 | Reward: -69.7 (r_f: 83.5%, r_h: 9.5%, r_d: 7.0%)
+          Actions mu: [-0.16, 0.14, 0.02, 0.11]  std: [0.36, 0.40, 0.36, 0.36]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.49 Hz
+  Ep 1210/2000 | Avg Reward: -39.8 | Steps: 60500 | Time: 6194s
+[Monitor] Ep 1219 | Reward: -35.4 (r_f: 71.1%, r_h: 12.2%, r_d: 16.7%)
+          Actions mu: [-0.25, 0.24, -0.06, 0.16]  std: [0.32, 0.32, 0.24, 0.34]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.40 Hz
+  Ep 1220/2000 | Avg Reward: -38.3 | Steps: 61000 | Time: 6242s
+[Monitor] Ep 1229 | Reward: -20.0 (r_f: 45.6%, r_h: 26.3%, r_d: 28.1%)
+          Actions mu: [-0.33, -0.04, 0.01, 0.15]  std: [0.32, 0.33, 0.33, 0.26]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.40 Hz
+  Ep 1230/2000 | Avg Reward: -34.5 | Steps: 61500 | Time: 6286s
+[Monitor] Ep 1239 | Reward: -30.8 (r_f: 65.0%, r_h: 20.6%, r_d: 14.3%)
+          Actions mu: [-0.00, 0.07, 0.01, 0.12]  std: [0.32, 0.37, 0.31, 0.39]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.43 Hz
+  Ep 1240/2000 | Avg Reward: -37.1 | Steps: 62000 | Time: 6333s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1242
+  'r_f' is only 43.6% of total reward (threshold: 50%). Breakdown: r_f: 43.6%, r_h: 23.5%, r_d: 32.9%
+[Monitor] Ep 1249 | Reward: -18.1 (r_f: 69.7%, r_h: 12.9%, r_d: 17.4%)
+          Actions mu: [-0.25, 0.23, 0.03, 0.07]  std: [0.30, 0.31, 0.25, 0.28]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.41 Hz
+  Ep 1250/2000 | Avg Reward: -23.7 | Steps: 62500 | Time: 6380s
+[Monitor] Ep 1259 | Reward: -29.4 (r_f: 60.5%, r_h: 14.6%, r_d: 24.9%)
+          Actions mu: [-0.07, 0.15, 0.03, 0.12]  std: [0.40, 0.35, 0.29, 0.24]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.36 Hz
+  Ep 1260/2000 | Avg Reward: -26.5 | Steps: 63000 | Time: 6427s
+[Monitor] Ep 1269 | Reward: -31.1 (r_f: 60.3%, r_h: 17.8%, r_d: 21.9%)
+          Actions mu: [-0.03, 0.01, 0.05, 0.16]  std: [0.30, 0.31, 0.30, 0.38]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.41 Hz
+  Ep 1270/2000 | Avg Reward: -36.4 | Steps: 63500 | Time: 6474s
+[Monitor] Ep 1279 | Reward: -33.5 (r_f: 70.6%, r_h: 18.5%, r_d: 11.0%)
+          Actions mu: [-0.12, 0.10, -0.01, 0.04]  std: [0.48, 0.42, 0.33, 0.31]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.43 Hz
+  Ep 1280/2000 | Avg Reward: -25.4 | Steps: 64000 | Time: 6522s
+[Monitor] Ep 1289 | Reward: -19.8 (r_f: 62.9%, r_h: 22.7%, r_d: 14.4%)
+          Actions mu: [-0.32, -0.08, 0.21, 0.31]  std: [0.27, 0.29, 0.32, 0.24]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.43 Hz
+  Ep 1290/2000 | Avg Reward: -24.4 | Steps: 64500 | Time: 6569s
+[Monitor] Ep 1299 | Reward: -16.7 (r_f: 64.5%, r_h: 15.9%, r_d: 19.6%)
+          Actions mu: [-0.34, 0.24, 0.03, 0.14]  std: [0.27, 0.25, 0.17, 0.27]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.35 Hz
+  Ep 1300/2000 | Avg Reward: -25.6 | Steps: 65000 | Time: 6617s
+[Monitor] Ep 1309 | Reward: -18.9 (r_f: 73.2%, r_h: 14.7%, r_d: 12.1%)
+          Actions mu: [-0.21, 0.18, -0.03, 0.09]  std: [0.32, 0.37, 0.31, 0.22]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.41 Hz
+  Ep 1310/2000 | Avg Reward: -33.7 | Steps: 65500 | Time: 6665s
+[Monitor] Ep 1319 | Reward: -33.7 (r_f: 75.5%, r_h: 15.1%, r_d: 9.5%)
+          Actions mu: [-0.25, 0.20, -0.00, 0.12]  std: [0.34, 0.35, 0.30, 0.30]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.40 Hz
+  Ep 1320/2000 | Avg Reward: -33.8 | Steps: 66000 | Time: 6711s
+[Monitor] Ep 1329 | Reward: -24.9 (r_f: 72.6%, r_h: 15.3%, r_d: 12.2%)
+          Actions mu: [-0.20, 0.07, 0.06, 0.17]  std: [0.36, 0.25, 0.25, 0.30]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.39 Hz
+  Ep 1330/2000 | Avg Reward: -31.4 | Steps: 66500 | Time: 6759s
+[Monitor] Ep 1339 | Reward: -27.1 (r_f: 63.5%, r_h: 25.4%, r_d: 11.0%)
+          Actions mu: [-0.01, 0.04, -0.01, 0.19]  std: [0.31, 0.33, 0.31, 0.32]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.41 Hz
+  Ep 1340/2000 | Avg Reward: -30.8 | Steps: 67000 | Time: 6806s
+[Monitor] Ep 1349 | Reward: -31.6 (r_f: 76.5%, r_h: 12.8%, r_d: 10.7%)
+          Actions mu: [-0.37, 0.20, 0.16, 0.17]  std: [0.25, 0.32, 0.24, 0.28]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.48 Hz
+  Ep 1350/2000 | Avg Reward: -35.1 | Steps: 67500 | Time: 6854s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1352
+  'r_f' is only 43.2% of total reward (threshold: 50%). Breakdown: r_f: 43.2%, r_h: 32.2%, r_d: 24.6%
+[Monitor] Ep 1359 | Reward: -22.1 (r_f: 49.9%, r_h: 19.5%, r_d: 30.6%)
+          Actions mu: [-0.15, -0.04, 0.12, 0.25]  std: [0.27, 0.28, 0.29, 0.33]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.40 Hz
+  Ep 1360/2000 | Avg Reward: -26.9 | Steps: 68000 | Time: 6902s
+[Monitor] Ep 1369 | Reward: -35.7 (r_f: 61.2%, r_h: 27.2%, r_d: 11.6%)
+          Actions mu: [-0.09, 0.01, 0.15, 0.21]  std: [0.30, 0.32, 0.31, 0.35]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.48 Hz
+  Ep 1370/2000 | Avg Reward: -36.0 | Steps: 68500 | Time: 6948s
+[Monitor] Ep 1379 | Reward: -37.8 (r_f: 68.8%, r_h: 20.0%, r_d: 11.2%)
+          Actions mu: [0.03, -0.04, 0.03, 0.20]  std: [0.36, 0.37, 0.32, 0.36]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.39 Hz
+  Ep 1380/2000 | Avg Reward: -25.8 | Steps: 69000 | Time: 6995s
+[Monitor] Ep 1389 | Reward: -40.0 (r_f: 68.1%, r_h: 19.2%, r_d: 12.7%)
+          Actions mu: [0.00, 0.03, -0.00, 0.16]  std: [0.37, 0.37, 0.32, 0.38]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.40 Hz
+  Ep 1390/2000 | Avg Reward: -32.8 | Steps: 69500 | Time: 7042s
+[Monitor] Ep 1399 | Reward: -32.0 (r_f: 67.2%, r_h: 20.0%, r_d: 12.8%)
+          Actions mu: [0.02, -0.02, 0.08, 0.19]  std: [0.33, 0.32, 0.32, 0.33]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.42 Hz
+  Ep 1400/2000 | Avg Reward: -32.4 | Steps: 70000 | Time: 7089s
+[Monitor] Ep 1409 | Reward: -27.6 (r_f: 65.7%, r_h: 18.3%, r_d: 16.0%)
+          Actions mu: [-0.03, 0.01, -0.00, 0.20]  std: [0.31, 0.35, 0.34, 0.37]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.40 Hz
+  Ep 1410/2000 | Avg Reward: -28.6 | Steps: 70500 | Time: 7137s
+[Monitor] Ep 1419 | Reward: -23.2 (r_f: 72.3%, r_h: 14.9%, r_d: 12.9%)
+          Actions mu: [-0.36, 0.22, 0.06, 0.18]  std: [0.25, 0.27, 0.26, 0.29]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.36 Hz
+  Ep 1420/2000 | Avg Reward: -30.4 | Steps: 71000 | Time: 7183s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1427
+  'r_f' is only 37.1% of total reward (threshold: 50%). Breakdown: r_f: 37.1%, r_h: 33.6%, r_d: 29.3%
+[Monitor] Ep 1429 | Reward: -24.4 (r_f: 54.6%, r_h: 29.7%, r_d: 15.6%)
+          Actions mu: [-0.29, -0.19, 0.24, 0.27]  std: [0.20, 0.27, 0.28, 0.33]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.42 Hz
+  Ep 1430/2000 | Avg Reward: -33.3 | Steps: 71500 | Time: 7233s
+[Monitor] Ep 1439 | Reward: -50.1 (r_f: 75.9%, r_h: 9.7%, r_d: 14.4%)
+          Actions mu: [-0.02, 0.04, 0.17, 0.03]  std: [0.31, 0.42, 0.37, 0.29]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.43 Hz
+  Ep 1440/2000 | Avg Reward: -38.7 | Steps: 72000 | Time: 7282s
+[Monitor] Ep 1449 | Reward: -76.7 (r_f: 77.4%, r_h: 10.8%, r_d: 11.8%)
+          Actions mu: [-0.17, 0.07, 0.02, 0.06]  std: [0.34, 0.38, 0.38, 0.44]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.40 Hz
+  Ep 1450/2000 | Avg Reward: -39.6 | Steps: 72500 | Time: 7329s
+[Monitor] Ep 1459 | Reward: -80.4 (r_f: 80.8%, r_h: 8.0%, r_d: 11.2%)
+          Actions mu: [0.01, 0.09, 0.04, 0.12]  std: [0.46, 0.44, 0.33, 0.36]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.44 Hz
+  Ep 1460/2000 | Avg Reward: -38.6 | Steps: 73000 | Time: 7377s
+[Monitor] Ep 1469 | Reward: -26.8 (r_f: 77.3%, r_h: 11.5%, r_d: 11.2%)
+          Actions mu: [-0.36, 0.16, 0.14, 0.14]  std: [0.33, 0.33, 0.22, 0.24]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.36 Hz
+  Ep 1470/2000 | Avg Reward: -29.3 | Steps: 73500 | Time: 7424s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1477
+  'r_f' is only 43.0% of total reward (threshold: 50%). Breakdown: r_f: 43.0%, r_h: 18.4%, r_d: 38.6%
+[Monitor] Ep 1479 | Reward: -17.7 (r_f: 66.4%, r_h: 17.1%, r_d: 16.5%)
+          Actions mu: [-0.38, 0.21, 0.13, 0.17]  std: [0.22, 0.26, 0.21, 0.23]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.41 Hz
+  Ep 1480/2000 | Avg Reward: -25.7 | Steps: 74000 | Time: 7470s
+[Monitor] Ep 1489 | Reward: -22.2 (r_f: 43.7%, r_h: 33.3%, r_d: 23.0%)
+          Actions mu: [-0.19, -0.09, 0.15, 0.32]  std: [0.28, 0.31, 0.33, 0.31]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.38 Hz
+  Ep 1490/2000 | Avg Reward: -31.9 | Steps: 74500 | Time: 7517s
+[Monitor] Ep 1499 | Reward: -16.7 (r_f: 57.1%, r_h: 28.5%, r_d: 14.3%)
+          Actions mu: [-0.30, -0.11, 0.25, 0.32]  std: [0.24, 0.26, 0.28, 0.24]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.39 Hz
+  Ep 1500/2000 | Avg Reward: -33.9 | Steps: 75000 | Time: 7565s
+[Monitor] Ep 1509 | Reward: -22.6 (r_f: 53.3%, r_h: 24.1%, r_d: 22.6%)
+          Actions mu: [-0.18, -0.30, 0.14, 0.25]  std: [0.32, 0.23, 0.29, 0.35]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.42 Hz
+  Ep 1510/2000 | Avg Reward: -28.5 | Steps: 75500 | Time: 7612s
+[Monitor] Ep 1519 | Reward: -33.3 (r_f: 77.2%, r_h: 14.2%, r_d: 8.5%)
+          Actions mu: [-0.23, 0.20, 0.07, 0.18]  std: [0.31, 0.30, 0.22, 0.21]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.47 Hz
+  Ep 1520/2000 | Avg Reward: -35.8 | Steps: 76000 | Time: 7660s
+[Monitor] Ep 1529 | Reward: -17.2 (r_f: 63.3%, r_h: 28.0%, r_d: 8.7%)
+          Actions mu: [-0.36, 0.16, 0.29, 0.19]  std: [0.23, 0.28, 0.22, 0.17]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.41 Hz
+  Ep 1530/2000 | Avg Reward: -27.5 | Steps: 76500 | Time: 7707s
+[Monitor] Ep 1539 | Reward: -17.9 (r_f: 61.6%, r_h: 20.2%, r_d: 18.2%)
+          Actions mu: [-0.29, 0.22, 0.08, 0.18]  std: [0.24, 0.24, 0.18, 0.24]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.41 Hz
+  Ep 1540/2000 | Avg Reward: -27.6 | Steps: 77000 | Time: 7754s
+[Monitor] Ep 1549 | Reward: -53.8 (r_f: 69.6%, r_h: 8.5%, r_d: 21.9%)
+          Actions mu: [-0.12, 0.14, 0.00, 0.08]  std: [0.38, 0.42, 0.39, 0.39]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.44 Hz
+  Ep 1550/2000 | Avg Reward: -38.1 | Steps: 77500 | Time: 7802s
+[Monitor] Ep 1559 | Reward: -18.9 (r_f: 61.7%, r_h: 14.8%, r_d: 23.5%)
+          Actions mu: [-0.15, 0.14, 0.03, 0.05]  std: [0.33, 0.32, 0.30, 0.23]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.46 Hz
+  Ep 1560/2000 | Avg Reward: -30.1 | Steps: 78000 | Time: 7848s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1568
+  'r_f' is only 46.3% of total reward (threshold: 50%). Breakdown: r_f: 46.3%, r_h: 23.0%, r_d: 30.7%
+[Monitor] Ep 1569 | Reward: -42.0 (r_f: 39.5%, r_h: 19.4%, r_d: 41.1%)
+          Actions mu: [-0.09, 0.19, 0.11, 0.07]  std: [0.33, 0.35, 0.38, 0.32]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.37 Hz
+  Ep 1570/2000 | Avg Reward: -30.9 | Steps: 78500 | Time: 7895s
+[Monitor] Ep 1579 | Reward: -23.6 (r_f: 63.4%, r_h: 11.9%, r_d: 24.7%)
+          Actions mu: [-0.11, 0.15, 0.00, 0.09]  std: [0.39, 0.35, 0.30, 0.26]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.41 Hz
+  Ep 1580/2000 | Avg Reward: -36.5 | Steps: 79000 | Time: 7942s
+[Monitor] Ep 1589 | Reward: -27.4 (r_f: 72.4%, r_h: 15.2%, r_d: 12.4%)
+          Actions mu: [-0.30, 0.20, 0.10, 0.15]  std: [0.31, 0.32, 0.20, 0.20]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.43 Hz
+  Ep 1590/2000 | Avg Reward: -38.7 | Steps: 79500 | Time: 7988s
+[Monitor] Ep 1599 | Reward: -23.6 (r_f: 76.4%, r_h: 12.4%, r_d: 11.2%)
+          Actions mu: [-0.17, -0.10, 0.15, 0.27]  std: [0.31, 0.32, 0.30, 0.32]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.37 Hz
+  Ep 1600/2000 | Avg Reward: -23.8 | Steps: 80000 | Time: 8035s
+[Monitor] Ep 1609 | Reward: -19.3 (r_f: 68.8%, r_h: 17.2%, r_d: 13.9%)
+          Actions mu: [-0.33, 0.21, 0.13, 0.15]  std: [0.24, 0.29, 0.20, 0.23]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.43 Hz
+  Ep 1610/2000 | Avg Reward: -35.0 | Steps: 80500 | Time: 8082s
+[Monitor] Ep 1619 | Reward: -18.0 (r_f: 51.0%, r_h: 17.0%, r_d: 32.0%)
+          Actions mu: [-0.17, 0.18, -0.04, 0.06]  std: [0.31, 0.36, 0.24, 0.23]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.46 Hz
+  Ep 1620/2000 | Avg Reward: -32.6 | Steps: 81000 | Time: 8129s
+[Monitor] Ep 1629 | Reward: -22.1 (r_f: 73.6%, r_h: 12.8%, r_d: 13.6%)
+          Actions mu: [-0.36, 0.17, 0.17, 0.19]  std: [0.23, 0.27, 0.25, 0.25]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.39 Hz
+  Ep 1630/2000 | Avg Reward: -33.9 | Steps: 81500 | Time: 8177s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1635
+  'r_f' is only 44.0% of total reward (threshold: 50%). Breakdown: r_f: 44.0%, r_h: 28.5%, r_d: 27.4%
+[Monitor] Ep 1639 | Reward: -35.5 (r_f: 64.6%, r_h: 18.1%, r_d: 17.3%)
+          Actions mu: [-0.13, -0.01, 0.09, 0.22]  std: [0.32, 0.33, 0.32, 0.36]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.44 Hz
+  Ep 1640/2000 | Avg Reward: -37.7 | Steps: 82000 | Time: 8224s
+[Monitor] Ep 1649 | Reward: -96.9 (r_f: 82.2%, r_h: 8.5%, r_d: 9.4%)
+          Actions mu: [-0.19, 0.07, 0.10, -0.04]  std: [0.31, 0.47, 0.42, 0.48]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.42 Hz
+  Ep 1650/2000 | Avg Reward: -46.5 | Steps: 82500 | Time: 8271s
+[Monitor] Ep 1659 | Reward: -41.6 (r_f: 70.0%, r_h: 18.2%, r_d: 11.8%)
+          Actions mu: [-0.23, 0.17, 0.26, 0.22]  std: [0.35, 0.31, 0.27, 0.30]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.41 Hz
+  Ep 1660/2000 | Avg Reward: -31.9 | Steps: 83000 | Time: 8318s
+[Monitor] Ep 1669 | Reward: -14.8 (r_f: 63.9%, r_h: 22.0%, r_d: 14.1%)
+          Actions mu: [-0.32, 0.25, 0.13, 0.17]  std: [0.25, 0.23, 0.18, 0.21]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.44 Hz
+  Ep 1670/2000 | Avg Reward: -32.5 | Steps: 83500 | Time: 8364s
+[Monitor] Ep 1679 | Reward: -86.2 (r_f: 80.2%, r_h: 11.6%, r_d: 8.2%)
+          Actions mu: [-0.09, 0.05, 0.28, 0.20]  std: [0.41, 0.35, 0.26, 0.32]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.47 Hz
+  Ep 1680/2000 | Avg Reward: -37.0 | Steps: 84000 | Time: 8411s
+[Monitor] Ep 1689 | Reward: -66.3 (r_f: 82.6%, r_h: 10.2%, r_d: 7.2%)
+          Actions mu: [-0.08, -0.01, 0.07, 0.06]  std: [0.40, 0.41, 0.35, 0.33]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.44 Hz
+  Ep 1690/2000 | Avg Reward: -31.6 | Steps: 84500 | Time: 8457s
+[Monitor] Ep 1699 | Reward: -18.7 (r_f: 59.9%, r_h: 20.3%, r_d: 19.8%)
+          Actions mu: [-0.28, -0.09, 0.24, 0.31]  std: [0.28, 0.30, 0.28, 0.22]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.34 Hz
+  Ep 1700/2000 | Avg Reward: -23.9 | Steps: 85000 | Time: 8503s
+[Monitor] Ep 1709 | Reward: -28.4 (r_f: 56.5%, r_h: 28.6%, r_d: 15.0%)
+          Actions mu: [-0.05, -0.03, 0.11, 0.17]  std: [0.31, 0.32, 0.33, 0.38]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.42 Hz
+  Ep 1710/2000 | Avg Reward: -36.3 | Steps: 85500 | Time: 8551s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1718
+  'r_f' is only 46.7% of total reward (threshold: 50%). Breakdown: r_f: 46.7%, r_h: 20.5%, r_d: 32.8%
+[Monitor] Ep 1719 | Reward: -14.8 (r_f: 50.3%, r_h: 20.3%, r_d: 29.4%)
+          Actions mu: [-0.21, 0.24, 0.01, 0.10]  std: [0.31, 0.35, 0.28, 0.20]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.40 Hz
+  Ep 1720/2000 | Avg Reward: -30.6 | Steps: 86000 | Time: 8598s
+[Monitor] Ep 1729 | Reward: -20.3 (r_f: 61.1%, r_h: 20.3%, r_d: 18.7%)
+          Actions mu: [-0.28, -0.11, 0.28, 0.33]  std: [0.27, 0.31, 0.30, 0.20]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.40 Hz
+  Ep 1730/2000 | Avg Reward: -33.9 | Steps: 86500 | Time: 8645s
+[Monitor] Ep 1739 | Reward: -36.1 (r_f: 77.1%, r_h: 11.3%, r_d: 11.6%)
+          Actions mu: [-0.28, 0.19, 0.11, 0.17]  std: [0.34, 0.34, 0.30, 0.28]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.39 Hz
+  Ep 1740/2000 | Avg Reward: -34.2 | Steps: 87000 | Time: 8691s
+[Monitor] Ep 1749 | Reward: -18.5 (r_f: 63.3%, r_h: 18.1%, r_d: 18.6%)
+          Actions mu: [-0.39, 0.20, 0.21, 0.21]  std: [0.22, 0.29, 0.21, 0.22]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.41 Hz
+  Ep 1750/2000 | Avg Reward: -36.5 | Steps: 87500 | Time: 8738s
+[Monitor] Ep 1759 | Reward: -13.5 (r_f: 44.1%, r_h: 17.1%, r_d: 38.8%)
+          Actions mu: [-0.26, -0.13, 0.29, 0.34]  std: [0.28, 0.28, 0.19, 0.26]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.40 Hz
+  Ep 1760/2000 | Avg Reward: -29.6 | Steps: 88000 | Time: 8785s
+[Monitor] Ep 1769 | Reward: -49.4 (r_f: 79.1%, r_h: 6.7%, r_d: 14.2%)
+          Actions mu: [-0.15, 0.10, 0.05, 0.11]  std: [0.40, 0.39, 0.35, 0.30]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.38 Hz
+  Ep 1770/2000 | Avg Reward: -32.2 | Steps: 88500 | Time: 8833s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1777
+  'r_f' is only 28.8% of total reward (threshold: 50%). Breakdown: r_f: 28.8%, r_h: 38.7%, r_d: 32.6%
+[Monitor] Ep 1779 | Reward: -32.8 (r_f: 66.6%, r_h: 14.4%, r_d: 19.0%)
+          Actions mu: [-0.10, -0.01, 0.13, 0.20]  std: [0.33, 0.36, 0.34, 0.32]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.40 Hz
+  Ep 1780/2000 | Avg Reward: -33.7 | Steps: 89000 | Time: 8879s
+[Monitor] Ep 1789 | Reward: -51.8 (r_f: 69.4%, r_h: 13.0%, r_d: 17.6%)
+          Actions mu: [-0.09, -0.02, 0.15, 0.13]  std: [0.26, 0.39, 0.41, 0.33]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.45 Hz
+  Ep 1790/2000 | Avg Reward: -33.7 | Steps: 89500 | Time: 8926s
+[Monitor] Ep 1799 | Reward: -24.5 (r_f: 70.7%, r_h: 14.4%, r_d: 14.9%)
+          Actions mu: [-0.40, 0.15, 0.21, 0.19]  std: [0.21, 0.32, 0.23, 0.28]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.42 Hz
+  Ep 1800/2000 | Avg Reward: -33.8 | Steps: 90000 | Time: 8972s
+[Monitor] Ep 1809 | Reward: -32.7 (r_f: 33.4%, r_h: 48.0%, r_d: 18.6%)
+          Actions mu: [-0.45, -0.10, 0.07, 0.09]  std: [0.19, 0.34, 0.30, 0.26]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.45 Hz
+  Ep 1810/2000 | Avg Reward: -41.9 | Steps: 90500 | Time: 9020s
+[Monitor] Ep 1819 | Reward: -27.2 (r_f: 69.0%, r_h: 20.0%, r_d: 11.0%)
+          Actions mu: [-0.15, -0.14, 0.17, 0.28]  std: [0.36, 0.25, 0.18, 0.27]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.43 Hz
+  Ep 1820/2000 | Avg Reward: -27.0 | Steps: 91000 | Time: 9068s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1828
+  'r_f' is only 39.9% of total reward (threshold: 50%). Breakdown: r_f: 39.9%, r_h: 46.2%, r_d: 13.9%
+[Monitor] Ep 1829 | Reward: -29.9 (r_f: 74.7%, r_h: 14.9%, r_d: 10.3%)
+          Actions mu: [-0.38, 0.17, 0.12, 0.14]  std: [0.21, 0.35, 0.27, 0.28]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.45 Hz
+  Ep 1830/2000 | Avg Reward: -39.9 | Steps: 91500 | Time: 9115s
+[Monitor] Ep 1839 | Reward: -30.7 (r_f: 51.6%, r_h: 22.7%, r_d: 25.7%)
+          Actions mu: [0.05, -0.00, 0.21, 0.15]  std: [0.34, 0.35, 0.29, 0.33]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.34 Hz
+  Ep 1840/2000 | Avg Reward: -29.3 | Steps: 92000 | Time: 9161s
+[Monitor] Ep 1849 | Reward: -24.2 (r_f: 70.6%, r_h: 16.1%, r_d: 13.3%)
+          Actions mu: [-0.40, 0.13, 0.21, 0.18]  std: [0.20, 0.33, 0.24, 0.27]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.35 Hz
+  Ep 1850/2000 | Avg Reward: -28.2 | Steps: 92500 | Time: 9205s
+[Monitor] Ep 1859 | Reward: -29.6 (r_f: 61.2%, r_h: 24.0%, r_d: 14.9%)
+          Actions mu: [-0.05, -0.01, 0.14, 0.21]  std: [0.37, 0.35, 0.30, 0.33]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.50 Hz
+  Ep 1860/2000 | Avg Reward: -52.9 | Steps: 93000 | Time: 9251s
+[Monitor] Ep 1869 | Reward: -14.6 (r_f: 58.3%, r_h: 21.9%, r_d: 19.8%)
+          Actions mu: [-0.22, 0.22, -0.07, 0.14]  std: [0.33, 0.28, 0.18, 0.17]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.38 Hz
+  Ep 1870/2000 | Avg Reward: -29.7 | Steps: 93500 | Time: 9296s
+[Monitor] Ep 1879 | Reward: -29.2 (r_f: 54.0%, r_h: 30.1%, r_d: 15.9%)
+          Actions mu: [0.05, 0.07, 0.07, 0.10]  std: [0.36, 0.37, 0.28, 0.34]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.43 Hz
+  Ep 1880/2000 | Avg Reward: -29.2 | Steps: 94000 | Time: 9341s
+[Monitor] Ep 1889 | Reward: -22.6 (r_f: 56.3%, r_h: 23.3%, r_d: 20.4%)
+          Actions mu: [-0.12, -0.04, 0.13, 0.22]  std: [0.29, 0.29, 0.30, 0.34]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.46 Hz
+  Ep 1890/2000 | Avg Reward: -31.5 | Steps: 94500 | Time: 9387s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1892
+  'r_f' is only 43.7% of total reward (threshold: 50%). Breakdown: r_f: 43.7%, r_h: 29.7%, r_d: 26.6%
+[Monitor] Ep 1899 | Reward: -22.5 (r_f: 57.7%, r_h: 25.2%, r_d: 17.1%)
+          Actions mu: [-0.33, 0.02, 0.14, 0.19]  std: [0.23, 0.30, 0.31, 0.38]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.43 Hz
+  Ep 1900/2000 | Avg Reward: -33.4 | Steps: 95000 | Time: 9434s
+[Monitor] Ep 1909 | Reward: -49.5 (r_f: 81.6%, r_h: 10.2%, r_d: 8.2%)
+          Actions mu: [-0.09, 0.15, 0.05, 0.13]  std: [0.39, 0.38, 0.32, 0.27]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.43 Hz
+  Ep 1910/2000 | Avg Reward: -32.3 | Steps: 95500 | Time: 9478s
+[Monitor] Ep 1919 | Reward: -20.4 (r_f: 58.6%, r_h: 21.9%, r_d: 19.5%)
+          Actions mu: [-0.29, -0.14, 0.20, 0.30]  std: [0.30, 0.31, 0.27, 0.24]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.41 Hz
+  Ep 1920/2000 | Avg Reward: -38.9 | Steps: 96000 | Time: 9521s
+[Monitor] Ep 1929 | Reward: -20.2 (r_f: 53.8%, r_h: 26.1%, r_d: 20.1%)
+          Actions mu: [-0.20, -0.03, 0.17, 0.27]  std: [0.31, 0.27, 0.28, 0.31]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.40 Hz
+  Ep 1930/2000 | Avg Reward: -29.2 | Steps: 96500 | Time: 9564s
+[Monitor] Ep 1939 | Reward: -14.5 (r_f: 65.8%, r_h: 17.1%, r_d: 17.1%)
+          Actions mu: [-0.33, 0.23, 0.04, 0.19]  std: [0.23, 0.29, 0.17, 0.20]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.41 Hz
+  Ep 1940/2000 | Avg Reward: -32.2 | Steps: 97000 | Time: 9606s
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 1943
+  'r_f' is only 49.3% of total reward (threshold: 50%). Breakdown: r_f: 49.3%, r_h: 25.4%, r_d: 25.3%
+[Monitor] Ep 1949 | Reward: -32.1 (r_f: 58.7%, r_h: 26.9%, r_d: 14.4%)
+          Actions mu: [-0.03, 0.10, 0.11, 0.25]  std: [0.35, 0.33, 0.32, 0.32]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.39 Hz
+  Ep 1950/2000 | Avg Reward: -32.2 | Steps: 97500 | Time: 9647s
+[Monitor] Ep 1959 | Reward: -19.8 (r_f: 74.1%, r_h: 16.5%, r_d: 9.4%)
+          Actions mu: [-0.31, 0.22, 0.07, 0.17]  std: [0.25, 0.33, 0.23, 0.18]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.40 Hz
+  Ep 1960/2000 | Avg Reward: -27.3 | Steps: 98000 | Time: 9687s
+[Monitor] Ep 1969 | Reward: -31.9 (r_f: 67.0%, r_h: 19.3%, r_d: 13.7%)
+          Actions mu: [-0.14, -0.01, 0.22, 0.13]  std: [0.31, 0.32, 0.35, 0.37]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.39 Hz
+  Ep 1970/2000 | Avg Reward: -37.0 | Steps: 98500 | Time: 9729s
+[Monitor] Ep 1979 | Reward: -40.1 (r_f: 61.0%, r_h: 18.0%, r_d: 21.0%)
+          Actions mu: [0.02, 0.13, 0.19, 0.10]  std: [0.38, 0.33, 0.37, 0.38]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.40 Hz
+  Ep 1980/2000 | Avg Reward: -25.0 | Steps: 99000 | Time: 9770s
+[Monitor] Ep 1989 | Reward: -35.9 (r_f: 79.2%, r_h: 11.9%, r_d: 9.0%)
+          Actions mu: [-0.24, 0.15, 0.08, 0.10]  std: [0.30, 0.38, 0.28, 0.30]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.34 Hz
+  Ep 1990/2000 | Avg Reward: -31.9 | Steps: 99500 | Time: 9810s
+[Monitor] Ep 1999 | Reward: -48.9 (r_f: 60.3%, r_h: 22.6%, r_d: 17.1%)
+          Actions mu: [0.01, 0.05, 0.07, 0.21]  std: [0.38, 0.38, 0.34, 0.41]
+          TDS fails: 0/10 (0.0%) | Freq peak: 0.39 Hz
+  Ep 2000/2000 | Avg Reward: -37.1 | Steps: 100000 | Time: 9852s
+
+[Monitor] === Training Summary ===
+  Episodes: 2000 | Calibration: complete
+  Reward:   -51 (ep 0) -> -49 (ep 1999)
+  Best:     -10 @ ep 513 | Worst: -326 @ ep 36
+
+  Checks triggered:
+    reward_component_ratio       [!] WARN  @ ep 38    (209 times)
+
+  TDS failures: 0/2000 (0.0%)
+  Freq peak deviation: 0.58 Hz (ep 36)
+
+
+Training log saved to results/andes_models_v2/training_log.json
+Training curves saved to results/figures/andes_training_curves.png
+
+Total time: 9853s
+Done!

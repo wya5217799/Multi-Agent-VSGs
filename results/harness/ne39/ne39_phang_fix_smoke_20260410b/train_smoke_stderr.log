@@ -1,0 +1,8 @@
+usage: train_simulink.py [-h] [--mode {standalone,simulink}]
+                         [--episodes EPISODES] [--eval-interval EVAL_INTERVAL]
+                         [--save-interval SAVE_INTERVAL]
+                         [--checkpoint-dir CHECKPOINT_DIR] [--resume RESUME]
+                         [--x-line X_LINE] [--comm-delay COMM_DELAY]
+                         [--seed SEED] [--update-repeat UPDATE_REPEAT]
+                         [--log-file LOG_FILE]
+train_simulink.py: error: argument --mode: invalid choice: 'quick' (choose from 'standalone', 'simulink')

@@ -1,0 +1,111 @@
+{
+  "scenario_id": "ne39",
+  "paper_reference": "Yang et al. 2023 New England System",
+  "reference_items": [
+    {
+      "key": "model_name",
+      "value": "NE39bus_v2",
+      "source": "repo contract + paper scenario mapping",
+      "confidence": "high",
+      "check_mode": "must_match",
+      "notes": "Supported harness model name."
+    },
+    {
+      "key": "training_entry",
+      "value": "scenarios/new_england/train_simulink.py",
+      "source": "repo contract",
+      "confidence": "high",
+      "check_mode": "must_match",
+      "notes": "Harness smoke entry point."
+    },
+    {
+      "key": "n_agents",
+      "value": 8,
+      "source": "paper + repo config",
+      "confidence": "high",
+      "check_mode": "must_match",
+      "notes": "Eight ES/VSG agents in New England."
+    },
+    {
+      "key": "dt",
+      "value": 0.2,
+      "source": "paper + repo config",
+      "confidence": "high",
+      "check_mode": "must_match",
+      "notes": "RL control step in seconds."
+    },
+    {
+      "key": "t_episode",
+      "value": 10.0,
+      "source": "paper + repo config",
+      "confidence": "high",
+      "check_mode": "must_match",
+      "notes": "Episode duration in seconds."
+    },
+    {
+      "key": "obs_dim",
+      "value": 7,
+      "source": "paper + repo config",
+      "confidence": "high",
+      "check_mode": "must_match",
+      "notes": "Per-agent observation dimension."
+    },
+    {
+      "key": "max_neighbors",
+      "value": 2,
+      "source": "paper + repo config",
+      "confidence": "high",
+      "check_mode": "must_match",
+      "notes": "Each agent communicates with two neighbors."
+    },
+    {
+      "key": "comm_adj",
+      "value": {
+        "0": [1, 7],
+        "1": [0, 2],
+        "2": [1, 3],
+        "3": [2, 4],
+        "4": [3, 5],
+        "5": [4, 6],
+        "6": [5, 7],
+        "7": [6, 0]
+      },
+      "source": "paper + repo config",
+      "confidence": "high",
+      "check_mode": "must_match",
+      "notes": "Eight-node ring communication graph."
+    },
+    {
+      "key": "scenario1_gen_trip",
+      "value": "GENROU_2",
+      "source": "repo config aligned to paper disturbance set",
+      "confidence": "high",
+      "check_mode": "warn_if_missing",
+      "notes": "Primary wind-farm trip proxy in the current implementation."
+    },
+    {
+      "key": "scenario1_trip_time",
+      "value": 0.5,
+      "source": "repo config aligned to paper disturbance set",
+      "confidence": "high",
+      "check_mode": "warn_if_missing",
+      "notes": "Primary disturbance time in the current implementation."
+    },
+    {
+      "key": "scenario2_bus",
+      "value": "PQ_4",
+      "source": "repo config aligned to paper disturbance set",
+      "confidence": "medium",
+      "check_mode": "warn_if_missing",
+      "notes": "Bus 3 short-circuit proxy used in the current implementation."
+    },
+    {
+      "key": "scenario2_time",
+      "value": 0.2,
+      "source": "paper + repo config",
+      "confidence": "high",
+      "check_mode": "warn_if_missing",
+      "notes": "Short-circuit disturbance time."
+    }
+  ]
+}

@@ -1,0 +1,44 @@
+{
+  "task": "scenario_status",
+  "scenario_id": "ne39",
+  "run_id": "ne39_v1",
+  "status": "ok",
+  "started_at": "2026-04-07T08:18:36.992825+00:00",
+  "finished_at": "2026-04-07T08:18:36.994828+00:00",
+  "inputs": {
+    "goal": "NE39 FastRestart co-simulation pipeline ready for RL training. Smoke test passed: warmup + 1 step, omega stable [0.95,1.05]. patch_ne39_faststart applied, vsg_warmup/vsg_step_and_read rewritten for FastRestart, bridge updated for 2-return signature + delta/Pe feedback loop.",
+    "requested_tasks": [
+      "scenario_status"
+    ]
+  },
+  "summary": [
+    "scenario 'ne39' resolved: model=NE39bus_v2"
+  ],
+  "artifacts": [],
+  "failures": [],
+  "resolved_model_name": "NE39bus_v2",
+  "resolved_model_dir": "scenarios\\new_england\\simulink_models",
+  "resolved_train_entry": "scenarios\\new_england\\train_simulink.py",
+  "supported": true,
+  "reference_manifest_path": "scenarios/new_england/harness_reference.json",
+  "reference_summary": {
+    "must_match_keys": [
+      "model_name",
+      "training_entry",
+      "n_agents",
+      "dt",
+      "t_episode",
+      "obs_dim",
+      "max_neighbors",
+      "comm_adj"
+    ],
+    "warn_if_missing_keys": [
+      "scenario1_gen_trip",
+      "scenario1_trip_time",
+      "scenario2_bus",
+      "scenario2_time"
+    ],
+    "informational_keys": []
+  },
+  "notes": []
+}

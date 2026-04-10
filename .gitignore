@@ -3,15 +3,36 @@ __pycache__/
 *.pyo
 .claude/
 _archive/
+.worktrees/
 
 # ANDES output
-kundur_full_out.*
+*_out.lst
+*_out.npz
+*_out.txt
+results/andes_output/
 
-# Large model checkpoints (keep figures)
+# Large model checkpoints (keep figures and logs)
 results/models/
 results/andes_models*/
+results/andes_kundur_models_v*/
+results/andes_ne_models*/
+results/andes_ne_regca1_models/
 results/new_england/models/
+results/sim_ne39/checkpoints/
+results/sim_kundur/checkpoints/
+results/scalability/
 results/*.npz
+
+# Simulink cache
+slprj/
+
+# Personal / reference (not project code)
+论文/
+其他/
+Figure.paper/
+paper_draft.tex
+journey-into-multi-agent-vsgs.md
+MEMORY.md
 
 # OS
 .DS_Store

@@ -56,10 +56,10 @@ HIDDEN_SIZES = [128, 128, 128, 128]
 LR = 3e-4
 GAMMA = 0.99
 TAU_SOFT = 0.005
-BUFFER_SIZE = 10000
-BATCH_SIZE = 256
+BUFFER_SIZE = 2500                 # 每 ep 清空, 单 ep 最多 50 transitions
+BATCH_SIZE = 32                    # 缩小: 每 ep 只有 50 transitions, 需 batch < 50
 N_EPISODES = 2000
-WARMUP_STEPS = 1000
+WARMUP_STEPS = 500                 # 缩短: buffer 每 ep 清空, warmup 经验不积累
 
 # ═══════════════════════════════════════════════════════
 #  通信拓扑 — 环形: 0↔1↔2↔3↔0
@@ -106,3 +106,8 @@ N_TEST_SCENARIOS = 50
 # ═══════════════════════════════════════════════════════
 LOAD_STEP_1 = np.array([0.0, 0.0, -15.0, 0.0])   # ~0.4 Hz deviation
 LOAD_STEP_2 = np.array([0.0, 0.0, 0.0, 12.0])    # ~0.3 Hz deviation
+
+# ═══════════════════════════════════════════════════════
+#  训练策略 (Algorithm 1 line 16)
+# ═══════════════════════════════════════════════════════
+CLEAR_BUFFER_PER_EPISODE = False   # 标准 off-policy SAC，跨 episode 积累经验

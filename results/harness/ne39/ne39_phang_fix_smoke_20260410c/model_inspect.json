@@ -1,0 +1,230 @@
+{
+  "task": "model_inspect",
+  "scenario_id": "ne39",
+  "run_id": "ne39_phang_fix_smoke_20260410c",
+  "status": "ok",
+  "started_at": "2026-04-10T05:15:55.349923+00:00",
+  "finished_at": "2026-04-10T05:15:55.352923+00:00",
+  "inputs": {
+    "focus_paths": [],
+    "query_params": [],
+    "include_block_tree": false,
+    "include_check_params": false
+  },
+  "summary": [
+    "model_inspect: loaded=True, ref=ok, elapsed=0.02s"
+  ],
+  "artifacts": [],
+  "failures": [],
+  "model_loaded": true,
+  "loaded_models": [
+    "power_utile",
+    "NE39bus_v2"
+  ],
+  "focus_blocks": [],
+  "queried_params": {
+    "items": []
+  },
+  "solver_audit": {},
+  "param_suspects": [],
+  "reference_validation": {
+    "checks": [
+      {
+        "key": "model_name",
+        "check_mode": "must_match",
+        "status": "match",
+        "expected": "NE39bus_v2",
+        "actual": "NE39bus_v2",
+        "source": "repo contract + paper scenario mapping",
+        "confidence": "high",
+        "notes": "Supported harness model name."
+      },
+      {
+        "key": "training_entry",
+        "check_mode": "must_match",
+        "status": "match",
+        "expected": "scenarios/new_england/train_simulink.py",
+        "actual": "scenarios/new_england/train_simulink.py",
+        "source": "repo contract",
+        "confidence": "high",
+        "notes": "Harness smoke entry point."
+      },
+      {
+        "key": "n_agents",
+        "check_mode": "must_match",
+        "status": "match",
+        "expected": 8,
+        "actual": 8,
+        "source": "paper + repo config",
+        "confidence": "high",
+        "notes": "Eight ES/VSG agents in New England."
+      },
+      {
+        "key": "dt",
+        "check_mode": "must_match",
+        "status": "match",
+        "expected": 0.2,
+        "actual": 0.2,
+        "source": "paper + repo config",
+        "confidence": "high",
+        "notes": "RL control step in seconds."
+      },
+      {
+        "key": "t_episode",
+        "check_mode": "must_match",
+        "status": "match",
+        "expected": 10.0,
+        "actual": 10.0,
+        "source": "paper + repo config",
+        "confidence": "high",
+        "notes": "Episode duration in seconds."
+      },
+      {
+        "key": "obs_dim",
+        "check_mode": "must_match",
+        "status": "match",
+        "expected": 7,
+        "actual": 7,
+        "source": "paper + repo config",
+        "confidence": "high",
+        "notes": "Per-agent observation dimension."
+      },
+      {
+        "key": "max_neighbors",
+        "check_mode": "must_match",
+        "status": "match",
+        "expected": 2,
+        "actual": 2,
+        "source": "paper + repo config",
+        "confidence": "high",
+        "notes": "Each agent communicates with two neighbors."
+      },
+      {
+        "key": "comm_adj",
+        "check_mode": "must_match",
+        "status": "match",
+        "expected": {
+          "0": [
+            1,
+            7
+          ],
+          "1": [
+            0,
+            2
+          ],
+          "2": [
+            1,
+            3
+          ],
+          "3": [
+            2,
+            4
+          ],
+          "4": [
+            3,
+            5
+          ],
+          "5": [
+            4,
+            6
+          ],
+          "6": [
+            5,
+            7
+          ],
+          "7": [
+            6,
+            0
+          ]
+        },
+        "actual": {
+          "0": [
+            1,
+            7
+          ],
+          "1": [
+            0,
+            2
+          ],
+          "2": [
+            1,
+            3
+          ],
+          "3": [
+            2,
+            4
+          ],
+          "4": [
+            3,
+            5
+          ],
+          "5": [
+            4,
+            6
+          ],
+          "6": [
+            5,
+            7
+          ],
+          "7": [
+            6,
+            0
+          ]
+        },
+        "source": "paper + repo config",
+        "confidence": "high",
+        "notes": "Eight-node ring communication graph."
+      },
+      {
+        "key": "scenario1_gen_trip",
+        "check_mode": "warn_if_missing",
+        "status": "match",
+        "expected": "GENROU_2",
+        "actual": "GENROU_2",
+        "source": "repo config aligned to paper disturbance set",
+        "confidence": "high",
+        "notes": "Primary wind-farm trip proxy in the current implementation."
+      },
+      {
+        "key": "scenario1_trip_time",
+        "check_mode": "warn_if_missing",
+        "status": "match",
+        "expected": 0.5,
+        "actual": 0.5,
+        "source": "repo config aligned to paper disturbance set",
+        "confidence": "high",
+        "notes": "Primary disturbance time in the current implementation."
+      },
+      {
+        "key": "scenario2_bus",
+        "check_mode": "warn_if_missing",
+        "status": "match",
+        "expected": "PQ_4",
+        "actual": "PQ_4",
+        "source": "repo config aligned to paper disturbance set",
+        "confidence": "medium",
+        "notes": "Bus 3 short-circuit proxy used in the current implementation."
+      },
+      {
+        "key": "scenario2_time",
+        "check_mode": "warn_if_missing",
+        "status": "match",
+        "expected": 0.2,
+        "actual": 0.2,
+        "source": "paper + repo config",
+        "confidence": "high",
+        "notes": "Short-circuit disturbance time."
+      }
+    ],
+    "mismatch_keys": [],
+    "missing_keys": [],
+    "has_warnings": false
+  },
+  "recommended_next_task": "model_patch_verify",
+  "_timings": {
+    "ensure_loaded": 0.02,
+    "reference_validation": 0.0,
+    "solver_audit": 0.0,
+    "total": 0.02
+  }
+}

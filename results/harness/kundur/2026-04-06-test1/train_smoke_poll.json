@@ -1,0 +1,27 @@
+{
+  "task": "train_smoke_poll",
+  "scenario_id": "kundur",
+  "run_id": "2026-04-06-test1",
+  "status": "failed",
+  "started_at": "2026-04-05T18:38:14.312201+00:00",
+  "finished_at": "2026-04-05T18:38:14.313202+00:00",
+  "inputs": {},
+  "summary": [],
+  "artifacts": [],
+  "failures": [
+    {
+      "failure_class": "smoke_failed",
+      "message": "Training smoke command failed",
+      "detail": {
+        "stdout_tail": "",
+        "stderr_tail": "Traceback (most recent call last):\n  File \"C:\\Users\\27443\\Desktop\\Multi-Agent  VSGs\\scenarios\\kundur\\train_simulink.py\", line 25, in <module>\n    from env.simulink.kundur_simulink_env import KundurStandaloneEnv, KundurSimulinkEnv\n  File \"C:\\Users\\27443\\Desktop\\Multi-Agent  VSGs\\scenarios\\kundur\\..\\..\\env\\simulink\\kundur_simulink_env.py\", line 32, in <module>\n    import gymnasium as gym\nModuleNotFoundError: No module named 'gymnasium'\n"
+      }
+    }
+  ],
+  "process_status": "finished",
+  "pid": 32200,
+  "exit_code": 1,
+  "native_log_paths": [],
+  "native_checkpoint_paths": [],
+  "smoke_passed": false
+}

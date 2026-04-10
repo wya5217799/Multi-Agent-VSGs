@@ -56,29 +56,29 @@ def main():
 
     # ═══ Step 1: ODE 主训练 (Fig 4) ═══
     if not args.skip_train:
-        ok = run_cmd(f"python train.py --episodes {ep_main}",
+        ok = run_cmd(f"python scenarios/kundur/train_ode.py --episodes {ep_main}",
                      f"Step 1/6: ODE 主训练 ({ep_main}ep) → Fig 4 训练曲线")
         success = success and ok
 
     # ═══ Step 2: ODE 评估 (Fig 4-13) ═══
-    ok = run_cmd("python evaluate.py",
+    ok = run_cmd("python scenarios/kundur/evaluate_ode.py",
                  "Step 2/6: ODE 评估 → Fig 4-13")
     success = success and ok
 
     # ═══ Step 3: 可扩展性实验 (Fig 14-16) ═══
     if not args.skip_train:
-        ok = run_cmd(f"python train_scalability.py --episodes {ep_scale}",
+        ok = run_cmd(f"python scenarios/scalability/train.py --episodes {ep_scale}",
                      f"Step 3/6: 可扩展性训练 N=2,4,8 ({ep_scale}ep) → Fig 14-15")
         success = success and ok
 
     # ═══ Step 4: New England (Fig 17-21) ═══
     if not args.skip_train:
-        ok = run_cmd(f"python train_new_england.py --episodes {ep_main}",
+        ok = run_cmd(f"python scenarios/new_england/train_ode.py --episodes {ep_main}",
                      f"Step 4/6: New England 训练+评估 ({ep_main}ep) → Fig 17-21")
         success = success and ok
 
     # ═══ Step 5: Fig 16 可扩展性分析图 ═══
-    ok = run_cmd("python generate_fig16.py",
+    ok = run_cmd("python plotting/generate_fig16.py",
                  "Step 5/6: 生成 Fig 16 可扩展性分析")
     # Fig 16 失败不影响整体
     if not ok:
@@ -90,13 +90,13 @@ def main():
 
         if not args.skip_train:
             ok = run_cmd(
-                f'{wsl_prefix}python3 train_andes.py --episodes {ep_main} '
+                f'{wsl_prefix}python3 scenarios/kundur/train_andes.py --episodes {ep_main} '
                 f'--save-dir results/andes_models_r4\'',
                 f"Step 6a/6: ANDES 训练 ({ep_main}ep)")
             success = success and ok
 
         ok = run_cmd(
-            f'{wsl_prefix}python3 evaluate_andes.py\'',
+            f'{wsl_prefix}python3 scenarios/kundur/evaluate_andes.py\'',
             "Step 6b/6: ANDES 评估 → Fig 4-13 (ANDES)")
         success = success and ok
 

@@ -1,0 +1,28 @@
+{
+  "task": "train_smoke_start",
+  "scenario_id": "ne39",
+  "run_id": "ne39_run2",
+  "status": "failed",
+  "started_at": "2026-04-07T12:50:11.734025+00:00",
+  "finished_at": "2026-04-07T12:50:11.749393+00:00",
+  "inputs": {
+    "episodes": 500,
+    "mode": "simulink"
+  },
+  "summary": [],
+  "artifacts": [],
+  "failures": [
+    {
+      "failure_class": "precondition_failed",
+      "message": "train_smoke requires scenario_status ok, no failed modeling tasks, and model_report run_status ok/warning",
+      "detail": {
+        "reasons": [
+          "model_report must exist with run_status ok or warning"
+        ]
+      }
+    }
+  ],
+  "command": "",
+  "pid": null,
+  "smoke_started": false
+}

@@ -151,9 +151,18 @@ end
 
 function ph = step_phase_command_deg(model_name, idx, delta_deg)
 % Convert VSG internal angle to the absolute VSrc PhaseAngle command.
+%
+% Feedback gain < 1.0 for NE39bus_v2:
+%   A gain of 1.0 causes delay-induced oscillations at the 0.2 s control
+%   sampling rate.  With X_line=0.10 p.u. and V=1 p.u., a 10-degree phAng
+%   jump produces ΔPe ≈ 1.7 p.u. (170 MW) per step, far above the system's
+%   damping capacity.  Reducing the gain to 0.3 limits ΔPe to ~30 MW/step
+%   while still coupling the mechanical rotor angle to the VSrc angle,
+%   preserving the VSG synchronisation behaviour.
     if strcmp(model_name, 'NE39bus_v2')
         init_phAng = [-3.646, 0, 2.466, 4.423, 3.398, 5.698, 8.494, 2.181];
-        ph = step_wrap_to_180(init_phAng(idx) + step_wrap_to_180(delta_deg));
+        gain = 0.3;
+        ph = step_wrap_to_180(init_phAng(idx) + gain * step_wrap_to_180(delta_deg));
     else
         ph = delta_deg;
     end

@@ -1,0 +1,17 @@
+{
+  "task": "train_smoke_poll",
+  "scenario_id": "ne39",
+  "run_id": "ne39_fix1",
+  "status": "running",
+  "started_at": "2026-04-07T19:08:05.491489+00:00",
+  "finished_at": "2026-04-07T19:08:05.491489+00:00",
+  "inputs": {},
+  "summary": [
+    "smoke_poll: still running, pid=23576 — poll again later"
+  ],
+  "artifacts": [],
+  "failures": [],
+  "process_status": "running",
+  "pid": 23576,
+  "smoke_passed": false
+}

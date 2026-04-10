@@ -1,0 +1,10 @@
+{
+  "run_id": "ne39_phang_fix_smoke_20260410c",
+  "scenario_id": "ne39",
+  "goal": "Validate NE39 phAng feedback fix with 1-episode Simulink train smoke.",
+  "requested_tasks": [
+    "status",
+    "model report prerequisite"
+  ],
+  "created_at": "2026-04-10T05:15:55.343719+00:00"
+}

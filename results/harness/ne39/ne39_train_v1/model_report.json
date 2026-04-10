@@ -1,0 +1,39 @@
+{
+  "task": "model_report",
+  "scenario_id": "ne39",
+  "run_id": "ne39_train_v1",
+  "status": "ok",
+  "started_at": "2026-04-07T12:34:21.336478+00:00",
+  "finished_at": "2026-04-07T12:34:21.345159+00:00",
+  "inputs": {
+    "include_summary_md": true
+  },
+  "summary": [
+    "run_report: status=failed, tasks=4, blocked=1, findings=1"
+  ],
+  "artifacts": [
+    "C:\\Users\\27443\\Desktop\\Multi-Agent  VSGs\\results\\harness\\ne39\\ne39_train_v1\\summary.md"
+  ],
+  "failures": [],
+  "run_status": "failed",
+  "completed_tasks": [
+    "model_inspect",
+    "model_report",
+    "scenario_status",
+    "train_smoke_start"
+  ],
+  "blocked_tasks": [
+    "train_smoke_start"
+  ],
+  "key_findings": [
+    "train_smoke_start: train_smoke requires scenario_status ok, no failed modeling tasks, and model_report run_status ok/warning"
+  ],
+  "next_actions": [
+    "Fix failed modeling tasks before train_smoke"
+  ],
+  "memory_hints": {
+    "should_write_devlog": false,
+    "should_write_decision": false,
+    "reason": []
+  }
+}

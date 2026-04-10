@@ -1,0 +1,5 @@
+Python: C:\Users\27443\miniconda3\envs\andes_env\python.exe
+torch: MISSING (No module named 'torch')
+gymnasium: OK 1.2.3
+numpy: OK 2.4.4
+matlab: OK ?

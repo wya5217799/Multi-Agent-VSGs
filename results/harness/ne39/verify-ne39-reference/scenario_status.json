@@ -1,0 +1,42 @@
+{
+  "task": "scenario_status",
+  "scenario_id": "ne39",
+  "run_id": "verify-ne39-reference",
+  "status": "ok",
+  "started_at": "2026-04-05T17:32:30.310639+00:00",
+  "finished_at": "2026-04-05T17:32:30.312137+00:00",
+  "inputs": {
+    "goal": "verify reference wiring",
+    "requested_tasks": [
+      "scenario_status"
+    ]
+  },
+  "summary": [],
+  "artifacts": [],
+  "failures": [],
+  "resolved_model_name": "NE39bus_v2",
+  "resolved_model_dir": "scenarios\\new_england\\simulink_models",
+  "resolved_train_entry": "scenarios\\new_england\\train_simulink.py",
+  "supported": true,
+  "reference_manifest_path": "scenarios/new_england/harness_reference.json",
+  "reference_summary": {
+    "must_match_keys": [
+      "model_name",
+      "training_entry",
+      "n_agents",
+      "dt",
+      "t_episode",
+      "obs_dim",
+      "max_neighbors",
+      "comm_adj"
+    ],
+    "warn_if_missing_keys": [
+      "scenario1_gen_trip",
+      "scenario1_trip_time",
+      "scenario2_bus",
+      "scenario2_time"
+    ],
+    "informational_keys": []
+  },
+  "notes": []
+}

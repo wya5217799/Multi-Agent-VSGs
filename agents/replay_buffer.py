@@ -20,6 +20,10 @@ class ReplayBuffer:
         self.next_obs = np.zeros((capacity, obs_dim), dtype=np.float32)
         self.dones = np.zeros(capacity, dtype=np.float32)
 
+    def clear(self):
+        self.ptr = 0
+        self.size = 0
+
     def add(self, obs, action, reward, next_obs, done):
         self.obs[self.ptr] = obs
         self.actions[self.ptr] = action
@@ -39,6 +43,11 @@ class ReplayBuffer:
             'next_obs': torch.FloatTensor(self.next_obs[idx]).to(device),
             'dones': torch.FloatTensor(self.dones[idx]).unsqueeze(1).to(device),
         }
+
+    def clear(self):
+        """清空缓冲区 (论文 Algorithm 1 line 16: 每 episode 结束后清空)."""
+        self.ptr = 0
+        self.size = 0
 
     def __len__(self):
         return self.size

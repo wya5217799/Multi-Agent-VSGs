@@ -1,0 +1,17 @@
+{
+  "task": "train_smoke_poll",
+  "scenario_id": "kundur",
+  "run_id": "kundur_v6",
+  "status": "running",
+  "started_at": "2026-04-07T18:28:05.426897+00:00",
+  "finished_at": "2026-04-07T18:28:05.426897+00:00",
+  "inputs": {},
+  "summary": [
+    "smoke_poll: still running, pid=49000 — poll again later"
+  ],
+  "artifacts": [],
+  "failures": [],
+  "process_status": "running",
+  "pid": 49000,
+  "smoke_passed": false
+}

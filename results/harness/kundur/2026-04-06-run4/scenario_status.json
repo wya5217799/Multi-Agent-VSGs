@@ -1,0 +1,43 @@
+{
+  "task": "scenario_status",
+  "scenario_id": "kundur",
+  "run_id": "2026-04-06-run4",
+  "status": "ok",
+  "started_at": "2026-04-05T18:24:10.009665+00:00",
+  "finished_at": "2026-04-05T18:24:10.010994+00:00",
+  "inputs": {
+    "goal": "Test slimmed harness with fast-path reference validation",
+    "requested_tasks": [
+      "scenario_status"
+    ]
+  },
+  "summary": [],
+  "artifacts": [],
+  "failures": [],
+  "resolved_model_name": "kundur_vsg",
+  "resolved_model_dir": "scenarios\\kundur\\simulink_models",
+  "resolved_train_entry": "scenarios\\kundur\\train_simulink.py",
+  "supported": true,
+  "reference_manifest_path": "scenarios/kundur/harness_reference.json",
+  "reference_summary": {
+    "must_match_keys": [
+      "model_name",
+      "training_entry",
+      "n_agents",
+      "dt",
+      "t_episode",
+      "obs_dim",
+      "act_dim",
+      "max_neighbors",
+      "comm_adj"
+    ],
+    "warn_if_missing_keys": [
+      "scenario1_breaker",
+      "scenario1_time",
+      "scenario2_breaker",
+      "scenario2_time"
+    ],
+    "informational_keys": []
+  },
+  "notes": []
+}

@@ -58,6 +58,11 @@ class MultiAgentManager:
             losses.append(loss)
         return losses
 
+    def clear_buffers(self):
+        """清空所有 agent 的回放缓冲区 (Algorithm 1 line 16)."""
+        for agent in self.agents:
+            agent.buffer.clear()
+
     def save(self, dir_path):
         os.makedirs(dir_path, exist_ok=True)
         for i in range(self.n_agents):

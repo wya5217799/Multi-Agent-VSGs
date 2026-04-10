@@ -1,0 +1,9 @@
+{
+  "run_id": "kundur_v4",
+  "scenario_id": "kundur",
+  "goal": "start simulink training",
+  "requested_tasks": [
+    "scenario_status"
+  ],
+  "created_at": "2026-04-07T18:15:18.768745+00:00"
+}

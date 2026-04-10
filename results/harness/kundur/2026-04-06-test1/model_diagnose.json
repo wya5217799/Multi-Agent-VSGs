@@ -1,0 +1,42 @@
+{
+  "task": "model_diagnose",
+  "scenario_id": "kundur",
+  "run_id": "2026-04-06-test1",
+  "status": "ok",
+  "started_at": "2026-04-05T18:26:54.152427+00:00",
+  "finished_at": "2026-04-05T18:27:33.585824+00:00",
+  "inputs": {
+    "diagnostic_window": {
+      "start_time": 0.0,
+      "stop_time": 1.0,
+      "dt": 0.2
+    },
+    "signals": [],
+    "capture_warnings": true
+  },
+  "summary": [],
+  "artifacts": [],
+  "failures": [],
+  "compile_ok": true,
+  "compile_errors": [],
+  "step_status": "success",
+  "warning_groups": [
+    {
+      "signature": "[警告: Source '<a href=\"matlab:open_and_hilite_hyperlink ('kundur_vsg/BrkCtrl_1','error')\">kundur_vsg/BrkCtrl_1</a>' specifies that its sample time (-1) is back-inherited. You should explicitly specify the sample time of sources. You can disable this diagnostic by setting the 'Source block specifies -1 sample time' diagnostic to 'none' in the Sample Time group on the Diagnostics pane of the Configuration Parameters dialog box.]",
+      "count": 1,
+      "example": "[警告: Source '<a href=\"matlab:open_and_hilite_hyperlink ('kundur_vsg/BrkCtrl_1','error')\">kundur_vsg/BrkCtrl_1</a>' specifies that its sample time (-1) is back-inherited. You should explicitly specify the sample time of sources. You can disable this diagnostic by setting the 'Source block specifies -1 sample time' diagnostic to 'none' in the Sample Time group on the Diagnostics pane of the Configuration Parameters dialog box.]",
+      "time": null
+    },
+    {
+      "signature": "[警告: Source '<a href=\"matlab:open_and_hilite_hyperlink ('kundur_vsg/BrkCtrl_2','error')\">kundur_vsg/BrkCtrl_2</a>' specifies that its sample time (-1) is back-inherited. You should explicitly specify the sample time of sources. You can disable this diagnostic by setting the 'Source block specifies -1 sample time' diagnostic to 'none' in the Sample Time group on the Diagnostics pane of the Configuration Parameters dialog box.]",
+      "count": 1,
+      "example": "[警告: Source '<a href=\"matlab:open_and_hilite_hyperlink ('kundur_vsg/BrkCtrl_2','error')\">kundur_vsg/BrkCtrl_2</a>' specifies that its sample time (-1) is back-inherited. You should explicitly specify the sample time of sources. You can disable this diagnostic by setting the 'Source block specifies -1 sample time' diagnostic to 'none' in the Sample Time group on the Diagnostics pane of the Configuration Parameters dialog box.]",
+      "time": null
+    }
+  ],
+  "signal_snapshot": {},
+  "prior_solver_audit": {},
+  "prior_param_suspects": [],
+  "suspected_root_causes": [],
+  "recommended_next_task": "model_patch_verify"
+}

@@ -22,8 +22,6 @@ import json
 # Add project root to path before importing repo-local utilities.
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 
-from utils.python_env_check import check_python_env
-check_python_env(r"C:\Users\27443\miniconda3\envs\andes_env\python.exe")
 from collections import deque
 import numpy as np
 
@@ -491,5 +489,7 @@ def train(args):
 
 
 if __name__ == "__main__":
+    from utils.python_env_check import check_python_env
+    check_python_env(r"C:\Users\27443\miniconda3\envs\andes_env\python.exe")
     args = parse_args()
     train(args)

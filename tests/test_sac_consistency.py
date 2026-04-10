@@ -110,3 +110,17 @@ def test_ne39_env_reward_formula():
         assert _uses_correct_reward_formula(env_file), (
             "ne39_simulink_env.py contains (mean(action))**2 penalty — should be mean(action**2)."
         )
+
+
+# ---------- Config base inheritance ----------
+
+def test_kundur_config_uses_base_lr():
+    from scenarios.kundur.config_simulink import LR
+    from scenarios.config_simulink_base import LR as BASE_LR
+    assert LR == BASE_LR, "Kundur LR diverged from base — edit config_simulink_base.py to change it"
+
+
+def test_ne39_config_uses_base_lr():
+    from scenarios.new_england.config_simulink import LR
+    from scenarios.config_simulink_base import LR as BASE_LR
+    assert LR == BASE_LR, "NE39 LR diverged from base — edit config_simulink_base.py to change it"

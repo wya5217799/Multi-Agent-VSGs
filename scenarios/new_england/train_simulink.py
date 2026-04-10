@@ -518,12 +518,11 @@ def train(args):
             })
         except Exception:
             pass  # metadata loss is acceptable; don't shadow the real error
+        env.close()
 
     total_time = time.time() - t_start
     print(f"\nTraining complete in {total_time:.1f}s ({total_time/60:.1f}min)")
     print(f"Best eval reward: {best_eval_reward:+.2f}")
-
-    env.close()
 
 
 if __name__ == "__main__":

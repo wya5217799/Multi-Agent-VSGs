@@ -12,8 +12,8 @@ class TestBridgeConfig:
         assert KUNDUR_BRIDGE_CONFIG.model_name == "kundur_vsg"
         assert "{idx}" in KUNDUR_BRIDGE_CONFIG.m_path_template
         assert KUNDUR_BRIDGE_CONFIG.sbase_va == 100e6
-        assert KUNDUR_BRIDGE_CONFIG.tripload1_p_default == 248e6
-        assert KUNDUR_BRIDGE_CONFIG.tripload2_p_default == 188e6
+        assert KUNDUR_BRIDGE_CONFIG.tripload1_p_default == pytest.approx(248e6 / 3)
+        assert KUNDUR_BRIDGE_CONFIG.tripload2_p_default == 0.0
 
     def test_ne39_config_has_correct_agents(self):
         from scenarios.new_england.config_simulink import NE39_BRIDGE_CONFIG

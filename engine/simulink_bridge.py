@@ -221,10 +221,11 @@ class SimulinkBridge:
         # Clip delta_deg to ±90°: VSG synchronisation limit; beyond that the
         # machine has slipped a pole and raw delta would drive phAng into a
         # nonphysical regime.
-        # Clip Pe to [0, 2] p.u. on sbase: prevents transient V×I measurement
-        # artefacts (e.g. −1.26 during large oscillations) from being fed back
-        # as large accelerating torque in the VSG swing equation.
-        self._Pe_prev        = np.clip(result["Pe"].copy(), 0.0, 2.0)
+        # Clip Pe to [0, 5] p.u. on sbase: prevents transient measurement
+        # artefacts from being fed back as extreme torque.  Kundur generators
+        # run at ~3.75 sbase p.u. each (375 MW / 100 MVA), so the old 2.0
+        # ceiling truncated valid readings.
+        self._Pe_prev        = np.clip(result["Pe"].copy(), 0.0, 5.0)
         self._delta_prev_deg = np.clip(result["delta_deg"].copy(), -90.0, 90.0)
 
         return result

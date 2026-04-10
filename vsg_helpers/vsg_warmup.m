@@ -236,11 +236,24 @@ function state = warmup_extract_state(simOut, agent_ids, cfg, sbase_va)
         catch
         end
 
+        % Pe: prefer V×I (NE39 has Vabc/Iabc ToWorkspace), fall back to
+        % p_out_signal (Kundur logs P_out directly from swing equation).
+        pe_read = false;
         try
             Vabc = simOut.get(vabc_name);
             Iabc = simOut.get(iabc_name);
             state.Pe(i) = real(sum(Vabc.Data(end,:) .* conj(Iabc.Data(end,:)))) / sbase_va;
+            pe_read = true;
         catch
+        end
+        if ~pe_read && isfield(cfg, 'p_out_signal') && ~isempty(cfg.p_out_signal)
+            try
+                p_out_name = strrep(cfg.p_out_signal, '{idx}', num2str(idx));
+                p_out_ts = simOut.get(p_out_name);
+                % P_out is p.u. on VSG base; convert to sbase p.u.
+                state.Pe(i) = p_out_ts.Data(end) * (cfg.vsg_sn / sbase_va);
+            catch
+            end
         end
 
         try

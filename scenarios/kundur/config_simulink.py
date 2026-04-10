@@ -126,6 +126,7 @@ KUNDUR_BRIDGE_CONFIG = BridgeConfig(
     iabc_signal='Iabc_ES{idx}',
     pe_path_template='{model}/Pe_{idx}',
     src_path_template='{model}/VSrc_ES{idx}',
+    p_out_signal='P_out_ES{idx}',   # Kundur logs P_out (swing eq output) not V×I
     # Dynamic Load disturbance: per-phase W stored in base workspace.
     # Bus14: TripLoad1_P = 248/3 MW per phase (nominal load on).
     # Bus15: TripLoad2_P = 0 W (nominal load off; set to 188/3 MW on disturbance).

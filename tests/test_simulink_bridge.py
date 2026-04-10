@@ -120,18 +120,19 @@ class TestSimulinkBridge:
         with pytest.raises(SimulinkError, match="Divergence"):
             bridge.step(np.ones(4) * 12, np.ones(4) * 3)
 
-    def test_reset_clears_time_without_ghost_state_attrs(self):
+    def test_reset_clears_time_and_feedback_state(self):
         from engine.simulink_bridge import SimulinkBridge
         cfg = _make_test_config()
         bridge = SimulinkBridge(cfg)
         bridge.t_current = 5.0
-
-        assert not hasattr(bridge, "_xFinal")
-        assert not hasattr(bridge, "_Pe_prev")
+        bridge._Pe_prev = np.array([0.5, 0.5, 0.5, 0.5])
+        bridge._delta_prev_deg = np.array([10.0, 10.0, 10.0, 10.0])
 
         bridge.reset()
 
         assert bridge.t_current == 0.0
+        assert bridge._Pe_prev is None
+        assert bridge._delta_prev_deg is None
 
 
 class _FakeKundurBridge:
@@ -157,6 +158,9 @@ class _FakeKundurBridge:
         self.warmups.append(duration)
         self.t_current = duration
 
+    def set_disturbance_load(self, var_name, value_w):
+        self._tripload_state[var_name] = value_w
+
     def configure_breaker_event(self, breaker_idx, *, time_s, before, after):
         self.breaker_events.append(
             {
@@ -172,7 +176,7 @@ class _FakeKundurBridge:
 
 
 @patch("engine.simulink_bridge.SimulinkBridge", new=_FakeKundurBridge)
-def test_kundur_reset_keeps_nominal_triploads_and_schedules_breakers():
+def test_kundur_reset_restores_nominal_triploads_and_warms_up():
     from env.simulink.kundur_simulink_env import KundurSimulinkEnv, T_WARMUP
 
     env = KundurSimulinkEnv(training=False)
@@ -182,7 +186,5 @@ def test_kundur_reset_keeps_nominal_triploads_and_schedules_breakers():
     assert env.bridge._tripload_state[cfg.tripload1_p_var] == cfg.tripload1_p_default
     assert env.bridge._tripload_state[cfg.tripload2_p_var] == cfg.tripload2_p_default
     assert env.bridge.warmups == [T_WARMUP]
-    assert env.bridge.breaker_events == [
-        {"breaker_idx": 1, "time_s": pytest.approx(T_WARMUP + 1e-3), "before": 1.0, "after": 0.0},
-        {"breaker_idx": 2, "time_s": pytest.approx(100.0), "before": 0.0, "after": 0.0},
-    ]
+    assert env.bridge.loaded == 1
+    assert env.bridge.reset_calls == 1

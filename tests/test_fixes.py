@@ -26,60 +26,51 @@ sys.path.insert(0, _PROJECT_ROOT)
 
 
 # =============================================================================
-# P0-2  Reward formula: mean^2 → mean(^2)
+# P0-2  Reward formula: r_h = -φ_H * (mean(ΔH_i))²  per paper Eq. 17
 # =============================================================================
+
+
+def _action_to_delta_M(action_col: np.ndarray, dm_min: float, dm_max: float) -> np.ndarray:
+    """Reproduce the affine action→ΔM mapping used in both envs."""
+    return 0.5 * (action_col + 1.0) * (dm_max - dm_min) + dm_min
+
 
 class TestRewardFormula:
     """
-    Paper Eq. 17-18:  r_h = -PHI_H * mean_i( a_i^2 )
-    Bug:              r_h = -PHI_H * (mean_i(a_i))^2
+    Paper Eq. 17:  r_h = -φ_H * (mean_i(ΔH_i))²   where ΔH_i = ΔM_i / 2
+    Paper Eq. 18:  r_d = -φ_D * (mean_i(ΔD_i))²
 
-    Key observable difference:
-        actions = [+1, -1, +1, -1]  (opposing per agent)
-          bug:   mean = 0  → penalty = 0   (wrong: agents exerted full effort)
-          fix:   mean(a^2) = 1  → penalty = -PHI_H  (correct)
+    These are *coordination* penalties on the global mean adjustment,
+    NOT per-agent effort penalties.  The affine mapping action∈[-1,1]→ΔM
+    is asymmetric (DM_MIN=-6, DM_MAX=18), so opposing raw actions do NOT
+    cancel to zero in ΔM space.
     """
 
     # ── Kundur env ────────────────────────────────────────────────────────────
 
-    def test_kundur_r_h_opposing_actions_nonzero(self):
-        """Kundur: r_h must NOT be near-zero when agents cancel each other out."""
-        from env.simulink.kundur_simulink_env import KundurStandaloneEnv, PHI_H
+    def test_kundur_r_h_nonzero_for_max_action(self):
+        """Kundur: r_h is large when all agents push max action."""
+        from env.simulink.kundur_simulink_env import (
+            KundurStandaloneEnv, PHI_H, DM_MIN, DM_MAX,
+        )
 
         env = KundurStandaloneEnv()
         env.reset(seed=0)
 
-        # 4 agents with opposing inertia actions (mean = 0)
-        actions = np.array(
-            [[+1.0, 0.0], [-1.0, 0.0], [+1.0, 0.0], [-1.0, 0.0]], dtype=np.float32
-        )
+        actions = np.ones((4, 2), dtype=np.float32)
         _, components = env._compute_reward(actions)
 
-        # With the BUG: components["r_h"] ≈ 0.0
-        # With the FIX: components["r_h"] = -PHI_H * mean([1,1,1,1]) = -PHI_H
-        assert components["r_h"] < -0.5 * PHI_H, (
-            f"r_h={components['r_h']:.4f} is near-zero for opposing actions; "
-            f"formula is using (mean)^2 instead of mean(^2)"
+        delta_M = _action_to_delta_M(actions[:, 0], DM_MIN, DM_MAX)
+        expected = -PHI_H * (float(np.mean(delta_M)) / 2.0) ** 2
+        assert abs(components["r_h"] - expected) < 1e-5, (
+            f"r_h={components['r_h']:.4f}, expected {expected:.4f}"
         )
 
-    def test_kundur_r_h_uniform_actions_correct(self):
-        """Kundur: r_h must equal -PHI_H when all agents push action=1."""
-        from env.simulink.kundur_simulink_env import KundurStandaloneEnv, PHI_H
-
-        env = KundurStandaloneEnv()
-        env.reset(seed=0)
-
-        actions = np.ones((4, 2), dtype=np.float32)  # all agents at max
-        _, components = env._compute_reward(actions)
-
-        # mean(1^2) == (mean(1))^2 == 1 in the uniform case — both formulas agree
-        assert abs(components["r_h"] - (-PHI_H * 1.0)) < 1e-5, (
-            f"Uniform actions r_h={components['r_h']:.4f}, expected {-PHI_H:.4f}"
+    def test_kundur_r_h_formula_matches_paper_eq17(self):
+        """Kundur: r_h = -φ_H * (mean(ΔM/2))² for arbitrary actions."""
+        from env.simulink.kundur_simulink_env import (
+            KundurStandaloneEnv, PHI_H, DM_MIN, DM_MAX,
         )
-
-    def test_kundur_r_h_formula_equals_mean_of_squares(self):
-        """Kundur: r_h == -PHI_H * mean(a_i^2) for arbitrary actions."""
-        from env.simulink.kundur_simulink_env import KundurStandaloneEnv, PHI_H
 
         env = KundurStandaloneEnv()
         env.reset(seed=0)
@@ -88,33 +79,37 @@ class TestRewardFormula:
         actions = rng.uniform(-1, 1, (4, 2)).astype(np.float32)
         _, components = env._compute_reward(actions)
 
-        expected_r_h = -PHI_H * float(np.mean(actions[:, 0] ** 2))
-        assert abs(components["r_h"] - expected_r_h) < 1e-5, (
-            f"r_h={components['r_h']:.6f}, expected mean(a^2) version={expected_r_h:.6f}"
+        delta_M = _action_to_delta_M(actions[:, 0], DM_MIN, DM_MAX)
+        expected = -PHI_H * (float(np.mean(delta_M)) / 2.0) ** 2
+        assert abs(components["r_h"] - expected) < 1e-5, (
+            f"r_h={components['r_h']:.6f}, expected {expected:.6f}"
         )
 
     # ── NE39 env ──────────────────────────────────────────────────────────────
 
-    def test_ne39_r_h_opposing_actions_nonzero(self):
-        """NE39: same formula bug — r_h must not be zero for opposing actions."""
-        from env.simulink.ne39_simulink_env import NE39BusStandaloneEnv, PHI_H
+    def test_ne39_r_h_nonzero_for_max_action(self):
+        """NE39: r_h is large when all agents push max action."""
+        from env.simulink.ne39_simulink_env import (
+            NE39BusStandaloneEnv, PHI_H, DM_MIN, DM_MAX,
+        )
 
         env = NE39BusStandaloneEnv()
         env.reset(seed=0)
 
-        # 8 agents alternating +1 / -1 (mean = 0)
-        actions = np.zeros((8, 2), dtype=np.float32)
-        actions[::2, 0] = 1.0
-        actions[1::2, 0] = -1.0
+        actions = np.ones((8, 2), dtype=np.float32)
         _, components = env._compute_reward(actions)
 
-        assert components["r_h"] < -0.5 * PHI_H, (
-            f"NE39 r_h={components['r_h']:.4f} near-zero for opposing actions"
+        delta_M = _action_to_delta_M(actions[:, 0], DM_MIN, DM_MAX)
+        expected = -PHI_H * (float(np.mean(delta_M)) / 2.0) ** 2
+        assert abs(components["r_h"] - expected) < 1e-5, (
+            f"NE39 r_h={components['r_h']:.4f}, expected {expected:.4f}"
         )
 
-    def test_ne39_r_h_formula_equals_mean_of_squares(self):
-        """NE39: r_h == -PHI_H * mean(a_i^2) for arbitrary actions."""
-        from env.simulink.ne39_simulink_env import NE39BusStandaloneEnv, PHI_H
+    def test_ne39_r_h_formula_matches_paper_eq17(self):
+        """NE39: r_h = -φ_H * (mean(ΔM/2))² for arbitrary actions."""
+        from env.simulink.ne39_simulink_env import (
+            NE39BusStandaloneEnv, PHI_H, DM_MIN, DM_MAX,
+        )
 
         env = NE39BusStandaloneEnv()
         env.reset(seed=0)
@@ -123,9 +118,10 @@ class TestRewardFormula:
         actions = rng.uniform(-1, 1, (8, 2)).astype(np.float32)
         _, components = env._compute_reward(actions)
 
-        expected_r_h = -PHI_H * float(np.mean(actions[:, 0] ** 2))
-        assert abs(components["r_h"] - expected_r_h) < 1e-5, (
-            f"NE39 r_h={components['r_h']:.6f}, expected {expected_r_h:.6f}"
+        delta_M = _action_to_delta_M(actions[:, 0], DM_MIN, DM_MAX)
+        expected = -PHI_H * (float(np.mean(delta_M)) / 2.0) ** 2
+        assert abs(components["r_h"] - expected) < 1e-5, (
+            f"NE39 r_h={components['r_h']:.6f}, expected {expected:.6f}"
         )
 
 
@@ -425,6 +421,7 @@ def test_physics_summary_settled_true_when_frequency_restored():
 
 def test_training_viz_produces_png_from_log(tmp_path):
     """plot_training_summary() must produce a PNG without error given minimal log."""
+    pytest.importorskip("matplotlib")
     from utils.training_viz import plot_training_summary
 
     log = {
@@ -451,6 +448,7 @@ def test_training_viz_produces_png_from_log(tmp_path):
 
 def test_training_viz_works_without_physics_summary(tmp_path):
     """plot_training_summary() must not crash if physics_summary key is absent (old logs)."""
+    pytest.importorskip("matplotlib")
     from utils.training_viz import plot_training_summary
 
     log = {

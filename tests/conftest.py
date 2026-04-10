@@ -37,6 +37,9 @@ def env(scenario):
 @pytest.fixture(scope="module")
 def trained_agents(scenario, io_config):
     """Load trained SAC agents."""
+    import os
+    if not os.path.isdir(io_config.model_dir):
+        pytest.skip(f"Model dir not found: {io_config.model_dir}")
     return load_agents(io_config.model_dir, scenario.n_agents)
 
 

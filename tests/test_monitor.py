@@ -374,6 +374,7 @@ class TestOutputFormatting:
 class TestEnvInfoCompat:
     def test_ode_env_info_has_max_freq_deviation(self):
         """ODE env step() info dict must include max_freq_deviation_hz."""
+        pytest.importorskip("scipy")
         import config as cfg
         from env.ode.multi_vsg_env import MultiVSGEnv
         env = MultiVSGEnv()
@@ -387,6 +388,7 @@ class TestEnvInfoCompat:
 class TestEndToEnd:
     def test_monitor_with_real_ode_env(self):
         """Full integration: ODE env + random actions + monitor."""
+        pytest.importorskip("scipy")
         import config as cfg
         from env.ode.multi_vsg_env import MultiVSGEnv
 

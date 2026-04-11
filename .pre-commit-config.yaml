@@ -1,0 +1,21 @@
+# Workspace hygiene hooks managed by pre-commit.
+# Activate locally with: pre-commit install
+# Run manually with:     pre-commit run --all-files
+
+repos:
+  # Standard hooks from the pre-commit community
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: check-merge-conflict
+
+  # Project-specific workspace pollution check
+  - repo: local
+    hooks:
+      - id: workspace-hygiene
+        name: workspace hygiene check
+        entry: python tools/workspace_clean.py check
+        language: system
+        pass_filenames: false
+        always_run: true
+        verbose: true

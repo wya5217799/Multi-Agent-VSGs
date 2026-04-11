@@ -20,8 +20,8 @@ Adopt a lightweight workspace hygiene mechanism:
 4. `tools/workspace_clean.py clean --apply` moves matched files to
    `C:\Users\27443\Desktop\一切\论文\Multi-Agent VSGs_cleanup_<timestamp>\`
    and writes `manifest.json`.
-5. `tools/workspace_clean.py install-hook` may install a local pre-commit hook,
-   but the hook only checks. It does not move files.
+5. Local git hook orchestration is managed via `.pre-commit-config.yaml`,
+   and the hygiene hook remains check-only. It does not move files.
 
 Tracked files must not be moved. If a movable directory contains a tracked file,
 the directory is reported instead of moved.
@@ -54,12 +54,22 @@ This balances four constraints:
 - recoverability: moved files are quarantined with a manifest
 - maintainability: all hygiene rules live in one TOML file
 
-## Follow-Up
+## Hook Management
 
-If the rule set proves stable, a pre-commit hook can be installed locally with:
+Hook orchestration is delegated to [pre-commit](https://pre-commit.com/).
+The repo ships a `.pre-commit-config.yaml` that registers two hooks:
 
-```powershell
-python tools/workspace_clean.py install-hook
+1. **workspace-hygiene** — runs `python tools/workspace_clean.py check`
+   (check-only, never moves files)
+2. **check-merge-conflict** — catches unresolved conflict markers
+
+To activate locally after cloning:
+
+```bash
+pip install pre-commit   # one-time
+pre-commit install       # registers the git hook
 ```
 
-The hook should remain check-only.
+This is a local activation step, not a repo-internal state change.
+The hand-written `install_pre_commit_hook()` function was removed to avoid
+maintaining two hook installation paths.

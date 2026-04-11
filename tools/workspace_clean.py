@@ -154,38 +154,13 @@ def apply_clean(
     return manifest_path
 
 
-def install_pre_commit_hook(workspace: Path, *, force: bool = False) -> Path:
-    workspace = workspace.resolve()
-    hooks_dir = workspace / ".git" / "hooks"
-    if not hooks_dir.exists():
-        raise FileNotFoundError(f"Git hooks directory not found: {hooks_dir}")
-
-    hook_path = hooks_dir / "pre-commit"
-    if hook_path.exists() and not force:
-        raise FileExistsError(f"Refusing to overwrite existing hook: {hook_path}")
-    hook = (
-        "#!/bin/sh\n"
-        "# Workspace hygiene check. Reports pollution before commit; does not move files.\n"
-        f"cd \"{workspace.as_posix()}\" || exit 1\n"
-        "python tools/workspace_clean.py check\n"
-    )
-    hook_path.write_text(hook, encoding="utf-8")
-    return hook_path
-
-
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Check or clean workspace pollution.")
-    parser.add_argument("command", choices=("check", "clean", "install-hook"))
+    parser.add_argument("command", choices=("check", "clean"))
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
     parser.add_argument("--workspace", type=Path, default=Path.cwd())
     parser.add_argument("--apply", action="store_true", help="Move matched files. Default is dry-run.")
-    parser.add_argument("--force", action="store_true", help="Overwrite an existing hook when installing.")
     args = parser.parse_args(argv)
-
-    if args.command == "install-hook":
-        hook_path = install_pre_commit_hook(args.workspace, force=args.force)
-        print(f"installed: {hook_path}")
-        return 0
 
     config = load_config(args.config)
     findings = scan_workspace(args.workspace, config)

@@ -9,7 +9,6 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from tools.workspace_clean import (
     HygieneConfig,
     apply_clean,
-    install_pre_commit_hook,
     load_config,
     scan_workspace,
 )
@@ -143,36 +142,13 @@ def test_apply_clean_dry_run_does_not_move_or_write_manifest(tmp_path):
     assert not config.quarantine_root.exists()
 
 
-def test_install_pre_commit_hook_runs_check_without_apply(tmp_path):
-    workspace = tmp_path / "repo"
-    hooks = workspace / ".git" / "hooks"
-    hooks.mkdir(parents=True)
-
-    hook_path = install_pre_commit_hook(workspace)
-
-    assert hook_path == hooks / "pre-commit"
-    content = hook_path.read_text(encoding="utf-8")
-    assert "workspace_clean.py check" in content
-    assert "--apply" not in content
-
-
-def test_install_pre_commit_hook_refuses_to_overwrite_existing_hook(tmp_path):
-    workspace = tmp_path / "repo"
-    hooks = workspace / ".git" / "hooks"
-    hooks.mkdir(parents=True)
-    existing = hooks / "pre-commit"
-    existing.write_text("#!/bin/sh\necho existing\n", encoding="utf-8")
-
-    with pytest.raises(FileExistsError):
-        install_pre_commit_hook(workspace)
-
-    assert existing.read_text(encoding="utf-8") == "#!/bin/sh\necho existing\n"
-
-
-def test_default_config_moves_local_workspace_pollution():
+def test_default_config_classifies_pollution_correctly():
     config = load_config()
 
-    assert "MEMORY.md" in config.movable_patterns
+    # MEMORY.md is a tracked navigation file, must NOT be movable
+    assert "MEMORY.md" not in config.movable_patterns
+
+    # Local-only artifacts should be movable
     assert ".claude" in config.movable_patterns
     assert ".worktrees" in config.movable_patterns
     assert "results/sim_kundur" in config.movable_patterns

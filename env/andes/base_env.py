@@ -21,13 +21,16 @@ from abc import ABC, abstractmethod
 from collections import deque
 import numpy as np
 
+from scenarios.contract import KUNDUR as _DEFAULT_CONTRACT
+
 
 class AndesBaseEnv(ABC):
     """ANDES 多智能体 VSG 控制环境基类."""
 
     # ─── 共享默认常量 (子类可覆盖) ───
-    FN = 50.0                        # 标称频率 (Hz), NE 子类覆盖为 60.0
-    DT = 0.2                         # 控制步长 (s)
+    # 基类默认使用 Kundur 契约值; NE 子类覆盖 FN/N_AGENTS
+    FN = _DEFAULT_CONTRACT.fn        # 标称频率 (Hz), NE 子类覆盖为 60.0
+    DT = _DEFAULT_CONTRACT.dt        # 控制步长 (s)
     T_EPISODE = 10.0                 # episode 总时长
     STEPS_PER_EPISODE = 50
 
@@ -48,8 +51,8 @@ class AndesBaseEnv(ABC):
     NEW_LINE_X = 0.10
     NEW_LINE_B = 0.0175
 
-    # 观测空间
-    MAX_NEIGHBORS = 2
+    # 观测空间 — from contract
+    MAX_NEIGHBORS = _DEFAULT_CONTRACT.max_neighbors
     OBS_DIM = 3 + 2 * MAX_NEIGHBORS  # = 7
 
     # 奖励权重 (论文 Eq. 14)

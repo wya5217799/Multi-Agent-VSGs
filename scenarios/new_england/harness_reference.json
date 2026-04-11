@@ -51,6 +51,14 @@
       "notes": "Per-agent observation dimension."
     },
     {
+      "key": "act_dim",
+      "value": 2,
+      "source": "paper + repo config",
+      "confidence": "high",
+      "check_mode": "must_match",
+      "notes": "Per-agent action dimension."
+    },
+    {
       "key": "max_neighbors",
       "value": 2,
       "source": "paper + repo config",

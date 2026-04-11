@@ -7,6 +7,7 @@ Adapted for 4-agent, 50 Hz Kundur system.
 
 import numpy as np
 
+from scenarios.contract import KUNDUR as _CONTRACT
 from scenarios.config_simulink_base import (
     LR, GAMMA, TAU_SOFT, HIDDEN_SIZES,
     DEFAULT_EPISODES, MAX_EPISODES,
@@ -22,10 +23,10 @@ from scenarios.config_simulink_base import (
     PHI_H, PHI_D, TDS_FAIL_PENALTY,
 )
 
-# ========== System ==========
-N_AGENTS = 4
+# ========== System (from contract) ==========
+N_AGENTS = _CONTRACT.n_agents
 SBASE = 100.0        # MVA
-FN = 50.0             # Hz
+FN = _CONTRACT.fn     # Hz
 OMEGA_N = 2 * np.pi * FN  # rad/s
 
 # ========== Simulation (Kundur-specific) ==========

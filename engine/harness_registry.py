@@ -3,22 +3,20 @@ from __future__ import annotations
 from pathlib import Path
 
 from engine.harness_models import ScenarioSpec
+from scenarios.contract import CONTRACTS
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
+# Derived from scenarios.contract — single source of truth.
+# ScenarioSpec is the harness's view; contract values are authoritative.
 _REGISTRY = {
-    "kundur": ScenarioSpec(
-        scenario_id="kundur",
-        model_name="kundur_vsg",
-        model_dir=Path("scenarios/kundur/simulink_models"),
-        train_entry=Path("scenarios/kundur/train_simulink.py"),
-    ),
-    "ne39": ScenarioSpec(
-        scenario_id="ne39",
-        model_name="NE39bus_v2",
-        model_dir=Path("scenarios/new_england/simulink_models"),
-        train_entry=Path("scenarios/new_england/train_simulink.py"),
-    ),
+    sid: ScenarioSpec(
+        scenario_id=c.scenario_id,
+        model_name=c.model_name,
+        model_dir=c.model_dir,
+        train_entry=c.train_entry,
+    )
+    for sid, c in CONTRACTS.items()
 }
 
 

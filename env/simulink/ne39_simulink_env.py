@@ -40,17 +40,18 @@ from gymnasium import spaces
 
 warnings.filterwarnings("ignore", category=UserWarning, module="matlab")
 
+from scenarios.contract import NE39 as _CONTRACT
 
 # ---------------------------------------------------------------------------
-# Constants (aligned with base_env.py and andes_ne_env.py)
+# Constants — contract values from scenarios.contract, rest inlined
 # ---------------------------------------------------------------------------
 
 # Number of ESS agents
-N_ESS: int = 8
+N_ESS: int = _CONTRACT.n_agents
 
 # Observation / action dimensions
-OBS_DIM: int = 7          # [P_norm, freq_dev, rocof, nb1_freq, nb2_freq, nb1_rocof, nb2_rocof]
-ACT_DIM: int = 2          # [delta_M, delta_D]
+OBS_DIM: int = _CONTRACT.obs_dim   # [P_norm, freq_dev, rocof, nb1_freq, nb2_freq, nb1_rocof, nb2_rocof]
+ACT_DIM: int = _CONTRACT.act_dim   # [delta_M, delta_D]
 
 # VSG base electrical parameters
 VSG_M0: float = 12.0      # M = 2H  =>  H0 = 6.0 s
@@ -80,14 +81,14 @@ NEW_LINE_B: float = 0.0175
 VSG_BUS_VN: float = 22.0  # kV
 
 # Simulation timing
-DT: float = 0.2           # control time-step (s)
+DT: float = _CONTRACT.dt  # control time-step (s)
 T_EPISODE: float = 10.0   # episode length (s)
 T_WARMUP: float = 0.5     # warmup before first RL step (s)
 STEPS_PER_EPISODE: int = 50
 N_SUBSTEPS: int = 5        # sub-step interpolation within each DT
 
 # System frequency
-F_NOM: float = 60.0
+F_NOM: float = _CONTRACT.fn
 OMEGA_N: float = 2.0 * np.pi * F_NOM  # rad/s
 
 # Reward weights (Eq. 15-18)
@@ -113,7 +114,7 @@ COMM_ADJ: Dict[int, List[int]] = {
     0: [1, 7], 1: [0, 2], 2: [1, 3], 3: [2, 4],
     4: [3, 5], 5: [4, 6], 6: [5, 7], 7: [6, 0],
 }
-MAX_NEIGHBORS: int = 2
+MAX_NEIGHBORS: int = _CONTRACT.max_neighbors
 COMM_FAIL_PROB: float = 0.1
 
 # Observation normalisation (from base_env.py)

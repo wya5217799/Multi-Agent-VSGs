@@ -18,6 +18,7 @@ import andes
 import warnings
 
 from env.andes.base_env import AndesBaseEnv
+from scenarios.contract import KUNDUR as _CONTRACT
 
 warnings.filterwarnings("ignore")
 
@@ -31,7 +32,7 @@ class AndesMultiVSGEnv(AndesBaseEnv):
       - 4 台 GENCLS 模拟 VSG 储能
     """
 
-    N_AGENTS = 4
+    N_AGENTS = _CONTRACT.n_agents
 
     # VSG 接入母线 (论文扩展拓扑 Fig. 3)
     VSG_BUSES = [12, 16, 14, 15]

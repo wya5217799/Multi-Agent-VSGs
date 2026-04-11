@@ -17,6 +17,7 @@ import andes
 import warnings
 
 from env.andes.base_env import AndesBaseEnv
+from scenarios.contract import NE39 as _CONTRACT
 
 warnings.filterwarnings("ignore")
 
@@ -30,8 +31,8 @@ class AndesNEEnv(AndesBaseEnv):
       - ES1-ES8: GENCLS VSG, 挂在新建 Bus 40-47
     """
 
-    N_AGENTS = 8
-    FN = 60.0                        # New England 标称频率 60 Hz
+    N_AGENTS = _CONTRACT.n_agents
+    FN = _CONTRACT.fn                # New England 标称频率 60 Hz
 
     # NE 系统需要高惯量 VSG, 否则 TDS 发散 (M0<20 → divergence)
     VSG_M0 = 20.0

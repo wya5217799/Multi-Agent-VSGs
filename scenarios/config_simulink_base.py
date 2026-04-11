@@ -7,6 +7,10 @@ DO NOT add system-specific parameters here (N_AGENTS, FN, T_EPISODE, PHI_F, BATC
 Those belong in the scenario config with a comment explaining WHY they differ.
 """
 
+# Pick KUNDUR arbitrarily; test_scenario_invariant_fields guarantees
+# DT, MAX_NEIGHBORS, OBS_DIM, ACT_DIM are identical across all contracts.
+from scenarios.contract import KUNDUR as _CONTRACT
+
 # ========== SAC Hyperparameters (scenario-invariant) ==========
 LR = 3e-4
 GAMMA = 0.99
@@ -25,7 +29,7 @@ ADAPTIVE_KH = 0.1
 ADAPTIVE_KD = 2.0
 
 # ========== Simulation Timing ==========
-DT = 0.2             # control step (s)
+DT = _CONTRACT.dt    # control step (s) — from contract
 N_SUBSTEPS = 5       # parameter interpolation substeps
 T_WARMUP = 0.5       # warmup before disturbance (s)
 
@@ -48,12 +52,12 @@ NORM_FREQ = 3.0
 NORM_ROCOF = 5.0
 
 # ========== Communication ==========
-MAX_NEIGHBORS = 2
+MAX_NEIGHBORS = _CONTRACT.max_neighbors
 COMM_FAIL_PROB = 0.1
 
-# ========== Observation / Action Dimensions ==========
-OBS_DIM = 7           # [P_norm, freq_dev, rocof, nb1_freq, nb2_freq, nb1_rocof, nb2_rocof]
-ACT_DIM = 2           # [delta_M, delta_D]
+# ========== Observation / Action Dimensions (from contract) ==========
+OBS_DIM = _CONTRACT.obs_dim   # [P_norm, freq_dev, rocof, nb1_freq, nb2_freq, nb1_rocof, nb2_rocof]
+ACT_DIM = _CONTRACT.act_dim   # [delta_M, delta_D]
 
 # ========== Reward (PHI_H, PHI_D are scenario-invariant; PHI_F is not) ==========
 PHI_H = 1.0    # inertia control cost

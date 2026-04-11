@@ -13,14 +13,16 @@
 
 import numpy as np
 
+from scenarios.contract import KUNDUR as _CONTRACT
+
 # ═══════════════════════════════════════════════════════
-#  系统参数 (Section IV-A)
+#  系统参数 (Section IV-A) — from contract
 # ═══════════════════════════════════════════════════════
-N_AGENTS = 4
-DT = 0.2                          # 控制步长 0.2s
+N_AGENTS = _CONTRACT.n_agents
+DT = _CONTRACT.dt                 # 控制步长 0.2s
 T_EPISODE = 10.0                  # episode 总时长 10s
 STEPS_PER_EPISODE = int(T_EPISODE / DT)  # M = 50
-OMEGA_N = 2 * np.pi * 50          # 额定角频率 (rad/s)
+OMEGA_N = 2 * np.pi * _CONTRACT.fn  # 额定角频率 (rad/s)
 
 # ═══════════════════════════════════════════════════════
 #  VSG 基础参数
@@ -66,9 +68,9 @@ WARMUP_STEPS = 500                 # 缩短: buffer 每 ep 清空, warmup 经验
 #  每个 agent 有 2 个邻居 (Section IV-G)
 # ═══════════════════════════════════════════════════════
 COMM_ADJACENCY = {0: [1, 3], 1: [0, 2], 2: [1, 3], 3: [2, 0]}
-MAX_NEIGHBORS = 2
+MAX_NEIGHBORS = _CONTRACT.max_neighbors
 OBS_DIM = 3 + 2 * MAX_NEIGHBORS   # = 7
-ACTION_DIM = 2
+ACTION_DIM = _CONTRACT.act_dim
 COMM_FAIL_PROB = 0.1               # 每条链路每 episode 故障概率
 
 # ═══════════════════════════════════════════════════════

@@ -31,6 +31,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 import gymnasium as gym
 from gymnasium import spaces
+from scenarios.contract import KUNDUR as _CONTRACT
 from scenarios.kundur.config_simulink import (
     KUNDUR_BRIDGE_CONFIG,
     T_WARMUP as CONFIG_T_WARMUP,
@@ -39,12 +40,12 @@ from scenarios.kundur.config_simulink import (
 warnings.filterwarnings("ignore", category=UserWarning, module="matlab")
 
 # ---------------------------------------------------------------------------
-# Constants (from config.py, inlined for self-contained module)
+# Constants — contract values from scenarios.contract, rest inlined
 # ---------------------------------------------------------------------------
 
-N_AGENTS: int = 4
-OBS_DIM: int = 7
-ACT_DIM: int = 2
+N_AGENTS: int = _CONTRACT.n_agents
+OBS_DIM: int = _CONTRACT.obs_dim
+ACT_DIM: int = _CONTRACT.act_dim
 
 VSG_M0: float = 12.0
 VSG_D0: float = 3.0
@@ -63,14 +64,14 @@ M_HI: float = VSG_M0 + DM_MAX
 D_LO: float = VSG_D0 + DD_MIN
 D_HI: float = VSG_D0 + DD_MAX
 
-DT: float = 0.2
+DT: float = _CONTRACT.dt
 T_EPISODE: float = 5.0   # shortened for training speed (nadir captured within 2-3 s)
 STEPS_PER_EPISODE: int = 25
 N_SUBSTEPS: int = 5
 T_WARMUP: float = CONFIG_T_WARMUP
 
 
-F_NOM: float = 50.0
+F_NOM: float = _CONTRACT.fn
 OMEGA_N: float = 2.0 * np.pi * F_NOM
 SBASE: float = 100.0      # MVA
 
@@ -80,7 +81,7 @@ PHI_D: float = 1.0
 TDS_FAIL_PENALTY: float = -50.0
 
 COMM_ADJ: Dict[int, List[int]] = {0: [1, 3], 1: [0, 2], 2: [1, 3], 3: [2, 0]}
-MAX_NEIGHBORS: int = 2
+MAX_NEIGHBORS: int = _CONTRACT.max_neighbors
 COMM_FAIL_PROB: float = 0.1
 
 NORM_P: float = 2.0

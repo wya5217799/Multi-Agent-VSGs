@@ -125,4 +125,6 @@ NE39_BRIDGE_CONFIG = BridgeConfig(
     omega_signal='omega_ES{idx}',
     vabc_signal='Vabc_ES{idx}',
     iabc_signal='Iabc_ES{idx}',
+    pe_measurement='vi',    # NE39: Pe from V×I (Vabc/Iabc ToWorkspace)
+    pe0_default_vsg=VSG_P0,
 )

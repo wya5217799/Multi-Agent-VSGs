@@ -1,7 +1,7 @@
 function cfg = vsg_build_bridge_config( ...
     m_path_template, d_path_template, omega_signal, vabc_signal, iabc_signal, ...
     pe_path_template, src_path_template, vsg_sn, delta_signal, p_out_signal, ...
-    m_var_template, d_var_template)
+    m_var_template, d_var_template, pe_measurement)
 %VSG_BUILD_BRIDGE_CONFIG  Build bridge config struct from typed Python arguments.
 %
 %   Replaces the Python-side string-eval pattern:
@@ -11,7 +11,10 @@ function cfg = vsg_build_bridge_config( ...
 %   cause an immediate argument error instead of silently using wrong defaults.
 %
 %   Required fields (used by vsg_step_and_read _extract_state):
-%     omega_signal, vabc_signal, iabc_signal
+%     omega_signal, vabc_signal, iabc_signal, pe_measurement
+%
+%   pe_measurement: 'vi' | 'pout' | 'vi_then_pout'
+%     Controls which Pe reading path step_extract_state uses.
 %
 %   Optional fields (set only when non-empty):
 %     pe_path_template, src_path_template, p_out_signal
@@ -27,6 +30,7 @@ function cfg = vsg_build_bridge_config( ...
     cfg.delta_signal    = char(delta_signal);
     cfg.m_var_template  = char(m_var_template);
     cfg.d_var_template  = char(d_var_template);
+    cfg.pe_measurement  = char(pe_measurement);
 
     % Optional: only set if caller provides non-empty value
     pe = char(pe_path_template);

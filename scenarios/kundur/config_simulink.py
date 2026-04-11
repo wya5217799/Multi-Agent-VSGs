@@ -75,6 +75,11 @@ LOAD_BUS9_MW = 1767.0
 V_BUS = np.array([1.03, 1.01, 1.01, 1.03])
 VSG_BUS_VN = 20.0      # kV
 
+# Kundur steady-state P_e is about 3.74 p.u. on system base, so the shared
+# normalization of 2.0 drives observations well outside the critic's nominal
+# input scale.
+NORM_P = 4.0
+
 
 # ========== Breaker Mapping for Simulink ==========
 # Breaker_1: Bus14 (near ES3), initially closed with 248 MW load
@@ -94,6 +99,7 @@ SCENARIO1_TIME = 0.5
 # Load Step 2: Bus15 load connection (188 MW increase) -> freq drops
 SCENARIO2_BREAKER = 'Breaker_2'
 SCENARIO2_TIME = 0.5
+TRIPLOAD2_P_MAX_W = 188e6 / 3.0  # per-phase cap for the Bus15 disturbance bank
 
 # ========== SAC Hyperparameters (Kundur-specific overrides) ==========
 # BATCH_SIZE: Kundur fills buffer slower (4 agents × 25 steps/ep vs NE39 8×50).
@@ -128,11 +134,13 @@ KUNDUR_BRIDGE_CONFIG = BridgeConfig(
     pe_path_template='{model}/Pe_{idx}',
     src_path_template='{model}/VSrc_ES{idx}',
     p_out_signal='P_out_ES{idx}',   # Kundur logs P_out (swing eq output) not V×I
+    pe_measurement='pout',           # Kundur: Pe from P_out ToWorkspace (swing eq output)
     # Dynamic Load disturbance: per-phase W stored in base workspace.
     # Bus14: TripLoad1_P = 248/3 MW per phase (nominal load on).
     # Bus15: TripLoad2_P = 0 W (nominal load off; set to 188/3 MW on disturbance).
     tripload1_p_default=248e6 / 3,   # ~82.67 MW per phase
     tripload2_p_default=0.0,          # Bus15 off at episode start
+    pe0_default_vsg=VSG_P0,
     # No breaker Step blocks in new model
     breaker_step_block_template='',
     breaker_count=0,

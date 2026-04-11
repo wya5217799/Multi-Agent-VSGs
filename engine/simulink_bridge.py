@@ -8,6 +8,7 @@ for use by KundurSimulinkEnv and NE39BusSimulinkEnv.
 from __future__ import annotations
 
 import logging
+import time
 from dataclasses import dataclass
 from typing import Any
 
@@ -40,6 +41,13 @@ def list_active_bridges() -> list[str]:
     return list(_bridge_registry.keys())
 
 
+# Valid Pe measurement strategies:
+#   "vi"             — V×I from Vabc/Iabc ToWorkspace (NE39)
+#   "pout"           — P_out from swing equation ToWorkspace (Kundur)
+#   "vi_then_pout"   — try V×I first, fall back to P_out (legacy/transition)
+PE_MEASUREMENT_MODES = ("vi", "pout", "vi_then_pout")
+
+
 @dataclass(frozen=True)
 class BridgeConfig:
     """Scenario-specific Simulink bridge configuration.
@@ -63,6 +71,8 @@ class BridgeConfig:
     vsg_sn_va: float = 200e6        # VSG rated power in VA for Pe base conversion
     delta_signal: str = 'delta_ES{idx}'  # rotor angle ToWorkspace signal template
     p_out_signal: str = ''          # 'P_out_ES{idx}' — Power Sensor ToWorkspace (W); if set, Pe read from here instead of V×I
+    pe_measurement: str = 'vi_then_pout'  # Pe strategy: "vi", "pout", or "vi_then_pout"
+    pe0_default_vsg: float = 0.5    # nominal Pe seed in VSG-base p.u. for warmup/first-step feedback
     # Workspace variable names referenced by M0/D0 Constant blocks (setVariable approach)
     m_var_template: str = 'M0_val_ES{idx}'   # must match Constant block Value field in .slx
     d_var_template: str = 'D0_val_ES{idx}'
@@ -75,6 +85,77 @@ class BridgeConfig:
     tripload2_p_default: float = 1.0         # initial load (W) — Bus15 default; scenario may override to rated MW
     breaker_step_block_template: str = ''    # '{model}/BrkCtrl_{idx}' (optional Step block path)
     breaker_count: int = 0                   # number of disturbance breaker controls
+
+    def __post_init__(self) -> None:
+        """Validate configuration at construction time.
+
+        Catches missing/inconsistent fields that would otherwise cause
+        silent measurement failures at runtime.
+        """
+        errors: list[str] = []
+
+        # Pe measurement contract validation
+        has_vi = bool(self.vabc_signal) and bool(self.iabc_signal)
+        has_pout = bool(self.p_out_signal)
+
+        if self.pe_measurement not in PE_MEASUREMENT_MODES:
+            errors.append(
+                f"pe_measurement={self.pe_measurement!r} not in "
+                f"{PE_MEASUREMENT_MODES}"
+            )
+        elif self.pe_measurement == "vi" and not has_vi:
+            errors.append(
+                "pe_measurement='vi' but vabc_signal/iabc_signal not both set"
+            )
+        elif self.pe_measurement == "pout" and not has_pout:
+            errors.append(
+                "pe_measurement='pout' but p_out_signal is empty"
+            )
+        elif self.pe_measurement == "vi_then_pout" and not has_vi and not has_pout:
+            errors.append(
+                "pe_measurement='vi_then_pout' but neither V×I nor p_out_signal configured"
+            )
+
+        # Template placeholders must be present
+        for field_name in ("omega_signal", "delta_signal", "m_var_template", "d_var_template"):
+            val = getattr(self, field_name)
+            if val and "{idx}" not in val:
+                errors.append(f"{field_name}={val!r} missing '{{idx}}' placeholder")
+
+        if self.n_agents < 1:
+            errors.append(f"n_agents must be >= 1, got {self.n_agents}")
+
+        if self.dt_control <= 0:
+            errors.append(f"dt_control must be > 0, got {self.dt_control}")
+
+        if errors:
+            raise ValueError(
+                f"BridgeConfig({self.model_name!r}) validation failed:\n"
+                + "\n".join(f"  - {e}" for e in errors)
+            )
+
+
+class MeasurementFailureError(SimulinkError):
+    """Raised when measurement signals are unavailable or stuck at zero.
+
+    Carries structured failure details from vsg_step_and_read.m so callers
+    can distinguish transient glitches from persistent feedback chain breaks.
+    """
+
+    def __init__(self, message: str, failures: list[str]):
+        super().__init__(message)
+        self.failures = failures
+
+
+# Maximum consecutive steps with all-zero Pe before raising.
+# 3 steps = 0.6s at dt=0.2s — long enough to skip a transient glitch,
+# short enough to catch a broken feedback chain within one episode.
+_PE_ZERO_TOLERANCE_STEPS: int = 3
+
+# Per-step wall-clock threshold (seconds).  If a single step exceeds this,
+# log a warning.  Normal Kundur steps take ~5s; NE39 ~15s.  25s indicates
+# solver struggling or model thrashing.
+_STEP_SLOW_THRESHOLD_S: float = 25.0
 
 
 class SimulinkBridge:
@@ -96,6 +177,8 @@ class SimulinkBridge:
         # Per-step feedback state (NE39 phase-angle + Pe loop)
         self._delta_prev_deg: np.ndarray | None = None  # degrees
         self._Pe_prev: np.ndarray | None = None         # p.u. on sbase
+        # Measurement health tracking
+        self._pe_zero_count: int = 0
         # Disturbance load state (workspace variables, no topology change)
         self._tripload_state: dict = {
             config.tripload1_p_var: config.tripload1_p_default,
@@ -160,6 +243,7 @@ class SimulinkBridge:
             self.cfg.p_out_signal,
             self.cfg.m_var_template,
             self.cfg.d_var_template,
+            self.cfg.pe_measurement,
             nargout=1,
         )
 
@@ -187,6 +271,7 @@ class SimulinkBridge:
         delta_arg = mdbl(self._delta_prev_deg.tolist()) if self._delta_prev_deg is not None else mdbl([])
 
         # New 2-return signature: (model, agent_ids, M, D, t_stop, sbase, cfg, Pe_prev, delta_prev_deg)
+        wall_t0 = time.perf_counter()
         state, status = self.session.call(
             "vsg_step_and_read",
             self.cfg.model_name,
@@ -200,11 +285,34 @@ class SimulinkBridge:
             delta_arg,
             nargout=2,
         )
+        wall_elapsed = time.perf_counter() - wall_t0
+
+        if wall_elapsed > _STEP_SLOW_THRESHOLD_S:
+            logger.warning(
+                "Slow step at t=%.3f: %.1fs (threshold %.1fs). "
+                "Solver may be struggling.",
+                t_stop, wall_elapsed, _STEP_SLOW_THRESHOLD_S,
+            )
 
         if not status["success"]:
             t_start = self.t_current
             raise SimulinkError(
                 f"Simulation failed at t={t_start:.3f}: {status['error']}"
+            )
+
+        # Surface measurement failures from MATLAB as structured data.
+        meas_failures_raw = status.get("measurement_failures", [])
+        # MATLAB returns cell array as list of strings (or empty list).
+        meas_failures: list[str] = []
+        if meas_failures_raw:
+            if isinstance(meas_failures_raw, str):
+                meas_failures = [meas_failures_raw]
+            else:
+                meas_failures = [str(f) for f in meas_failures_raw]
+        if meas_failures:
+            logger.warning(
+                "Measurement failures at t=%.3f: %s",
+                t_stop, "; ".join(meas_failures),
             )
 
         self.t_current = t_stop
@@ -216,6 +324,22 @@ class SimulinkBridge:
             "delta":     np.array(state["delta"]).flatten(),
             "delta_deg": np.array(state["delta_deg"]).flatten(),
         }
+
+        # --- Pe sanity check: detect broken feedback chain early ---
+        # If ALL agents report Pe=0 for _PE_ZERO_TOLERANCE_STEPS consecutive
+        # steps, the feedback chain is almost certainly broken (missing
+        # ToWorkspace signal, wrong p_out_signal, etc.).
+        if np.all(result["Pe"] == 0.0):
+            self._pe_zero_count += 1
+            if self._pe_zero_count >= _PE_ZERO_TOLERANCE_STEPS:
+                raise MeasurementFailureError(
+                    f"Pe=0 for all agents for {self._pe_zero_count} consecutive "
+                    f"steps (t={self.t_current:.3f}s). Feedback chain is likely "
+                    f"broken. Check p_out_signal config or ToWorkspace blocks.",
+                    failures=meas_failures,
+                )
+        else:
+            self._pe_zero_count = 0
 
         # Store for next step's feedback.
         # Clip delta_deg to ±90°: VSG synchronisation limit; beyond that the
@@ -253,7 +377,7 @@ class SimulinkBridge:
         # the Pe writeback (``if ~isempty(Pe_prev)`` → false) and the electrical
         # power never responds to M/D changes.  NE39's 5-arg warmup sets these
         # in MATLAB; the Kundur 3-arg path must do it here in Python.
-        pe_nominal_vsg = 0.5   # VSG base p.u. — safe initial for any scenario
+        pe_nominal_vsg = self.cfg.pe0_default_vsg
         for i in range(1, self.cfg.n_agents + 1):
             m_var = self.cfg.m_var_template.replace('{idx}', str(i))
             d_var = self.cfg.d_var_template.replace('{idx}', str(i))
@@ -368,6 +492,7 @@ class SimulinkBridge:
         self.t_current       = 0.0
         self._Pe_prev        = None
         self._delta_prev_deg = None
+        self._pe_zero_count  = 0
 
     def close(self) -> None:
         """Close the Simulink model (keep MATLAB engine alive).
@@ -378,7 +503,11 @@ class SimulinkBridge:
         """
         try:
             self.session.call("vsg_close_model", self.cfg.model_name, nargout=0)
-        except MatlabCallError:
-            pass  # model may already be closed
+        except MatlabCallError as exc:
+            logger.warning(
+                "Failed to close Simulink model %s cleanly: %s",
+                self.cfg.model_name,
+                exc,
+            )
         self._model_loaded = False
         self._fr_compiled  = False

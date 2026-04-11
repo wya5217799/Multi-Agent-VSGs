@@ -1,8 +1,41 @@
 # tests/test_simulink_bridge.py
 """Tests for engine.simulink_bridge."""
-import pytest
+import sys
+import types
+from pathlib import Path
 from unittest.mock import MagicMock, patch
+
 import numpy as np
+import pytest
+
+
+def _install_fake_gymnasium(monkeypatch) -> None:
+    """Provide a tiny gymnasium shim when the optional dependency is absent."""
+    try:
+        import gymnasium  # noqa: F401
+        return
+    except ImportError:
+        pass
+
+    fake_gym = types.ModuleType("gymnasium")
+
+    class _Env:
+        def reset(self, *args, **kwargs):
+            raise NotImplementedError
+
+        def step(self, *args, **kwargs):
+            raise NotImplementedError
+
+    class _Box:
+        def __init__(self, low, high, shape=None, dtype=None):
+            self.low = low
+            self.high = high
+            self.shape = shape
+            self.dtype = dtype
+
+    fake_gym.Env = _Env
+    fake_gym.spaces = types.SimpleNamespace(Box=_Box)
+    monkeypatch.setitem(sys.modules, "gymnasium", fake_gym)
 
 
 class TestBridgeConfig:
@@ -37,6 +70,7 @@ def _make_test_config(tmp_path=None):
         omega_signal="omega_ES{idx}",
         vabc_signal="Vabc_ES{idx}",
         iabc_signal="Iabc_ES{idx}",
+        pe0_default_vsg=1.87,
     )
 
 
@@ -134,6 +168,41 @@ class TestSimulinkBridge:
         assert bridge._Pe_prev is None
         assert bridge._delta_prev_deg is None
 
+    @patch("engine.matlab_session.matlab_engine", create=True)
+    def test_warmup_seeds_pe_prev_from_config_default(self, mock_me):
+        from engine.simulink_bridge import SimulinkBridge
+
+        mock_eng = MagicMock()
+        mock_me.start_matlab.return_value = mock_eng
+
+        cfg = _make_test_config()
+        bridge = SimulinkBridge(cfg)
+        bridge._matlab_cfg = MagicMock()
+        bridge.warmup(0.5)
+
+        expected = cfg.pe0_default_vsg * (cfg.vsg_sn_va / cfg.sbase_va)
+        assert np.allclose(bridge._Pe_prev, np.full(cfg.n_agents, expected))
+        pe_calls = [
+            args[0]
+            for args, kwargs in mock_eng.eval.call_args_list
+            if "assignin('base', 'Pe_ES" in args[0]
+        ]
+        assert any("1.87" in call for call in pe_calls)
+
+    def test_close_logs_warning_when_close_model_fails(self, caplog):
+        from engine.exceptions import MatlabCallError
+        from engine.simulink_bridge import SimulinkBridge
+
+        cfg = _make_test_config()
+        bridge = SimulinkBridge(cfg)
+        bridge.session = MagicMock()
+        bridge.session.call.side_effect = MatlabCallError("vsg_close_model", (), "close failed")
+
+        with caplog.at_level("WARNING"):
+            bridge.close()
+
+        assert "close failed" in caplog.text
+
 
 class _FakeKundurBridge:
     def __init__(self, cfg):
@@ -142,6 +211,7 @@ class _FakeKundurBridge:
             cfg.tripload1_p_var: cfg.tripload1_p_default,
             cfg.tripload2_p_var: cfg.tripload2_p_default,
         }
+        self.disturbance_load_calls = []
         self.breaker_events = []
         self.loaded = 0
         self.reset_calls = 0
@@ -161,6 +231,10 @@ class _FakeKundurBridge:
     def set_disturbance_load(self, var_name, value_w):
         self._tripload_state[var_name] = value_w
 
+    def apply_disturbance_load(self, var_name, value_w):
+        self._tripload_state[var_name] = value_w
+        self.disturbance_load_calls.append((var_name, value_w))
+
     def configure_breaker_event(self, breaker_idx, *, time_s, before, after):
         self.breaker_events.append(
             {
@@ -176,7 +250,8 @@ class _FakeKundurBridge:
 
 
 @patch("engine.simulink_bridge.SimulinkBridge", new=_FakeKundurBridge)
-def test_kundur_reset_restores_nominal_triploads_and_warms_up():
+def test_kundur_reset_restores_nominal_triploads_and_warms_up(monkeypatch):
+    _install_fake_gymnasium(monkeypatch)
     from env.simulink.kundur_simulink_env import KundurSimulinkEnv, T_WARMUP
 
     env = KundurSimulinkEnv(training=False)
@@ -188,3 +263,377 @@ def test_kundur_reset_restores_nominal_triploads_and_warms_up():
     assert env.bridge.warmups == [T_WARMUP]
     assert env.bridge.loaded == 1
     assert env.bridge.reset_calls == 1
+
+
+def test_kundur_config_overrides_power_normalization():
+    from scenarios.kundur.config_simulink import NORM_P
+
+    assert NORM_P == 4.0
+
+
+@patch("engine.simulink_bridge.SimulinkBridge", new=_FakeKundurBridge)
+def test_kundur_env_uses_configured_power_normalization(monkeypatch):
+    _install_fake_gymnasium(monkeypatch)
+    import env.simulink.kundur_simulink_env as kundur_env
+    from scenarios.kundur.config_simulink import NORM_P as configured_norm_p
+
+    assert kundur_env.NORM_P == configured_norm_p
+
+
+@patch("engine.simulink_bridge.SimulinkBridge", new=_FakeKundurBridge)
+def test_kundur_negative_disturbance_scales_tripload1_with_magnitude(monkeypatch):
+    _install_fake_gymnasium(monkeypatch)
+    from env.simulink.kundur_simulink_env import KundurSimulinkEnv
+
+    env = KundurSimulinkEnv(training=False)
+    cfg = env.bridge.cfg
+
+    env._apply_disturbance_backend(bus_idx=None, magnitude=-1.0)
+    expected_small = (248e6 - 100e6) / 3.0
+    assert env.bridge._tripload_state[cfg.tripload1_p_var] == pytest.approx(expected_small)
+
+    env._apply_disturbance_backend(bus_idx=None, magnitude=-3.0)
+    assert env.bridge._tripload_state[cfg.tripload1_p_var] == 0.0
+
+
+@patch("engine.simulink_bridge.SimulinkBridge", new=_FakeKundurBridge)
+def test_kundur_positive_disturbance_scales_tripload2_with_magnitude(monkeypatch):
+    _install_fake_gymnasium(monkeypatch)
+    from env.simulink.kundur_simulink_env import KundurSimulinkEnv
+
+    env = KundurSimulinkEnv(training=False)
+    cfg = env.bridge.cfg
+
+    env._apply_disturbance_backend(bus_idx=None, magnitude=1.0)
+    expected_small = 100e6 / 3.0
+    assert env.bridge._tripload_state[cfg.tripload2_p_var] == pytest.approx(expected_small)
+
+    env._apply_disturbance_backend(bus_idx=None, magnitude=1.88)
+    expected_large = 188e6 / 3.0
+    assert env.bridge._tripload_state[cfg.tripload2_p_var] == pytest.approx(expected_large)
+
+    env._apply_disturbance_backend(bus_idx=None, magnitude=3.0)
+    assert env.bridge._tripload_state[cfg.tripload2_p_var] == pytest.approx(expected_large)
+
+
+def test_vsg_step_and_read_warns_when_pe_measurement_fails():
+    helper = (
+        Path(__file__).resolve().parents[1]
+        / "vsg_helpers"
+        / "vsg_step_and_read.m"
+    )
+    text = helper.read_text(encoding="utf-8")
+
+    assert "warning('vsg_step_and_read:PeReadFailed'" in text
+
+
+def test_ne39_probe_sets_pe_measurement_mode():
+    helper = (
+        Path(__file__).resolve().parents[1]
+        / "vsg_helpers"
+        / "vsg_probe_ne39_phang_sensitivity.m"
+    )
+    text = helper.read_text(encoding="utf-8")
+
+    assert "cfg.pe_measurement = 'vi';" in text
+
+
+def test_kundur_build_script_uses_workspace_backed_m0_d0_constants():
+    script = (
+        Path(__file__).resolve().parents[1]
+        / "scenarios"
+        / "kundur"
+        / "simulink_models"
+        / "build_powerlib_kundur.m"
+    )
+    text = script.read_text(encoding="utf-8")
+
+    assert "'Value', sprintf('M0_val_ES%d', i)" in text
+    assert "'Value', sprintf('D0_val_ES%d', i)" in text
+
+
+# =============================================================================
+# P0: Measurement failure detection
+# =============================================================================
+
+
+class TestMeasurementFailureDetection:
+    """Tests for structured measurement failure reporting and Pe sanity check."""
+
+    def setup_method(self):
+        from engine.matlab_session import MatlabSession
+        MatlabSession._instances.clear()
+
+    @patch("engine.matlab_session.matlab_engine", create=True)
+    def test_consecutive_pe_zero_raises_after_tolerance(self, mock_me):
+        """Pe=0 for all agents for N consecutive steps raises MeasurementFailureError."""
+        from engine.simulink_bridge import SimulinkBridge, MeasurementFailureError, _PE_ZERO_TOLERANCE_STEPS
+
+        mock_eng = MagicMock()
+        mock_me.start_matlab.return_value = mock_eng
+
+        # All Pe = 0 (broken feedback chain)
+        mock_state = {
+            "omega": [[1.0]*4], "Pe": [[0.0]*4], "rocof": [[0.0]*4],
+            "delta": [[0.0]*4], "delta_deg": [[0.0]*4],
+        }
+        mock_status = {"success": True, "error": "", "elapsed_ms": 5.0, "measurement_failures": []}
+        mock_eng.vsg_step_and_read = MagicMock(return_value=(mock_state, mock_status))
+
+        cfg = _make_test_config()
+        bridge = SimulinkBridge(cfg)
+        bridge._matlab_cfg = MagicMock()
+        bridge._SimulinkBridge__mdbl = lambda x: x
+
+        M = np.ones(4) * 12
+        D = np.ones(4) * 3
+
+        # Should NOT raise for steps below tolerance
+        for _ in range(_PE_ZERO_TOLERANCE_STEPS - 1):
+            bridge.step(M, D)
+
+        # Should raise on the tolerance-th step
+        with pytest.raises(MeasurementFailureError, match="Pe=0"):
+            bridge.step(M, D)
+
+    @patch("engine.matlab_session.matlab_engine", create=True)
+    def test_pe_zero_counter_resets_on_nonzero(self, mock_me):
+        """A single step with Pe>0 resets the consecutive zero counter."""
+        from engine.simulink_bridge import SimulinkBridge, _PE_ZERO_TOLERANCE_STEPS
+
+        mock_eng = MagicMock()
+        mock_me.start_matlab.return_value = mock_eng
+
+        cfg = _make_test_config()
+        bridge = SimulinkBridge(cfg)
+        bridge._matlab_cfg = MagicMock()
+        bridge._SimulinkBridge__mdbl = lambda x: x
+
+        M = np.ones(4) * 12
+        D = np.ones(4) * 3
+
+        # Two steps with Pe=0
+        zero_state = {
+            "omega": [[1.0]*4], "Pe": [[0.0]*4], "rocof": [[0.0]*4],
+            "delta": [[0.0]*4], "delta_deg": [[0.0]*4],
+        }
+        zero_status = {"success": True, "error": "", "elapsed_ms": 5.0, "measurement_failures": []}
+        mock_eng.vsg_step_and_read = MagicMock(return_value=(zero_state, zero_status))
+        bridge.step(M, D)
+        bridge.step(M, D)
+        assert bridge._pe_zero_count == 2
+
+        # One step with Pe>0 resets counter
+        nonzero_state = {
+            "omega": [[1.0]*4], "Pe": [[0.5]*4], "rocof": [[0.0]*4],
+            "delta": [[0.0]*4], "delta_deg": [[0.0]*4],
+        }
+        mock_eng.vsg_step_and_read = MagicMock(return_value=(nonzero_state, zero_status))
+        bridge.step(M, D)
+        assert bridge._pe_zero_count == 0
+
+    @patch("engine.matlab_session.matlab_engine", create=True)
+    def test_measurement_failures_logged(self, mock_me, caplog):
+        """Measurement failures from MATLAB are surfaced via Python logging."""
+        from engine.simulink_bridge import SimulinkBridge
+
+        mock_eng = MagicMock()
+        mock_me.start_matlab.return_value = mock_eng
+
+        mock_state = {
+            "omega": [[1.0]*4], "Pe": [[0.5]*4], "rocof": [[0.0]*4],
+            "delta": [[0.0]*4], "delta_deg": [[0.0]*4],
+        }
+        mock_status = {
+            "success": True, "error": "", "elapsed_ms": 5.0,
+            "measurement_failures": ["omega:agent3:signal not found"],
+        }
+        mock_eng.vsg_step_and_read = MagicMock(return_value=(mock_state, mock_status))
+
+        cfg = _make_test_config()
+        bridge = SimulinkBridge(cfg)
+        bridge._matlab_cfg = MagicMock()
+        bridge._SimulinkBridge__mdbl = lambda x: x
+
+        import logging
+        with caplog.at_level(logging.WARNING):
+            bridge.step(np.ones(4) * 12, np.ones(4) * 3)
+
+        assert "omega:agent3" in caplog.text
+
+    def test_reset_clears_pe_zero_counter(self):
+        """reset() must clear the Pe zero counter."""
+        from engine.simulink_bridge import SimulinkBridge
+
+        cfg = _make_test_config()
+        bridge = SimulinkBridge(cfg)
+        bridge._pe_zero_count = 5
+        bridge.reset()
+        assert bridge._pe_zero_count == 0
+
+
+class TestBridgeConfigValidation:
+    """Tests for BridgeConfig.__post_init__ validation."""
+
+    def test_vi_mode_without_vabc_raises(self):
+        """pe_measurement='vi' but no vabc_signal must raise."""
+        from engine.simulink_bridge import BridgeConfig
+
+        with pytest.raises(ValueError, match="pe_measurement='vi'"):
+            BridgeConfig(
+                model_name="bad_vi",
+                model_dir="/tmp",
+                n_agents=4,
+                dt_control=0.2,
+                sbase_va=100e6,
+                m_path_template="{model}/M{idx}",
+                d_path_template="{model}/D{idx}",
+                omega_signal="omega_ES{idx}",
+                vabc_signal="",       # empty!
+                iabc_signal="",       # empty!
+                pe_measurement="vi",
+            )
+
+    def test_pout_mode_without_p_out_signal_raises(self):
+        """pe_measurement='pout' but no p_out_signal must raise."""
+        from engine.simulink_bridge import BridgeConfig
+
+        with pytest.raises(ValueError, match="pe_measurement='pout'"):
+            BridgeConfig(
+                model_name="bad_pout",
+                model_dir="/tmp",
+                n_agents=4,
+                dt_control=0.2,
+                sbase_va=100e6,
+                m_path_template="{model}/M{idx}",
+                d_path_template="{model}/D{idx}",
+                omega_signal="omega_ES{idx}",
+                vabc_signal="V{idx}",
+                iabc_signal="I{idx}",
+                pe_measurement="pout",
+                p_out_signal="",      # empty!
+            )
+
+    def test_vi_then_pout_with_nothing_raises(self):
+        """pe_measurement='vi_then_pout' with no signals at all must raise."""
+        from engine.simulink_bridge import BridgeConfig
+
+        with pytest.raises(ValueError, match="vi_then_pout"):
+            BridgeConfig(
+                model_name="bad_both",
+                model_dir="/tmp",
+                n_agents=4,
+                dt_control=0.2,
+                sbase_va=100e6,
+                m_path_template="{model}/M{idx}",
+                d_path_template="{model}/D{idx}",
+                omega_signal="omega_ES{idx}",
+                vabc_signal="",
+                iabc_signal="",
+                pe_measurement="vi_then_pout",
+                p_out_signal="",
+            )
+
+    def test_invalid_pe_measurement_mode_raises(self):
+        """Unknown pe_measurement mode must raise."""
+        from engine.simulink_bridge import BridgeConfig
+
+        with pytest.raises(ValueError, match="pe_measurement='bogus'"):
+            BridgeConfig(
+                model_name="bad_mode",
+                model_dir="/tmp",
+                n_agents=4,
+                dt_control=0.2,
+                sbase_va=100e6,
+                m_path_template="{model}/M{idx}",
+                d_path_template="{model}/D{idx}",
+                omega_signal="omega_ES{idx}",
+                vabc_signal="V{idx}",
+                iabc_signal="I{idx}",
+                pe_measurement="bogus",
+            )
+
+    def test_valid_config_with_pout_only(self):
+        """Config with pe_measurement='pout' and p_out_signal should pass."""
+        from engine.simulink_bridge import BridgeConfig
+
+        cfg = BridgeConfig(
+            model_name="pout_model",
+            model_dir="/tmp",
+            n_agents=4,
+            dt_control=0.2,
+            sbase_va=100e6,
+            m_path_template="{model}/M{idx}",
+            d_path_template="{model}/D{idx}",
+            omega_signal="omega_ES{idx}",
+            vabc_signal="",
+            iabc_signal="",
+            pe_measurement="pout",
+            p_out_signal="P_out_ES{idx}",
+        )
+        assert cfg.pe_measurement == "pout"
+
+    def test_valid_config_vi_mode(self):
+        """Config with pe_measurement='vi' and V×I signals should pass."""
+        from engine.simulink_bridge import BridgeConfig
+
+        cfg = BridgeConfig(
+            model_name="vi_model",
+            model_dir="/tmp",
+            n_agents=8,
+            dt_control=0.2,
+            sbase_va=100e6,
+            m_path_template="{model}/M{idx}",
+            d_path_template="{model}/D{idx}",
+            omega_signal="omega_ES{idx}",
+            vabc_signal="Vabc_ES{idx}",
+            iabc_signal="Iabc_ES{idx}",
+            pe_measurement="vi",
+        )
+        assert cfg.pe_measurement == "vi"
+
+    def test_kundur_config_declares_pout(self):
+        """Kundur scenario config must declare pe_measurement='pout'."""
+        from scenarios.kundur.config_simulink import KUNDUR_BRIDGE_CONFIG
+        assert KUNDUR_BRIDGE_CONFIG.pe_measurement == "pout"
+
+    def test_ne39_config_declares_vi(self):
+        """NE39 scenario config must declare pe_measurement='vi'."""
+        from scenarios.new_england.config_simulink import NE39_BRIDGE_CONFIG
+        assert NE39_BRIDGE_CONFIG.pe_measurement == "vi"
+
+    def test_missing_idx_placeholder_raises(self):
+        """Template without {idx} should raise ValueError."""
+        from engine.simulink_bridge import BridgeConfig
+
+        with pytest.raises(ValueError, match="omega_signal.*missing.*idx"):
+            BridgeConfig(
+                model_name="bad_tmpl",
+                model_dir="/tmp",
+                n_agents=4,
+                dt_control=0.2,
+                sbase_va=100e6,
+                m_path_template="{model}/M{idx}",
+                d_path_template="{model}/D{idx}",
+                omega_signal="omega_ES_FIXED",  # no {idx}!
+                vabc_signal="V{idx}",
+                iabc_signal="I{idx}",
+            )
+
+    def test_invalid_n_agents_raises(self):
+        """n_agents < 1 should raise."""
+        from engine.simulink_bridge import BridgeConfig
+
+        with pytest.raises(ValueError, match="n_agents"):
+            BridgeConfig(
+                model_name="zero_agents",
+                model_dir="/tmp",
+                n_agents=0,
+                dt_control=0.2,
+                sbase_va=100e6,
+                m_path_template="{model}/M{idx}",
+                d_path_template="{model}/D{idx}",
+                omega_signal="omega_ES{idx}",
+                vabc_signal="V{idx}",
+                iabc_signal="I{idx}",
+            )

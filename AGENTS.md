@@ -9,12 +9,16 @@
 
 ## Start Here
 
-1. Read `docs/decisions/2026-04-05-harness-architecture.md`.
-2. Read `docs/decisions/2026-04-06-project-memory-system.md`.
-3. Follow task contracts in `docs/harness/2026-04-05-simulink-harness-v1.md`.
-4. Write harness outputs under `results/harness/` as defined in `results/harness/README.md`.
-5. Use `MEMORY.md` as the index into project facts, process notes, decisions, and paper notes.
-6. Use `docs/devlog/commit-guidelines.md` when preparing commits that may need a devlog or decision.
+> Governed by `docs/navigation_manifest.toml` (single source of truth).
+> Update the manifest when entries change; AGENTS.md is validated against it.
+
+1. Read `engine/harness_reference.py` - Authoritative harness state; read before any agent action (Re-evaluate when: harness architecture change)
+2. Read `scenarios/contract.py` - ScenarioContract; single source of truth for scenario constants (Re-evaluate when: scenario parameter schema change)
+3. Read `docs/harness/2026-04-05-simulink-harness-v1.md` - Task contracts; defines harness task I/O and sequencing (Re-evaluate when: harness task definition change)
+4. Read `results/harness/README.md` - Output directory structure; where to write harness evidence (Re-evaluate when: output artifact policy change)
+5. Read `docs/devlog/commit-guidelines.md` - Commit and devlog standards for preparing commits (Re-evaluate when: commit workflow change)
+
+For project memory index, see `MEMORY.md`. For historical architecture decisions, see `docs/decisions/`.
 
 ## Scenario Registry
 

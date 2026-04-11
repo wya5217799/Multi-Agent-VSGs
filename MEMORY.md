@@ -3,13 +3,10 @@
 This file is the navigation layer for repo-native project memory. Keep entries
 short and link to the source record instead of duplicating document bodies.
 
-## Start Here
+## Navigation
 
-- [Harness architecture](docs/decisions/2026-04-05-harness-architecture.md)
-- [Project memory system](docs/decisions/2026-04-06-project-memory-system.md)
-- [Simulink harness v1](docs/harness/2026-04-05-simulink-harness-v1.md)
-- [Harness output README](results/harness/README.md)
-- [Commit guidelines](docs/devlog/commit-guidelines.md)
+Agent entry points are defined in `AGENTS.md` (governed by `docs/navigation_manifest.toml`).
+This file is an index only — do not maintain a parallel Start Here list here.
 
 ## Decisions
 
@@ -26,4 +23,5 @@ short and link to the source record instead of duplicating document bodies.
 - [2026-04-10 NE39 phang feedback probe](docs/devlog/2026-04-10-ne39-phang-feedback-probe.md)
 - [2026-04-10 Phase 1 artifact contract fixes](docs/devlog/2026-04-10-phase1-artifact-contract-fixes.md)
 - [2026-04-10 Test contract alignment](docs/devlog/2026-04-10-test-contract-alignment.md)
+- [2026-04-11 Nav manifest semantic enforcement](docs/devlog/2026-04-11-nav-manifest-semantic-enforcement.md)
 - [2026-04-11 Simulink run artifact locality](docs/devlog/2026-04-11-simulink-run-artifact-locality.md)

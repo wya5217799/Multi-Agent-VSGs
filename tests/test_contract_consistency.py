@@ -187,6 +187,95 @@ def test_simulink_ne39_env_matches_contract():
     assert mod.MAX_NEIGHBORS == NE39.max_neighbors
 
 
+# ── Simulink env ↔ scenario config drift detection (Phase 2) ──
+
+
+def test_kundur_env_vsg_base_from_config():
+    """Env VSG base params must come from config_simulink_base (not hardcoded)."""
+    pytest.importorskip("gymnasium")
+    from scenarios.config_simulink_base import (
+        VSG_M0, VSG_D0, VSG_SN, DM_MIN, DM_MAX, DD_MIN, DD_MAX,
+    )
+    from env.simulink import kundur_simulink_env as mod
+
+    assert mod.VSG_M0 is VSG_M0, "VSG_M0 must be imported, not redefined"
+    assert mod.VSG_D0 is VSG_D0, "VSG_D0 must be imported, not redefined"
+    assert mod.VSG_SN is VSG_SN, "VSG_SN must be imported, not redefined"
+    assert mod.DM_MIN is DM_MIN, "DM_MIN must be imported, not redefined"
+    assert mod.DM_MAX is DM_MAX, "DM_MAX must be imported, not redefined"
+    assert mod.DD_MIN is DD_MIN, "DD_MIN must be imported, not redefined"
+    assert mod.DD_MAX is DD_MAX, "DD_MAX must be imported, not redefined"
+
+
+def test_kundur_env_scenario_params_from_config():
+    """Env scenario-specific params must come from kundur config (not hardcoded).
+
+    Note: ``is`` identity checks are reliable for floats and dicts but NOT for
+    small integers (CPython interns [-5, 256]).  N_SUBSTEPS=5 and
+    STEPS_PER_EPISODE=25 fall in that range, so ``is`` cannot distinguish
+    import from redefinition.  We keep ``==`` for those as a value guard only.
+    """
+    pytest.importorskip("gymnasium")
+    from scenarios.kundur.config_simulink import (
+        PHI_F, PHI_H, PHI_D, COMM_ADJ, T_EPISODE, T_WARMUP,
+        N_SUBSTEPS, STEPS_PER_EPISODE,
+    )
+    from env.simulink import kundur_simulink_env as mod
+
+    # floats + dict: identity proves import (not redefinition)
+    assert mod.PHI_F is PHI_F, "PHI_F must be imported, not redefined"
+    assert mod.PHI_H is PHI_H, "PHI_H must be imported, not redefined"
+    assert mod.PHI_D is PHI_D, "PHI_D must be imported, not redefined"
+    assert mod.COMM_ADJ is COMM_ADJ, "COMM_ADJ must be imported, not redefined"
+    assert mod.T_EPISODE is T_EPISODE, "T_EPISODE must be imported, not redefined"
+    assert mod.T_WARMUP is T_WARMUP, "T_WARMUP must be imported, not redefined"
+    # ints: value guard only (CPython small-int interning defeats identity)
+    assert mod.N_SUBSTEPS == N_SUBSTEPS
+    assert mod.STEPS_PER_EPISODE == STEPS_PER_EPISODE
+
+
+def test_ne39_env_vsg_base_from_config():
+    """Env VSG base params must come from config_simulink_base (not hardcoded)."""
+    pytest.importorskip("gymnasium")
+    from scenarios.config_simulink_base import (
+        VSG_M0, VSG_D0, VSG_SN, DM_MIN, DM_MAX, DD_MIN, DD_MAX,
+    )
+    from env.simulink import ne39_simulink_env as mod
+
+    assert mod.VSG_M0 is VSG_M0, "VSG_M0 must be imported, not redefined"
+    assert mod.VSG_D0 is VSG_D0, "VSG_D0 must be imported, not redefined"
+    assert mod.VSG_SN is VSG_SN, "VSG_SN must be imported, not redefined"
+    assert mod.DM_MIN is DM_MIN, "DM_MIN must be imported, not redefined"
+    assert mod.DM_MAX is DM_MAX, "DM_MAX must be imported, not redefined"
+    assert mod.DD_MIN is DD_MIN, "DD_MIN must be imported, not redefined"
+    assert mod.DD_MAX is DD_MAX, "DD_MAX must be imported, not redefined"
+
+
+def test_ne39_env_scenario_params_from_config():
+    """Env scenario-specific params must come from NE39 config (not hardcoded).
+
+    See test_kundur_env_scenario_params_from_config docstring for ``is`` vs
+    ``==`` rationale on integer constants.
+    """
+    pytest.importorskip("gymnasium")
+    from scenarios.new_england.config_simulink import (
+        PHI_F, PHI_H, PHI_D, COMM_ADJ, T_EPISODE, T_WARMUP,
+        N_SUBSTEPS, STEPS_PER_EPISODE,
+    )
+    from env.simulink import ne39_simulink_env as mod
+
+    # floats + dict: identity proves import
+    assert mod.PHI_F is PHI_F, "PHI_F must be imported, not redefined"
+    assert mod.PHI_H is PHI_H, "PHI_H must be imported, not redefined"
+    assert mod.PHI_D is PHI_D, "PHI_D must be imported, not redefined"
+    assert mod.COMM_ADJ is COMM_ADJ, "COMM_ADJ must be imported, not redefined"
+    assert mod.T_EPISODE is T_EPISODE, "T_EPISODE must be imported, not redefined"
+    assert mod.T_WARMUP is T_WARMUP, "T_WARMUP must be imported, not redefined"
+    # ints: value guard only
+    assert mod.N_SUBSTEPS == N_SUBSTEPS
+    assert mod.STEPS_PER_EPISODE == STEPS_PER_EPISODE
+
+
 # ── Harness reference JSON ──
 
 

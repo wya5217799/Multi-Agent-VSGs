@@ -32,55 +32,45 @@ import numpy as np
 import gymnasium as gym
 from gymnasium import spaces
 from scenarios.contract import KUNDUR as _CONTRACT
+from scenarios.config_simulink_base import (
+    VSG_M0, VSG_D0, VSG_SN,
+    DM_MIN, DM_MAX, DD_MIN, DD_MAX,
+)
 from scenarios.kundur.config_simulink import (
     KUNDUR_BRIDGE_CONFIG,
-    T_WARMUP as CONFIG_T_WARMUP,
+    T_WARMUP, PHI_F, PHI_H, PHI_D,
+    COMM_ADJ, T_EPISODE, N_SUBSTEPS, STEPS_PER_EPISODE,
 )
 
 warnings.filterwarnings("ignore", category=UserWarning, module="matlab")
 
 # ---------------------------------------------------------------------------
-# Constants — contract values from scenarios.contract, rest inlined
+# Constants — imported from scenario config chain, Kundur-specific inlined
 # ---------------------------------------------------------------------------
 
 N_AGENTS: int = _CONTRACT.n_agents
 OBS_DIM: int = _CONTRACT.obs_dim
 ACT_DIM: int = _CONTRACT.act_dim
 
-VSG_M0: float = 12.0
-VSG_D0: float = 3.0
-VSG_SN: float = 200.0     # MVA
+# Kundur-specific VSG parameters (not in base/scenario config)
 VSG_RA: float = 0.003
 VSG_XD1: float = 0.30
 VSG_P0: float = 0.5       # p.u. on VSG base
 
-DM_MIN: float = -6.0
-DM_MAX: float = 18.0
-DD_MIN: float = -1.5
-DD_MAX: float = 4.5
-
+# Derived physical limits
 M_LO: float = VSG_M0 + DM_MIN
 M_HI: float = VSG_M0 + DM_MAX
 D_LO: float = VSG_D0 + DD_MIN
 D_HI: float = VSG_D0 + DD_MAX
 
 DT: float = _CONTRACT.dt
-T_EPISODE: float = 5.0   # shortened for training speed (nadir captured within 2-3 s)
-STEPS_PER_EPISODE: int = 25
-N_SUBSTEPS: int = 5
-T_WARMUP: float = CONFIG_T_WARMUP
-
 
 F_NOM: float = _CONTRACT.fn
 OMEGA_N: float = 2.0 * np.pi * F_NOM
 SBASE: float = 100.0      # MVA
 
-PHI_F: float = 100.0
-PHI_H: float = 1.0
-PHI_D: float = 1.0
 TDS_FAIL_PENALTY: float = -50.0
 
-COMM_ADJ: Dict[int, List[int]] = {0: [1, 3], 1: [0, 2], 2: [1, 3], 3: [2, 0]}
 MAX_NEIGHBORS: int = _CONTRACT.max_neighbors
 COMM_FAIL_PROB: float = 0.1
 

@@ -41,9 +41,18 @@ from gymnasium import spaces
 warnings.filterwarnings("ignore", category=UserWarning, module="matlab")
 
 from scenarios.contract import NE39 as _CONTRACT
+from scenarios.config_simulink_base import (
+    VSG_M0, VSG_D0, VSG_SN,
+    DM_MIN, DM_MAX, DD_MIN, DD_MAX,
+)
+from scenarios.new_england.config_simulink import (
+    PHI_F, PHI_H, PHI_D,
+    COMM_ADJ, T_EPISODE, N_SUBSTEPS, STEPS_PER_EPISODE,
+    T_WARMUP,
+)
 
 # ---------------------------------------------------------------------------
-# Constants — contract values from scenarios.contract, rest inlined
+# Constants — imported from scenario config chain, NE39-specific inlined
 # ---------------------------------------------------------------------------
 
 # Number of ESS agents
@@ -53,18 +62,9 @@ N_ESS: int = _CONTRACT.n_agents
 OBS_DIM: int = _CONTRACT.obs_dim   # [P_norm, freq_dev, rocof, nb1_freq, nb2_freq, nb1_rocof, nb2_rocof]
 ACT_DIM: int = _CONTRACT.act_dim   # [delta_M, delta_D]
 
-# VSG base electrical parameters
-VSG_M0: float = 12.0      # M = 2H  =>  H0 = 6.0 s
-VSG_D0: float = 3.0       # p.u. damping
-VSG_SN: float = 200.0     # MVA rating
+# NE39-specific VSG parameters (not in base/scenario config)
 VSG_RA: float = 0.001     # armature resistance (p.u.)
 VSG_XD1: float = 0.15     # transient reactance (p.u.)
-
-# Action bounds (delta values added to base)
-DM_MIN: float = -6.0      # M range: [VSG_M0 + DM_MIN, VSG_M0 + DM_MAX] = [6.0, 30.0]
-DM_MAX: float = 18.0
-DD_MIN: float = -1.5      # D range: [VSG_D0 + DD_MIN, VSG_D0 + DD_MAX] = [1.5, 7.5]
-DD_MAX: float = 4.5
 
 # Derived physical limits
 M_LO: float = VSG_M0 + DM_MIN   # 6.0
@@ -82,19 +82,11 @@ VSG_BUS_VN: float = 22.0  # kV
 
 # Simulation timing
 DT: float = _CONTRACT.dt  # control time-step (s)
-T_EPISODE: float = 10.0   # episode length (s)
-T_WARMUP: float = 0.5     # warmup before first RL step (s)
-STEPS_PER_EPISODE: int = 50
-N_SUBSTEPS: int = 5        # sub-step interpolation within each DT
 
 # System frequency
 F_NOM: float = _CONTRACT.fn
 OMEGA_N: float = 2.0 * np.pi * F_NOM  # rad/s
 
-# Reward weights (Eq. 15-18)
-PHI_F: float = 200.0
-PHI_H: float = 1.0
-PHI_D: float = 1.0
 TDS_FAIL_PENALTY: float = -50.0
 
 # Omega-based early-termination guard.
@@ -109,11 +101,6 @@ TDS_FAIL_PENALTY: float = -50.0
 OMEGA_TERM_THRESHOLD: float = 15.0 / F_NOM   # 0.25 pu
 OMEGA_TERM_PENALTY: float = -500.0            # per agent, lump-sum terminal reward
 
-# Communication topology -- 8-node ring
-COMM_ADJ: Dict[int, List[int]] = {
-    0: [1, 7], 1: [0, 2], 2: [1, 3], 3: [2, 4],
-    4: [3, 5], 5: [4, 6], 6: [5, 7], 7: [6, 0],
-}
 MAX_NEIGHBORS: int = _CONTRACT.max_neighbors
 COMM_FAIL_PROB: float = 0.1
 

@@ -29,8 +29,7 @@ from dataclasses import replace
 from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
-import gymnasium as gym
-from gymnasium import spaces
+from utils.gym_compat import gym, spaces
 from scenarios.contract import KUNDUR as _CONTRACT
 from scenarios.config_simulink_base import (
     VSG_M0, VSG_D0, VSG_SN,
@@ -40,6 +39,8 @@ from scenarios.kundur.config_simulink import (
     KUNDUR_BRIDGE_CONFIG,
     T_WARMUP, PHI_F, PHI_H, PHI_D,
     COMM_ADJ, T_EPISODE, N_SUBSTEPS, STEPS_PER_EPISODE,
+    NORM_P, NORM_FREQ, NORM_ROCOF,
+    TRIPLOAD2_P_MAX_W,
 )
 
 warnings.filterwarnings("ignore", category=UserWarning, module="matlab")
@@ -74,14 +75,24 @@ TDS_FAIL_PENALTY: float = -50.0
 MAX_NEIGHBORS: int = _CONTRACT.max_neighbors
 COMM_FAIL_PROB: float = 0.1
 
-NORM_P: float = 2.0
-NORM_FREQ: float = 3.0
-NORM_ROCOF: float = 5.0
-
 DIST_MIN: float = 1.0
 DIST_MAX: float = 3.0
 
 VSG_BUS_VN: float = 20.0  # kV
+
+
+def _map_zero_centered_action(
+    action_col: np.ndarray,
+    delta_min: float,
+    delta_max: float,
+) -> np.ndarray:
+    """Map [-1, 1] to [delta_min, 0, delta_max] while preserving 0 -> 0."""
+    action_col = np.asarray(action_col, dtype=np.float32)
+    return np.where(
+        action_col >= 0.0,
+        action_col * delta_max,
+        action_col * (-delta_min),
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -194,9 +205,9 @@ class _KundurBaseEnv(gym.Env):
     ) -> Tuple[np.ndarray, np.ndarray, bool, bool, dict]:
         action = np.clip(np.asarray(action, dtype=np.float32), -1.0, 1.0)
 
-        # Map [-1, 1] -> physical delta values
-        delta_M = 0.5 * (action[:, 0] + 1.0) * (DM_MAX - DM_MIN) + DM_MIN
-        delta_D = 0.5 * (action[:, 1] + 1.0) * (DD_MAX - DD_MIN) + DD_MIN
+        # Preserve zero action as the nominal M0/D0 operating point.
+        delta_M = _map_zero_centered_action(action[:, 0], DM_MIN, DM_MAX)
+        delta_D = _map_zero_centered_action(action[:, 1], DD_MIN, DD_MAX)
 
         M_target = np.clip(VSG_M0 + delta_M, M_LO, M_HI)
         D_target = np.clip(VSG_D0 + delta_D, D_LO, D_HI)
@@ -324,9 +335,9 @@ class _KundurBaseEnv(gym.Env):
         rewards = np.zeros(N_AGENTS, dtype=np.float32)
         r_f_total = 0.0
 
-        # Recover physical parameter adjustments from normalized actions
-        delta_M = 0.5 * (action[:, 0] + 1.0) * (DM_MAX - DM_MIN) + DM_MIN  # p.u.
-        delta_D = 0.5 * (action[:, 1] + 1.0) * (DD_MAX - DD_MIN) + DD_MIN  # p.u.
+        # Recover physical parameter adjustments from normalized actions.
+        delta_M = _map_zero_centered_action(action[:, 0], DM_MIN, DM_MAX)
+        delta_D = _map_zero_centered_action(action[:, 1], DD_MIN, DD_MAX)
 
         # Frequency deviations in Hz for all agents
         dw_hz = (self._omega - 1.0) * F_NOM  # shape (N_AGENTS,)
@@ -730,18 +741,33 @@ class KundurSimulinkEnv(_KundurBaseEnv):
         Sets a workspace variable that the Simulink Constant block reads on the
         next FastRestart sim() call.  No topology change — no Simscape re-solve.
 
-        magnitude < 0: load reduction — Bus14 TripLoad1 goes from 248/3 MW → 0
-        magnitude > 0: load increase  — Bus15 TripLoad2 goes from 0 → 188/3 MW
+        magnitude is in system-base p.u. (100 MW per +1.0). The backend keeps
+        the paper's sign convention while making the magnitude observable:
+
+        magnitude < 0: reduce Bus14 TripLoad1 by |magnitude| * 100 MW
+        magnitude > 0: add    Bus15 TripLoad2 by  magnitude  * 100 MW
         """
         cfg = self.bridge.cfg
+        delta_per_phase_w = abs(float(magnitude)) * cfg.sbase_va / 3.0
         if magnitude < 0:
-            # Remove Bus14 load: TripLoad1_P = 0 (3 phases × 0 W = 0 total)
-            self.bridge.apply_disturbance_load(cfg.tripload1_p_var, 0.0)
-            print(f"[Kundur-Simulink] Load reduction: {cfg.tripload1_p_var}=0 (Bus14 248MW off)")
+            tripload1_w = max(0.0, cfg.tripload1_p_default - delta_per_phase_w)
+            self.bridge.apply_disturbance_load(cfg.tripload1_p_var, tripload1_w)
+            total_mw = tripload1_w * 3.0 / 1e6
+            print(
+                f"[Kundur-Simulink] Load reduction: {cfg.tripload1_p_var}="
+                f"{total_mw:.2f}MW total (Bus14 remaining load)"
+            )
         else:
-            # Add Bus15 load: TripLoad2_P = 188e6/3 W per phase = 188MW total
-            self.bridge.apply_disturbance_load(cfg.tripload2_p_var, 188e6 / 3.0)
-            print(f"[Kundur-Simulink] Load increase: {cfg.tripload2_p_var}=62.67MW/ph (Bus15 188MW on)")
+            tripload2_w = min(
+                TRIPLOAD2_P_MAX_W,
+                cfg.tripload2_p_default + delta_per_phase_w,
+            )
+            self.bridge.apply_disturbance_load(cfg.tripload2_p_var, tripload2_w)
+            total_mw = tripload2_w * 3.0 / 1e6
+            print(
+                f"[Kundur-Simulink] Load increase: {cfg.tripload2_p_var}="
+                f"{total_mw:.2f}MW total (Bus15 applied load)"
+            )
 
     def _close_backend(self) -> None:
         self.bridge.close()

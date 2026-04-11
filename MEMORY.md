@@ -25,3 +25,4 @@ This file is an index only — do not maintain a parallel Start Here list here.
 - [2026-04-10 Test contract alignment](docs/devlog/2026-04-10-test-contract-alignment.md)
 - [2026-04-11 Nav manifest semantic enforcement](docs/devlog/2026-04-11-nav-manifest-semantic-enforcement.md)
 - [2026-04-11 Simulink run artifact locality](docs/devlog/2026-04-11-simulink-run-artifact-locality.md)
+- [2026-04-11 Python runtime alignment and optional ANDES skip](docs/devlog/2026-04-11-python-runtime-alignment-and-optional-andes-skip.md)

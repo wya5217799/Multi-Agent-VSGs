@@ -2,20 +2,27 @@
 快速测试: NE 环境 M0=12 + substep=5 的 TDS 崩溃率
 只跑 NE, 只统计结果, 抑制 ANDES warning
 """
+import importlib.util
 import os, sys, time, warnings, logging
 import numpy as np
+import pytest
 
 # 抑制所有 ANDES 输出
 warnings.filterwarnings("ignore")
 logging.disable(logging.CRITICAL)
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+pytestmark = pytest.mark.skipif(
+    importlib.util.find_spec("andes") is None,
+    reason="ANDES is optional in this Windows workspace; NE quick test runs where andes is installed.",
+)
 
 # 重定向 stdout 来抑制 ANDES 的 print 输出
 import io
 from contextlib import redirect_stdout
 
-from env.andes.andes_ne_env import AndesNEEnv
+if importlib.util.find_spec("andes") is not None:
+    from env.andes.andes_ne_env import AndesNEEnv
 
 
 def run_test(n_episodes=10, max_steps=15):

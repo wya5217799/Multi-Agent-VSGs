@@ -40,6 +40,7 @@ try
     cfg.vabc_signal = 'Vabc_ES{idx}';
     cfg.iabc_signal = 'Iabc_ES{idx}';
     cfg.delta_signal = 'delta_ES{idx}';
+    cfg.pe_measurement = 'vi';
 
     phase_expr = local_get_param_or_empty([model_name '/VSrc_ES1'], 'PhaseAngle');
     phang_param_exists = contains(phase_expr, 'phAng_ES1');

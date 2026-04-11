@@ -35,8 +35,7 @@ import warnings
 from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
-import gymnasium as gym
-from gymnasium import spaces
+from utils.gym_compat import gym, spaces
 
 warnings.filterwarnings("ignore", category=UserWarning, module="matlab")
 

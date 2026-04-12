@@ -20,6 +20,7 @@ from engine.task_primitives import (
     load_task_record,
     record_failure,
 )
+from engine.task_state import check_transition, recommended_next_tasks_for
 from engine.harness_reference import (
     build_reference_context,
     load_scenario_reference,
@@ -223,6 +224,11 @@ def harness_model_inspect(
             "include_check_params": include_check_params,
         },
     )
+    run_dir = harness_reports.ensure_run_dir(scenario_id, run_id)
+    transition_ok, transition_reason = check_transition(run_dir, "model_inspect")
+    if not transition_ok:
+        record.summary.append(f"transition_advisory: {transition_reason}")
+
     _timings: dict[str, float] = {}
     try:
         _t0 = _time.monotonic()
@@ -314,7 +320,7 @@ def harness_model_inspect(
                 "missing_keys": [],
                 "has_warnings": False,
             },
-            "recommended_next_task": "model_diagnose",
+            "recommended_next_task": (recommended_next_tasks_for("model_inspect", "failed") or ["model_diagnose"])[0],
         }
         record.summary = [f"model_inspect FAILED ({failure_class}): {hint}"]
         return finish(record, extra=extra)
@@ -327,7 +333,7 @@ def harness_model_inspect(
         "solver_audit": solver_audit,
         "param_suspects": param_suspects,
         "reference_validation": reference_validation,
-        "recommended_next_task": "model_patch_verify",
+        "recommended_next_task": (recommended_next_tasks_for("model_inspect", record.status) or ["model_patch_verify"])[0],
         "_timings": _timings,
     }
     if not load_result.get("ok", False):
@@ -359,6 +365,11 @@ def harness_model_patch_verify(
             "smoke_test_stop_time": smoke_test_stop_time,
         },
     )
+    run_dir = harness_reports.ensure_run_dir(scenario_id, run_id)
+    transition_ok, transition_reason = check_transition(run_dir, "model_patch_verify")
+    if not transition_ok:
+        record.summary.append(f"transition_advisory: {transition_reason}")
+
     try:
         spec = resolve_scenario(scenario_id)
         _ensure_loaded(spec)
@@ -386,7 +397,7 @@ def harness_model_patch_verify(
             "update_ok": False,
             "smoke_test_ok": False,
             "smoke_test_summary": {},
-            "recommended_next_task": "model_diagnose",
+            "recommended_next_task": (recommended_next_tasks_for("model_patch_verify", "failed") or ["model_diagnose"])[0],
         }
         record.summary = [f"patch_verify FAILED: {patch_hint}"]
         return finish(record, extra=extra)
@@ -395,7 +406,9 @@ def harness_model_patch_verify(
     smoke_test_ok = patch.get("smoke_test_ok")
     has_errors = bool(patch.get("errors")) or any(item.get("error") for item in patch.get("readback", []))
     ok = bool(patch.get("ok", False)) and update_ok and not has_errors and (smoke_test_ok is not False)
-    recommended = "model_report" if ok else "model_diagnose"
+    patch_status = "ok" if ok else "failed"
+    next_from_table = recommended_next_tasks_for("model_patch_verify", patch_status)
+    recommended = next_from_table[0] if next_from_table else ("model_report" if ok else "model_diagnose")
     extra = {
         "applied_edits": patch.get("applied_edits", []),
         "readback": patch.get("readback", []),
@@ -448,6 +461,11 @@ def harness_model_diagnose(
             "capture_warnings": capture_warnings,
         },
     )
+    run_dir_diag = harness_reports.ensure_run_dir(scenario_id, run_id)
+    transition_ok, transition_reason = check_transition(run_dir_diag, "model_diagnose")
+    if not transition_ok:
+        record.summary.append(f"transition_advisory: {transition_reason}")
+
     try:
         spec = resolve_scenario(scenario_id)
         _ensure_loaded(spec)
@@ -491,7 +509,7 @@ def harness_model_diagnose(
             "signal_snapshot": {},
             "suspected_root_causes": [],
             "repair_hints": [],
-            "recommended_next_task": "model_patch_verify",
+            "recommended_next_task": (recommended_next_tasks_for("model_diagnose", "failed") or ["model_patch_verify"])[0],
         }
         record.summary = [f"diagnose FAILED ({diag_failure_class}): {diag_hint}"]
         return finish(record, extra=extra)
@@ -509,7 +527,7 @@ def harness_model_diagnose(
         "prior_param_suspects": prior_param_suspects,
         "suspected_root_causes": suspected_root_causes,
         "repair_hints": repair_hints,
-        "recommended_next_task": "model_patch_verify",
+        "recommended_next_task": (recommended_next_tasks_for("model_diagnose", record.status) or ["model_patch_verify"])[0],
     }
     if (not compile_info.get("ok", False)) or step_info.get("status") not in {"success", "ok"}:
         record_failure(record, "model_error", "Diagnostics found compile or simulation issues")

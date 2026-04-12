@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from enum import Enum
 from pathlib import Path
 from typing import Any, Literal
 
@@ -197,3 +198,49 @@ class SmokePollResult:
 
     def to_dict(self) -> dict[str, Any]:
         return _payload_to_dict(self)
+
+
+# ---------------------------------------------------------------------------
+# Explicit flow state (Phase 3) — ADVISORY ONLY
+# ---------------------------------------------------------------------------
+
+
+class TaskPhase(str, Enum):
+    NOT_STARTED = "not_started"
+    SCENARIO_RESOLVED = "scenario_resolved"
+    MODEL_INSPECTED = "model_inspected"
+    MODEL_PATCHED = "model_patched"
+    MODEL_DIAGNOSED = "model_diagnosed"
+    MODEL_REPORTED = "model_reported"
+    SMOKE_STARTED = "smoke_started"
+    SMOKE_COMPLETED = "smoke_completed"
+
+
+TRANSITIONS: dict[tuple[TaskPhase, HarnessStatus], list[HarnessTaskName]] = {
+    (TaskPhase.NOT_STARTED, "ok"): ["scenario_status"],
+    (TaskPhase.SCENARIO_RESOLVED, "ok"): ["model_inspect"],
+    (TaskPhase.SCENARIO_RESOLVED, "failed"): [],
+    (TaskPhase.MODEL_INSPECTED, "ok"): ["model_patch_verify", "model_report"],
+    (TaskPhase.MODEL_INSPECTED, "warning"): ["model_patch_verify", "model_diagnose"],
+    (TaskPhase.MODEL_INSPECTED, "failed"): ["model_diagnose"],
+    (TaskPhase.MODEL_PATCHED, "ok"): ["model_report"],
+    (TaskPhase.MODEL_PATCHED, "failed"): ["model_diagnose"],
+    (TaskPhase.MODEL_DIAGNOSED, "ok"): ["model_patch_verify"],
+    (TaskPhase.MODEL_DIAGNOSED, "failed"): ["model_patch_verify"],
+    (TaskPhase.MODEL_REPORTED, "ok"): ["train_smoke_start"],
+    (TaskPhase.MODEL_REPORTED, "warning"): ["train_smoke_start"],
+    (TaskPhase.MODEL_REPORTED, "failed"): ["model_inspect", "model_diagnose"],
+    (TaskPhase.SMOKE_STARTED, "running"): ["train_smoke_poll"],
+    (TaskPhase.SMOKE_COMPLETED, "ok"): [],
+    (TaskPhase.SMOKE_COMPLETED, "failed"): ["model_diagnose"],
+}
+
+TASK_TO_PHASE: dict[HarnessTaskName, TaskPhase] = {
+    "scenario_status": TaskPhase.SCENARIO_RESOLVED,
+    "model_inspect": TaskPhase.MODEL_INSPECTED,
+    "model_patch_verify": TaskPhase.MODEL_PATCHED,
+    "model_diagnose": TaskPhase.MODEL_DIAGNOSED,
+    "model_report": TaskPhase.MODEL_REPORTED,
+    "train_smoke_start": TaskPhase.SMOKE_STARTED,
+    "train_smoke_poll": TaskPhase.SMOKE_COMPLETED,
+}

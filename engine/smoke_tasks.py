@@ -21,6 +21,7 @@ from engine.task_primitives import (
     record_failure,
 )
 from engine.harness_registry import resolve_scenario
+from engine.task_state import check_transition
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
@@ -50,13 +51,20 @@ def _train_smoke_paths(scenario_id: str, run_id: str) -> tuple[Path, Path]:
 
 def _train_smoke_preconditions(run_dir: Path) -> tuple[bool, list[str]]:
     failures: list[str] = []
+
+    # Advisory: check transition table
+    transition_ok, transition_reason = check_transition(run_dir, "train_smoke_start")
+    if not transition_ok:
+        failures.append(f"transition_advisory: {transition_reason}")
+
+    # Hard gates (existing logic preserved exactly):
     scenario_status = load_task_record(run_dir, "scenario_status")
     if not scenario_status or scenario_status.get("status") != "ok":
         failures.append("scenario_status must exist with status ok")
 
     model_report = load_task_record(run_dir, "model_report")
-    report_status = None if model_report is None else model_report.get("run_status")
-    if report_status not in {"ok", "warning"}:
+    report_run_status = None if model_report is None else model_report.get("run_status")
+    if report_run_status not in {"ok", "warning"}:
         failures.append("model_report must exist with run_status ok or warning")
 
     for task_name in _MODELING_TASKS:
@@ -64,7 +72,9 @@ def _train_smoke_preconditions(run_dir: Path) -> tuple[bool, list[str]]:
         if record and record.get("status") == "failed":
             failures.append(f"{task_name} is failed")
 
-    return (not failures), failures
+    # Only hard failures block; transition advisory is informational
+    hard_failures = [item for item in failures if not item.startswith("transition_advisory:")]
+    return (not hard_failures), failures
 
 
 def _recover_pid_from_disk(scenario_id: str, run_id: str) -> int | None:

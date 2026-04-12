@@ -91,8 +91,6 @@ def check_transition(
 def recommended_next_tasks_for(
     task_name: HarnessTaskName,
     task_status: HarnessStatus,
-    *,
-    run_status: HarnessStatus | None = None,
 ) -> list[HarnessTaskName]:
     """In-memory recommendation for use INSIDE a task body before persistence.
 

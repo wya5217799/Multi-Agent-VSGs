@@ -235,6 +235,14 @@ TRANSITIONS: dict[tuple[TaskPhase, HarnessStatus], list[HarnessTaskName]] = {
     (TaskPhase.SMOKE_COMPLETED, "failed"): ["model_diagnose"],
 }
 
+MODELING_TASKS: list[HarnessTaskName] = [
+    "scenario_status",
+    "model_inspect",
+    "model_patch_verify",
+    "model_diagnose",
+    "model_report",
+]
+
 TASK_TO_PHASE: dict[HarnessTaskName, TaskPhase] = {
     "scenario_status": TaskPhase.SCENARIO_RESOLVED,
     "model_inspect": TaskPhase.MODEL_INSPECTED,

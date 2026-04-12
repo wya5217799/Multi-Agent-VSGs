@@ -44,13 +44,7 @@ from engine.mcp_simulink_tools import (
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
-_MODELING_TASKS = [
-    "scenario_status",
-    "model_inspect",
-    "model_patch_verify",
-    "model_diagnose",
-    "model_report",
-]
+from engine.harness_models import MODELING_TASKS as _MODELING_TASKS
 
 
 def _ensure_loaded(spec) -> dict[str, Any]:

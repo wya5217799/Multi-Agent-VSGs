@@ -25,13 +25,7 @@ from engine.task_state import check_transition
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
-_MODELING_TASKS = [
-    "scenario_status",
-    "model_inspect",
-    "model_patch_verify",
-    "model_diagnose",
-    "model_report",
-]
+from engine.harness_models import MODELING_TASKS as _MODELING_TASKS
 _NATIVE_RESULTS_ROOTS = {
     "kundur": Path("results/sim_kundur"),
     "ne39": Path("results/sim_ne39"),

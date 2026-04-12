@@ -4,11 +4,17 @@ import json
 import subprocess
 import sys
 import time as _time
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Mapping
 
 from engine import harness_reports
+from engine.task_primitives import (
+    create_record,
+    finish,
+    list_existing_task_records,
+    load_task_record,
+    record_failure,
+)
 from engine.harness_reference import (
     build_reference_context,
     load_scenario_reference,
@@ -43,9 +49,8 @@ _PROJECT_ROOT = Path(__file__).resolve().parents[1]
 #   — Thin subprocess launcher only. Does not own training logic.
 #   — Interface to training layer is filesystem + subprocess ONLY; no imports.
 #
-# Extraction rule: if a third zone appears, or if a second independent consumer
-#   needs the record primitives (_base_record/_record_failure/_finish), extract
-#   those primitives to engine/run_support.py at that point — not before.
+# Record primitives (create_record/record_failure/finish/load_task_record/
+#   list_existing_task_records) live in engine/task_primitives.py.
 # ---------------------------------------------------------------------------
 
 _MODELING_TASKS = [
@@ -59,25 +64,6 @@ _NATIVE_RESULTS_ROOTS = {
     "kundur": Path("results/sim_kundur"),
     "ne39": Path("results/sim_ne39"),
 }
-
-
-def _now() -> str:
-    return datetime.now(timezone.utc).isoformat()
-
-
-def _base_record(task: str, scenario_id: str, run_id: str, inputs: Mapping[str, Any]) -> dict[str, Any]:
-    return {
-        "task": task,
-        "scenario_id": scenario_id,
-        "run_id": run_id,
-        "status": "ok",
-        "started_at": _now(),
-        "finished_at": None,
-        "inputs": dict(inputs),
-        "summary": [],
-        "artifacts": [],
-        "failures": [],
-    }
 
 
 def _ensure_loaded(spec) -> dict[str, Any]:
@@ -99,44 +85,16 @@ def _read_prior_evidence(run_dir: Path, task_name: str, key: str) -> Any | None:
     Returns the value if the prior task exists and has the key, else None.
     This is *evidence from a prior step*, not live MATLAB state.
     """
-    record = _load_task_record(run_dir, task_name)
+    record = load_task_record(run_dir, task_name)
     if record is None:
         return None
     return record.get(key)
 
 
-def _record_failure(record: dict[str, Any], failure_class: str, message: str, detail: Mapping[str, Any] | None = None) -> None:
-    record["status"] = "failed"
-    record["failures"].append(
-        {
-            "failure_class": failure_class,
-            "message": message,
-            "detail": dict(detail or {}),
-        }
-    )
 
-
-def _finish(record: dict[str, Any]) -> dict[str, Any]:
-    run_dir = harness_reports.ensure_run_dir(record["scenario_id"], record["run_id"])
-    record["finished_at"] = _now()
-    harness_reports.write_task_record(run_dir, record["task"], record)
-    return record
-
-
-def _load_task_record(run_dir: Path, task_name: str) -> dict[str, Any] | None:
-    path = run_dir / f"{task_name}.json"
-    if not path.exists():
-        return None
-    return json.loads(path.read_text(encoding="utf-8"))
-
-
-def _list_existing_task_records(run_dir: Path) -> list[dict[str, Any]]:
-    records: list[dict[str, Any]] = []
-    for path in sorted(run_dir.glob("*.json")):
-        if path.name == "manifest.json":
-            continue
-        records.append(json.loads(path.read_text(encoding="utf-8")))
-    return records
+# _record_failure, _finish, _load_task_record, _list_existing_task_records
+# have been extracted to engine.task_primitives as:
+#   record_failure, finish, load_task_record, list_existing_task_records
 
 
 def _collect_findings(records: list[dict[str, Any]]) -> list[str]:
@@ -207,17 +165,17 @@ def _train_smoke_paths(scenario_id: str, run_id: str) -> tuple[Path, Path]:
 
 def _train_smoke_preconditions(run_dir: Path) -> tuple[bool, list[str]]:
     failures: list[str] = []
-    scenario_status = _load_task_record(run_dir, "scenario_status")
+    scenario_status = load_task_record(run_dir, "scenario_status")
     if not scenario_status or scenario_status.get("status") != "ok":
         failures.append("scenario_status must exist with status ok")
 
-    model_report = _load_task_record(run_dir, "model_report")
+    model_report = load_task_record(run_dir, "model_report")
     report_status = None if model_report is None else model_report.get("run_status")
     if report_status not in {"ok", "warning"}:
         failures.append("model_report must exist with run_status ok or warning")
 
     for task_name in _MODELING_TASKS:
-        record = _load_task_record(run_dir, task_name)
+        record = load_task_record(run_dir, task_name)
         if record and record.get("status") == "failed":
             failures.append(f"{task_name} is failed")
 
@@ -238,7 +196,7 @@ def harness_scenario_status(
     goal: str,
     requested_tasks: list[str] | None = None,
 ) -> dict[str, Any]:
-    record = _base_record(
+    record = create_record(
         "scenario_status",
         scenario_id,
         run_id,
@@ -248,10 +206,8 @@ def harness_scenario_status(
     try:
         spec = resolve_scenario(scenario_id)
     except ValueError as exc:
-        record["supported"] = False
-        record["notes"] = []
-        _record_failure(record, "contract_error", str(exc))
-        return _finish(record)
+        record_failure(record, "contract_error", str(exc))
+        return finish(record, extra={"supported": False, "notes": []})
 
     harness_reports.write_manifest(
         run_dir,
@@ -259,22 +215,20 @@ def harness_scenario_status(
         scenario_id=scenario_id,
         goal=goal,
         requested_tasks=requested_tasks or ["scenario_status"],
-        created_at=record["started_at"],
+        created_at=record.started_at,
     )
     reference_manifest = load_scenario_reference(scenario_id)
-    record.update(
-        {
-            "resolved_model_name": spec.model_name,
-            "resolved_model_dir": str(spec.model_dir),
-            "resolved_train_entry": str(spec.train_entry),
-            "supported": True,
-            "reference_manifest_path": reference_path_for_scenario(scenario_id).relative_to(_PROJECT_ROOT).as_posix(),
-            "reference_summary": summarize_reference_manifest(reference_manifest),
-            "notes": [],
-        }
-    )
-    record["summary"] = [f"scenario '{scenario_id}' resolved: model={spec.model_name}"]
-    return _finish(record)
+    extra = {
+        "resolved_model_name": spec.model_name,
+        "resolved_model_dir": str(spec.model_dir),
+        "resolved_train_entry": str(spec.train_entry),
+        "supported": True,
+        "reference_manifest_path": reference_path_for_scenario(scenario_id).relative_to(_PROJECT_ROOT).as_posix(),
+        "reference_summary": summarize_reference_manifest(reference_manifest),
+        "notes": [],
+    }
+    record.summary = [f"scenario '{scenario_id}' resolved: model={spec.model_name}"]
+    return finish(record, extra=extra)
 
 
 def harness_model_inspect(
@@ -306,7 +260,7 @@ def harness_model_inspect(
     """
     focus_paths = focus_paths or []
     query_params = query_params or []
-    record = _base_record(
+    record = create_record(
         "model_inspect",
         scenario_id,
         run_id,
@@ -391,52 +345,48 @@ def harness_model_inspect(
         else:
             failure_class = "tool_error"
             hint = "Check the MATLAB engine and model file path."
-        _record_failure(record, failure_class, "Model inspection failed", {"error": exc_str, "hint": hint})
+        record_failure(record, failure_class, "Model inspection failed", {"error": exc_str, "hint": hint})
         try:
             loaded = simulink_loaded_models()
         except Exception:
             loaded = []
-        record.update(
-            {
-                "model_loaded": False,
-                "loaded_models": loaded,
-                "focus_blocks": [],
-                "solver_audit": {},
-                "param_suspects": [],
-                "reference_validation": {
-                    "checks": [],
-                    "mismatch_keys": [],
-                    "missing_keys": [],
-                    "has_warnings": False,
-                },
-                "recommended_next_task": "model_diagnose",
-            }
-        )
-        record["summary"] = [f"model_inspect FAILED ({failure_class}): {hint}"]
-        return _finish(record)
-
-    record.update(
-        {
-            "model_loaded": bool(load_result.get("ok", False)),
-            "loaded_models": load_result.get("loaded_models", []),
-            "focus_blocks": focus_blocks,
-            "queried_params": queried_params,
-            "solver_audit": solver_audit,
-            "param_suspects": param_suspects,
-            "reference_validation": reference_validation,
-            "recommended_next_task": "model_patch_verify",
-            "_timings": _timings,
+        extra = {
+            "model_loaded": False,
+            "loaded_models": loaded,
+            "focus_blocks": [],
+            "solver_audit": {},
+            "param_suspects": [],
+            "reference_validation": {
+                "checks": [],
+                "mismatch_keys": [],
+                "missing_keys": [],
+                "has_warnings": False,
+            },
+            "recommended_next_task": "model_diagnose",
         }
-    )
+        record.summary = [f"model_inspect FAILED ({failure_class}): {hint}"]
+        return finish(record, extra=extra)
+
+    extra = {
+        "model_loaded": bool(load_result.get("ok", False)),
+        "loaded_models": load_result.get("loaded_models", []),
+        "focus_blocks": focus_blocks,
+        "queried_params": queried_params,
+        "solver_audit": solver_audit,
+        "param_suspects": param_suspects,
+        "reference_validation": reference_validation,
+        "recommended_next_task": "model_patch_verify",
+        "_timings": _timings,
+    }
     if not load_result.get("ok", False):
-        _record_failure(record, "tool_error", "Failed to load model", load_result)
+        record_failure(record, "tool_error", "Failed to load model", load_result)
     elif reference_validation["has_warnings"]:
-        record["status"] = "warning"
+        record.status = "warning"
     ref_status = "ok" if not reference_validation["has_warnings"] else f"{len(reference_validation['mismatch_keys'])} mismatch(es)"
-    record["summary"] = [
+    record.summary = [
         f"model_inspect: loaded={bool(load_result.get('ok'))}, ref={ref_status}, elapsed={_timings.get('total', '?')}s"
     ]
-    return _finish(record)
+    return finish(record, extra=extra)
 
 
 def harness_model_patch_verify(
@@ -447,7 +397,7 @@ def harness_model_patch_verify(
     run_update: bool = True,
     smoke_test_stop_time: float | None = None,
 ) -> dict[str, Any]:
-    record = _base_record(
+    record = create_record(
         "model_patch_verify",
         scenario_id,
         run_id,
@@ -477,40 +427,37 @@ def harness_model_patch_verify(
             patch_hint = "Model not loaded. Run model_inspect first."
         else:
             patch_hint = "Run model_inspect to confirm model is loaded, then model_diagnose to identify root cause before retrying edits."
-        _record_failure(record, "tool_error", "Patch and verify call failed", {"error": exc_str, "hint": patch_hint})
-        record.update(
-            {
-                "applied_edits": [],
-                "readback": [],
-                "update_ok": False,
-                "smoke_test_ok": False,
-                "smoke_test_summary": {},
-                "recommended_next_task": "model_diagnose",
-            }
-        )
-        record["summary"] = [f"patch_verify FAILED: {patch_hint}"]
-        return _finish(record)
+        record_failure(record, "tool_error", "Patch and verify call failed", {"error": exc_str, "hint": patch_hint})
+        extra = {
+            "applied_edits": [],
+            "readback": [],
+            "update_ok": False,
+            "smoke_test_ok": False,
+            "smoke_test_summary": {},
+            "recommended_next_task": "model_diagnose",
+        }
+        record.summary = [f"patch_verify FAILED: {patch_hint}"]
+        return finish(record, extra=extra)
 
     update_ok = bool(patch.get("update_ok", False))
     smoke_test_ok = patch.get("smoke_test_ok")
     has_errors = bool(patch.get("errors")) or any(item.get("error") for item in patch.get("readback", []))
     ok = bool(patch.get("ok", False)) and update_ok and not has_errors and (smoke_test_ok is not False)
-    record.update(
-        {
-            "applied_edits": patch.get("applied_edits", []),
-            "readback": patch.get("readback", []),
-            "update_ok": update_ok,
-            "smoke_test_ok": smoke_test_ok,
-            "smoke_test_summary": patch.get("smoke_test_summary", {}),
-            "recommended_next_task": "model_report" if ok else "model_diagnose",
-        }
-    )
+    recommended = "model_report" if ok else "model_diagnose"
+    extra = {
+        "applied_edits": patch.get("applied_edits", []),
+        "readback": patch.get("readback", []),
+        "update_ok": update_ok,
+        "smoke_test_ok": smoke_test_ok,
+        "smoke_test_summary": patch.get("smoke_test_summary", {}),
+        "recommended_next_task": recommended,
+    }
     if not ok:
-        _record_failure(record, "model_error", "Patch verification did not complete cleanly", patch)
-    record["summary"] = [
-        f"patch_verify: {len(edits)} edit(s), update_ok={update_ok}, smoke_ok={smoke_test_ok}, next={record['recommended_next_task']}"
+        record_failure(record, "model_error", "Patch verification did not complete cleanly", patch)
+    record.summary = [
+        f"patch_verify: {len(edits)} edit(s), update_ok={update_ok}, smoke_ok={smoke_test_ok}, next={recommended}"
     ]
-    return _finish(record)
+    return finish(record, extra=extra)
 
 
 def harness_model_diagnose(
@@ -539,7 +486,7 @@ def harness_model_diagnose(
         diagnostic_window["stop_time"] = diagnostic_window.pop("stop")
 
     signals = signals or []
-    record = _base_record(
+    record = create_record(
         "model_diagnose",
         scenario_id,
         run_id,
@@ -583,46 +530,42 @@ def harness_model_diagnose(
         else:
             diag_failure_class = "tool_error"
             diag_hint = "Check that MATLAB engine is running and model is loaded (simulink_loaded_models)."
-        _record_failure(record, diag_failure_class, "Diagnostics failed", {"error": exc_str, "hint": diag_hint})
-        record.update(
-            {
-                "compile_ok": False,
-                "compile_errors": [],
-                "step_status": "tool_error",
-                "warning_groups": [],
-                "signal_snapshot": {},
-                "suspected_root_causes": [],
-                "repair_hints": [],
-                "recommended_next_task": "model_patch_verify",
-            }
-        )
-        record["summary"] = [f"diagnose FAILED ({diag_failure_class}): {diag_hint}"]
-        return _finish(record)
+        record_failure(record, diag_failure_class, "Diagnostics failed", {"error": exc_str, "hint": diag_hint})
+        extra = {
+            "compile_ok": False,
+            "compile_errors": [],
+            "step_status": "tool_error",
+            "warning_groups": [],
+            "signal_snapshot": {},
+            "suspected_root_causes": [],
+            "repair_hints": [],
+            "recommended_next_task": "model_patch_verify",
+        }
+        record.summary = [f"diagnose FAILED ({diag_failure_class}): {diag_hint}"]
+        return finish(record, extra=extra)
 
     suspected_root_causes = [entry.get("message", "") for entry in compile_info.get("errors", []) if entry.get("message")]
     suspected_root_causes.extend(item.get("example", "") for item in step_info.get("top_errors", []) if item.get("example"))
     repair_hints = generate_repair_hints(suspected_root_causes)
-    record.update(
-        {
-            "compile_ok": bool(compile_info.get("ok", False)),
-            "compile_errors": compile_info.get("errors", []),
-            "step_status": step_info.get("status", ""),
-            "warning_groups": step_info.get("top_warnings", []),
-            "signal_snapshot": {},
-            "prior_solver_audit": prior_solver_audit,
-            "prior_param_suspects": prior_param_suspects,
-            "suspected_root_causes": suspected_root_causes,
-            "repair_hints": repair_hints,
-            "recommended_next_task": "model_patch_verify",
-        }
-    )
+    extra = {
+        "compile_ok": bool(compile_info.get("ok", False)),
+        "compile_errors": compile_info.get("errors", []),
+        "step_status": step_info.get("status", ""),
+        "warning_groups": step_info.get("top_warnings", []),
+        "signal_snapshot": {},
+        "prior_solver_audit": prior_solver_audit,
+        "prior_param_suspects": prior_param_suspects,
+        "suspected_root_causes": suspected_root_causes,
+        "repair_hints": repair_hints,
+        "recommended_next_task": "model_patch_verify",
+    }
     if (not compile_info.get("ok", False)) or step_info.get("status") not in {"success", "ok"}:
-        _record_failure(record, "model_error", "Diagnostics found compile or simulation issues")
-    record["summary"] = [
+        record_failure(record, "model_error", "Diagnostics found compile or simulation issues")
+    record.summary = [
         f"diagnose: compile_ok={compile_info.get('ok', False)}, step={step_info.get('status', '')}, "
         f"causes={len(suspected_root_causes)}, hints={len(repair_hints)}"
     ]
-    return _finish(record)
+    return finish(record, extra=extra)
 
 
 def harness_model_report(
@@ -631,14 +574,14 @@ def harness_model_report(
     run_id: str,
     include_summary_md: bool = True,
 ) -> dict[str, Any]:
-    record = _base_record(
+    record = create_record(
         "model_report",
         scenario_id,
         run_id,
         {"include_summary_md": include_summary_md},
     )
     run_dir = harness_reports.ensure_run_dir(scenario_id, run_id)
-    prior_records = _list_existing_task_records(run_dir)
+    prior_records = list_existing_task_records(run_dir)
     completed_tasks = [item.get("task", Path(item.get("task", "")).stem) for item in prior_records if item.get("task")]
     failed_tasks = [item.get("task", "") for item in prior_records if item.get("status") == "failed"]
     warning_tasks = [item.get("task", "") for item in prior_records if item.get("status") == "warning"]
@@ -653,24 +596,22 @@ def harness_model_report(
         else ["Fix failed modeling tasks before train_smoke"]
     )
     memory_hints = _build_memory_hints(prior_records)
-    record.update(
-        {
-            "run_status": run_status,
-            "completed_tasks": completed_tasks,
-            "blocked_tasks": failed_tasks,
-            "key_findings": key_findings,
-            "recommended_followups": recommended_followups,
-            "memory_hints": memory_hints,
-        }
-    )
+    extra = {
+        "run_status": run_status,
+        "completed_tasks": completed_tasks,
+        "blocked_tasks": failed_tasks,
+        "key_findings": key_findings,
+        "recommended_followups": recommended_followups,
+        "memory_hints": memory_hints,
+    }
     if include_summary_md:
         summary_path = _write_summary(run_dir, run_status, completed_tasks, key_findings, recommended_followups, memory_hints)
-        record["artifacts"].append(str(summary_path))
-    record["summary"] = [
+        record.artifacts.append(str(summary_path))
+    record.summary = [
         f"run_report: status={run_status}, tasks={len(completed_tasks)}, "
         f"blocked={len(failed_tasks)}, findings={len(key_findings)}"
     ]
-    return _finish(record)
+    return finish(record, extra=extra)
 
 
 def harness_train_smoke(
@@ -686,30 +627,28 @@ def harness_train_smoke(
     time out.  Use ``harness_train_smoke_start`` + ``harness_train_smoke_poll``
     instead.
     """
-    record = _base_record(
+    record = create_record(
         "train_smoke",
         scenario_id,
         run_id,
         {"episodes": episodes, "mode": mode},
     )
     run_dir = harness_reports.ensure_run_dir(scenario_id, run_id)
-    _record_failure(
+    record_failure(
         record,
         "contract_error",
         "harness_train_smoke is deprecated: use harness_train_smoke_start + harness_train_smoke_poll. "
         "Calling this tool directly blocks the MCP server and will time out.",
         {"migration": "call harness_train_smoke_start, then poll with harness_train_smoke_poll"},
     )
-    record.update(
-        {
-            "command": "",
-            "exit_code": None,
-            "native_log_paths": [],
-            "native_checkpoint_paths": [],
-            "smoke_passed": False,
-        }
-    )
-    return _finish(record)
+    extra = {
+        "command": "",
+        "exit_code": None,
+        "native_log_paths": [],
+        "native_checkpoint_paths": [],
+        "smoke_passed": False,
+    }
+    return finish(record, extra=extra)
 
 
 # ---------------------------------------------------------------------------
@@ -726,7 +665,7 @@ _SMOKE_LOG_HANDLES: dict[tuple[str, str], tuple[Any, Any]] = {}
 def _recover_pid_from_disk(scenario_id: str, run_id: str) -> int | None:
     """Try to recover a PID from a prior train_smoke_start record on disk."""
     run_dir = harness_reports.ensure_run_dir(scenario_id, run_id)
-    record = _load_task_record(run_dir, "train_smoke_start")
+    record = load_task_record(run_dir, "train_smoke_start")
     if record and record.get("status") == "running" and record.get("pid"):
         return record["pid"]
     return None
@@ -751,7 +690,7 @@ def harness_train_smoke_start(
     mode: str = "simulink",
 ) -> dict[str, Any]:
     """Launch train_smoke as a background process; returns immediately."""
-    record = _base_record(
+    record = create_record(
         "train_smoke_start",
         scenario_id,
         run_id,
@@ -760,43 +699,28 @@ def harness_train_smoke_start(
     run_dir = harness_reports.ensure_run_dir(scenario_id, run_id)
     preconditions_ok, failures = _train_smoke_preconditions(run_dir)
     if not preconditions_ok:
-        record.update(
-            {
-                "command": "",
-                "pid": None,
-                "smoke_started": False,
-            }
-        )
-        _record_failure(
+        record_failure(
             record,
             "precondition_failed",
             "train_smoke requires scenario_status ok, no failed modeling tasks, and model_report run_status ok/warning",
             {"reasons": failures},
         )
-        return _finish(record)
+        return finish(record, extra={"command": "", "pid": None, "smoke_started": False})
 
     try:
         spec = resolve_scenario(scenario_id)
     except ValueError as exc:
-        record.update({"command": "", "pid": None, "smoke_started": False})
-        _record_failure(record, "contract_error", str(exc))
-        return _finish(record)
+        record_failure(record, "contract_error", str(exc))
+        return finish(record, extra={"command": "", "pid": None, "smoke_started": False})
 
     key = (scenario_id, run_id)
     if key in _SMOKE_PROCESSES and _SMOKE_PROCESSES[key].poll() is None:
-        record.update(
-            {
-                "command": "",
-                "pid": _SMOKE_PROCESSES[key].pid,
-                "smoke_started": False,
-            }
-        )
-        _record_failure(
+        record_failure(
             record,
             "contract_error",
             f"train_smoke already running for {scenario_id}/{run_id} (pid {_SMOKE_PROCESSES[key].pid})",
         )
-        return _finish(record)
+        return finish(record, extra={"command": "", "pid": _SMOKE_PROCESSES[key].pid, "smoke_started": False})
 
     checkpoint_dir, log_file = _train_smoke_paths(scenario_id, run_id)
     checkpoint_dir.mkdir(parents=True, exist_ok=True)
@@ -828,18 +752,16 @@ def harness_train_smoke_start(
     _SMOKE_PROCESSES[key] = proc
     _SMOKE_LOG_HANDLES[key] = (stdout_fh, stderr_fh)
 
-    record.update(
-        {
-            "command": subprocess.list2cmdline(command),
-            "pid": proc.pid,
-            "smoke_started": True,
-            "stdout_path": str(stdout_path),
-            "stderr_path": str(stderr_path),
-        }
-    )
-    record["status"] = "running"
-    record["summary"] = [f"smoke_start: pid={proc.pid}, episodes={episodes}, mode={mode} — poll to check completion"]
-    return _finish(record)
+    extra = {
+        "command": subprocess.list2cmdline(command),
+        "pid": proc.pid,
+        "smoke_started": True,
+        "stdout_path": str(stdout_path),
+        "stderr_path": str(stderr_path),
+    }
+    record.status = "running"
+    record.summary = [f"smoke_start: pid={proc.pid}, episodes={episodes}, mode={mode} — poll to check completion"]
+    return finish(record, extra=extra)
 
 
 def harness_train_smoke_poll(
@@ -853,7 +775,7 @@ def harness_train_smoke_poll(
     recovers PID from the persisted train_smoke_start.json record and
     checks whether the OS process is still alive.
     """
-    record = _base_record("train_smoke_poll", scenario_id, run_id, {})
+    record = create_record("train_smoke_poll", scenario_id, run_id, {})
     key = (scenario_id, run_id)
     run_dir = harness_reports.ensure_run_dir(scenario_id, run_id)
 
@@ -863,10 +785,9 @@ def harness_train_smoke_poll(
     if proc is not None:
         returncode = proc.poll()
         if returncode is None:
-            record.update({"process_status": "running", "pid": proc.pid, "smoke_passed": False})
-            record["status"] = "running"
-            record["summary"] = [f"smoke_poll: still running, pid={proc.pid} — poll again later"]
-            return _finish(record)
+            record.status = "running"
+            record.summary = [f"smoke_poll: still running, pid={proc.pid} — poll again later"]
+            return finish(record, extra={"process_status": "running", "pid": proc.pid, "smoke_passed": False})
         # Done — close log file handles.
         for fh in _SMOKE_LOG_HANDLES.pop(key, ()):
             if fh and not fh.closed:
@@ -876,20 +797,20 @@ def harness_train_smoke_poll(
     # --- Slow path: MCP restarted, recover PID from disk ---
     recovered_pid = _recover_pid_from_disk(scenario_id, run_id)
     if recovered_pid is None:
-        record.update({"process_status": "not_found", "smoke_passed": False})
-        _record_failure(
+        record_failure(
             record,
             "contract_error",
             f"No running train_smoke for {scenario_id}/{run_id}. Call train_smoke_start first.",
         )
-        return _finish(record)
+        return finish(record, extra={"process_status": "not_found", "smoke_passed": False})
 
     if _is_pid_alive(recovered_pid):
-        record.update({"process_status": "running", "pid": recovered_pid, "smoke_passed": False,
-                        "recovered_from_disk": True})
-        record["status"] = "running"
-        record["summary"] = [f"smoke_poll: still running (recovered), pid={recovered_pid} — poll again later"]
-        return _finish(record)
+        record.status = "running"
+        record.summary = [f"smoke_poll: still running (recovered), pid={recovered_pid} — poll again later"]
+        return finish(record, extra={
+            "process_status": "running", "pid": recovered_pid,
+            "smoke_passed": False, "recovered_from_disk": True,
+        })
 
     # Process finished but we lost the handle — exit code unknown.
     return _collect_finished(record, run_dir, scenario_id, run_id, recovered_pid, None, key)
@@ -941,7 +862,7 @@ def _parse_training_summary(log_file: Path) -> dict[str, Any] | None:
 
 
 def _collect_finished(
-    record: dict[str, Any],
+    record: Any,
     run_dir: Path,
     scenario_id: str,
     run_id: str,
@@ -967,20 +888,18 @@ def _collect_finished(
     else:
         smoke_passed = returncode == 0
 
-    record.update(
-        {
-            "process_status": "finished",
-            "pid": pid,
-            "exit_code": returncode,
-            "native_log_paths": native_log_paths,
-            "native_checkpoint_paths": native_checkpoint_paths,
-            "smoke_passed": smoke_passed,
-            "training_summary": _parse_training_summary(log_file),
-        }
-    )
+    extra = {
+        "process_status": "finished",
+        "pid": pid,
+        "exit_code": returncode,
+        "native_log_paths": native_log_paths,
+        "native_checkpoint_paths": native_checkpoint_paths,
+        "smoke_passed": smoke_passed,
+        "training_summary": _parse_training_summary(log_file),
+    }
 
     if not smoke_passed:
-        _record_failure(
+        record_failure(
             record,
             "smoke_failed",
             "Training smoke command failed" + (" (exit code unknown — recovered after MCP restart)" if returncode is None else ""),
@@ -989,5 +908,5 @@ def _collect_finished(
 
     _SMOKE_PROCESSES.pop(key, None)
     exit_str = str(returncode) if returncode is not None else "unknown"
-    record["summary"] = [f"smoke_poll: finished, passed={smoke_passed}, exit_code={exit_str}"]
-    return _finish(record)
+    record.summary = [f"smoke_poll: finished, passed={smoke_passed}, exit_code={exit_str}"]
+    return finish(record, extra=extra)

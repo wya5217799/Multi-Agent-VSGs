@@ -51,21 +51,21 @@ def test_scenario_status_resolves_registry_and_writes_manifest(tmp_path, monkeyp
 
 
 def test_model_inspect_queries_underlying_tools(tmp_path, monkeypatch):
-    from engine import harness_reports, harness_tasks
+    from engine import harness_reports, modeling_tasks
 
     monkeypatch.setattr(harness_reports, "HARNESS_ROOT", tmp_path / "results" / "harness")
     monkeypatch.setattr(
-        harness_tasks,
+        modeling_tasks,
         "simulink_load_model",
         lambda model_name: {"ok": True, "loaded_models": [model_name]},
     )
     monkeypatch.setattr(
-        harness_tasks,
+        modeling_tasks,
         "simulink_loaded_models",
         lambda: ["kundur_vsg"],
     )
     monkeypatch.setattr(
-        harness_tasks,
+        modeling_tasks,
         "simulink_get_block_tree",
         lambda model_name, root_path=None, max_depth=3: {
             "path": root_path or model_name,
@@ -73,22 +73,22 @@ def test_model_inspect_queries_underlying_tools(tmp_path, monkeypatch):
         },
     )
     monkeypatch.setattr(
-        harness_tasks,
+        modeling_tasks,
         "simulink_query_params",
         lambda model_name, block_paths, param_names=None: {"items": [{"block_path": block_paths[0], "params": {}}]},
     )
     monkeypatch.setattr(
-        harness_tasks,
+        modeling_tasks,
         "simulink_solver_audit",
         lambda model_name: {"ok": True, "solver_type": "Fixed-step"},
     )
     monkeypatch.setattr(
-        harness_tasks,
+        modeling_tasks,
         "simulink_check_params",
         lambda model_name, depth=5: {"passed": True, "suspects": []},
     )
 
-    result = harness_tasks.harness_model_inspect(
+    result = modeling_tasks.harness_model_inspect(
         scenario_id="kundur",
         run_id="run-001",
         focus_paths=["kundur_vsg/VSG_ES1"],
@@ -104,46 +104,46 @@ def test_model_inspect_queries_underlying_tools(tmp_path, monkeypatch):
 
 
 def test_model_inspect_downgrades_to_warning_on_reference_mismatch(tmp_path, monkeypatch):
-    from engine import harness_reports, harness_tasks
+    from engine import harness_reports, modeling_tasks
 
     monkeypatch.setattr(harness_reports, "HARNESS_ROOT", tmp_path / "results" / "harness")
     monkeypatch.setattr(
-        harness_tasks,
+        modeling_tasks,
         "simulink_load_model",
         lambda model_name: {"ok": True, "loaded_models": [model_name]},
     )
     monkeypatch.setattr(
-        harness_tasks,
+        modeling_tasks,
         "simulink_loaded_models",
         lambda: ["kundur_vsg"],
     )
     monkeypatch.setattr(
-        harness_tasks,
+        modeling_tasks,
         "simulink_get_block_tree",
         lambda model_name, root_path=None, max_depth=3: {"path": root_path or model_name, "children": []},
     )
     monkeypatch.setattr(
-        harness_tasks,
+        modeling_tasks,
         "simulink_query_params",
         lambda model_name, block_paths, param_names=None: {"items": []},
     )
     monkeypatch.setattr(
-        harness_tasks,
+        modeling_tasks,
         "simulink_solver_audit",
         lambda model_name: {"ok": True, "solver_type": "Fixed-step"},
     )
     monkeypatch.setattr(
-        harness_tasks,
+        modeling_tasks,
         "simulink_check_params",
         lambda model_name, depth=5: {"passed": True, "suspects": []},
     )
     monkeypatch.setattr(
-        harness_tasks,
+        modeling_tasks,
         "build_reference_context",
         lambda scenario_id, spec, load_result=None: {"n_agents": 99, "model_name": "kundur_vsg"},
     )
 
-    result = harness_tasks.harness_model_inspect(
+    result = modeling_tasks.harness_model_inspect(
         scenario_id="kundur",
         run_id="run-002",
     )
@@ -219,7 +219,7 @@ def test_train_smoke_is_deprecated_and_fails_fast(tmp_path, monkeypatch):
     The synchronous version blocks the MCP server for the full training
     duration and will time out.  It should never reach subprocess.run.
     """
-    from engine import harness_reports, harness_tasks
+    from engine import harness_reports, smoke_tasks
 
     monkeypatch.setattr(harness_reports, "HARNESS_ROOT", tmp_path / "results" / "harness")
     harness_reports.ensure_run_dir("kundur", "run-001")
@@ -231,9 +231,9 @@ def test_train_smoke_is_deprecated_and_fails_fast(tmp_path, monkeypatch):
         called = True
         raise AssertionError("subprocess should not run for deprecated sync train_smoke")
 
-    monkeypatch.setattr(harness_tasks.subprocess, "run", _never_run)
+    monkeypatch.setattr(smoke_tasks.subprocess, "run", _never_run)
 
-    result = harness_tasks.harness_train_smoke(
+    result = smoke_tasks.harness_train_smoke(
         scenario_id="kundur",
         run_id="run-001",
         episodes=1,
@@ -249,10 +249,10 @@ def test_train_smoke_is_deprecated_and_fails_fast(tmp_path, monkeypatch):
 
 def test_train_smoke_is_deprecated_even_with_green_preconditions(tmp_path, monkeypatch):
     """sync harness_train_smoke must fail with contract_error even when preconditions are green."""
-    from engine import harness_reports, harness_tasks
+    from engine import harness_reports, smoke_tasks
 
     monkeypatch.setattr(harness_reports, "HARNESS_ROOT", tmp_path / "results" / "harness")
-    monkeypatch.setattr(harness_tasks, "_PROJECT_ROOT", tmp_path)
+    monkeypatch.setattr(smoke_tasks, "_PROJECT_ROOT", tmp_path)
     run_dir = _write_green_modeling_records(harness_reports, "kundur", "run-002")
 
     called = False
@@ -262,9 +262,9 @@ def test_train_smoke_is_deprecated_even_with_green_preconditions(tmp_path, monke
         called = True
         raise AssertionError("subprocess should not run for deprecated sync train_smoke")
 
-    monkeypatch.setattr(harness_tasks.subprocess, "run", _never_run)
+    monkeypatch.setattr(smoke_tasks.subprocess, "run", _never_run)
 
-    result = harness_tasks.harness_train_smoke(
+    result = smoke_tasks.harness_train_smoke(
         scenario_id="kundur",
         run_id="run-002",
         episodes=1,
@@ -281,10 +281,10 @@ def test_train_smoke_is_deprecated_even_with_green_preconditions(tmp_path, monke
 
 
 def test_train_smoke_start_launches_and_poll_collects(tmp_path, monkeypatch):
-    from engine import harness_reports, harness_tasks
+    from engine import harness_reports, smoke_tasks
 
     monkeypatch.setattr(harness_reports, "HARNESS_ROOT", tmp_path / "results" / "harness")
-    monkeypatch.setattr(harness_tasks, "_PROJECT_ROOT", tmp_path)
+    monkeypatch.setattr(smoke_tasks, "_PROJECT_ROOT", tmp_path)
     _write_green_modeling_records(harness_reports, "kundur", "run-async")
 
     # Create a fake training script that writes expected artifacts.
@@ -306,7 +306,7 @@ def test_train_smoke_start_launches_and_poll_collects(tmp_path, monkeypatch):
     )
 
     # Start
-    start_result = harness_tasks.harness_train_smoke_start(
+    start_result = smoke_tasks.harness_train_smoke_start(
         scenario_id="kundur",
         run_id="run-async",
         episodes=1,
@@ -319,7 +319,7 @@ def test_train_smoke_start_launches_and_poll_collects(tmp_path, monkeypatch):
     # Wait for process to finish (it's a tiny script).
     import time
     for _ in range(60):
-        poll_result = harness_tasks.harness_train_smoke_poll(
+        poll_result = smoke_tasks.harness_train_smoke_poll(
             scenario_id="kundur",
             run_id="run-async",
         )
@@ -338,12 +338,12 @@ def test_train_smoke_start_launches_and_poll_collects(tmp_path, monkeypatch):
 
 
 def test_train_smoke_start_rejects_without_preconditions(tmp_path, monkeypatch):
-    from engine import harness_reports, harness_tasks
+    from engine import harness_reports, smoke_tasks
 
     monkeypatch.setattr(harness_reports, "HARNESS_ROOT", tmp_path / "results" / "harness")
     harness_reports.ensure_run_dir("kundur", "run-fail")
 
-    result = harness_tasks.harness_train_smoke_start(
+    result = smoke_tasks.harness_train_smoke_start(
         scenario_id="kundur",
         run_id="run-fail",
     )
@@ -352,12 +352,12 @@ def test_train_smoke_start_rejects_without_preconditions(tmp_path, monkeypatch):
 
 
 def test_train_smoke_poll_not_found(tmp_path, monkeypatch):
-    from engine import harness_reports, harness_tasks
+    from engine import harness_reports, smoke_tasks
 
     monkeypatch.setattr(harness_reports, "HARNESS_ROOT", tmp_path / "results" / "harness")
     harness_reports.ensure_run_dir("kundur", "run-ghost")
 
-    result = harness_tasks.harness_train_smoke_poll(
+    result = smoke_tasks.harness_train_smoke_poll(
         scenario_id="kundur",
         run_id="run-ghost",
     )
@@ -367,10 +367,10 @@ def test_train_smoke_poll_not_found(tmp_path, monkeypatch):
 
 def test_poll_training_summary_populated_from_complete_log(tmp_path, monkeypatch):
     """training_summary is parsed from training_log.json after successful training."""
-    from engine import harness_reports, harness_tasks
+    from engine import harness_reports, smoke_tasks
 
     monkeypatch.setattr(harness_reports, "HARNESS_ROOT", tmp_path / "results" / "harness")
-    monkeypatch.setattr(harness_tasks, "_PROJECT_ROOT", tmp_path)
+    monkeypatch.setattr(smoke_tasks, "_PROJECT_ROOT", tmp_path)
     _write_green_modeling_records(harness_reports, "kundur", "run-tsum")
 
     # 11 episodes, last-10 mean = (-80-60-50-40-35-30-25-20-15-10)/10 = -36.5
@@ -405,14 +405,14 @@ def test_poll_training_summary_populated_from_complete_log(tmp_path, monkeypatch
         encoding="utf-8",
     )
 
-    start_result = harness_tasks.harness_train_smoke_start(
+    start_result = smoke_tasks.harness_train_smoke_start(
         scenario_id="kundur", run_id="run-tsum", episodes=1, mode="simulink",
     )
     assert start_result["smoke_started"] is True
 
     import time
     for _ in range(60):
-        poll_result = harness_tasks.harness_train_smoke_poll(
+        poll_result = smoke_tasks.harness_train_smoke_poll(
             scenario_id="kundur", run_id="run-tsum",
         )
         if poll_result["process_status"] != "running":
@@ -439,7 +439,7 @@ def test_poll_training_summary_populated_from_complete_log(tmp_path, monkeypatch
 
 def test_parse_training_summary_returns_none_for_absent_and_invalid(tmp_path):
     """_parse_training_summary is None for missing file or malformed JSON."""
-    from engine.harness_tasks import _parse_training_summary
+    from engine.smoke_tasks import _parse_training_summary
 
     # File does not exist
     assert _parse_training_summary(tmp_path / "no_such_file.json") is None
@@ -461,10 +461,10 @@ def test_parse_training_summary_returns_none_for_absent_and_invalid(tmp_path):
 
 def test_train_smoke_poll_recovers_pid_from_disk_after_restart(tmp_path, monkeypatch):
     """Simulate MCP restart: clear in-memory dict, poll should recover PID from disk."""
-    from engine import harness_reports, harness_tasks
+    from engine import harness_reports, smoke_tasks
 
     monkeypatch.setattr(harness_reports, "HARNESS_ROOT", tmp_path / "results" / "harness")
-    monkeypatch.setattr(harness_tasks, "_PROJECT_ROOT", tmp_path)
+    monkeypatch.setattr(smoke_tasks, "_PROJECT_ROOT", tmp_path)
     run_dir = _write_green_modeling_records(harness_reports, "kundur", "run-recover")
 
     # Create a fake train_script that exits quickly.
@@ -486,7 +486,7 @@ def test_train_smoke_poll_recovers_pid_from_disk_after_restart(tmp_path, monkeyp
     )
 
     # Start normally.
-    start_result = harness_tasks.harness_train_smoke_start(
+    start_result = smoke_tasks.harness_train_smoke_start(
         scenario_id="kundur", run_id="run-recover", episodes=1, mode="simulink",
     )
     assert start_result["smoke_started"] is True
@@ -495,18 +495,18 @@ def test_train_smoke_poll_recovers_pid_from_disk_after_restart(tmp_path, monkeyp
     # Wait for process to finish.
     import time
     for _ in range(60):
-        if harness_tasks._SMOKE_PROCESSES.get(("kundur", "run-recover"), None) is None:
+        if smoke_tasks._SMOKE_PROCESSES.get(("kundur", "run-recover"), None) is None:
             break
-        if harness_tasks._SMOKE_PROCESSES[("kundur", "run-recover")].poll() is not None:
+        if smoke_tasks._SMOKE_PROCESSES[("kundur", "run-recover")].poll() is not None:
             break
         time.sleep(0.2)
 
     # Simulate MCP restart: clear in-memory state.
-    harness_tasks._SMOKE_PROCESSES.clear()
-    harness_tasks._SMOKE_LOG_HANDLES.clear()
+    smoke_tasks._SMOKE_PROCESSES.clear()
+    smoke_tasks._SMOKE_LOG_HANDLES.clear()
 
     # Poll should recover from disk. Process is dead, so it collects results.
-    poll_result = harness_tasks.harness_train_smoke_poll(
+    poll_result = smoke_tasks.harness_train_smoke_poll(
         scenario_id="kundur", run_id="run-recover",
     )
     assert poll_result["process_status"] == "finished"

@@ -492,18 +492,20 @@ def test_train_smoke_poll_recovers_pid_from_disk_after_restart(tmp_path, monkeyp
     assert start_result["smoke_started"] is True
     pid = start_result["pid"]
 
-    # Wait for process to finish.
+    # Wait for process to finish and fully terminate.
     import time
-    for _ in range(60):
-        if smoke_tasks._SMOKE_PROCESSES.get(("kundur", "run-recover"), None) is None:
-            break
-        if smoke_tasks._SMOKE_PROCESSES[("kundur", "run-recover")].poll() is not None:
-            break
-        time.sleep(0.2)
+    proc = smoke_tasks._SMOKE_PROCESSES.get(("kundur", "run-recover"))
+    if proc is not None:
+        proc.wait(timeout=30)
 
     # Simulate MCP restart: clear in-memory state.
     smoke_tasks._SMOKE_PROCESSES.clear()
     smoke_tasks._SMOKE_LOG_HANDLES.clear()
+
+    # On Windows, os.kill(pid, 0) can report a recently-exited process as alive
+    # due to handle caching.  Mock _is_pid_alive to return False so the poll
+    # takes the "process finished" path deterministically.
+    monkeypatch.setattr(smoke_tasks, "_is_pid_alive", lambda pid: False)
 
     # Poll should recover from disk. Process is dead, so it collects results.
     poll_result = smoke_tasks.harness_train_smoke_poll(

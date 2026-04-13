@@ -153,17 +153,18 @@ def test_evidence_contains_matched_text():
 
 def test_model_diagnose_output_has_repair_hints_field(tmp_path, monkeypatch):
     """model_diagnose must always return a repair_hints key (even when empty)."""
-    from engine import harness_reports, harness_tasks
+    from engine import harness_reports, harness_tasks, modeling_tasks
 
     monkeypatch.setattr(harness_reports, "HARNESS_ROOT", tmp_path / "results" / "harness")
 
     # Stub out MATLAB IPC calls.
+    # After Phase 2 decomposition, these live in modeling_tasks, not harness_tasks.
     monkeypatch.setattr(
-        harness_tasks, "simulink_compile_diagnostics",
+        modeling_tasks, "simulink_compile_diagnostics",
         lambda model, mode="update": {"ok": True, "errors": []},
     )
     monkeypatch.setattr(
-        harness_tasks, "simulink_step_diagnostics",
+        modeling_tasks, "simulink_step_diagnostics",
         lambda model, start, stop, capture_warnings=True: {
             "status": "success",
             "top_warnings": [],
@@ -171,7 +172,7 @@ def test_model_diagnose_output_has_repair_hints_field(tmp_path, monkeypatch):
         },
     )
     monkeypatch.setattr(
-        harness_tasks, "_ensure_loaded",
+        modeling_tasks, "_ensure_loaded",
         lambda spec: {"ok": True, "model_name": spec.model_name, "skipped_load": True},
     )
 
@@ -187,19 +188,19 @@ def test_model_diagnose_output_has_repair_hints_field(tmp_path, monkeypatch):
 
 def test_model_diagnose_populates_repair_hints_on_known_error(tmp_path, monkeypatch):
     """model_diagnose with a D1-matching compile error must produce a D1 hint."""
-    from engine import harness_reports, harness_tasks
+    from engine import harness_reports, harness_tasks, modeling_tasks
 
     monkeypatch.setattr(harness_reports, "HARNESS_ROOT", tmp_path / "results" / "harness")
 
     monkeypatch.setattr(
-        harness_tasks, "simulink_compile_diagnostics",
+        modeling_tasks, "simulink_compile_diagnostics",
         lambda model, mode="update": {
             "ok": False,
             "errors": [{"message": "set_param failed: TransitionTimes is not valid"}],
         },
     )
     monkeypatch.setattr(
-        harness_tasks, "simulink_step_diagnostics",
+        modeling_tasks, "simulink_step_diagnostics",
         lambda model, start, stop, capture_warnings=True: {
             "status": "sim_error",
             "top_warnings": [],
@@ -207,7 +208,7 @@ def test_model_diagnose_populates_repair_hints_on_known_error(tmp_path, monkeypa
         },
     )
     monkeypatch.setattr(
-        harness_tasks, "_ensure_loaded",
+        modeling_tasks, "_ensure_loaded",
         lambda spec: {"ok": True, "model_name": spec.model_name, "skipped_load": True},
     )
 

@@ -312,6 +312,7 @@ def train(args):
     print(f"{'='*60}\n")
 
     t_start = time.time()
+    monitor_stopped = False
 
     end_episode = start_episode + args.episodes
     for ep in range(start_episode, end_episode):
@@ -458,6 +459,7 @@ def train(args):
                 os.path.join(args.checkpoint_dir, f"monitor_stop_ep{ep}.pt"),
                 metadata={"start_episode": ep + 1},
             )
+            monitor_stopped = True
             break
 
         # Print progress
@@ -561,8 +563,9 @@ def train(args):
         monitor.save_checkpoint(os.path.join(log_dir, "monitor_state.json"))
         print(f"Monitor data exported to {log_dir}/")
 
+        final_status = "monitor_stopped" if monitor_stopped else "completed"
         write_training_status(run_dir, {
-            "status": "completed",
+            "status": final_status,
             "run_id": run_id,
             "scenario": "ne39",
             "episodes_total": args.episodes,

@@ -64,6 +64,42 @@ def test_read_training_status_returns_none_if_missing(tmp_path):
     assert result is None
 
 
+@pytest.mark.parametrize("monitor_stopped,expected_status", [
+    (True, "monitor_stopped"),
+    (False, "completed"),
+])
+def test_training_status_distinguishes_monitor_stop_from_completion(
+    tmp_path, monitor_stopped, expected_status
+):
+    """Monitor early-stop must write 'monitor_stopped', not 'completed'."""
+    from utils.run_protocol import write_training_status, read_training_status
+    run_dir = tmp_path / "run1"
+    run_dir.mkdir()
+
+    final_status = "monitor_stopped" if monitor_stopped else "completed"
+    write_training_status(run_dir, {
+        "status": final_status,
+        "run_id": "test_run",
+        "scenario": "kundur",
+        "episodes_total": 200,
+        "episodes_done": 100,
+    })
+
+    loaded = read_training_status(run_dir)
+    assert loaded["status"] == expected_status
+
+
+def test_monitor_stopped_status_is_not_completed(tmp_path):
+    """Regression: a monitor-stopped run must never read back as 'completed'."""
+    from utils.run_protocol import write_training_status, read_training_status
+    run_dir = tmp_path / "run1"
+    run_dir.mkdir()
+
+    write_training_status(run_dir, {"status": "monitor_stopped", "episodes_done": 50})
+    loaded = read_training_status(run_dir)
+    assert loaded["status"] != "completed"
+
+
 def test_ensure_run_dir_creates_directory(tmp_path, monkeypatch):
     from utils import run_protocol
     monkeypatch.setattr(run_protocol, "_PROJECT_ROOT", tmp_path)

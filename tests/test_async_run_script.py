@@ -2,14 +2,12 @@
 
 All tests mock simulink_run_script so no MATLAB engine is needed.
 """
-import time
 import threading
 from unittest.mock import patch
 
-import pytest
-
 from engine.mcp_simulink_tools import (
     _SCRIPT_JOBS,
+    _SCRIPT_JOB_LOCK,
     simulink_poll_script,
     simulink_run_script_async,
 )
@@ -17,7 +15,16 @@ from engine.mcp_simulink_tools import (
 
 def _clear_jobs():
     """Helper: drain the module-level job registry between tests."""
-    _SCRIPT_JOBS.clear()
+    with _SCRIPT_JOB_LOCK:
+        _SCRIPT_JOBS.clear()
+
+
+def _wait_done(job_id: str, timeout: float = 3.0) -> None:
+    """Block until the done_event for job_id is set."""
+    with _SCRIPT_JOB_LOCK:
+        job = _SCRIPT_JOBS.get(job_id)
+    if job:
+        job["done_event"].wait(timeout=timeout)
 
 
 # ---------------------------------------------------------------------------
@@ -30,10 +37,10 @@ class TestRunScriptAsync:
         _clear_jobs()
 
     def test_returns_job_id_immediately(self):
-        event = threading.Event()
+        gate = threading.Event()
 
         def slow_run_script(code_or_file, timeout_sec=120):
-            event.wait(timeout=5)
+            gate.wait(timeout=5)
             return {"ok": True, "elapsed": 1.0, "n_warnings": 0, "n_errors": 0,
                     "error_message": "", "important_lines": []}
 
@@ -46,28 +53,29 @@ class TestRunScriptAsync:
             assert result["status"] == "running"
             assert result["job_id"] in result["message"]
         finally:
-            event.set()
+            gate.set()
 
     def test_job_registered_in_dict(self):
-        event = threading.Event()
+        gate = threading.Event()
 
         def slow_run_script(code_or_file, timeout_sec=120):
-            event.wait(timeout=5)
+            gate.wait(timeout=5)
             return {"ok": True, "elapsed": 0.5, "n_warnings": 0, "n_errors": 0,
                     "error_message": "", "important_lines": []}
 
         with patch("engine.mcp_simulink_tools.simulink_run_script", side_effect=slow_run_script):
             result = simulink_run_script_async("test_script")
             job_id = result["job_id"]
-            assert job_id in _SCRIPT_JOBS
+            with _SCRIPT_JOB_LOCK:
+                assert job_id in _SCRIPT_JOBS
 
-        event.set()
+        gate.set()
 
     def test_busy_when_job_already_running(self):
-        event = threading.Event()
+        gate = threading.Event()
 
         def slow_run_script(code_or_file, timeout_sec=120):
-            event.wait(timeout=5)
+            gate.wait(timeout=5)
             return {"ok": True, "elapsed": 0.5, "n_warnings": 0, "n_errors": 0,
                     "error_message": "", "important_lines": []}
 
@@ -80,7 +88,7 @@ class TestRunScriptAsync:
             assert second["status"] == "busy"
             assert "already running" in second["error_message"].lower()
         finally:
-            event.set()
+            gate.set()
 
 
 # ---------------------------------------------------------------------------
@@ -99,10 +107,10 @@ class TestPollScript:
         assert result["job_id"] == "deadbeef"
 
     def test_running_while_in_progress(self):
-        event = threading.Event()
+        gate = threading.Event()
 
         def slow_run_script(code_or_file, timeout_sec=120):
-            event.wait(timeout=5)
+            gate.wait(timeout=5)
             return {"ok": True, "elapsed": 0.5, "n_warnings": 0, "n_errors": 0,
                     "error_message": "", "important_lines": []}
 
@@ -116,7 +124,7 @@ class TestPollScript:
             assert poll_result["status"] == "running"
             assert poll_result["elapsed_sec"] >= 0
         finally:
-            event.set()
+            gate.set()
 
     def test_done_after_completion(self):
         def fast_run_script(code_or_file, timeout_sec=120):
@@ -126,9 +134,7 @@ class TestPollScript:
         with patch("engine.mcp_simulink_tools.simulink_run_script", side_effect=fast_run_script):
             start_result = simulink_run_script_async("quick_script")
             job_id = start_result["job_id"]
-            # Wait for the thread to finish
-            job = _SCRIPT_JOBS[job_id]
-            job["thread"].join(timeout=3)
+            _wait_done(job_id)
             poll_result = simulink_poll_script(job_id)
 
         assert poll_result["ok"] is True
@@ -137,6 +143,37 @@ class TestPollScript:
         assert poll_result["n_errors"] == 0
         assert poll_result["important_lines"] == ["RESULT: done"]
         assert poll_result["elapsed_sec"] >= 0
+
+    def test_done_evicts_job_from_registry(self):
+        """Polling a completed job removes it from _SCRIPT_JOBS (no memory leak)."""
+        def fast_run_script(code_or_file, timeout_sec=120):
+            return {"ok": True, "elapsed": 0.0, "n_warnings": 0, "n_errors": 0,
+                    "error_message": "", "important_lines": []}
+
+        with patch("engine.mcp_simulink_tools.simulink_run_script", side_effect=fast_run_script):
+            start_result = simulink_run_script_async("evict_script")
+            job_id = start_result["job_id"]
+            _wait_done(job_id)
+            poll_result = simulink_poll_script(job_id)
+
+        assert poll_result["status"] == "done"
+        with _SCRIPT_JOB_LOCK:
+            assert job_id not in _SCRIPT_JOBS
+
+    def test_evicted_job_returns_not_found_on_second_poll(self):
+        """Second poll after eviction returns not_found (expected caller behaviour)."""
+        def fast_run_script(code_or_file, timeout_sec=120):
+            return {"ok": True, "elapsed": 0.0, "n_warnings": 0, "n_errors": 0,
+                    "error_message": "", "important_lines": []}
+
+        with patch("engine.mcp_simulink_tools.simulink_run_script", side_effect=fast_run_script):
+            start_result = simulink_run_script_async("evict_script2")
+            job_id = start_result["job_id"]
+            _wait_done(job_id)
+            simulink_poll_script(job_id)           # first poll — evicts
+            second_poll = simulink_poll_script(job_id)  # second poll — not_found
+
+        assert second_poll["status"] == "not_found"
 
     def test_done_with_script_failure(self):
         def failing_run_script(code_or_file, timeout_sec=120):
@@ -147,8 +184,7 @@ class TestPollScript:
         with patch("engine.mcp_simulink_tools.simulink_run_script", side_effect=failing_run_script):
             start_result = simulink_run_script_async("bad_script")
             job_id = start_result["job_id"]
-            job = _SCRIPT_JOBS[job_id]
-            job["thread"].join(timeout=3)
+            _wait_done(job_id)
             poll_result = simulink_poll_script(job_id)
 
         assert poll_result["ok"] is False
@@ -163,8 +199,7 @@ class TestPollScript:
         with patch("engine.mcp_simulink_tools.simulink_run_script", side_effect=raising_run_script):
             start_result = simulink_run_script_async("crash_script")
             job_id = start_result["job_id"]
-            job = _SCRIPT_JOBS[job_id]
-            job["thread"].join(timeout=3)
+            _wait_done(job_id)
             poll_result = simulink_poll_script(job_id)
 
         assert poll_result["ok"] is False
@@ -172,19 +207,21 @@ class TestPollScript:
         assert "Engine crashed" in poll_result["error_message"]
 
     def test_second_job_allowed_after_first_completes(self):
+        """busy guard releases once done_event is set — no thread.join() needed."""
         def fast_run_script(code_or_file, timeout_sec=120):
             return {"ok": True, "elapsed": 0.0, "n_warnings": 0, "n_errors": 0,
                     "error_message": "", "important_lines": []}
 
         with patch("engine.mcp_simulink_tools.simulink_run_script", side_effect=fast_run_script):
             first = simulink_run_script_async("script_1")
-            _SCRIPT_JOBS[first["job_id"]]["thread"].join(timeout=3)
+            # Wait only for done_event — this is what the busy guard checks
+            _wait_done(first["job_id"])
             second = simulink_run_script_async("script_2")
 
         assert second["ok"] is True
         assert second["status"] == "running"
         assert second["job_id"] != first["job_id"]
-        _SCRIPT_JOBS[second["job_id"]]["thread"].join(timeout=3)
+        _wait_done(second["job_id"])
 
 
 # ---------------------------------------------------------------------------

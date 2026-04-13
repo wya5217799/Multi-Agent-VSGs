@@ -768,7 +768,7 @@ def simulink_run_script_async(
         message (str).
     """
     with _SCRIPT_JOB_LOCK:
-        running = [jid for jid, j in _SCRIPT_JOBS.items() if not j["done"]]
+        running = [jid for jid, j in _SCRIPT_JOBS.items() if not j["done_event"].is_set()]
         if running:
             return {
                 "ok": False,
@@ -780,20 +780,27 @@ def simulink_run_script_async(
                 ),
             }
         job_id = uuid.uuid4().hex[:8]
+        done_event = threading.Event()
         job: dict[str, Any] = {
             "code_or_file": code_or_file,
             "timeout_sec": int(timeout_sec),
             "result": None,
-            "done": False,
+            "done_event": done_event,
             "started_at": time.monotonic(),
         }
         _SCRIPT_JOBS[job_id] = job
 
-    def _worker() -> None:
+    # Capture locals so the closure doesn't depend on mutable enclosing scope.
+    _code = code_or_file
+    _timeout = int(timeout_sec)
+    _done_event = done_event
+
+    def _worker(_job: dict = job, _c: str = _code, _t: int = _timeout,
+                _ev: threading.Event = _done_event) -> None:
         try:
-            job["result"] = simulink_run_script(code_or_file, int(timeout_sec))
+            _job["result"] = simulink_run_script(_c, _t)
         except Exception as exc:
-            job["result"] = {
+            _job["result"] = {
                 "ok": False,
                 "elapsed": 0.0,
                 "n_warnings": 0,
@@ -802,7 +809,7 @@ def simulink_run_script_async(
                 "important_lines": [],
             }
         finally:
-            job["done"] = True
+            _ev.set()  # atomic signal: result is visible before event is set
 
     t = threading.Thread(target=_worker, daemon=True, name=f"slx_script_{job_id}")
     job["thread"] = t
@@ -830,7 +837,9 @@ def simulink_poll_script(job_id: str) -> dict:
         elapsed_sec (float), and on completion: n_warnings, n_errors, error_message,
         important_lines (mirrors simulink_run_script output).
     """
-    job = _SCRIPT_JOBS.get(job_id)
+    with _SCRIPT_JOB_LOCK:
+        job = _SCRIPT_JOBS.get(job_id)
+
     if job is None:
         return {
             "ok": False,
@@ -844,8 +853,9 @@ def simulink_poll_script(job_id: str) -> dict:
         }
 
     elapsed = round(time.monotonic() - job["started_at"], 1)
+    done_event: threading.Event = job["done_event"]
 
-    if not job["done"]:
+    if not done_event.is_set():
         return {
             "ok": True,
             "job_id": job_id,
@@ -854,7 +864,11 @@ def simulink_poll_script(job_id: str) -> dict:
             "message": "Script still running — poll again later.",
         }
 
+    # Job is done — read result then evict to prevent unbounded growth.
     result: dict = job.get("result") or {}
+    with _SCRIPT_JOB_LOCK:
+        _SCRIPT_JOBS.pop(job_id, None)
+
     return {
         "ok": bool(result.get("ok", False)),
         "job_id": job_id,
@@ -1701,7 +1715,7 @@ def simulink_signal_snapshot(
 
 
 # ------------------------------------------------------------------
-# Visual capture (internal — not in PUBLIC_TOOLS yet)
+# Visual capture
 # ------------------------------------------------------------------
 
 

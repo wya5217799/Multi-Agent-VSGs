@@ -42,3 +42,7 @@ trigger = "output artifact policy change"
 path = "docs/devlog/commit-guidelines.md"
 purpose = "Commit and devlog standards for preparing commits"
 trigger = "commit workflow change"
+
+[agent_control]
+manifest = "docs/agent_control_manifest.toml"
+reference_py = "engine/harness_reference.py"

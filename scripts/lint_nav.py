@@ -207,6 +207,52 @@ def check_harness_consistency() -> list[str]:
     return errors
 
 
+def check_agent_control_manifest() -> list[str]:
+    """Validate docs/agent_control_manifest.toml structural integrity."""
+    try:
+        import tomllib
+    except ImportError:
+        return []  # Python < 3.11 without tomllib: skip silently
+
+    errors = []
+    manifest_path = REPO_ROOT / "docs" / "agent_control_manifest.toml"
+
+    if not manifest_path.exists():
+        errors.append("  agent_control_manifest.toml -> NOT FOUND at docs/agent_control_manifest.toml")
+        return errors
+
+    try:
+        data = tomllib.loads(manifest_path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        errors.append(f"  agent_control_manifest.toml -> PARSE ERROR: {exc}")
+        return errors
+
+    # Check reference_py
+    ref_py = data.get("reference_py", "")
+    if not (REPO_ROOT / ref_py).exists():
+        errors.append(f"  agent_control_manifest.toml: reference_py `{ref_py}` -> NOT FOUND")
+
+    # Check reference_paths for both control sections
+    for section in ("model_control", "training_control"):
+        sec = data.get(section, {})
+        for rel in sec.get("reference_paths", []):
+            if not (REPO_ROOT / rel).exists():
+                errors.append(
+                    f"  agent_control_manifest.toml [{section}]: `{rel}` -> NOT FOUND"
+                )
+
+    # Check AGENTS.md mentions both control lines
+    agents_md = REPO_ROOT / "AGENTS.md"
+    if agents_md.exists():
+        text = agents_md.read_text(encoding="utf-8")
+        if "Model Control" not in text:
+            errors.append("  AGENTS.md: must mention 'Model Control'")
+        if "Training Control" not in text:
+            errors.append("  AGENTS.md: must mention 'Training Control'")
+
+    return errors
+
+
 def main():
     all_errors = []
     checked = 0
@@ -219,6 +265,9 @@ def main():
 
     # Cross-check harness consistency
     all_errors.extend(check_harness_consistency())
+
+    # Validate agent control manifest
+    all_errors.extend(check_agent_control_manifest())
 
     if not checked:
         print("FAIL: No navigation files found (wrong working directory?).")

@@ -1,0 +1,49 @@
+# Agent Control Manifest
+#
+# Single registration source for the two control lines.
+# Validated by tests/test_agent_control_manifest.py.
+#
+# Rules:
+#   - reference_py: code-backed reference anchor (single, shared by both lines)
+#   - model_control: model correctness / diagnosis / repair / smoke gate
+#   - training_control: run lifecycle / verdicts / comparison
+#
+# Do NOT create a separate training_reference.py.
+# Do NOT add a second code-backed reference anchor.
+
+version = 1
+reference_py = "engine/harness_reference.py"
+
+[model_control]
+entry_doc = "AGENTS.md"
+artifact_root = "results/harness"
+reference_paths = [
+  "docs/harness/2026-04-05-simulink-harness-v1.md",
+]
+task_family = [
+  "scenario_status",
+  "model_inspect",
+  "model_patch_verify",
+  "model_diagnose",
+  "model_report",
+  "train_smoke_start",
+  "train_smoke_poll",
+]
+
+[training_control]
+entry_doc = "AGENTS.md"
+artifact_root = "results/sim_*"
+reference_paths = [
+  "utils/run_protocol.py",
+  "utils/artifact_writer.py",
+  "utils/monitor.py",
+  "utils/evaluate_run.py",
+  "scenarios/kundur/train_simulink.py",
+  "scenarios/new_england/train_simulink.py",
+]
+task_family = [
+  "run_lifecycle",
+  "run_polling",
+  "run_verdict",
+  "run_compare",
+]

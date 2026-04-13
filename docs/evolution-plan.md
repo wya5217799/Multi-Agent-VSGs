@@ -4,17 +4,18 @@
 > **维护**: 完成一项打勾+填日期；阻塞时写原因；每次改动更新 Last Updated。
 > **上游计划**:
 >   - `docs/superpowers/plans/2026-04-12-harness-type-contracts-and-decomposition.md` (Phase 1-3 done + Phase 4-7 directional)
->   - `docs/superpowers/plans/2026-04-12-agent-control-layer-restructure.md` (Task 1-4 全部未开始)
+>   - `docs/superpowers/plans/2026-04-12-agent-control-layer-restructure.md` (Task 1-4 全部完成 2026-04-13)
 
-**Last Updated**: 2026-04-14
-**Current Phase**: B/C/D 全部任务完成（含 D2）
+**Last Updated**: 2026-04-13
+**Current Phase**: B/C/D 全部完成 + Agent Control Layer Task 1-4 全部完成
 
 ---
 
-## 当前工具表面（已验证 2026-04-14，D1 后）
+## 当前工具表面（已验证 2026-04-13，Task 3 后）
 
-`engine/mcp_server.py` PUBLIC_TOOLS: **34 个**（7 harness + 27 simulink）
+`engine/mcp_server.py` PUBLIC_TOOLS: **36 个**（2 training + 7 harness + 27 simulink）
 `engine/mcp_simulink_tools.py` 定义: **56 个** simulink_* 函数（新增 run_script_async + poll_script）→ 29 个未暴露
+`engine/training_tasks.py` 新增: training_evaluate_run + training_compare_runs（thin wrapper over evaluate_run.py）
 
 B1a 审计分类（原 54）：expose=2 / merged=5 / deprecated=3 / scenario=1 / evaluate=20 / exposed=23
 
@@ -155,7 +156,7 @@ B1a 审计分类（原 54）：expose=2 / merged=5 / deprecated=3 / scenario=1 /
 
 | ID | 任务 | 状态 | 备注 |
 |----|------|------|------|
-| Z1 | Graph policy 文档 (`docs/agent_layer/graph-policy.md`) | `ready` | 10 min |
+| Z1 | Graph policy 文档 (`docs/agent_layer/graph-policy.md`) | `done` 2026-04-13 (f3cdcf4) | 10 min |
 | Z2 | `vsg_helpers/` 前缀清理 (vsg_ → slx_) | `deferred` | 准备独立发布时再改 |
 
 ---

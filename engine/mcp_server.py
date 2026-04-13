@@ -1,6 +1,6 @@
 """engine/mcp_server.py - Python MCP server for structured Simulink access.
 
-Registers a curated set of ~20 workflow-level tools for Claude.
+Registers a curated set of ~25 workflow-level tools for Claude.
 Lower-level helpers remain importable from mcp_simulink_tools but are NOT
 exposed to the model, reducing tool-selection confusion.
 
@@ -67,12 +67,15 @@ from engine.mcp_simulink_tools import (
     simulink_patch_and_verify,
     # --- Escape hatch (1) ---
     simulink_run_script,
+    # --- Visual capture (2) ---
+    simulink_screenshot,
+    simulink_capture_figure,
 )
 
 mcp = FastMCP(
     "simulink-tools",
     instructions=(
-        "Structured Simulink model inspection and execution (~21 tools). "
+        "Structured Simulink model inspection and execution (~25 tools). "
         "Prefer the harness_* task tools for Kundur/NE39 Simulink workflows. "
         "Use simulink_preflight to discover block parameters before placing. "
         "Use simulink_run_script to run build scripts or set_param operations "
@@ -116,6 +119,8 @@ PUBLIC_TOOLS = [
     simulink_solver_audit,
     simulink_patch_and_verify,
     simulink_run_script,
+    simulink_screenshot,
+    simulink_capture_figure,
 ]
 
 for tool in PUBLIC_TOOLS:

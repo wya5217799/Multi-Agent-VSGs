@@ -55,7 +55,7 @@ def simulink_inspect_model(
         depth: Search depth for block discovery (default 3)
         max_blocks: Maximum blocks to return in detail (default 60); full count still reported
         include_params: Include key_params per block (default False — use
-            simulink_get_block_params for per-block params to avoid token overflow)
+            simulink_query_params for per-block params to avoid token overflow)
         subsystem_prefix: Only return blocks whose path starts with this string
             (e.g. 'kundur_vsg/VSG_ES1'). Useful for large models to avoid token overflow.
 
@@ -1568,6 +1568,146 @@ def simulink_signal_snapshot(
         "read_ok": bool(raw.get("read_ok", False)),
         "warnings": _to_list(raw.get("warnings", [])),
         "error_message": str(raw.get("error_message", "")),
+    }
+
+
+# ------------------------------------------------------------------
+# Visual capture (internal — not in PUBLIC_TOOLS yet)
+# ------------------------------------------------------------------
+
+
+def simulink_screenshot(
+    model_name: str,
+    system_path: str | None = None,
+    resolution: _IntArg = 150,
+    return_base64: _BoolArg = False,
+) -> dict:
+    """Capture a Simulink model or subsystem diagram as a PNG image.
+
+    The image is saved to a temporary file.  By default only the file path
+    and metadata are returned (compact JSON).  Set *return_base64=True* to
+    also include the raw image bytes as a base64 string — use sparingly as
+    this inflates the response payload.
+
+    Args:
+        model_name: Simulink model name (without .slx).  The model will be
+            loaded automatically if needed.
+        system_path: Optional subsystem path (e.g. 'kundur_vsg/VSG_ES1').
+            When *None*, the top-level model diagram is captured.
+        resolution: DPI for the output PNG (default 150).
+        return_base64: If True, add an ``image_base64`` field to the result.
+
+    Returns:
+        dict with ok, artifact_path, width, height, format, sha256,
+        and optionally image_base64.
+    """
+    import base64
+    import hashlib
+    import tempfile
+
+    session = MatlabSession.get()
+    loaded_model_name = _ensure_model_bootstrapped(session, model_name)
+    target = system_path if system_path else loaded_model_name
+
+    tmp_dir = tempfile.mkdtemp(prefix="slx_screenshot_")
+    out_path = str(Path(tmp_dir) / f"{target.replace('/', '__')}.png")
+
+    raw = session.call("vsg_screenshot", target, out_path, float(resolution))
+    ok = bool(raw.get("ok", False))
+
+    result: dict = {
+        "ok": ok,
+        "artifact_path": out_path if ok else "",
+        "width": int(raw.get("width", 0)),
+        "height": int(raw.get("height", 0)),
+        "format": "png",
+        "sha256": "",
+        "error_message": str(raw.get("error_msg", "")),
+    }
+
+    if ok and Path(out_path).exists():
+        data = Path(out_path).read_bytes()
+        result["sha256"] = hashlib.sha256(data).hexdigest()
+        if return_base64:
+            result["image_base64"] = base64.b64encode(data).decode("ascii")
+
+    return result
+
+
+def simulink_capture_figure(
+    figure_id: _IntArg | None = None,
+    capture_all: _BoolArg = False,
+    resolution: _IntArg = 150,
+    return_base64: _BoolArg = False,
+) -> dict:
+    """Capture one or more open MATLAB figure windows as PNG images.
+
+    By default captures the most recent figure (gcf).  Pass an explicit
+    *figure_id* to target a specific figure, or set *capture_all=True* to
+    capture every open figure window.
+
+    Args:
+        figure_id: MATLAB figure number to capture.  *None* means the most
+            recent figure (gcf).  Ignored when *capture_all* is True.
+        capture_all: When True, capture all open figure windows.
+        resolution: DPI for the output PNG (default 150).
+        return_base64: If True, add ``image_base64`` to each figure entry.
+
+    Returns:
+        dict with ok, count, figures (list of dicts with id, artifact_path,
+        title, width, height, format, sha256, and optionally image_base64),
+        and error_message.
+    """
+    import base64
+    import hashlib
+    import tempfile
+
+    session = MatlabSession.get()
+    tmp_dir = tempfile.mkdtemp(prefix="slx_figure_")
+
+    matlab_fig_id = float(figure_id) if figure_id is not None else 0.0
+
+    raw = session.call(
+        "vsg_capture_figure",
+        tmp_dir,
+        matlab_fig_id,
+        bool(capture_all),
+        float(resolution),
+    )
+
+    ok = bool(raw.get("ok", False))
+    error_msg = str(raw.get("error_msg", ""))
+
+    figures: list[dict] = []
+    if ok:
+        raw_figs = raw.get("figures", [])
+        if isinstance(raw_figs, dict):
+            raw_figs = [raw_figs]
+        for fig in _to_list(raw_figs) if not isinstance(raw_figs, list) else raw_figs:
+            if not isinstance(fig, dict):
+                continue
+            fig_path = str(fig.get("path", ""))
+            entry: dict = {
+                "id": int(fig.get("id", 0)),
+                "artifact_path": fig_path,
+                "title": str(fig.get("title", "")),
+                "width": int(fig.get("width", 0)),
+                "height": int(fig.get("height", 0)),
+                "format": "png",
+                "sha256": "",
+            }
+            if fig_path and Path(fig_path).exists():
+                data = Path(fig_path).read_bytes()
+                entry["sha256"] = hashlib.sha256(data).hexdigest()
+                if return_base64:
+                    entry["image_base64"] = base64.b64encode(data).decode("ascii")
+            figures.append(entry)
+
+    return {
+        "ok": ok,
+        "count": len(figures),
+        "figures": figures,
+        "error_message": error_msg,
     }
 
 

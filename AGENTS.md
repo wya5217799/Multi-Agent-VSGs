@@ -59,4 +59,4 @@ For project memory index, see `MEMORY.md`. For historical architecture decisions
   - stable rules in `docs/decisions/`
   - paper-facing summaries in `docs/paper/`
 
-For relational navigation and drift discovery, graph output may be consulted as a secondary aid.
+For relational navigation and drift discovery, graph output may be consulted as a secondary aid. See `docs/agent_layer/graph-policy.md`.

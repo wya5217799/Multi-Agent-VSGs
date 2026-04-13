@@ -316,7 +316,7 @@ def harness_model_inspect(
             },
             "recommended_next_task": (recommended_next_tasks_for("model_inspect", "failed") or ["model_diagnose"])[0],
         }
-        record.summary = [f"model_inspect FAILED ({failure_class}): {hint}"]
+        record.summary.append(f"model_inspect FAILED ({failure_class}): {hint}")
         return finish(record, extra=extra)
 
     extra = {
@@ -505,7 +505,7 @@ def harness_model_diagnose(
             "repair_hints": [],
             "recommended_next_task": (recommended_next_tasks_for("model_diagnose", "failed") or ["model_patch_verify"])[0],
         }
-        record.summary = [f"diagnose FAILED ({diag_failure_class}): {diag_hint}"]
+        record.summary.append(f"diagnose FAILED ({diag_failure_class}): {diag_hint}")
         return finish(record, extra=extra)
 
     suspected_root_causes = [entry.get("message", "") for entry in compile_info.get("errors", []) if entry.get("message")]
@@ -525,10 +525,10 @@ def harness_model_diagnose(
     }
     if (not compile_info.get("ok", False)) or step_info.get("status") not in {"success", "ok"}:
         record_failure(record, "model_error", "Diagnostics found compile or simulation issues")
-    record.summary = [
+    record.summary.append(
         f"diagnose: compile_ok={compile_info.get('ok', False)}, step={step_info.get('status', '')}, "
         f"causes={len(suspected_root_causes)}, hints={len(repair_hints)}"
-    ]
+    )
     return finish(record, extra=extra)
 
 

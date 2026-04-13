@@ -183,7 +183,7 @@ def _collect_finished(
 
     _SMOKE_PROCESSES.pop(key, None)
     exit_str = str(returncode) if returncode is not None else "unknown"
-    record.summary = [f"smoke_poll: finished, passed={smoke_passed}, exit_code={exit_str}"]
+    record.summary.append(f"smoke_poll: finished, passed={smoke_passed}, exit_code={exit_str}")
     return finish(record, extra=extra)
 
 
@@ -307,7 +307,7 @@ def harness_train_smoke_start(
         "stderr_path": str(stderr_path),
     }
     record.status = "running"
-    record.summary = [f"smoke_start: pid={proc.pid}, episodes={episodes}, mode={mode} — poll to check completion"]
+    record.summary.append(f"smoke_start: pid={proc.pid}, episodes={episodes}, mode={mode} — poll to check completion")
     return finish(record, extra=extra)
 
 
@@ -333,7 +333,7 @@ def harness_train_smoke_poll(
         returncode = proc.poll()
         if returncode is None:
             record.status = "running"
-            record.summary = [f"smoke_poll: still running, pid={proc.pid} — poll again later"]
+            record.summary.append(f"smoke_poll: still running, pid={proc.pid} — poll again later")
             return finish(record, extra={"process_status": "running", "pid": proc.pid, "smoke_passed": False})
         # Done — close log file handles.
         for fh in _SMOKE_LOG_HANDLES.pop(key, ()):
@@ -353,7 +353,7 @@ def harness_train_smoke_poll(
 
     if _is_pid_alive(recovered_pid):
         record.status = "running"
-        record.summary = [f"smoke_poll: still running (recovered), pid={recovered_pid} — poll again later"]
+        record.summary.append(f"smoke_poll: still running (recovered), pid={recovered_pid} — poll again later")
         return finish(record, extra={
             "process_status": "running", "pid": recovered_pid,
             "smoke_passed": False, "recovered_from_disk": True,

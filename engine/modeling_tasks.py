@@ -174,7 +174,7 @@ def harness_scenario_status(
         "reference_summary": summarize_reference_manifest(reference_manifest),
         "notes": [],
     }
-    record.summary = [f"scenario '{scenario_id}' resolved: model={spec.model_name}"]
+    record.summary.append(f"scenario '{scenario_id}' resolved: model={spec.model_name}")
     return finish(record, extra=extra)
 
 
@@ -571,8 +571,8 @@ def harness_model_report(
     if include_summary_md:
         summary_path = _write_summary(run_dir, run_status, completed_tasks, key_findings, recommended_followups, memory_hints)
         record.artifacts.append(str(summary_path))
-    record.summary = [
+    record.summary.append(
         f"run_report: status={run_status}, tasks={len(completed_tasks)}, "
         f"blocked={len(failed_tasks)}, findings={len(key_findings)}"
-    ]
+    )
     return finish(record, extra=extra)

@@ -47,10 +47,11 @@ def _scenario_ok(scenario_id: str, run_id: str) -> dict:
 def _inject_load_error(monkeypatch):
     """Patch _ensure_loaded to raise RuntimeError so model_inspect returns failed."""
     import engine.modeling_tasks as mt
-    monkeypatch.setattr(mt, "_ensure_loaded",
-                        lambda _spec: (_ for _ in ()).throw(
-                            RuntimeError("injected load error")
-                        ))
+
+    def _raise(_spec):
+        raise RuntimeError("injected load error")
+
+    monkeypatch.setattr(mt, "_ensure_loaded", _raise)
 
 
 # ── 1. Scenario-based integration ─────────────────────────────────────────────
@@ -207,10 +208,7 @@ class TestFaultInjection:
         run_dir = _redirect("kundur", "fc-fault-002", tmp_path, monkeypatch)
         _scenario_ok("kundur", "fc-fault-002")
 
-        import engine.modeling_tasks as mt
-
-        monkeypatch.setattr(mt, "_ensure_loaded",
-                            lambda _: (_ for _ in ()).throw(RuntimeError("injected")))
+        _inject_load_error(monkeypatch)
         harness_model_inspect(scenario_id="kundur", run_id="fc-fault-002")
 
         record = load_task_record(run_dir, "model_inspect")
@@ -238,9 +236,7 @@ class TestFaultInjection:
         _redirect("kundur", "fc-fault-004", tmp_path, monkeypatch)
         _scenario_ok("kundur", "fc-fault-004")
 
-        import engine.modeling_tasks as mt
-        monkeypatch.setattr(mt, "_ensure_loaded",
-                            lambda _: (_ for _ in ()).throw(RuntimeError("injected")))
+        _inject_load_error(monkeypatch)
         result = harness_model_inspect(scenario_id="kundur", run_id="fc-fault-004")
 
         assert result["status"] == "failed"
@@ -354,6 +350,28 @@ class TestSummaryAdvisoryPreservation:
             edits=[{"block": "VSG1/H", "param": "Value", "value": "5"}],
         )
         # Status will be failed (no MATLAB) — advisory must survive
+        advisories = [s for s in r.get("summary", []) if "transition_advisory" in s]
+        assert len(advisories) >= 1, (
+            f"Expected transition_advisory in summary but got: {r.get('summary', [])}"
+        )
+
+    def test_model_diagnose_failed_preserves_transition_advisory(
+        self, tmp_path, monkeypatch
+    ):
+        """model_diagnose FAILED path must not overwrite a transition_advisory.
+
+        Regression guard for the fix in commit 8d7f480: calling model_diagnose
+        before model_inspect triggers an advisory; the except-path summary
+        assignment must preserve it.
+        """
+        _redirect("kundur", "fc-adv-004", tmp_path, monkeypatch)
+        _scenario_ok("kundur", "fc-adv-004")
+        # diagnose before model_inspect → out-of-order advisory; no MATLAB → fails
+        r = harness_model_diagnose(
+            scenario_id="kundur",
+            run_id="fc-adv-004",
+            diagnostic_window={"start_time": 0.0, "stop_time": 1.0},
+        )
         advisories = [s for s in r.get("summary", []) if "transition_advisory" in s]
         assert len(advisories) >= 1, (
             f"Expected transition_advisory in summary but got: {r.get('summary', [])}"

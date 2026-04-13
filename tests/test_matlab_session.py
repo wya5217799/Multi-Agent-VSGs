@@ -1,7 +1,9 @@
 # tests/test_matlab_session.py
 """Tests for engine.exceptions and engine.matlab_session."""
+import io
+import logging
 import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import ANY, MagicMock, patch
 
 
 class TestMatlabCallError:
@@ -69,7 +71,8 @@ class TestMatlabSessionCall:
         session._connect()
         result = session.call("my_func", 1, 2, nargout=1)
 
-        mock_eng.my_func.assert_called_once_with(1, 2, nargout=1)
+        # stdout/stderr are now injected by default to prevent JSON-RPC corruption
+        mock_eng.my_func.assert_called_once_with(1, 2, nargout=1, stdout=ANY, stderr=ANY)
         assert result == 42
 
     @patch("engine.matlab_session.matlab_engine", create=True)
@@ -101,6 +104,7 @@ class TestMatlabSessionCall:
         session._connect()
         result = session.call("my_func", 1, nargout=1, timeout=5)
 
+        # background=True path does NOT inject stdout/stderr (async calls don't support it)
         mock_eng.my_func.assert_called_once_with(1, nargout=1, background=True)
         future.result.assert_called_once_with(timeout=5)
         assert result == 42
@@ -196,7 +200,7 @@ class TestMatlabSessionEval:
         mock_me.start_matlab.return_value = mock_eng
 
         call_count = 0
-        def fake_eval(code, nargout):
+        def fake_eval(code, nargout, **kwargs):
             nonlocal call_count
             call_count += 1
             if call_count == 1:
@@ -209,3 +213,82 @@ class TestMatlabSessionEval:
         session._connect()
         session.eval("x = 1;", nargout=0)
         assert call_count == 2
+
+
+class TestMatlabStdoutIsolation:
+    """Verify MATLAB output is captured and does not leak to sys.stdout."""
+
+    def setup_method(self):
+        from engine.matlab_session import MatlabSession
+        MatlabSession._instances.clear()
+
+    @patch("engine.matlab_session.matlab_engine", create=True)
+    def test_call_passes_stringio_stdout_to_engine(self, mock_me):
+        """call() injects io.StringIO buffers so MATLAB output never hits sys.stdout."""
+        from engine.matlab_session import MatlabSession
+        mock_eng = MagicMock()
+        mock_me.start_matlab.return_value = mock_eng
+        mock_eng.my_func = MagicMock(return_value=None)
+
+        session = MatlabSession.get()
+        session._connect()
+        session.call("my_func", nargout=0)
+
+        call_kwargs = mock_eng.my_func.call_args.kwargs
+        assert "stdout" in call_kwargs
+        assert "stderr" in call_kwargs
+        assert hasattr(call_kwargs["stdout"], "write"), "stdout must be a writable stream"
+        assert hasattr(call_kwargs["stderr"], "write"), "stderr must be a writable stream"
+
+    @patch("engine.matlab_session.matlab_engine", create=True)
+    def test_call_caller_supplied_streams_are_honoured(self, mock_me):
+        """A caller-supplied stdout stream overrides the default io.StringIO()."""
+        from engine.matlab_session import MatlabSession
+        mock_eng = MagicMock()
+        mock_me.start_matlab.return_value = mock_eng
+        mock_eng.my_func = MagicMock(return_value=None)
+
+        custom_stdout = io.StringIO()
+        session = MatlabSession.get()
+        session._connect()
+        session.call("my_func", nargout=0, stdout=custom_stdout)
+
+        assert mock_eng.my_func.call_args.kwargs["stdout"] is custom_stdout
+
+    @patch("engine.matlab_session.matlab_engine", create=True)
+    def test_call_captured_output_logged_at_debug(self, mock_me, caplog):
+        """MATLAB stdout text is forwarded to logger.debug, not printed."""
+        from engine.matlab_session import MatlabSession
+
+        def fake_func(*args, nargout=1, stdout=None, stderr=None, **kw):
+            if stdout is not None:
+                stdout.write("MATLAB disp output\n")
+            return None
+
+        mock_eng = MagicMock()
+        mock_eng.my_func = MagicMock(side_effect=fake_func)
+        mock_me.start_matlab.return_value = mock_eng
+
+        session = MatlabSession.get()
+        session._connect()
+        with caplog.at_level(logging.DEBUG, logger="engine.matlab_session"):
+            session.call("my_func", nargout=0)
+
+        assert any("MATLAB disp output" in r.message for r in caplog.records)
+
+    @patch("engine.matlab_session.matlab_engine", create=True)
+    def test_eval_passes_stringio_to_engine_eval(self, mock_me):
+        """eval() injects io.StringIO so MATLAB output never hits sys.stdout."""
+        from engine.matlab_session import MatlabSession
+        mock_eng = MagicMock()
+        mock_me.start_matlab.return_value = mock_eng
+        mock_eng.eval = MagicMock(return_value=None)
+
+        session = MatlabSession.get()
+        session._connect()
+        session.eval("disp('hi')", nargout=0)
+
+        call_kwargs = mock_eng.eval.call_args.kwargs
+        assert "stdout" in call_kwargs
+        assert "stderr" in call_kwargs
+        assert hasattr(call_kwargs["stdout"], "write")

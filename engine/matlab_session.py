@@ -11,6 +11,7 @@ Provides a singleton-per-session_id wrapper around matlab.engine with:
 
 from __future__ import annotations
 
+import io
 import logging
 import os
 import time
@@ -33,6 +34,16 @@ def _get_matlab_engine():
         except ImportError:
             pass
     return matlab_engine
+
+
+def _log_matlab_output(label: str, stdout: Any, stderr: Any) -> None:
+    """Route any captured MATLAB console output to the Python logger."""
+    stdout_text = stdout.getvalue() if hasattr(stdout, "getvalue") else ""
+    stderr_text = stderr.getvalue() if hasattr(stderr, "getvalue") else ""
+    if stdout_text.strip():
+        logger.debug("MATLAB stdout [%s]: %s", label, stdout_text.strip())
+    if stderr_text.strip():
+        logger.warning("MATLAB stderr [%s]: %s", label, stderr_text.strip())
 
 
 class MatlabSession:
@@ -149,15 +160,29 @@ class MatlabSession:
 
         Preferred over eval() – enables passive reconnect and structured
         error reporting.
+
+        MATLAB console output (disp, fprintf, warnings) is captured into
+        io.StringIO() by default to prevent it from leaking into Python's
+        stdout and corrupting MCP's JSON-RPC transport.  Callers may supply
+        their own ``stdout``/``stderr`` streams via kwargs to override.
         """
         eng = self._get_engine()
         t0 = time.perf_counter()
         timeout = kwargs.pop("timeout", None)
+        # Pop stdout/stderr so we control where MATLAB output lands.
+        # Default: io.StringIO() — output is captured and routed to logger.
+        # background=True calls use a different code path; stdout/stderr are
+        # not passed there because the async future pattern doesn't support it.
+        _stdout: Any = kwargs.pop("stdout", io.StringIO())
+        _stderr: Any = kwargs.pop("stderr", io.StringIO())
 
         def _invoke(target_eng: Any) -> Any:
             if timeout is None:
-                return getattr(target_eng, func_name)(*args, nargout=nargout, **kwargs)
+                return getattr(target_eng, func_name)(
+                    *args, nargout=nargout, stdout=_stdout, stderr=_stderr, **kwargs
+                )
 
+            # background=True: skip stdout/stderr redirect (unsupported for async calls)
             call_kwargs = dict(kwargs)
             call_kwargs["background"] = True
             future = getattr(target_eng, func_name)(*args, nargout=nargout, **call_kwargs)
@@ -194,8 +219,12 @@ class MatlabSession:
                     args,
                     self._format_exception_message(exc),
                 ) from exc
+
         elapsed = (time.perf_counter() - t0) * 1000
         logger.debug("MATLAB %s() -> %.1f ms", func_name, elapsed)
+
+        # Log any MATLAB console output at debug/warning level
+        _log_matlab_output(func_name, _stdout, _stderr)
         return result
 
     def eval(self, code: str, nargout: int = 0) -> Any:
@@ -204,10 +233,18 @@ class MatlabSession:
         Prefer call() when possible — but unlike the original, this now
         wraps errors in MatlabCallError and handles reconnect identically
         to call().
+
+        MATLAB console output is captured into io.StringIO() to prevent
+        it from leaking into Python's stdout and corrupting MCP's JSON-RPC
+        transport.  Captured text is routed to the Python logger instead.
         """
         eng = self._get_engine()
+        _stdout = io.StringIO()
+        _stderr = io.StringIO()
         try:
-            return eng.eval(code, nargout=nargout)
+            result = eng.eval(code, nargout=nargout, stdout=_stdout, stderr=_stderr)
+            _log_matlab_output(f"eval({code!r})", _stdout, _stderr)
+            return result
         except Exception as exc:
             if self._is_communication_error(exc):
                 logger.warning(
@@ -215,8 +252,12 @@ class MatlabSession:
                 )
                 self._eng = None
                 eng = self._get_engine()
+                _stdout2 = io.StringIO()
+                _stderr2 = io.StringIO()
                 try:
-                    return eng.eval(code, nargout=nargout)
+                    result = eng.eval(code, nargout=nargout, stdout=_stdout2, stderr=_stderr2)
+                    _log_matlab_output(f"eval({code!r})", _stdout2, _stderr2)
+                    return result
                 except Exception as exc2:
                     raise MatlabCallError(
                         f"eval({code!r})",

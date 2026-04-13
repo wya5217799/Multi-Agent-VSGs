@@ -3,7 +3,7 @@
 from pathlib import Path
 
 import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import ANY, MagicMock, patch
 
 
 class TestSimulinkHelperInventory:
@@ -82,7 +82,7 @@ class TestSimulinkGetBlockParams:
 
         result = simulink_get_block_params("test_model", "mdl/Breaker_1")
 
-        mock_eng.load_system.assert_called_once_with("test_model", nargout=0)
+        mock_eng.load_system.assert_called_once_with("test_model", nargout=0, stdout=ANY, stderr=ANY)
         assert result["R_closed"] == "0.001"
         assert result["threshold"] == "0.5"
 
@@ -127,6 +127,8 @@ class TestSimulinkMergedFacades:
             "mdl",
             ["mdl/G1", "mdl/G2"],
             nargout=1,
+            stdout=ANY,
+            stderr=ANY,
         )
         assert result["items"][1]["params"]["Gain"] == "3"
         assert result["items"][0]["missing_params"] == []
@@ -153,6 +155,8 @@ class TestSimulinkMergedFacades:
             ["mdl/G1"],
             ["Gain", "SampleTime"],
             nargout=1,
+            stdout=ANY,
+            stderr=ANY,
         )
         assert result["items"][0]["missing_params"] == ["SampleTime"]
 
@@ -178,6 +182,8 @@ class TestSimulinkMergedFacades:
             ["mdl/G1"],
             ["Gain"],
             nargout=1,
+            stdout=ANY,
+            stderr=ANY,
         )
         assert result["items"][0]["params"]["Gain"] == "2"
 
@@ -203,6 +209,8 @@ class TestSimulinkMergedFacades:
             ["mdl/G1"],
             ["Gain", "SampleTime"],
             nargout=1,
+            stdout=ANY,
+            stderr=ANY,
         )
         assert result["items"][0]["params"]["SampleTime"] == "0"
 
@@ -234,6 +242,8 @@ class TestSimulinkMergedFacades:
             True,
             True,
             nargout=1,
+            stdout=ANY,
+            stderr=ANY,
         )
         assert result["created_branch"] is True
 
@@ -302,7 +312,7 @@ class TestSimulinkStructuredOps:
         expected_model_dir = str(expected_model.parent)
         expected_script_dir = str(expected_model.parent.parent / "matlab_scripts")
 
-        mock_eng.load_system.assert_called_once_with(str(expected_model), nargout=0)
+        mock_eng.load_system.assert_called_once_with(str(expected_model), nargout=0, stdout=ANY, stderr=ANY)
         addpath_paths = [call.args[0] for call in mock_eng.addpath.call_args_list]
         assert expected_model_dir in addpath_paths
         assert expected_script_dir in addpath_paths
@@ -337,7 +347,7 @@ class TestSimulinkStructuredOps:
         expected_scenario_dir = str(expected_model.parent.parent)
         expected_script_dir = str(expected_model.parent.parent / "matlab_scripts")
 
-        mock_eng.load_system.assert_called_once_with(str(expected_model), nargout=0)
+        mock_eng.load_system.assert_called_once_with(str(expected_model), nargout=0, stdout=ANY, stderr=ANY)
         addpath_paths = [call.args[0] for call in mock_eng.addpath.call_args_list]
         assert expected_model_dir in addpath_paths
         assert expected_scenario_dir in addpath_paths
@@ -347,6 +357,8 @@ class TestSimulinkStructuredOps:
             ["NE39bus_v2/VSrc_ES1"],
             ["ReferenceBlock"],
             nargout=1,
+            stdout=ANY,
+            stderr=ANY,
         )
         assert result["items"][0]["params"]["ReferenceBlock"] == "spsThreePhaseSourceLib/Three-Phase Source"
 
@@ -367,11 +379,13 @@ class TestSimulinkStructuredOps:
         repo_root = Path(__file__).resolve().parents[1]
         expected_model = repo_root / "scenarios" / "new_england" / "simulink_models" / "NE39bus_v2.slx"
 
-        mock_eng.load_system.assert_called_once_with(str(expected_model), nargout=0)
+        mock_eng.load_system.assert_called_once_with(str(expected_model), nargout=0, stdout=ANY, stderr=ANY)
         mock_eng.vsg_describe_block_ports.assert_called_once_with(
             "NE39bus_v2",
             "NE39bus_v2/VSG_ES1",
             nargout=1,
+            stdout=ANY,
+            stderr=ANY,
         )
         assert result["block_path"] == "NE39bus_v2/VSG_ES1"
 
@@ -397,12 +411,14 @@ class TestSimulinkStructuredOps:
         repo_root = Path(__file__).resolve().parents[1]
         expected_model = repo_root / "scenarios" / "new_england" / "simulink_models" / "NE39bus_v2.slx"
 
-        mock_eng.load_system.assert_called_once_with(str(expected_model), nargout=0)
+        mock_eng.load_system.assert_called_once_with(str(expected_model), nargout=0, stdout=ANY, stderr=ANY)
         mock_eng.vsg_get_block_tree.assert_called_once_with(
             "NE39bus_v2",
             "NE39bus_v2/VSG_ES1",
             4.0,
             nargout=1,
+            stdout=ANY,
+            stderr=ANY,
         )
         assert result["path"] == "NE39bus_v2/VSG_ES1"
 
@@ -430,7 +446,7 @@ class TestSimulinkStructuredOps:
         expected_scenario_dir = str(expected_model.parent.parent)
         expected_script_dir = str(expected_model.parent.parent / "matlab_scripts")
 
-        mock_eng.load_system.assert_called_once_with(str(expected_model), nargout=0)
+        mock_eng.load_system.assert_called_once_with(str(expected_model), nargout=0, stdout=ANY, stderr=ANY)
         addpath_paths = [call.args[0] for call in mock_eng.addpath.call_args_list]
         assert expected_model_dir in addpath_paths
         assert expected_scenario_dir in addpath_paths

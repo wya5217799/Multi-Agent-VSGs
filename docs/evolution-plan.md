@@ -7,7 +7,7 @@
 >   - `docs/superpowers/plans/2026-04-12-agent-control-layer-restructure.md` (Task 1-4 全部完成 2026-04-13)
 
 **Last Updated**: 2026-04-14
-**Current Phase**: B/C/D + ACL + 训练状态修复 + E1-E2 + F 全部完成（含 summary overwrite 全部修复 2f0a177）；E3/G/H directional
+**Current Phase**: B/C/D + ACL + 训练状态修复 + E1-E2 + F + H 全部完成；E3/G directional
 
 ---
 
@@ -160,11 +160,17 @@ B1a 审计分类（原 54）：expose=2 / merged=5 / deprecated=3 / scenario=1 /
 **前置**: 需要运营经验积累确定分级边界。
 **详见**: harness plan Phase 6
 
-### Phase H: FastMCP 迁移
+### Phase H: FastMCP 迁移 — `done` 2026-04-14
 
-**问题**: 手工 tool 注册需要实现和 schema 同步修改，存在签名漂移风险。
-**方向**: `@mcp.tool` 装饰器自动 schema + 分类组织 + stdout 隔离。
-**前置**: B1a 确定最终工具表面后再迁移。FastMCP 已是现有依赖，不是新引入。
+**实现**: `engine/matlab_session.py` — MatlabSession stdout 隔离
+- `call()` 和 `eval()` 默认注入 `io.StringIO()` 捕获 MATLAB 控制台输出
+- MATLAB output 路由至 `logger.debug/warning`，不再泄漏到 Python stdout
+- 防止 MATLAB `disp()`/`fprintf()` 污染 MCP JSON-RPC 传输
+- 新增 `_log_matlab_output()` helper；4 个新 stdout-isolation 测试
+- 注: schema 自动生成已通过 `mcp.add_tool()` 覆盖（FastMCP 3.2.0）；
+  `@mcp.tool` 装饰器重构风险收益比低，不执行
+
+**背景**: FastMCP 3.2.0 已是现有依赖并已验证稳定。"blocked" 状态已解除。
 **详见**: harness plan Phase 7
 
 ---
@@ -255,6 +261,7 @@ E/F/G/H: directional，前置条件见各节
 | 2026-04-14 | B1 拆分为 B1a (审计报告) + B1b (执行建议) | 分离 read-only 结论与 write 操作，消除 Done when 歧义 |
 | 2026-04-14 | B3-B6 触发条件改为问题驱动 | 工具数量不是 manifest 的决策依据；导航一致性才是 |
 | 2026-04-14 | 训练状态语义修复提前完成 | 控制层 Task 1-4 landing 后 unblocked；monitor_stop ≠ completed 是正确性问题不是设计问题 |
+| 2026-04-14 | Phase H 以 stdout 隔离为核心，不执行 @mcp.tool 重构 | mcp.add_tool() 已自动生成 schema（FastMCP 3.2.0）；装饰器重构需要 circular import 处理，风险收益比低 |
 
 ---
 

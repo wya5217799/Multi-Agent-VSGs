@@ -18,6 +18,7 @@ from engine import harness_reports
 from engine.modeling_tasks import (
     harness_model_diagnose,
     harness_model_inspect,
+    harness_model_patch_verify,
     harness_model_report,
     harness_scenario_status,
 )
@@ -306,3 +307,93 @@ class TestIdempotency:
         after_two = allowed_next_tasks(run_dir)
 
         assert after_one == after_two
+
+
+# ── 5. Advisory preservation regression (summary overwrite bug) ────────────────
+
+class TestSummaryAdvisoryPreservation:
+    """Regression: record.summary = [...] must never overwrite transition advisories.
+
+    Each test verifies that an advisory appended early in a task body is still
+    present in the returned summary even when the task itself succeeds or fails
+    and writes its own summary entry at the end.
+    """
+
+    def test_model_inspect_success_preserves_transition_advisory(
+        self, tmp_path, monkeypatch
+    ):
+        """model_inspect success path must not overwrite a transition_advisory.
+
+        Calling model_inspect before scenario_status → advisory appended early.
+        In bootstrap mode the inspect still returns ok.
+        The advisory must survive the final record.summary assignment.
+        """
+        _redirect("kundur", "fc-adv-001", tmp_path, monkeypatch)
+        # Do NOT call scenario_status first → model_inspect is out-of-order
+        r = harness_model_inspect(scenario_id="kundur", run_id="fc-adv-001")
+        advisories = [s for s in r.get("summary", []) if "transition_advisory" in s]
+        assert len(advisories) >= 1, (
+            f"Expected transition_advisory in summary but got: {r.get('summary', [])}"
+        )
+
+    def test_model_patch_verify_failed_preserves_transition_advisory(
+        self, tmp_path, monkeypatch
+    ):
+        """patch_verify FAILED path must not overwrite a transition_advisory.
+
+        Calling model_patch_verify before model_inspect → advisory appended early.
+        Without MATLAB the patch call will raise → hits the except path.
+        The advisory must survive the except-path summary assignment.
+        """
+        _redirect("kundur", "fc-adv-002", tmp_path, monkeypatch)
+        _scenario_ok("kundur", "fc-adv-002")
+        # patch_verify before model_inspect → out-of-order advisory
+        r = harness_model_patch_verify(
+            scenario_id="kundur",
+            run_id="fc-adv-002",
+            edits=[{"block": "VSG1/H", "param": "Value", "value": "5"}],
+        )
+        # Status will be failed (no MATLAB) — advisory must survive
+        advisories = [s for s in r.get("summary", []) if "transition_advisory" in s]
+        assert len(advisories) >= 1, (
+            f"Expected transition_advisory in summary but got: {r.get('summary', [])}"
+        )
+
+    def test_model_patch_verify_success_preserves_transition_advisory(
+        self, tmp_path, monkeypatch
+    ):
+        """patch_verify success path must not overwrite a transition_advisory.
+
+        Monkeypatching simulink_patch_and_verify to succeed so we reach
+        the normal (non-except) summary assignment at the end of the function.
+        """
+        _redirect("kundur", "fc-adv-003", tmp_path, monkeypatch)
+        _scenario_ok("kundur", "fc-adv-003")
+
+        import engine.modeling_tasks as mt
+
+        monkeypatch.setattr(mt, "_ensure_loaded", lambda _: None)
+        monkeypatch.setattr(
+            mt,
+            "simulink_patch_and_verify",
+            lambda *_a, **_kw: {
+                "ok": True,
+                "update_ok": True,
+                "smoke_test_ok": True,
+                "applied_edits": [],
+                "readback": [],
+                "errors": [],
+                "smoke_test_summary": {},
+            },
+        )
+        # patch_verify before model_inspect → out-of-order advisory
+        r = harness_model_patch_verify(
+            scenario_id="kundur",
+            run_id="fc-adv-003",
+            edits=[{"block": "VSG1/H", "param": "Value", "value": "5"}],
+        )
+        assert r["status"] == "ok"
+        advisories = [s for s in r.get("summary", []) if "transition_advisory" in s]
+        assert len(advisories) >= 1, (
+            f"Expected transition_advisory in summary but got: {r.get('summary', [])}"
+        )

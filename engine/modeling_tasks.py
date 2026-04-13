@@ -335,9 +335,9 @@ def harness_model_inspect(
     elif reference_validation["has_warnings"]:
         record.status = "warning"
     ref_status = "ok" if not reference_validation["has_warnings"] else f"{len(reference_validation['mismatch_keys'])} mismatch(es)"
-    record.summary = [
+    record.summary.append(
         f"model_inspect: loaded={bool(load_result.get('ok'))}, ref={ref_status}, elapsed={_timings.get('total', '?')}s"
-    ]
+    )
     return finish(record, extra=extra)
 
 
@@ -393,7 +393,7 @@ def harness_model_patch_verify(
             "smoke_test_summary": {},
             "recommended_next_task": (recommended_next_tasks_for("model_patch_verify", "failed") or ["model_diagnose"])[0],
         }
-        record.summary = [f"patch_verify FAILED: {patch_hint}"]
+        record.summary.append(f"patch_verify FAILED: {patch_hint}")
         return finish(record, extra=extra)
 
     update_ok = bool(patch.get("update_ok", False))
@@ -413,9 +413,9 @@ def harness_model_patch_verify(
     }
     if not ok:
         record_failure(record, "model_error", "Patch verification did not complete cleanly", patch)
-    record.summary = [
+    record.summary.append(
         f"patch_verify: {len(edits)} edit(s), update_ok={update_ok}, smoke_ok={smoke_test_ok}, next={recommended}"
-    ]
+    )
     return finish(record, extra=extra)
 
 

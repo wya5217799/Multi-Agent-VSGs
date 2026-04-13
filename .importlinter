@@ -1,0 +1,65 @@
+[importlinter]
+root_packages =
+    agents
+    env
+    engine
+    scenarios
+    utils
+    plotting
+    tests
+include_external_packages = True
+
+# ─── Contract 1: 双控制线隔离 ───
+# training_tasks 是只读分析层，不得碰模型修复代码
+# 这是 training_tasks.py:4 的硬编码规则的机械化检查
+[importlinter:contract:training-modeling-isolation]
+name = Training Control must not import Model Control
+type = forbidden
+source_modules =
+    engine.training_tasks
+forbidden_modules =
+    engine.modeling_tasks
+    engine.harness_repair
+    engine.harness_tasks
+
+# ─── Contract 2: modeling 不反向依赖 training ───
+[importlinter:contract:modeling-training-isolation]
+name = Model Control must not import Training Control
+type = forbidden
+source_modules =
+    engine.modeling_tasks
+forbidden_modules =
+    engine.training_tasks
+
+# ─── Contract 3: 三后端独立性 ───
+# andes/ode/simulink 是三个平行的执行模式，互不依赖
+[importlinter:contract:backend-independence]
+name = Environment backends are independent
+type = independence
+modules =
+    env.andes
+    env.ode
+    env.simulink
+
+# ─── Contract 4: agents 不反向依赖 engine ───
+# agents 是纯 RL 算法层（torch/numpy），不应知道 Simulink/MATLAB 的存在
+[importlinter:contract:agents-no-engine]
+name = Agents must not import engine
+type = forbidden
+source_modules =
+    agents
+forbidden_modules =
+    engine
+
+# ─── Contract 5: 生产代码不导入 tests ───
+[importlinter:contract:no-prod-imports-tests]
+name = Production code must not import tests
+type = forbidden
+source_modules =
+    agents
+    env
+    engine
+    scenarios
+    utils
+forbidden_modules =
+    tests

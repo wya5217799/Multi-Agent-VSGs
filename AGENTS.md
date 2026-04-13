@@ -2,10 +2,11 @@
 
 ## Scope
 
-- Primary line: Simulink-only model building for `kundur` and `ne39`.
-- First priority: make agents complete Simulink modeling more reliably.
-- Default execution layer: MCP tools in `engine/mcp_simulink_tools.py`.
-- Training scope: `train_smoke` only. Do not design convergence loops, tuning frameworks, ODE, or ANDES modeling mainlines here.
+- Repo control model: dual control lines.
+- **Model Control** governs model correctness, diagnosis, repair, and smoke readiness.
+- **Training Control** governs run lifecycle, verdicts, and comparison of training outputs.
+- Default execution layer: MCP tools in `engine/mcp_simulink_tools.py` (model side); training-side MCP surface is thin and currently centered on smoke bridge behavior.
+- Current phase: model issues may still exist, but training is acknowledged as a parallel control line, not a permanent afterthought.
 
 ## Start Here
 
@@ -31,14 +32,20 @@ For project memory index, see `MEMORY.md`. For historical architecture decisions
   - model dir: `scenarios/new_england/simulink_models/`
   - training entry: `scenarios/new_england/train_simulink.py`
 
-## Default Harness Order
+## Default Working Mode
+
+1. Use **Model Control** when the question is about model validity, closed-loop semantics, or patching.
+2. Use **Training Control** when the question is about run quality, verdicts, comparison, or artifact interpretation.
+3. Route from training back to model work when training evidence indicates model-side physical or semantic faults.
+
+## Default Harness Order (Model Control)
 
 1. `scenario_status`
 2. `model_inspect`
 3. `model_patch_verify`
 4. `model_diagnose`
 5. `model_report`
-6. `train_smoke` only after modeling tasks are green
+6. `train_smoke_start` / `train_smoke_poll` only after modeling tasks are green
 
 ## Guardrails
 
@@ -51,3 +58,5 @@ For project memory index, see `MEMORY.md`. For historical architecture decisions
   - process notes in `docs/devlog/`
   - stable rules in `docs/decisions/`
   - paper-facing summaries in `docs/paper/`
+
+For relational navigation and drift discovery, graph output may be consulted as a secondary aid.

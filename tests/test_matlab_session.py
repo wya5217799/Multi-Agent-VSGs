@@ -292,3 +292,53 @@ class TestMatlabStdoutIsolation:
         assert "stdout" in call_kwargs
         assert "stderr" in call_kwargs
         assert hasattr(call_kwargs["stdout"], "write")
+
+    @patch("engine.matlab_session.matlab_engine", create=True)
+    def test_log_matlab_output_routes_stderr_to_warning(self, mock_me, caplog):
+        """MATLAB stderr text is forwarded to logger.warning, not printed."""
+        from engine.matlab_session import MatlabSession
+
+        def fake_func(*args, nargout=1, stdout=None, stderr=None, **kw):
+            if stderr is not None:
+                stderr.write("MATLAB warning: unstable step\n")
+            return None
+
+        mock_eng = MagicMock()
+        mock_eng.my_func = MagicMock(side_effect=fake_func)
+        mock_me.start_matlab.return_value = mock_eng
+
+        session = MatlabSession.get()
+        session._connect()
+        with caplog.at_level(logging.WARNING, logger="engine.matlab_session"):
+            session.call("my_func", nargout=0)
+
+        assert any("MATLAB warning: unstable step" in r.message for r in caplog.records)
+
+    @patch("engine.matlab_session.matlab_engine", create=True)
+    def test_eval_reconnect_logs_first_attempt_output_before_retry(self, mock_me, caplog):
+        """eval() logs any MATLAB output captured before a communication error, then retries."""
+        from engine.matlab_session import MatlabSession
+
+        call_count = 0
+
+        def fake_eval(code, nargout, stdout=None, stderr=None):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                if stdout is not None:
+                    stdout.write("output before drop\n")
+                raise Exception("rpc connection broken")
+            return None
+
+        mock_eng = MagicMock()
+        mock_eng.eval = MagicMock(side_effect=fake_eval)
+        mock_me.start_matlab.return_value = mock_eng
+
+        session = MatlabSession.get()
+        session._connect()
+        with caplog.at_level(logging.DEBUG, logger="engine.matlab_session"):
+            session.eval("x = 1;", nargout=0)
+
+        assert call_count == 2
+        assert any("output before drop" in r.message for r in caplog.records), \
+            "Output captured before the connection drop should not be silently discarded"

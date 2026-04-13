@@ -247,6 +247,8 @@ class MatlabSession:
             return result
         except Exception as exc:
             if self._is_communication_error(exc):
+                # Log anything captured before the connection dropped, then retry
+                _log_matlab_output(f"eval({code!r})", _stdout, _stderr)
                 logger.warning(
                     "MATLAB engine communication lost, reconnecting ..."
                 )

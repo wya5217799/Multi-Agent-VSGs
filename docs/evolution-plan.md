@@ -7,7 +7,7 @@
 >   - `docs/superpowers/plans/2026-04-12-agent-control-layer-restructure.md` (Task 1-4 全部完成 2026-04-13)
 
 **Last Updated**: 2026-04-14
-**Current Phase**: B/C/D + ACL + 训练状态修复 + E1-E2 + F 全部完成；E3/G/H directional
+**Current Phase**: B/C/D + ACL + 训练状态修复 + E1-E2 + F 全部完成（含 summary overwrite 全部修复 2f0a177）；E3/G/H directional
 
 ---
 
@@ -141,9 +141,9 @@ B1a 审计分类（原 54）：expose=2 / merged=5 / deprecated=3 / scenario=1 /
 
 ### Phase F: Agent 层评估测试 — `done` 2026-04-14
 
-**实现**: `tests/test_harness_flow_contract.py` — 17 个测试，4 类场景（TDD）
-- 场景化集成链 · 非法转移 · 故障注入 · 幂等性
-- **副产品 bug fix**: inspect+diagnose summary 覆盖 bug → 改为 append
+**实现**: `tests/test_harness_flow_contract.py` — 20 个测试，5 类场景（TDD）
+- 场景化集成链 · 非法转移 · 故障注入 · 幂等性 · Advisory 保留回归
+- **bug fix**: model_inspect/model_patch_verify 共 5 处 `record.summary = [...]` 全改为 `append`（commits 8d7f480 + 2f0a177）
 **详见**: harness plan Phase 5
 
 ### Phase F: Agent 层评估测试

@@ -1,6 +1,10 @@
-"""engine/mcp_server.py - Python MCP server for structured Simulink access.
+"""engine/mcp_server.py - Python MCP server for structured Simulink and training access.
 
-Registers a curated set of ~27 workflow-level tools for Claude.
+Registers a curated set of ~36 workflow-level tools for Claude:
+  - 2  training_* tools  (Training Control: evaluate_run + compare_runs)
+  - 7  harness_*  tools  (Model Control: scenario/inspect/patch/diagnose/report/smoke)
+  - 27 simulink_* tools  (model building, parameter ops, diagnostics, visual capture)
+
 Lower-level helpers remain importable from mcp_simulink_tools but are NOT
 exposed to the model, reducing tool-selection confusion.
 
@@ -34,6 +38,10 @@ from engine.harness_tasks import (
     harness_scenario_status,
     harness_train_smoke_start,
     harness_train_smoke_poll,
+)
+from engine.training_tasks import (
+    training_evaluate_run,
+    training_compare_runs,
 )
 from engine.mcp_simulink_tools import (
     # --- Model lifecycle (4) ---
@@ -78,7 +86,8 @@ from engine.mcp_simulink_tools import (
 mcp = FastMCP(
     "simulink-tools",
     instructions=(
-        "Structured Simulink model inspection and execution (~27 tools). "
+        "Structured Simulink and training control tools (~36 total). "
+        "Use training_evaluate_run / training_compare_runs for Training Control workflows. "
         "Prefer the harness_* task tools for Kundur/NE39 Simulink workflows. "
         "Use simulink_preflight to discover block parameters before placing. "
         "Use simulink_run_script to run build scripts or set_param operations "
@@ -92,6 +101,10 @@ mcp = FastMCP(
 )
 
 PUBLIC_TOOLS = [
+    # --- Training Control (2) ---
+    training_evaluate_run,
+    training_compare_runs,
+    # --- Model Control harness (7) ---
     harness_scenario_status,
     harness_model_inspect,
     harness_model_patch_verify,

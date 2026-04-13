@@ -9,6 +9,8 @@ def test_public_tools_list_matches_expected_contract():
     from engine import mcp_server
 
     expected_names = [
+        "training_evaluate_run",
+        "training_compare_runs",
         "harness_scenario_status",
         "harness_model_inspect",
         "harness_model_patch_verify",
@@ -51,7 +53,7 @@ def test_public_tools_list_matches_expected_contract():
 def test_public_tools_contract_has_stable_size():
     from engine import mcp_server
 
-    assert len(mcp_server.PUBLIC_TOOLS) == 34
+    assert len(mcp_server.PUBLIC_TOOLS) == 36
 
 
 def test_prepare_process_environment_sets_project_root_cwd(monkeypatch, tmp_path):

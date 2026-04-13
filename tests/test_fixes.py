@@ -30,9 +30,19 @@ sys.path.insert(0, _PROJECT_ROOT)
 # =============================================================================
 
 
-def _action_to_delta_M(action_col: np.ndarray, dm_min: float, dm_max: float) -> np.ndarray:
-    """Reproduce the affine action→ΔM mapping used in both envs."""
+def _action_to_delta_affine(
+    action_col: np.ndarray, dm_min: float, dm_max: float
+) -> np.ndarray:
+    """Reproduce the legacy affine action→delta mapping."""
     return 0.5 * (action_col + 1.0) * (dm_max - dm_min) + dm_min
+
+
+def _action_to_delta_zero_centered(
+    action_col: np.ndarray, dm_min: float, dm_max: float
+) -> np.ndarray:
+    """Map [-1, 1] to [dm_min, 0, dm_max] with 0 preserved at zero delta."""
+    action_col = np.asarray(action_col, dtype=np.float32)
+    return np.where(action_col >= 0.0, action_col * dm_max, action_col * (-dm_min))
 
 
 class TestRewardFormula:
@@ -60,7 +70,7 @@ class TestRewardFormula:
         actions = np.ones((4, 2), dtype=np.float32)
         _, components = env._compute_reward(actions)
 
-        delta_M = _action_to_delta_M(actions[:, 0], DM_MIN, DM_MAX)
+        delta_M = _action_to_delta_zero_centered(actions[:, 0], DM_MIN, DM_MAX)
         expected = -PHI_H * (float(np.mean(delta_M)) / 2.0) ** 2
         assert abs(components["r_h"] - expected) < 1e-5, (
             f"r_h={components['r_h']:.4f}, expected {expected:.4f}"
@@ -79,11 +89,26 @@ class TestRewardFormula:
         actions = rng.uniform(-1, 1, (4, 2)).astype(np.float32)
         _, components = env._compute_reward(actions)
 
-        delta_M = _action_to_delta_M(actions[:, 0], DM_MIN, DM_MAX)
+        delta_M = _action_to_delta_zero_centered(actions[:, 0], DM_MIN, DM_MAX)
         expected = -PHI_H * (float(np.mean(delta_M)) / 2.0) ** 2
         assert abs(components["r_h"] - expected) < 1e-5, (
             f"r_h={components['r_h']:.6f}, expected {expected:.6f}"
         )
+
+    def test_kundur_zero_action_keeps_nominal_m_and_d(self):
+        """Kundur: zero action must leave M and D at their nominal baselines."""
+        from env.simulink.kundur_simulink_env import (
+            KundurStandaloneEnv, VSG_M0, VSG_D0,
+        )
+
+        env = KundurStandaloneEnv(training=False)
+        env.reset(seed=0)
+
+        action = np.zeros((4, 2), dtype=np.float32)
+        _, _, _, _, info = env.step(action)
+
+        assert np.allclose(info["M"], np.full(4, VSG_M0))
+        assert np.allclose(info["D"], np.full(4, VSG_D0))
 
     # ── NE39 env ──────────────────────────────────────────────────────────────
 
@@ -99,7 +124,7 @@ class TestRewardFormula:
         actions = np.ones((8, 2), dtype=np.float32)
         _, components = env._compute_reward(actions)
 
-        delta_M = _action_to_delta_M(actions[:, 0], DM_MIN, DM_MAX)
+        delta_M = _action_to_delta_affine(actions[:, 0], DM_MIN, DM_MAX)
         expected = -PHI_H * (float(np.mean(delta_M)) / 2.0) ** 2
         assert abs(components["r_h"] - expected) < 1e-5, (
             f"NE39 r_h={components['r_h']:.4f}, expected {expected:.4f}"
@@ -118,7 +143,7 @@ class TestRewardFormula:
         actions = rng.uniform(-1, 1, (8, 2)).astype(np.float32)
         _, components = env._compute_reward(actions)
 
-        delta_M = _action_to_delta_M(actions[:, 0], DM_MIN, DM_MAX)
+        delta_M = _action_to_delta_affine(actions[:, 0], DM_MIN, DM_MAX)
         expected = -PHI_H * (float(np.mean(delta_M)) / 2.0) ** 2
         assert abs(components["r_h"] - expected) < 1e-5, (
             f"NE39 r_h={components['r_h']:.6f}, expected {expected:.6f}"

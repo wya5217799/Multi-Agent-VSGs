@@ -7,7 +7,7 @@
 >   - `docs/superpowers/plans/2026-04-12-agent-control-layer-restructure.md` (Task 1-4 全部完成 2026-04-13)
 
 **Last Updated**: 2026-04-14
-**Current Phase**: B/C/D + Agent Control Layer Task 1-4 + 训练状态语义修复 + Phase E1-E2 全部完成；E3 directional
+**Current Phase**: B/C/D + ACL + 训练状态修复 + E1-E2 + F 全部完成；E3/G/H directional
 
 ---
 
@@ -137,15 +137,13 @@ B1a 审计分类（原 54）：expose=2 / merged=5 / deprecated=3 / scenario=1 /
 **Done when E1-E2**: ✅ ABC 定义完成，TrainingMonitor 实现接口，441 tests 全绿（commit: feat(E1-E2)）
 **E3 触发条件**: 需要添加第 2 个 callback（如 checkpointing callback）时。
 
-## Phase F-H: 方向性规划（不可直接执行）
+## Phase F-H: 方向性规划（F 已完成）
 
-> 以下三个 phase 方向已定但具体设计待定。详细设计见上游计划文档，此处仅保留摘要。
+### Phase F: Agent 层评估测试 — `done` 2026-04-14
 
-### Phase F: Agent 层评估测试
-
-**问题**: flow 合约（转移顺序、前置条件、故障传播）只在端到端手动运行时才被验证。
-**方向**: 场景化集成测试 + 非法转移测试 + 故障注入测试 + 幂等性测试。
-**前置**: B+C 完成后定范围。
+**实现**: `tests/test_harness_flow_contract.py` — 17 个测试，4 类场景（TDD）
+- 场景化集成链 · 非法转移 · 故障注入 · 幂等性
+- **副产品 bug fix**: inspect+diagnose summary 覆盖 bug → 改为 append
 **详见**: harness plan Phase 5
 
 ### Phase F: Agent 层评估测试

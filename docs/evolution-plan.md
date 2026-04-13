@@ -6,8 +6,8 @@
 >   - `docs/superpowers/plans/2026-04-12-harness-type-contracts-and-decomposition.md` (Phase 1-3 done + Phase 4-7 directional)
 >   - `docs/superpowers/plans/2026-04-12-agent-control-layer-restructure.md` (Task 1-4 全部完成 2026-04-13)
 
-**Last Updated**: 2026-04-13
-**Current Phase**: B/C/D 全部完成 + Agent Control Layer Task 1-4 全部完成
+**Last Updated**: 2026-04-14
+**Current Phase**: B/C/D 全部完成 + Agent Control Layer Task 1-4 全部完成 + 训练状态语义修复完成
 
 ---
 
@@ -118,16 +118,35 @@ B1a 审计分类（原 54）：expose=2 / merged=5 / deprecated=3 / scenario=1 /
 
 ---
 
-## Phase E-H: 方向性规划（不可直接执行）
+## Phase E: 训练回调统一化
 
-> 以下四个 phase 方向已定但具体设计待定。详细设计见上游计划文档，此处仅保留摘要。
+> **状态**: `ready` (2026-04-14 升级，三个"未决"问题通过代码审查已解)
+> **风险缓解**: 先只做 ABC 定义 + EpisodeResult dataclass，不改任何训练脚本
 
-### Phase E: 训练回调统一化
+**设计决策**（已解）:
+- 粒度: per-episode（全部 6 个脚本均在 episode 末调用 monitor）
+- 排序: 顺序执行，首个返回 True 的 callback 触发 stop
+- 注册: 命令式（训练脚本在 startup 组合 callback 列表）
 
-**问题**: 每个 train_*.py 各自重实现 monitoring/checkpointing/early-stop。
-**方向**: 提取最小 callback ABC（参考 SB3 on_step → bool），TrainingMonitor 变为 callback 实现。
-**未决**: hook 粒度、callback 排序、声明式 vs 命令式注册。
-**详见**: harness plan Phase 4
+| ID | 任务 | 状态 | 依赖 | 预估 |
+|----|------|------|------|------|
+| E1 | 创建 `utils/training_callback.py`: ABC + EpisodeResult dataclass | `ready` | 无 | 30 min |
+| E2 | `TrainingMonitor` 实现 callback 接口（保持 `log_and_check` 签名不变）| `ready` | E1 | 30 min |
+| E3 | 训练脚本迁移: 用 callback list 替代直接调用 monitor | `directional` | E2 + 训练稳定后 | 2 hr |
+
+**Done when E1-E2**: ABC 定义完成，TrainingMonitor 实现接口，现有训练脚本测试全绿。
+**E3 触发条件**: 需要添加第 2 个 callback（如 checkpointing callback）时。
+
+## Phase F-H: 方向性规划（不可直接执行）
+
+> 以下三个 phase 方向已定但具体设计待定。详细设计见上游计划文档，此处仅保留摘要。
+
+### Phase F: Agent 层评估测试
+
+**问题**: flow 合约（转移顺序、前置条件、故障传播）只在端到端手动运行时才被验证。
+**方向**: 场景化集成测试 + 非法转移测试 + 故障注入测试 + 幂等性测试。
+**前置**: B+C 完成后定范围。
+**详见**: harness plan Phase 5
 
 ### Phase F: Agent 层评估测试
 
@@ -186,7 +205,7 @@ E/F/G/H: directional，前置条件见各节
 | Workspace snapshot | bootstrap 已覆盖冷启动恢复 | 出现"崩溃后丢失大量修改"痛点 |
 | ScenarioAdapter 接口 | 只有 2 个场景，硬编码可接受 | 第 3 个场景到来 |
 | TRANSITIONS 参数化 | 只有 1 种任务流 | 出现不同工作流 |
-| 训练状态 bug line | 控制层计划明确 scope out | 训练进入评估/对比阶段 |
+| 训练状态 bug line | ~~控制层计划明确 scope out~~ **已完成 2026-04-14**: monitor_stop → "monitor_stopped" 状态，tests 覆盖 | — |
 
 ---
 
@@ -237,6 +256,7 @@ E/F/G/H: directional，前置条件见各节
 | 2026-04-14 | B3-B6 标 directional | manifest 仅在导航/authority drift 出现时才执行 |
 | 2026-04-14 | B1 拆分为 B1a (审计报告) + B1b (执行建议) | 分离 read-only 结论与 write 操作，消除 Done when 歧义 |
 | 2026-04-14 | B3-B6 触发条件改为问题驱动 | 工具数量不是 manifest 的决策依据；导航一致性才是 |
+| 2026-04-14 | 训练状态语义修复提前完成 | 控制层 Task 1-4 landing 后 unblocked；monitor_stop ≠ completed 是正确性问题不是设计问题 |
 
 ---
 

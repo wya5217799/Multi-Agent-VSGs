@@ -20,9 +20,19 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 def test_markdown_links_lychee():
     """All standard Markdown links pass lychee check."""
     result = subprocess.run(
-        ["lychee", "--no-progress", "*.md", "docs/**/*.md"],
+        [
+            "lychee",
+            "--no-progress",
+            # GitHub rate-limits unauthenticated requests; skip to avoid false failures
+            "--exclude",
+            "https://github.com",
+            "*.md",
+            "docs/**/*.md",
+        ],
         capture_output=True,
         text=True,
+        encoding="utf-8",
+        errors="replace",
         cwd=str(REPO_ROOT),
     )
     assert result.returncode == 0, (

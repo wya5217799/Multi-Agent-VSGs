@@ -204,6 +204,7 @@ load_system('ee_lib');
 load_system('nesl_utility');
 
 fprintf('=== Building %s (16-bus Modified Kundur, ee_lib, Power Sensor P_e) ===\n', mdl);
+fprintf('RESULT: [0/12] start — building %s\n', mdl);
 
 % --- Find ee_lib block library paths dynamically ---
 cvs_lib = char(find_system('ee_lib/Sources', 'SearchDepth', 1, 'RegExp', 'on', 'Name', '.*Controlled Voltage.*Three.*'));
@@ -250,6 +251,7 @@ fprintf('  GND lib: %s\n', gnd_lib);
 fprintf('  CB lib:  %s\n', cb_lib);
 fprintf('  PSensor: %s\n', ps_lib);
 fprintf('  Solver:  %s\n', solver_lib);
+fprintf('RESULT: [0/12] ee_lib paths resolved\n');
 
 %% ======================================================================
 %  Step 1: Solver Configuration + Electrical Reference (replaces powergui)
@@ -284,6 +286,7 @@ gnd_count = 0;
 %   d(delta)/dt = wn * (omega - 1)
 
 fprintf('\n=== Building conventional generators G1-G3 ===\n');
+fprintf('RESULT: [3/12] building generators G1-G3\n');
 
 for gi = 1:length(gen_cfg)
     g = gen_cfg(gi);
@@ -543,11 +546,13 @@ for gi = 1:length(gen_cfg)
     fprintf('  %s at Bus%d: H=%.3f, M=%.1f, P0=%.0fMW, D=%.1f, R=%.2f (P_e=sensor)\n', ...
         gname, bus_id, g.H, M, g.P0_MW, g.D, g.R);
 end
+fprintf('RESULT: [3/12] generators done (%d)\n', length(gen_cfg));
 
 %% ======================================================================
 %  Step 4: Wind Farms W1, W2 (Programmable Voltage Source, constant)
 %% ======================================================================
 fprintf('\n=== Building wind farms W1, W2 ===\n');
+fprintf('RESULT: [4/12] building wind farms W1-W2\n');
 
 for wi = 1:length(wind_cfg)
     w = wind_cfg(wi);
@@ -596,6 +601,7 @@ for wi = 1:length(wind_cfg)
     fprintf('  %s at Bus%d: P0=%.0fMW, Sn=%.0fMVA\n', ...
         wname, bus_id, w.P0_MW, w.Sn/1e6);
 end
+fprintf('RESULT: [4/12] wind farms done (%d)\n', length(wind_cfg));
 
 %% ======================================================================
 %  Step 5: VSG/ESS subsystems (signal-domain swing equation with RL inputs)
@@ -608,6 +614,7 @@ end
 % Voltage driven by delta output → 3-phase instantaneous voltages → CVS.
 
 fprintf('\n=== Building VSG/ESS subsystems ES1-ES4 ===\n');
+fprintf('RESULT: [5/12] building VSG/ESS ES1-ES4\n');
 
 vsg_pos_x = [1800, 2300, 1800, 2300];
 vsg_pos_y = [100,  100,  500,  500];
@@ -648,9 +655,9 @@ for i = 1:n_vsg
     % === Internal swing equation blocks (PRESERVED from original) ===
     % Constants — block names M0, D0 are referenced by Python env
     add_block('built-in/Constant', [vsg_path '/M0'], ...
-        'Position', [100 10 150 30], 'Value', num2str(VSG_M0));
+        'Position', [100 10 150 30], 'Value', sprintf('M0_val_ES%d', i));
     add_block('built-in/Constant', [vsg_path '/D0'], ...
-        'Position', [100 60 150 80], 'Value', num2str(VSG_D0));
+        'Position', [100 60 150 80], 'Value', sprintf('D0_val_ES%d', i));
     add_block('built-in/Constant', [vsg_path '/wn'], ...
         'Position', [300 260 350 280], 'Value', num2str(wn));
 
@@ -897,11 +904,13 @@ for i = 1:n_vsg
     fprintf('  VSG_ES%d at Bus%d (->Bus%d): M0=%.1f, D0=%.1f, P0=%.4f pu\n', ...
         i, bus_id, ess_main(i), VSG_M0, VSG_D0, VSG_P0(i));
 end
+fprintf('RESULT: [5/12] VSG/ESS done (%d)\n', n_vsg);
 
 %% ======================================================================
 %  Step 6: Transmission lines (Transmission Line Three-Phase)
 %% ======================================================================
 fprintf('\n=== Adding transmission lines ===\n');
+fprintf('RESULT: [6/12] adding %d transmission lines\n', size(line_defs, 1));
 
 n_lines = size(line_defs, 1);
 line_y_base = 800;
@@ -954,6 +963,7 @@ end
 %  Step 7: Loads (Wye-Connected Load)
 %% ======================================================================
 fprintf('\n=== Adding loads ===\n');
+fprintf('RESULT: [7/12] adding loads\n');
 
 for li = 1:length(load_defs)
     ld = load_defs(li);
@@ -988,6 +998,7 @@ end
 %  Step 8: Shunt capacitors (Wye-Connected Load, capacitive only)
 %% ======================================================================
 fprintf('\n=== Adding shunt capacitors ===\n');
+fprintf('RESULT: [8/12] adding shunt capacitors\n');
 
 for si = 1:length(shunt_defs)
     sh = shunt_defs(si);
@@ -1020,6 +1031,7 @@ end
 %  Step 9: Disturbance breakers + trip loads
 %% ======================================================================
 fprintf('\n=== Adding disturbance breakers ===\n');
+fprintf('RESULT: [9/12] adding disturbance breakers\n');
 
 for bi = 1:length(brk_defs)
     b = brk_defs(bi);
@@ -1091,6 +1103,7 @@ add_line(mdl, ...
     sprintf(bus1_rep{2}, bus1_rep{1}), ...
     'autorouting', 'smart');
 fprintf('\n  Solver Configuration connected to Bus1 network.\n');
+fprintf('RESULT: [9b/12] solver config wired to network\n');
 
 %% ======================================================================
 %  Step 10: Clock + time logger
@@ -1116,14 +1129,17 @@ set_param(mdl, ...
 model_path = fullfile(model_dir, [mdl '.slx']);
 save_system(mdl, model_path);
 fprintf('\n=== Model saved to %s ===\n', model_path);
+fprintf('RESULT: [11/12] model saved — %s\n', model_path);
 
 %% ======================================================================
 %  Step 12: Test simulation (1 second)
 %% ======================================================================
 fprintf('\n=== Running 1-second test simulation ===\n');
+fprintf('RESULT: [12/12] test simulation running\n');
 try
     simOut = sim(mdl, 'StopTime', '1.0');
     fprintf('SUCCESS! 1-second simulation completed.\n');
+    fprintf('RESULT: [12/12] test simulation OK\n');
 
     % Check logged VSG outputs
     vars = {'omega_ES1', 'delta_ES1', 'P_out_ES1', 'sim_time'};
@@ -1156,6 +1172,7 @@ end
 %  Summary
 %% ======================================================================
 fprintf('\n=== build_powerlib_kundur done (ee_lib, Power Sensor P_e) ===\n');
+fprintf('RESULT: [DONE] build_powerlib_kundur complete\n');
 fprintf('Model: %s\n', model_path);
 fprintf('Topology: 16-bus Modified Kundur Two-Area System\n');
 fprintf('Conv Gens: G1(Bus1), G2(Bus2), G3(Bus3) — swing eq + CVS, P_e=sensor\n');

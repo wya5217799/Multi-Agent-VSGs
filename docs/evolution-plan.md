@@ -7,7 +7,7 @@
 >   - `docs/superpowers/plans/2026-04-12-agent-control-layer-restructure.md` (Task 1-4 全部未开始)
 
 **Last Updated**: 2026-04-14
-**Current Phase**: B/C/D 全部核心任务完成
+**Current Phase**: B/C/D 全部任务完成（含 D2）
 
 ---
 
@@ -109,7 +109,7 @@ B1a 审计分类（原 54）：expose=2 / merged=5 / deprecated=3 / scenario=1 /
 | ID | 任务 | 状态 | 依赖 | 预估 |
 |----|------|------|------|------|
 | D1 | `run_script` 异步化: start/poll 模式（复用 smoke_tasks 骨架） | `done` 2026-04-14 | 无硬依赖 | 2 hr |
-| D2 | MATLAB 端 build 脚本加 stage-level progress 写入 | `ready` | D1 | 1 hr |
+| D2 | MATLAB 端 build 脚本加 stage-level progress 写入 | `done` 2026-04-14 (17 RESULT: markers in build_powerlib_kundur.m, steps 0-DONE) | D1 | 1 hr |
 
 背景: Claude Code 不渲染 MCP progress notifications ([claude-code#4157](https://github.com/anthropics/claude-code/issues/4157))。当前可行方案: start/poll 两工具模式。
 

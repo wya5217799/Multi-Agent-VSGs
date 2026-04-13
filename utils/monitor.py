@@ -2,6 +2,9 @@
 
 Detects reward scaling bugs, action collapse, simulation failures,
 and other domain-specific issues during RL training on power systems.
+
+Implements ``TrainingCallback`` so it can be composed via ``CallbackList``.
+Existing callers can continue using ``log_and_check()`` directly.
 """
 from __future__ import annotations
 
@@ -12,6 +15,8 @@ from pathlib import Path
 
 import numpy as np
 from typing import Any
+
+from utils.training_callback import EpisodeResult, TrainingCallback
 
 
 # Default check configurations
@@ -31,8 +36,14 @@ _DEFAULT_CHECKS = {
 }
 
 
-class TrainingMonitor:
-    """Domain-level training diagnostics for power system RL environments."""
+class TrainingMonitor(TrainingCallback):
+    """Domain-level training diagnostics for power system RL environments.
+
+    Implements ``TrainingCallback`` so it can be used in a ``CallbackList``.
+    The ``on_episode_end(result)`` method is a thin wrapper around the
+    existing ``log_and_check()`` API, which remains unchanged for callers
+    that invoke it directly.
+    """
 
     def __init__(
         self,
@@ -154,6 +165,24 @@ class TrainingMonitor:
             return self._run_manual_checks(episode)
 
         return self._run_all_checks(episode)
+
+    # ─── TrainingCallback implementation ───
+
+    def on_episode_end(self, result: EpisodeResult) -> bool:
+        """Implement TrainingCallback: delegate to log_and_check().
+
+        Allows TrainingMonitor to be used inside a CallbackList without
+        changing any existing direct callers of log_and_check().
+        """
+        return self.log_and_check(
+            episode=result.episode,
+            rewards=result.rewards,
+            reward_components=result.reward_components,
+            actions=result.actions,
+            info=result.info,
+            per_agent_rewards=result.per_agent_rewards,
+            sac_losses=result.sac_losses,
+        )
 
     # ─── Calibration ───
 

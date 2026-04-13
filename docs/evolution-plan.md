@@ -7,7 +7,7 @@
 >   - `docs/superpowers/plans/2026-04-12-agent-control-layer-restructure.md` (Task 1-4 全部完成 2026-04-13)
 
 **Last Updated**: 2026-04-14
-**Current Phase**: B/C/D 全部完成 + Agent Control Layer Task 1-4 全部完成 + 训练状态语义修复完成
+**Current Phase**: B/C/D + Agent Control Layer Task 1-4 + 训练状态语义修复 + Phase E1-E2 全部完成；E3 directional
 
 ---
 
@@ -130,11 +130,11 @@ B1a 审计分类（原 54）：expose=2 / merged=5 / deprecated=3 / scenario=1 /
 
 | ID | 任务 | 状态 | 依赖 | 预估 |
 |----|------|------|------|------|
-| E1 | 创建 `utils/training_callback.py`: ABC + EpisodeResult dataclass | `ready` | 无 | 30 min |
-| E2 | `TrainingMonitor` 实现 callback 接口（保持 `log_and_check` 签名不变）| `ready` | E1 | 30 min |
+| E1 | 创建 `utils/training_callback.py`: ABC + EpisodeResult dataclass | `done` 2026-04-14 | 无 | 30 min |
+| E2 | `TrainingMonitor` 实现 callback 接口（保持 `log_and_check` 签名不变）| `done` 2026-04-14 | E1 | 30 min |
 | E3 | 训练脚本迁移: 用 callback list 替代直接调用 monitor | `directional` | E2 + 训练稳定后 | 2 hr |
 
-**Done when E1-E2**: ABC 定义完成，TrainingMonitor 实现接口，现有训练脚本测试全绿。
+**Done when E1-E2**: ✅ ABC 定义完成，TrainingMonitor 实现接口，441 tests 全绿（commit: feat(E1-E2)）
 **E3 触发条件**: 需要添加第 2 个 callback（如 checkpointing callback）时。
 
 ## Phase F-H: 方向性规划（不可直接执行）

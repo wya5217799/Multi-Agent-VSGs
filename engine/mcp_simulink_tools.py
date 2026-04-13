@@ -10,6 +10,9 @@ from __future__ import annotations
 
 import logging
 import re
+import threading
+import time
+import uuid
 from pathlib import Path
 from typing import Annotated, Any
 
@@ -25,6 +28,11 @@ _WORKSPACE_ROOT = Path(__file__).resolve().parents[1]
 # lives on the MatlabSession instance as _bootstrapped (set[str]) so it is
 # automatically invalidated when MatlabSession._instances.clear() is called.
 _BOOTSTRAPPED: set[str] = set()  # never populated; kept so tests can assert the name exists
+
+# Async script job registry — keyed by job_id (8-char hex).
+# Jobs are lost on MCP server restart (MATLAB engine is in-process).
+_SCRIPT_JOBS: dict[str, dict[str, Any]] = {}
+_SCRIPT_JOB_LOCK = threading.Lock()
 _MATLAB_MODEL_REF_RE = re.compile(
     r"(?:get_param|set_param|sim|open_system|close_system|bdIsLoaded|find_system)\s*\(\s*'([^']+)'",
     re.IGNORECASE,
@@ -735,6 +743,127 @@ def simulink_run_script(code_or_file: str, timeout_sec: _IntArg = 120) -> dict:
         "n_errors":          int(summary.get("n_errors", 0)),
         "error_message":     str(summary.get("error_message", "")),
         "important_lines":   _to_list(summary.get("important_lines", [])),
+    }
+
+
+def simulink_run_script_async(
+    code_or_file: str,
+    timeout_sec: _IntArg = 300,
+) -> dict:
+    """Start a MATLAB script in the background; returns immediately with a job_id.
+
+    The MATLAB engine is single-threaded — only one async job can run at a time.
+    Use :func:`simulink_poll_script` to check completion.
+
+    Jobs are **not** preserved across MCP server restarts; if the server
+    restarts while a script is running, re-submit the script.
+
+    Args:
+        code_or_file: MATLAB code string or script name (same as simulink_run_script).
+        timeout_sec: Engine-level timeout in seconds (default 300). Increase for
+            large build scripts — e.g. 600 for NE39 full model build.
+
+    Returns:
+        dict with ok (bool), job_id (str), status ("running" | "busy"),
+        message (str).
+    """
+    with _SCRIPT_JOB_LOCK:
+        running = [jid for jid, j in _SCRIPT_JOBS.items() if not j["done"]]
+        if running:
+            return {
+                "ok": False,
+                "job_id": "",
+                "status": "busy",
+                "error_message": (
+                    f"A script is already running (job_id={running[0]!r}). "
+                    "Poll it with simulink_poll_script first."
+                ),
+            }
+        job_id = uuid.uuid4().hex[:8]
+        job: dict[str, Any] = {
+            "code_or_file": code_or_file,
+            "timeout_sec": int(timeout_sec),
+            "result": None,
+            "done": False,
+            "started_at": time.monotonic(),
+        }
+        _SCRIPT_JOBS[job_id] = job
+
+    def _worker() -> None:
+        try:
+            job["result"] = simulink_run_script(code_or_file, int(timeout_sec))
+        except Exception as exc:
+            job["result"] = {
+                "ok": False,
+                "elapsed": 0.0,
+                "n_warnings": 0,
+                "n_errors": 1,
+                "error_message": str(exc),
+                "important_lines": [],
+            }
+        finally:
+            job["done"] = True
+
+    t = threading.Thread(target=_worker, daemon=True, name=f"slx_script_{job_id}")
+    job["thread"] = t
+    t.start()
+
+    return {
+        "ok": True,
+        "job_id": job_id,
+        "status": "running",
+        "message": (
+            f"Script started in background (job_id={job_id!r}). "
+            f"Use simulink_poll_script(job_id={job_id!r}) to check completion."
+        ),
+    }
+
+
+def simulink_poll_script(job_id: str) -> dict:
+    """Poll whether a background script job has completed.
+
+    Args:
+        job_id: The job_id returned by simulink_run_script_async.
+
+    Returns:
+        dict with ok (bool), job_id (str), status ("running" | "done" | "not_found"),
+        elapsed_sec (float), and on completion: n_warnings, n_errors, error_message,
+        important_lines (mirrors simulink_run_script output).
+    """
+    job = _SCRIPT_JOBS.get(job_id)
+    if job is None:
+        return {
+            "ok": False,
+            "job_id": job_id,
+            "status": "not_found",
+            "elapsed_sec": 0.0,
+            "error_message": (
+                f"No job found for job_id={job_id!r}. "
+                "Jobs are lost on MCP server restart — re-run the script if needed."
+            ),
+        }
+
+    elapsed = round(time.monotonic() - job["started_at"], 1)
+
+    if not job["done"]:
+        return {
+            "ok": True,
+            "job_id": job_id,
+            "status": "running",
+            "elapsed_sec": elapsed,
+            "message": "Script still running — poll again later.",
+        }
+
+    result: dict = job.get("result") or {}
+    return {
+        "ok": bool(result.get("ok", False)),
+        "job_id": job_id,
+        "status": "done",
+        "elapsed_sec": elapsed,
+        "n_warnings": int(result.get("n_warnings", 0)),
+        "n_errors": int(result.get("n_errors", 0)),
+        "error_message": str(result.get("error_message", "")),
+        "important_lines": list(result.get("important_lines", [])),
     }
 
 

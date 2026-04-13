@@ -39,6 +39,8 @@ def test_public_tools_list_matches_expected_contract():
         "simulink_solver_audit",
         "simulink_patch_and_verify",
         "simulink_run_script",
+        "simulink_run_script_async",
+        "simulink_poll_script",
         "simulink_screenshot",
         "simulink_capture_figure",
     ]
@@ -49,7 +51,7 @@ def test_public_tools_list_matches_expected_contract():
 def test_public_tools_contract_has_stable_size():
     from engine import mcp_server
 
-    assert len(mcp_server.PUBLIC_TOOLS) == 32
+    assert len(mcp_server.PUBLIC_TOOLS) == 34
 
 
 def test_prepare_process_environment_sets_project_root_cwd(monkeypatch, tmp_path):

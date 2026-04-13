@@ -7,16 +7,16 @@
 >   - `docs/superpowers/plans/2026-04-12-agent-control-layer-restructure.md` (Task 1-4 全部未开始)
 
 **Last Updated**: 2026-04-14
-**Current Phase**: B (完成 B1a/B1b/B2 → C2 解锁)
+**Current Phase**: B/C/D 全部核心任务完成
 
 ---
 
-## 当前工具表面（已验证 2026-04-14，B1b 后）
+## 当前工具表面（已验证 2026-04-14，D1 后）
 
-`engine/mcp_server.py` PUBLIC_TOOLS: **32 个**（7 harness + 25 simulink）
-`engine/mcp_simulink_tools.py` 定义: **54 个** simulink_* 函数 → 29 个未暴露
+`engine/mcp_server.py` PUBLIC_TOOLS: **34 个**（7 harness + 27 simulink）
+`engine/mcp_simulink_tools.py` 定义: **56 个** simulink_* 函数（新增 run_script_async + poll_script）→ 29 个未暴露
 
-B1a 审计分类：expose=2（已暴露）/ merged=5 / deprecated=3 / scenario=1 / evaluate=20 / exposed=23（原有）
+B1a 审计分类（原 54）：expose=2 / merged=5 / deprecated=3 / scenario=1 / evaluate=20 / exposed=23
 
 ---
 
@@ -108,8 +108,8 @@ B1a 审计分类：expose=2（已暴露）/ merged=5 / deprecated=3 / scenario=1
 
 | ID | 任务 | 状态 | 依赖 | 预估 |
 |----|------|------|------|------|
-| D1 | `run_script` 异步化: start/poll 模式（复用 smoke_tasks 骨架） | `ready` | 无硬依赖 | 2 hr |
-| D2 | MATLAB 端 build 脚本加 stage-level progress 写入 | `blocked` | D1 | 1 hr |
+| D1 | `run_script` 异步化: start/poll 模式（复用 smoke_tasks 骨架） | `done` 2026-04-14 | 无硬依赖 | 2 hr |
+| D2 | MATLAB 端 build 脚本加 stage-level progress 写入 | `ready` | D1 | 1 hr |
 
 背景: Claude Code 不渲染 MCP progress notifications ([claude-code#4157](https://github.com/anthropics/claude-code/issues/4157))。当前可行方案: start/poll 两工具模式。
 

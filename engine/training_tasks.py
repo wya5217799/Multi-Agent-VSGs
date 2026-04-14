@@ -22,19 +22,20 @@ _CONTRACTS_DIR = _REPO_ROOT / "scenarios" / "contracts"
 
 
 def _contract_path(scenario_id: str) -> Path:
-    return _CONTRACTS_DIR / f"{scenario_id}.json"
+    # Contract files are named sim_<scenario_id>.json (e.g. sim_kundur.json).
+    return _CONTRACTS_DIR / f"sim_{scenario_id}.json"
 
 
 def _log_dir(scenario_id: str, run_id: str) -> Path:
-    """Convention: results/<scenario_id>/runs/<run_id>/logs/simulink/"""
-    return _REPO_ROOT / "results" / scenario_id / "runs" / run_id / "logs" / "simulink"
+    """Convention: results/sim_<scenario_id>/runs/<run_id>/logs/"""
+    return _REPO_ROOT / "results" / f"sim_{scenario_id}" / "runs" / run_id / "logs"
 
 
 def training_evaluate_run(scenario_id: str, run_id: str) -> dict[str, Any]:
     """Evaluate a completed training run and emit a structured verdict.
 
     Args:
-        scenario_id: e.g. "sim_kundur" or "sim_ne39"
+        scenario_id: "kundur" or "ne39" (same convention as training_status)
         run_id: directory name under results/<scenario_id>/runs/
 
     Returns dict with keys: scenario_id, run_id, verdict, reasons, metrics,
@@ -223,12 +224,20 @@ def _diagnose_physics(
     if not rows:
         return {"pattern": None, "evidence": "metrics.jsonl is empty", "recommendation": None}
 
-    freq_devs = [r.get("max_freq_dev_hz") for r in rows if r.get("max_freq_dev_hz") is not None]
+    # metrics.jsonl rows written by train_simulink.py use a nested "physics" key:
+    #   {"episode": N, "reward": ..., "physics": {"max_freq_dev_hz": ..., "settled": ...}}
+    freq_devs = [
+        r["physics"]["max_freq_dev_hz"] for r in rows
+        if r.get("physics", {}).get("max_freq_dev_hz") is not None
+    ]
     rewards = [r.get("reward") for r in rows if r.get("reward") is not None]
-    settled = [r.get("settled") for r in rows if r.get("settled") is not None]
+    settled = [
+        r["physics"]["settled"] for r in rows
+        if r.get("physics", {}).get("settled") is not None
+    ]
 
     if not freq_devs:
-        return {"pattern": None, "evidence": "no max_freq_dev_hz in metrics", "recommendation": None}
+        return {"pattern": None, "evidence": "no physics.max_freq_dev_hz in metrics", "recommendation": None}
 
     n = len(freq_devs)
     cap_threshold = 14.5  # Hz — within 0.5 Hz of the 15 Hz termination guard

@@ -272,8 +272,11 @@ def harness_train_smoke_start(
     checkpoint_dir, log_file = _train_smoke_paths(scenario_id, run_id)
     checkpoint_dir.mkdir(parents=True, exist_ok=True)
     log_file.parent.mkdir(parents=True, exist_ok=True)
+    # Use the andes_env interpreter (has matlab.engine) instead of sys.executable
+    # which may point to the MCP server's Python (no matlab.engine → silent failure).
+    from engine.training_launch import _PYTHON_EXE as _andes_python
     command = [
-        sys.executable,
+        str(_andes_python),
         str(_PROJECT_ROOT / spec.train_entry),
         "--mode",
         mode,

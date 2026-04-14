@@ -88,10 +88,26 @@ def get_training_launch_status(scenario_id: str) -> dict[str, Any]:
     slx_abs      = _PROJECT_ROOT / slx_rel
     model_exists = slx_abs.exists() if slx_rel else None
 
-    # --- inspect the latest run ---
-    runs_root = _PROJECT_ROOT / "results" / f"sim_{scenario_id}" / "runs"
-    latest_run_id, latest_run_status, ckpt_count, resume_candidate = \
-        _inspect_latest_run(runs_root)
+    # --- inspect the latest run (status-aware, ghost-proof via find_latest_run) ---
+    from utils.run_protocol import find_latest_run as _find_latest, \
+        read_training_status as _read_status
+    _latest_dir = _find_latest(scenario_id)
+    if _latest_dir is None:
+        latest_run_id = latest_run_status = resume_candidate = None
+        ckpt_count = 0
+    else:
+        latest_run_id = _latest_dir.name
+        latest_run_status = (_read_status(_latest_dir) or {}).get("status")
+        _ckpt_dir = _latest_dir / "checkpoints"
+        _ep_ckpts = sorted(
+            [f for f in (_ckpt_dir.iterdir() if _ckpt_dir.is_dir() else [])
+             if f.name.startswith("ep") and f.name.endswith(".pt")],
+            key=lambda f: int(f.stem[2:]),
+        )
+        ckpt_count = len(_ep_ckpts)
+        resume_candidate = str(_ep_ckpts[-1]) if _ep_ckpts else (
+            str(_ckpt_dir / "final.pt") if (_ckpt_dir / "final.pt").exists() else None
+        )
 
     # --- is there an active training process for this scenario? ---
     active_pid = _find_active_pid(train_entry)
@@ -133,7 +149,11 @@ def get_training_launch_status(scenario_id: str) -> dict[str, Any]:
 # ── helpers ───────────────────────────────────────────────────────────────────
 
 def _inspect_latest_run(runs_root: Path):
-    """Find the most-recently-modified run dir and summarise its state."""
+    """Find the most-recently-modified run dir and summarise its state.
+
+    NOTE: this helper is used only by tests; get_training_launch_status() calls
+    find_latest_run() directly for ghost-proof, status-aware selection.
+    """
     if not runs_root.is_dir():
         return None, None, 0, None
 

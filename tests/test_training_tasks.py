@@ -208,7 +208,7 @@ def test_diagnose_physics_early_termination_pattern(tmp_path, monkeypatch):
     monkeypatch.setattr(rp, "_PROJECT_ROOT", tmp_path)
 
     rows = [
-        {"episode": i, "max_freq_dev_hz": 15.0, "reward": -500.0, "settled": False}
+        {"episode": i, "physics": {"max_freq_dev_hz": 15.0, "settled": False}, "reward": -500.0}
         for i in range(50)
     ]
     _make_metrics_run(tmp_path, "kundur", "run1", rows)
@@ -228,8 +228,9 @@ def test_diagnose_physics_no_pattern_healthy(tmp_path, monkeypatch):
     monkeypatch.setattr(rp, "_PROJECT_ROOT", tmp_path)
 
     rows = [
-        {"episode": i, "max_freq_dev_hz": max(2.0, 12.0 - i * 0.1),
-         "reward": -5000.0 + i * 20, "settled": i > 20}
+        {"episode": i,
+         "physics": {"max_freq_dev_hz": max(2.0, 12.0 - i * 0.1), "settled": i > 20},
+         "reward": -5000.0 + i * 20}
         for i in range(100)
     ]
     _make_metrics_run(tmp_path, "kundur", "run1", rows)
@@ -246,7 +247,7 @@ def test_diagnose_physics_no_progress_pattern(tmp_path, monkeypatch):
     monkeypatch.setattr(rp, "_PROJECT_ROOT", tmp_path)
 
     rows = [
-        {"episode": i, "max_freq_dev_hz": 8.0, "reward": -50000.0, "settled": False}
+        {"episode": i, "physics": {"max_freq_dev_hz": 8.0, "settled": False}, "reward": -50000.0}
         for i in range(30)
     ]
     _make_metrics_run(tmp_path, "kundur", "run1", rows)

@@ -144,18 +144,31 @@ def find_latest_run(scenario_id: str) -> Path | None:
     if not candidates:
         return None
 
+    def _terminal_ts(item: tuple[Path, dict]) -> str:
+        s = item[1]
+        return s.get("finished_at") or s.get("failed_at") or ""
+
     running = [(d, s) for d, s in candidates if s.get("status") == "running"]
-    if len(running) == 1:
-        return running[0][0]
-    if len(running) > 1:
-        return max(running, key=lambda item: item[1].get("last_updated") or "")[0]
+    terminal = [(d, s) for d, s in candidates if s.get("status") != "running"]
+
+    if running:
+        best_running = max(running, key=lambda item: item[1].get("last_updated") or "")
+        best_running_ts = best_running[1].get("last_updated") or ""
+
+        # Ghost-run guard: if a completed/failed run has a terminal timestamp
+        # *after* the best running heartbeat, the running status is stale (process
+        # died without writing a final status).  Prefer the terminal run instead.
+        if terminal:
+            best_terminal = max(terminal, key=_terminal_ts)
+            if _terminal_ts(best_terminal) > best_running_ts:
+                return best_terminal[0]
+
+        return best_running[0]
 
     # No running runs: use finished_at or failed_at timestamp from file content.
     # Runs that lack both timestamps (e.g. crashed before writing them) return ""
     # and sort last — the most-recently-terminated run wins, which is the desired
     # behaviour: a clean finish beats an incomplete/crashed run of similar vintage.
-    def _terminal_ts(item: tuple[Path, dict]) -> str:
-        s = item[1]
-        return s.get("finished_at") or s.get("failed_at") or ""
-
-    return max(candidates, key=_terminal_ts)[0]
+    if not terminal:
+        return None
+    return max(terminal, key=_terminal_ts)[0]

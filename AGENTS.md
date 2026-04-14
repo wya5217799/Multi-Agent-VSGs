@@ -14,6 +14,7 @@
 > Update the manifest when entries change; AGENTS.md is validated against it.
 
 1. Read `engine/harness_reference.py` - Authoritative harness state; read before any agent action (Re-evaluate when: harness architecture change)
+   - **Exception — pure launch query**: call `get_training_launch_status(scenario_id)` from `engine/training_launch.py` instead; no need to read harness file directly
 2. Read `scenarios/contract.py` - ScenarioContract; single source of truth for scenario constants (Re-evaluate when: scenario parameter schema change)
 3. Read `docs/harness/2026-04-05-simulink-harness-v1.md` - Task contracts; defines harness task I/O and sequencing (Re-evaluate when: harness task definition change)
 4. Read `results/harness/README.md` - Output directory structure; where to write harness evidence (Re-evaluate when: output artifact policy change)
@@ -31,6 +32,17 @@ For project memory index, see `MEMORY.md`. For historical architecture decisions
   - model: `NE39bus_v2`
   - model dir: `scenarios/new_england/simulink_models/`
   - training entry: `scenarios/new_england/train_simulink.py`
+
+## Training Launch Flow (Simulink)
+
+Bootstrap sequence enforced in `scenarios/*/train_simulink.py`:
+1. **Init** — parse args, generate `run_id`, resolve `run_dir` path (no mkdir yet)
+2. **Backend-ready** — `env.reset()` triggers MATLAB startup + warmup; if this fails, no orphaned directories are created
+3. **Commit outputs** — create `run_dir/checkpoints/`, `run_dir/logs/`, write `training_status.json` (status: running)
+4. **Train loop** — episode iterations with periodic checkpointing
+
+To launch from shell: `scripts/launch_training.ps1 [kundur|ne39|both]`
+To query before launch: `engine/training_launch.py::get_training_launch_status(scenario_id)` → returns `launch.python_executable`, `launch.script`, `launch.args`
 
 ## Default Working Mode
 

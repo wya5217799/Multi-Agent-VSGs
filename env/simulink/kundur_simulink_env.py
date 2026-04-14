@@ -73,34 +73,11 @@ OMEGA_N: float = 2.0 * np.pi * F_NOM
 SBASE: float = 100.0      # MVA
 
 TDS_FAIL_PENALTY: float = -50.0
-OMEGA_TERM_THRESHOLD: float = 15.0 / F_NOM   # 0.30 pu at 50 Hz base
-# 15 Hz matches the NE39 cut-off (NE39 uses 0.25 pu because its base is 60 Hz).
-# At this deviation the system is in transient instability; continuing would
-# crash MATLAB sim() and pollute the replay buffer.
-OMEGA_TERM_PENALTY: float = -500.0            # per agent, lump-sum terminal reward
 
 MAX_NEIGHBORS: int = _CONTRACT.max_neighbors
 COMM_FAIL_PROB: float = 0.1
 
 VSG_BUS_VN: float = 20.0  # kV
-
-# Physics sanity check — catches config-env wiring regressions at import time.
-# Formula: with N_AGENTS VSGs each at minimum damping D_LO, the estimated
-# steady-state frequency deviation under a DIST_MAX disturbance is:
-#   Δf_ss ≈ DIST_MAX × F_NOM / (N_AGENTS × D_LO)
-# This must stay below 85% of OMEGA_TERM_THRESHOLD × F_NOM (= 12.75 Hz) to
-# leave headroom for transient overshoot without immediate episode termination.
-_OMEGA_TERM_HZ: float = OMEGA_TERM_THRESHOLD * F_NOM
-_DIST_MAX_SAFE_HZ: float = 0.85 * _OMEGA_TERM_HZ
-_DIST_MAX_EST_HZ: float = DIST_MAX * F_NOM / (N_AGENTS * D_LO)
-if _DIST_MAX_EST_HZ > _DIST_MAX_SAFE_HZ:
-    warnings.warn(
-        f"DIST_MAX={DIST_MAX} may cause immediate episode termination: "
-        f"estimated steady-state Δf ≈ {_DIST_MAX_EST_HZ:.1f} Hz exceeds "
-        f"safe limit {_DIST_MAX_SAFE_HZ:.1f} Hz (85% of OMEGA_TERM={_OMEGA_TERM_HZ:.0f} Hz). "
-        f"Consider reducing DIST_MAX in scenarios/kundur/config_simulink.py.",
-        stacklevel=2,
-    )
 
 
 def _map_zero_centered_action(
@@ -276,23 +253,17 @@ class _KundurBaseEnv(_SimVsgBase):
 
         obs = self._build_obs()
 
-        # Omega instability guard: terminate early when any VSG deviates beyond
-        # 15 Hz (OMEGA_TERM_THRESHOLD) so we avoid MATLAB sim() crashes on
-        # diverged trajectories and prevent polluting the replay buffer.
-        omega_unstable = sim_ok and bool(
-            np.any(np.abs(self._omega - 1.0) > OMEGA_TERM_THRESHOLD)
-        )
-
-        if omega_unstable:
-            reward = np.full(N_AGENTS, OMEGA_TERM_PENALTY, dtype=np.float32)
-            components = {"r_f": float(OMEGA_TERM_PENALTY), "r_h": 0.0, "r_d": 0.0}
-        elif sim_ok:
+        if sim_ok:
             reward, components = self._compute_reward(action)
         else:
             reward = np.full(N_AGENTS, TDS_FAIL_PENALTY, dtype=np.float32)
             components = {"r_f": float(TDS_FAIL_PENALTY), "r_h": 0.0, "r_d": 0.0}
 
-        terminated = (not sim_ok) or omega_unstable
+        # Paper (Yang et al. TPWRS 2023) runs fixed-length episodes (M=50 steps).
+        # Episodes only terminate on MATLAB sim() crash.  Frequency deviations are
+        # handled by the Simulink integrator saturation (±15 Hz hardware limit) and
+        # do not need a Python-level early-termination guard.
+        terminated = not sim_ok
         truncated = self._step_count >= STEPS_PER_EPISODE
 
         _max_freq_dev = float(np.max(np.abs((self._omega - 1.0) * F_NOM)))
@@ -306,10 +277,7 @@ class _KundurBaseEnv(_SimVsgBase):
             "freq_hz": self._omega * F_NOM,
             "max_freq_dev_hz": _max_freq_dev,
             "max_freq_deviation_hz": _max_freq_dev,
-            # tds_failed is True for any disrupted episode (sim crash OR omega
-            # instability guard).  Use omega_unstable to distinguish the two paths.
-            "tds_failed": (not sim_ok) or omega_unstable,
-            "omega_unstable": omega_unstable,
+            "tds_failed": not sim_ok,
             "reward_components": components,
         }
 

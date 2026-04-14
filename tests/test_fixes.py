@@ -535,14 +535,16 @@ def test_load_or_create_log_preserves_physics_summary(tmp_path):
 
 
 # =============================================================================
-# T8: omega_unstable early termination — Kundur env
+# T8: fixed-length episodes — Kundur env (paper-aligned, no omega termination)
 # =============================================================================
 
-class TestKundurOmegaUnstable:
+class TestKundurNoOmegaTermination:
     """
-    Kundur env must terminate early when any VSG frequency deviation exceeds
-    OMEGA_TERM_THRESHOLD (15 Hz).  Previously 'terminated = not sim_ok' only,
-    meaning MATLAB sim() would crash before the env could stop the episode.
+    Yang et al. TPWRS 2023 runs fixed-length episodes (M=50 steps).
+    The previous OMEGA_TERM_THRESHOLD (15 Hz) early-termination guard has been
+    removed.  Episodes now only terminate on MATLAB sim() crash (sim_ok=False).
+    The Simulink integrator saturation (±15 Hz hardware limit) handles extreme
+    frequency deviations without Python-level intervention.
     """
 
     def _make_env(self):
@@ -551,53 +553,50 @@ class TestKundurOmegaUnstable:
         env.reset(seed=0)
         return env
 
-    def test_normal_step_omega_unstable_false(self):
+    def test_normal_step_no_termination(self):
         """No termination when omega is near nominal (1.0 p.u.)."""
         env = self._make_env()
-        # Standalone ODE at rest should stay near nominal
         action = np.zeros((4, 2), dtype=np.float32)
         _, _, terminated, _, info = env.step(action)
-        assert info["omega_unstable"] is False
-        # terminated may be False (no crash, no instability)
+        assert not terminated
         assert not info["tds_failed"]
-
-    def test_high_freq_deviation_triggers_omega_unstable(self):
-        """omega > 1 + OMEGA_TERM_THRESHOLD must set omega_unstable and terminated."""
-        from env.simulink.kundur_simulink_env import (
-            KundurStandaloneEnv, OMEGA_TERM_THRESHOLD, OMEGA_TERM_PENALTY,
+        assert "omega_unstable" not in info, (
+            "omega_unstable key must not exist — early termination guard removed"
         )
+
+    def test_high_freq_deviation_does_not_terminate(self):
+        """omega >> 1 must NOT terminate the episode (hardware saturation handles it)."""
         env = self._make_env()
 
-        # Inject a supercritical frequency deviation (beyond the 15 Hz threshold)
-        # then hold it by patching _step_backend and _read_measurements so that
-        # the injected omega value is preserved through the step call.
-        env._omega = np.full(4, 1.0 + OMEGA_TERM_THRESHOLD + 0.01, dtype=np.float64)
+        # Inject supercritical frequency deviation (well beyond the old 15 Hz guard)
+        env._omega = np.full(4, 1.60, dtype=np.float64)  # 30 Hz deviation at 50 Hz base
         env._step_backend = lambda *a, **kw: None
         env._read_measurements = lambda: None
 
         action = np.zeros((4, 2), dtype=np.float32)
-        _, reward, terminated, _, info = env.step(action)
+        _, reward, terminated, truncated, info = env.step(action)
 
-        assert info["omega_unstable"] is True, "omega_unstable must be True"
-        assert terminated is True, "episode must terminate on omega_unstable"
-        assert info["tds_failed"] is True, "tds_failed must be True when omega_unstable"
-        assert float(reward[0]) == pytest.approx(OMEGA_TERM_PENALTY)
+        assert not terminated, (
+            "High freq deviation must NOT terminate — only sim crash terminates"
+        )
+        assert not info["tds_failed"], "tds_failed must be False (sim did not crash)"
+        assert "omega_unstable" not in info, "omega_unstable key must not exist"
+        # Reward should be a normal r_f/r_h/r_d computation, not a -500 penalty
+        assert float(reward[0]) > -500.0, (
+            f"Reward should not be the old OMEGA_TERM_PENALTY (-500), got {reward[0]}"
+        )
 
-    def test_omega_unstable_false_when_sim_fails(self):
-        """omega_unstable must be False when sim_ok is False (mutually exclusive)."""
-        from env.simulink.kundur_simulink_env import KundurStandaloneEnv
-
+    def test_only_sim_crash_terminates(self):
+        """sim_ok=False (MATLAB crash) is the sole early-termination condition."""
         env = self._make_env()
 
         def _raise(*a, **kw):
-            raise RuntimeError("simulated crash")
+            raise RuntimeError("simulated MATLAB crash")
 
         env._step_backend = _raise
 
         action = np.zeros((4, 2), dtype=np.float32)
         _, _, terminated, _, info = env.step(action)
 
-        assert info["omega_unstable"] is False, (
-            "omega_unstable must be False when sim_ok=False (sim never ran)"
-        )
-        assert terminated is True  # terminated via sim_ok=False path
+        assert terminated is True, "sim crash must terminate the episode"
+        assert info["tds_failed"] is True, "tds_failed must be True on sim crash"

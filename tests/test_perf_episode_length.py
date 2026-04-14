@@ -1,9 +1,12 @@
 # tests/test_perf_episode_length.py
-"""Opt-A: Shorten Kundur episode from 10 s → 5 s.
+"""Episode length contract for Kundur Simulink training.
 
-TDD RED → GREEN contract
-  RED : current code has T_EPISODE=10 / STEPS=50 → all assertions fail
-  GREEN: after updating config + env constants, all pass
+Yang et al. TPWRS 2023 Sec.IV-A: M=50 control steps × DT=0.2s = T_EPISODE=10s.
+
+This file was previously written as "Opt-A: Shorten to 5s" but the 5s change
+has been reverted — the paper's OMEGA_TERM_THRESHOLD guard (which caused 100%
+episode termination) has been removed instead.  Episodes now run the full 10s
+per the paper specification.
 """
 import numpy as np
 import pytest
@@ -15,16 +18,16 @@ import pytest
 
 class TestEpisodeLengthConfig:
 
-    def test_config_t_episode_is_5s(self):
+    def test_config_t_episode_is_10s(self):
         from scenarios.kundur.config_simulink import T_EPISODE
-        assert T_EPISODE == 5.0, (
-            f"T_EPISODE should be 5.0 for faster training, got {T_EPISODE}"
+        assert T_EPISODE == 10.0, (
+            f"T_EPISODE should be 10.0 (paper Sec.IV-A M=50), got {T_EPISODE}"
         )
 
-    def test_config_steps_per_episode_is_25(self):
+    def test_config_steps_per_episode_is_50(self):
         from scenarios.kundur.config_simulink import STEPS_PER_EPISODE
-        assert STEPS_PER_EPISODE == 25, (
-            f"STEPS_PER_EPISODE should be 25, got {STEPS_PER_EPISODE}"
+        assert STEPS_PER_EPISODE == 50, (
+            f"STEPS_PER_EPISODE should be 50, got {STEPS_PER_EPISODE}"
         )
 
     def test_config_steps_consistent_with_dt(self):
@@ -49,13 +52,13 @@ class TestStandaloneEnvEpisodeLength:
         yield e
         e.close()
 
-    def test_env_t_episode_attribute_is_5s(self, env):
-        assert env.T_EPISODE == 5.0, (
-            f"env.T_EPISODE should be 5.0, got {env.T_EPISODE}"
+    def test_env_t_episode_attribute_is_10s(self, env):
+        assert env.T_EPISODE == 10.0, (
+            f"env.T_EPISODE should be 10.0, got {env.T_EPISODE}"
         )
 
-    def test_env_truncates_at_25_steps(self, env):
-        """Episode must end with truncated=True at exactly 25 steps."""
+    def test_env_truncates_at_50_steps(self, env):
+        """Episode must end with truncated=True at exactly 50 steps."""
         env.reset()
         step_count = 0
         truncated = False
@@ -65,36 +68,36 @@ class TestStandaloneEnvEpisodeLength:
             step_count += 1
             if terminated or truncated:
                 break
-        assert step_count == 25, (
-            f"Expected episode length 25 steps, got {step_count}"
+        assert step_count == 50, (
+            f"Expected episode length 50 steps, got {step_count}"
         )
         assert truncated, "Episode should end via truncation (time limit), not termination"
 
-    def test_env_sim_time_at_end_is_5s(self, env):
-        """sim_time after 25 steps must reach 5.0 s."""
+    def test_env_sim_time_at_end_is_10s(self, env):
+        """sim_time after 50 steps must reach 10.0 s."""
         env.reset()
         info = {}
-        for _ in range(25):
+        for _ in range(50):
             action = np.zeros((env.N_AGENTS, 2), dtype=np.float32)
             _, _, terminated, truncated, info = env.step(action)
             if terminated or truncated:
                 break
-        assert abs(info["sim_time"] - 5.0) < 1e-6, (
-            f"sim_time at episode end should be 5.0 s, got {info['sim_time']}"
+        assert abs(info["sim_time"] - 10.0) < 1e-6, (
+            f"sim_time at episode end should be 10.0 s, got {info['sim_time']}"
         )
 
 
 # ---------------------------------------------------------------------------
-# Physics contract: frequency nadir must be observable within 5 s
+# Physics contract: frequency nadir must be observable within 10 s
 # ---------------------------------------------------------------------------
 
-class TestPhysicsWithin5s:
+class TestPhysicsWithin10s:
 
     def test_nadir_visible_after_load_trip(self):
         """After a load disturbance the nadir must appear before the episode ends.
 
         A real power system nadir after a 248 MW load trip occurs within ~2-3 s.
-        This test verifies 5 s is enough to capture it.
+        10 s easily captures it.
         """
         from env.simulink.kundur_simulink_env import KundurStandaloneEnv
         env = KundurStandaloneEnv(training=False)
@@ -105,7 +108,7 @@ class TestPhysicsWithin5s:
 
             min_omega = 1.0
             max_omega = 1.0
-            for _ in range(25):  # 25 steps × 0.2 s = 5 s
+            for _ in range(50):  # 50 steps × 0.2 s = 10 s
                 action = np.zeros((env.N_AGENTS, 2), dtype=np.float32)
                 _, _, terminated, truncated, info = env.step(action)
                 step_omega = np.array(info["omega"])
@@ -117,7 +120,7 @@ class TestPhysicsWithin5s:
             # After a load trip the frequency should deviate noticeably from 1.0 pu
             max_deviation = max(abs(max_omega - 1.0), abs(min_omega - 1.0))
             assert max_deviation > 0.005, (
-                f"Expected visible freq deviation >0.5% within 5s after disturbance, "
+                f"Expected visible freq deviation >0.5% within 10s after disturbance, "
                 f"got max_deviation={max_deviation:.4f} pu "
                 f"(omega range [{min_omega:.4f}, {max_omega:.4f}])"
             )
@@ -126,7 +129,7 @@ class TestPhysicsWithin5s:
 
     def test_settled_vs_unsettled_distinguishable(self):
         """With control (clamped to nominal) vs no control episodes produce
-        different reward totals — confirming 5 s window has RL signal.
+        different reward totals — confirming 10 s window has RL signal.
         """
         from env.simulink.kundur_simulink_env import KundurStandaloneEnv
 
@@ -135,7 +138,7 @@ class TestPhysicsWithin5s:
             env.reset()
             env.apply_disturbance(magnitude=2.0)
             total_r = 0.0
-            for _ in range(25):
+            for _ in range(50):
                 a = np.full((env.N_AGENTS, 2), action_val, dtype=np.float32)
                 _, r, terminated, truncated, _ = env.step(a)
                 total_r += float(np.mean(r))
@@ -155,5 +158,5 @@ class TestPhysicsWithin5s:
         # The two policies must produce distinguishably different rewards
         assert abs(r_nominal - r_max_damp) > 0.1, (
             f"Rewards too similar: nominal={r_nominal:.3f}, max_damp={r_max_damp:.3f}. "
-            f"5 s window may lack RL signal."
+            f"10 s window may lack RL signal."
         )

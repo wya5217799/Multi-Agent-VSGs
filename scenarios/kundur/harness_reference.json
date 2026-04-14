@@ -36,11 +36,11 @@
     },
     {
       "key": "t_episode",
-      "value": 5.0,
-      "source": "repo config (config_simulink.py T_EPISODE=5.0; reduced from paper 10s for faster Kundur dynamics)",
+      "value": 10.0,
+      "source": "Yang et al. TPWRS 2023 Sec.IV-A (M=50 steps × DT=0.2s = 10s)",
       "confidence": "high",
       "check_mode": "must_match",
-      "notes": "Episode duration in seconds. Kundur 4-gen nadir appears within 2-3s, 5s is sufficient."
+      "notes": "Episode duration in seconds. Paper Sec.IV-A uses M=50 control steps per episode."
     },
     {
       "key": "obs_dim",

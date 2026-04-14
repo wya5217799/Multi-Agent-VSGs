@@ -29,12 +29,12 @@ FN = _CONTRACT.fn     # Hz
 OMEGA_N = 2 * np.pi * FN  # rad/s
 
 # ========== Simulation (Kundur-specific) ==========
-# T_EPISODE: 5s (25 steps). Engineering decision: Kundur 4-gen nadir appears within 2-3s;
-# 5s covers the full swing and is sufficient for RL learning signal.
-# Paper Sec.IV-A states 10s (M=50), but that is for the NE39-scale experiment.
-# See harness_reference.json for detailed rationale.
-T_EPISODE = 5.0
-STEPS_PER_EPISODE = int(T_EPISODE / DT)  # 25
+# T_EPISODE: 10s (50 steps), matching Yang et al. TPWRS 2023 Sec.IV-A (M=50, DT=0.2s).
+T_EPISODE = 10.0
+STEPS_PER_EPISODE = int(T_EPISODE / DT)  # 50
+
+# DEFAULT_EPISODES: Paper Section IV trains for 2000 episodes.
+DEFAULT_EPISODES = 2000
 
 # ========== VSG Parameters (Kundur-specific) ==========
 VSG_RA = 0.003        # p.u. armature resistance (Kundur-specific; NE39 uses 0.001)

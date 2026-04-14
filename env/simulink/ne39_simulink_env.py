@@ -897,24 +897,12 @@ class NE39BusSimulinkEnv(_NE39BaseEnv):
         )
         self.x_line = x_line
 
-        from engine.simulink_bridge import BridgeConfig, SimulinkBridge
+        import dataclasses
+        from engine.simulink_bridge import SimulinkBridge
+        from scenarios.new_england.config_simulink import NE39_BRIDGE_CONFIG
 
-        resolved_dir = model_dir or os.path.join(
-            os.path.dirname(os.path.abspath(__file__)),
-            '..', '..', 'scenarios', 'new_england', 'simulink_models'
-        )
-        cfg = BridgeConfig(
-            model_name=model_name,
-            model_dir=resolved_dir,
-            n_agents=N_ESS,
-            dt_control=DT,
-            sbase_va=100e6,  # 100 MVA system base
-            m_path_template='{model}/VSG_ES{idx}/M0',
-            d_path_template='{model}/VSG_ES{idx}/D0',
-            omega_signal='omega_ES{idx}',
-            vabc_signal='Vabc_ES{idx}',
-            iabc_signal='Iabc_ES{idx}',
-        )
+        resolved_dir = model_dir or NE39_BRIDGE_CONFIG.model_dir
+        cfg = dataclasses.replace(NE39_BRIDGE_CONFIG, model_dir=resolved_dir)
         self.bridge = SimulinkBridge(cfg)
 
     # ------------------------------------------------------------------

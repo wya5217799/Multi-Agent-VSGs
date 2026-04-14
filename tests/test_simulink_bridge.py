@@ -56,6 +56,84 @@ class TestBridgeConfig:
         assert NE39_BRIDGE_CONFIG.sbase_va == 100e6
 
 
+class TestNE39FrCompiled:
+    """NE39 env must expose _fr_compiled via its bridge and pass do_recompile correctly."""
+
+    def test_fr_compiled_starts_false(self, monkeypatch):
+        """bridge._fr_compiled is False before any reset."""
+        _install_fake_gymnasium(monkeypatch)
+        import types, sys
+        fake_matlab = types.ModuleType("matlab")
+        fake_matlab.engine = types.ModuleType("matlab.engine")
+        monkeypatch.setitem(sys.modules, "matlab", fake_matlab)
+        monkeypatch.setitem(sys.modules, "matlab.engine", fake_matlab.engine)
+
+        with patch("engine.simulink_bridge.SimulinkBridge") as MockBridge:
+            instance = MockBridge.return_value
+            instance._fr_compiled = False
+            from env.simulink.ne39_simulink_env import NE39BusSimulinkEnv
+            env = NE39BusSimulinkEnv.__new__(NE39BusSimulinkEnv)
+            env.bridge = instance
+            assert env.bridge._fr_compiled is False
+
+    def test_fr_compiled_set_after_reset(self, monkeypatch):
+        """After _reset_backend, bridge._fr_compiled must be True and do_recompile
+        must be True on the first call, False on the second."""
+        _install_fake_gymnasium(monkeypatch)
+        import types, sys
+        fake_matlab = types.ModuleType("matlab")
+        fake_matlab.engine = types.ModuleType("matlab.engine")
+        fake_matlab.double = list
+        monkeypatch.setitem(sys.modules, "matlab", fake_matlab)
+        monkeypatch.setitem(sys.modules, "matlab.engine", fake_matlab.engine)
+
+        recorded_calls = []
+
+        class FakeBridge:
+            _fr_compiled = False
+            cfg = MagicMock()
+            cfg.model_name = "NE39bus_v2"
+            cfg.sbase_va = 100e6
+            _matlab_double = list
+            _matlab_cfg = {}
+            t_current = 0.0
+            _delta_prev_deg = [0.0] * 8
+            _Pe_prev = [0.5] * 8
+
+            def load_model(self): pass
+            def reset(self): pass
+
+            class session:
+                @staticmethod
+                def eval(expr, nargout=0): return {}
+
+                @staticmethod
+                def call(fn, *args, nargout=0):
+                    recorded_calls.append((fn, args))
+                    if fn == "vsg_warmup":
+                        return {}, {"success": True}
+                    return None
+
+        with patch("engine.simulink_bridge.SimulinkBridge", return_value=FakeBridge()), \
+             patch("scenarios.new_england.config_simulink.NE39_BRIDGE_CONFIG"):
+            from env.simulink.ne39_simulink_env import NE39BusSimulinkEnv
+            env = NE39BusSimulinkEnv.__new__(NE39BusSimulinkEnv)
+            env.bridge = FakeBridge()
+            env._sim_time = 0.0
+
+            # First reset: do_recompile must be True (bridge._fr_compiled=False)
+            env._reset_backend()
+            warmup_call = next(c for c in recorded_calls if c[0] == "vsg_warmup")
+            assert warmup_call[1][-1] is True, "first reset must recompile"
+            assert env.bridge._fr_compiled is True
+
+            # Second reset: do_recompile must be False
+            recorded_calls.clear()
+            env._reset_backend()
+            warmup_call2 = next(c for c in recorded_calls if c[0] == "vsg_warmup")
+            assert warmup_call2[1][-1] is False, "second reset must skip recompile"
+
+
 def _make_test_config(tmp_path=None):
     """Create a BridgeConfig for testing."""
     from engine.simulink_bridge import BridgeConfig

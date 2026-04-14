@@ -943,10 +943,12 @@ class NE39BusSimulinkEnv(_NE39BaseEnv):
                 nargout=0,
             )
 
-            # Call vsg_warmup with full NE39 5-arg signature
-            # Returns [state, status] but we only need status for error checking.
+            # Call vsg_warmup with full NE39 5-arg signature + do_recompile flag.
+            # do_recompile=False on episode 2+ skips the ~12s FastRestart off→on
+            # recompile cycle.  bridge._fr_compiled is False until first success.
             mdbl = self.bridge._matlab_double
             agent_ids = mdbl(list(range(1, N_ESS + 1)))
+            do_recompile = not self.bridge._fr_compiled
             warmup_state, warmup_status = self.bridge.session.call(
                 "vsg_warmup",
                 self.bridge.cfg.model_name,
@@ -954,6 +956,7 @@ class NE39BusSimulinkEnv(_NE39BaseEnv):
                 float(self.bridge.cfg.sbase_va),
                 self.bridge._matlab_cfg,
                 self.bridge.session.eval("ne39_ip", nargout=1),
+                bool(do_recompile),  # 6th arg: skip FastRestart off→on after first episode
                 nargout=2,
             )
 
@@ -962,6 +965,7 @@ class NE39BusSimulinkEnv(_NE39BaseEnv):
                     f"vsg_warmup failed: {warmup_status.get('error', 'unknown')}"
                 )
 
+            self.bridge._fr_compiled = True  # mark compiled; future resets skip recompile
             self.bridge.t_current = T_WARMUP
 
             # Seed feedback state from warmup result so first step has valid Pe/delta

@@ -1,4 +1,4 @@
-function [state, status] = vsg_warmup(model_name, agent_ids_or_duration, sbase_va, cfg, init_params)
+function [state, status] = vsg_warmup(model_name, agent_ids_or_duration, sbase_va, cfg, init_params, do_recompile)
 %VSG_WARMUP  Episode reset helper -- shared by Kundur and NE39 scenarios.
 %
 % Kundur (2-arg) mode:
@@ -56,7 +56,13 @@ function [state, status] = vsg_warmup(model_name, agent_ids_or_duration, sbase_v
         return;
     end
 
-    % NE39 full mode
+    % NE39 full mode (5-arg or 6-arg with optional do_recompile flag).
+    % 6-arg: do_recompile=false skips the ~10-12 s FastRestart recompile on
+    % episodes 2+ — caller tracks bridge._fr_compiled and passes the flag.
+    if nargin < 6
+        do_recompile = true;   % default: always recompile (backward-compat)
+    end
+
     status.success = true;
     status.error   = '';
     tic;
@@ -83,10 +89,12 @@ function [state, status] = vsg_warmup(model_name, agent_ids_or_duration, sbase_v
     catch
     end
 
-    % Step 1: Stop any running FastRestart session
-    try
-        set_param(model_name, 'FastRestart', 'off');
-    catch
+    % Step 1: Stop any running FastRestart session (skip when do_recompile=false)
+    if do_recompile
+        try
+            set_param(model_name, 'FastRestart', 'off');
+        catch
+        end
     end
 
     % Step 2: Write all workspace variables
@@ -99,15 +107,17 @@ function [state, status] = vsg_warmup(model_name, agent_ids_or_duration, sbase_v
         assignin('base', sprintf('wref_%d',     idx), 1.0);
     end
 
-    % Step 3: Enable FastRestart
-    try
-        set_param(model_name, 'FastRestart', 'on');
-    catch ME
-        status.success = false;
-        status.error   = ['FastRestart enable failed: ' ME.message];
-        state = warmup_empty_state(N);
-        status.elapsed_ms = toc * 1000;
-        return;
+    % Step 3: Enable FastRestart (skip when do_recompile=false -- already compiled)
+    if do_recompile
+        try
+            set_param(model_name, 'FastRestart', 'on');
+        catch ME
+            status.success = false;
+            status.error   = ['FastRestart enable failed: ' ME.message];
+            state = warmup_empty_state(N);
+            status.elapsed_ms = toc * 1000;
+            return;
+        end
     end
 
     % Step 4: Run warmup simulation

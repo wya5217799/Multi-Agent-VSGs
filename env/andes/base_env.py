@@ -48,15 +48,14 @@ class AndesBaseEnv(ABC):
     VSG_D0 = 4.0                     # 基础阻尼 D (p.u.)
     VSG_SN = 200.0                   # 额定容量 (MVA)
 
-    # 动作范围 (v1: scale_H=5, scale_D=10, DH∈[-5,15], DD∈[-10,30])
-    # PENDING AUDIT: These action bounds come from "v1 config". Simulink side uses
-    # DM_MIN=-6/DM_MAX=18, DD_MIN=-1.5/DD_MAX=4.5 (40-67% narrower range).
-    # Do NOT unify until action bounds audit confirms which is physically correct.
-    # See: docs/decisions/ or paper Table I for correct ranges.
+    # 动作范围 — see docs/decisions/2026-04-14-action-bounds-audit.md
+    # DM: BackendProfile — ANDES M0=20 vs Simulink M0=12; ratio 5/3 explains all differences. OK.
     DM_MIN = -10.0                   # = 2 * DH_MIN = 2 * (-5)
     DM_MAX = 30.0                    # = 2 * DH_MAX = 2 * 15
-    DD_MIN = -10.0                   # = DD_MIN (v1 config)
-    DD_MAX = 30.0                    # = DD_MAX (v1 config)
+    # DD: PENDING AUDIT — v1 legacy artefact. D0-proportional estimate: [-2, 6].
+    # Do NOT change until ANDES training completes (risk of breaking trained policies).
+    DD_MIN = -10.0                   # v1 config; proportional target: -2.0
+    DD_MAX = 30.0                    # v1 config; proportional target:  6.0
 
     # 传输线路参数 (校准值)
     NEW_LINE_R = 0.001

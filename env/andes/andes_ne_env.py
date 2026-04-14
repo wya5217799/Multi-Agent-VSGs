@@ -40,12 +40,12 @@ class AndesNEEnv(AndesBaseEnv):
     # Also note: root config.py still contains old H_ES0=3/D_ES0=2 (v0 system, to be retired).
     VSG_M0 = 20.0
     VSG_D0 = 4.0
-    # PENDING AUDIT: These action bounds come from "v1 config". Simulink side uses
-    # DM_MIN=-6/DM_MAX=18, DD_MIN=-1.5/DD_MAX=4.5 (40-67% narrower range).
-    # Do NOT unify until action bounds audit confirms which is physically correct.
-    # See: docs/decisions/ or paper Table I for correct ranges.
+    # 动作范围 — see docs/decisions/2026-04-14-action-bounds-audit.md
+    # DM: BackendProfile — M0 ratio (20/12=5/3) explains difference vs Simulink. OK.
     DM_MIN = -10.0
     DM_MAX = 30.0
+    # DD: PENDING AUDIT — v1 legacy. Proportional target: [-2, 6]. Do not change until
+    # ANDES training is complete (risk of breaking trained policies).
     DD_MIN = -10.0
     DD_MAX = 30.0
 

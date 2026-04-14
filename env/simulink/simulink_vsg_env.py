@@ -287,7 +287,7 @@ class SimulinkMultiVSGEnv:
 
         # 6. Compute rewards
         rewards, r_f, r_h, r_d = self._compute_rewards(
-            omega, omega_dot, norm_actions
+            omega, omega_dot, delta_M, delta_D
         )
 
         # 7. Check termination
@@ -411,14 +411,20 @@ class SimulinkMultiVSGEnv:
         self,
         omega: np.ndarray,
         omega_dot: np.ndarray,
-        norm_actions: np.ndarray,
+        delta_M: np.ndarray,
+        delta_D: np.ndarray,
     ) -> Tuple[Dict[int, float], float, float, float]:
-        """Compute per-agent rewards, matching base_env._compute_rewards."""
+        """Compute per-agent rewards, matching base_env._compute_rewards.
+
+        Uses physical delta_M/delta_D (not normalized actions) per paper Eq.17-18:
+            r_h = -(mean(ΔH))²  where ΔH = ΔM/2
+            r_d = -(mean(ΔD))²
+        """
         d_omega_hz = (omega - 1.0) * _OMEGA_SCALE  # Hz deviation
 
-        # Global average normalized actions (Eq. 17-18)
-        ah_avg = float(np.mean(norm_actions[:, 0]))
-        ad_avg = float(np.mean(norm_actions[:, 1]))
+        # Global average physical increments (Eq. 17-18)
+        ah_avg = float(np.mean(delta_M)) / 2.0   # ΔH_avg = mean(ΔM)/2
+        ad_avg = float(np.mean(delta_D))          # ΔD_avg
 
         rewards = {}
         r_f_total = 0.0

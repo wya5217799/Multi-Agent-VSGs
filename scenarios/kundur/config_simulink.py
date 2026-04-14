@@ -30,9 +30,9 @@ FN = _CONTRACT.fn     # Hz
 OMEGA_N = 2 * np.pi * FN  # rad/s
 
 # ========== Simulation (Kundur-specific) ==========
-# T_EPISODE: Kundur uses 5s episodes (vs NE39 10s) — faster 4-gen dynamics converge sooner
-T_EPISODE = 5.0
-STEPS_PER_EPISODE = int(T_EPISODE / DT)  # 25
+# T_EPISODE: 10s matches paper Sec.IV-A (M=50 steps). Covers full transient decay post-disturbance.
+T_EPISODE = 10.0
+STEPS_PER_EPISODE = int(T_EPISODE / DT)  # 50
 
 # ========== VSG Parameters (Kundur-specific) ==========
 VSG_RA = 0.003        # p.u. armature resistance (Kundur-specific; NE39 uses 0.001)
@@ -48,8 +48,7 @@ D_HI = VSG_D0 + DD_MAX   # 7.5
 COMM_ADJ = {0: [1, 3], 1: [0, 2], 2: [1, 3], 3: [2, 0]}
 
 # ========== Reward (Kundur-specific) ==========
-# PHI_F: Kundur 4-gen system has lower frequency sensitivity than 8-gen NE39.
-# Paper Table I uses PHI_F=100 for this topology. NE39 uses PHI_F=200.
+# PHI_F: Paper Table I uses PHI_F=100 for all experiments (φ_f=100, φ_h=1, φ_d=1).
 PHI_F = 100.0
 
 # ========== Electrical Network ==========

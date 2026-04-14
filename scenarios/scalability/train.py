@@ -131,8 +131,9 @@ class ScalableVSGEnv:
 
         for i in range(self.N):
             a = np.clip(actions[i], -1.0, 1.0)
-            delta_H[i] = (a[0] + 1) / 2 * (cfg.DH_MAX - cfg.DH_MIN) + cfg.DH_MIN
-            delta_D[i] = (a[1] + 1) / 2 * (cfg.DD_MAX - cfg.DD_MIN) + cfg.DD_MIN
+            # Zero-centered mapping: a=0 → ΔH=0 (保持基准参数，与论文 Eq.12-13 语义一致)
+            delta_H[i] = a[0] * cfg.DH_MAX if a[0] >= 0 else a[0] * (-cfg.DH_MIN)
+            delta_D[i] = a[1] * cfg.DD_MAX if a[1] >= 0 else a[1] * (-cfg.DD_MIN)
             H_es[i] = max(self.H_es0[i] + delta_H[i], 0.1)
             D_es[i] = max(self.D_es0[i] + delta_D[i], 0.1)
 
@@ -141,9 +142,8 @@ class ScalableVSGEnv:
         self.step_count += 1
 
         obs = self._build_obs(result)
-        norm_actions = np.array([np.clip(actions[i], -1.0, 1.0) for i in range(self.N)])
         rewards, r_f_sum, r_h_sum, r_d_sum = self._compute_rewards(
-            result, norm_actions)
+            result, delta_H, delta_D)
         done = self.step_count >= cfg.STEPS_PER_EPISODE
 
         # 添加 H/D 到 info
@@ -178,19 +178,19 @@ class ScalableVSGEnv:
             obs[i] = o
         return obs
 
-    def _compute_rewards(self, state, norm_actions):
+    def _compute_rewards(self, state, delta_H, delta_D):
         """计算奖励 (Eq. 14-18).
 
         r_f: 局部邻居平均频率 (Eq.15-16)
-        r_h: -(a_h^avg)² 归一化动作全局平均 (Eq.17)
-        r_d: -(a_d^avg)² 归一化动作全局平均 (Eq.18)
+        r_h: -(ΔH_avg)² 物理惯量调整均值 (Eq.17)
+        r_d: -(ΔD_avg)² 物理阻尼调整均值 (Eq.18)
         """
         rewards = {}
         r_f_total, r_h_total, r_d_total = 0.0, 0.0, 0.0
 
-        # Eq. 17-18: 使用归一化动作的全局平均
-        ah_avg = np.mean(norm_actions[:, 0])
-        ad_avg = np.mean(norm_actions[:, 1])
+        # Eq.17-18: 物理调整量全局均值 (先均值再平方)
+        ah_avg = float(np.mean(delta_H))   # ΔH_avg
+        ad_avg = float(np.mean(delta_D))   # ΔD_avg
 
         for i in range(self.N):
             omega_i = state['omega'][i]
@@ -208,10 +208,10 @@ class ScalableVSGEnv:
                 if self.comm.is_link_active(i, j):
                     r_f -= (state['omega'][j] - omega_bar) ** 2
 
-            # Eq. 17: r_h = -(a_h^avg)² (归一化动作全局平均)
+            # Eq. 17: r_h = -(ΔH_avg)²
             r_h = -(ah_avg) ** 2
 
-            # Eq. 18: r_d = -(a_d^avg)² (归一化动作全局平均)
+            # Eq. 18: r_d = -(ΔD_avg)²
             r_d = -(ad_avg) ** 2
 
             rewards[i] = cfg.PHI_F * r_f + cfg.PHI_H * r_h + cfg.PHI_D * r_d
@@ -333,9 +333,8 @@ def compute_test_reward(n_agents, manager, n_test=50, seed=2000):
 def compute_no_control_reward(n_agents, n_test=50, seed=2000):
     """计算无控制基线的全局频率奖励 (ΔH=0, ΔD=0)."""
     env = ScalableVSGEnv(n_agents, random_disturbance=True, comm_fail_prob=0.0)
-    a0 = (0 - cfg.DH_MIN) / (cfg.DH_MAX - cfg.DH_MIN) * 2 - 1
-    a1 = (0 - cfg.DD_MIN) / (cfg.DD_MAX - cfg.DD_MIN) * 2 - 1
-    fixed_action = np.array([a0, a1], dtype=np.float32)
+    # Zero-centered mapping: action=0 → ΔH=0, ΔD=0 (no parameter change)
+    fixed_action = np.array([0.0, 0.0], dtype=np.float32)
     rewards_list = []
 
     for ep in range(n_test):

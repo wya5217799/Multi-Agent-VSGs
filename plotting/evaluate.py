@@ -101,10 +101,29 @@ def _build_delta_u(disturbance: DisturbanceBase) -> dict:
 
 
 def _get_zero_action(env) -> np.ndarray:
-    """Compute the normalized action for DeltaM=0, DeltaD=0."""
-    a0 = (0 - env.DM_MIN) / (env.DM_MAX - env.DM_MIN) * 2 - 1
-    a1 = (0 - env.DD_MIN) / (env.DD_MAX - env.DD_MIN) * 2 - 1
-    return np.array([a0, a1], dtype=np.float32)
+    """Compute the normalized action for DeltaM=0, DeltaD=0.
+
+    Two action encodings exist in this codebase:
+
+    Zero-centered (ANDES and Kundur Simulink envs):
+        a >= 0  ->  delta = a * DM_MAX
+        a < 0   ->  delta = a * (-DM_MIN)
+        => a=0 already maps to delta=0; zero action is [0, 0].
+
+    Affine (NE39 Simulink env):
+        delta = 0.5*(a+1)*(DM_MAX - DM_MIN) + DM_MIN
+        => solving for delta=0: a = -2*DM_MIN/(DM_MAX-DM_MIN) - 1
+
+    Detect encoding by checking for the 'ACTION_ENCODING' class attribute
+    (present on NE39 Simulink env), falling back to zero-centered.
+    """
+    encoding = getattr(env, 'ACTION_ENCODING', 'zero_centered')
+    if encoding == 'affine':
+        a0 = -2.0 * env.DM_MIN / (env.DM_MAX - env.DM_MIN) - 1.0
+        a1 = -2.0 * env.DD_MIN / (env.DD_MAX - env.DD_MIN) - 1.0
+        return np.array([a0, a1], dtype=np.float32)
+    # zero-centered: a=0 -> delta=0
+    return np.zeros(2, dtype=np.float32)
 
 
 # ── Core evaluation ──
@@ -172,7 +191,7 @@ def run_evaluation(scenario: ScenarioConfig,
         method=method,
         trajectory=trajectory,
         cumulative_reward=float(np.sum(trajectory.rewards)),
-        max_freq_dev=float(np.max(np.abs(trajectory.freq_hz - 50.0))),
+        max_freq_dev=float(np.max(np.abs(trajectory.freq_hz - getattr(_env, 'FN', 50.0)))),
     )
 
 

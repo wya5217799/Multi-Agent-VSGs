@@ -138,9 +138,9 @@ class MultiVSGEnv:
 
         for i in range(self.N):
             a = np.clip(actions[i], -1.0, 1.0)
-            # 线性映射: [-1,1] → [min, max]
-            delta_H[i] = (a[0] + 1) / 2 * (cfg.DH_MAX - cfg.DH_MIN) + cfg.DH_MIN
-            delta_D[i] = (a[1] + 1) / 2 * (cfg.DD_MAX - cfg.DD_MIN) + cfg.DD_MIN
+            # Zero-centered mapping: a=0 → ΔH=0 (保持基准参数，与论文 Eq.12-13 语义一致)
+            delta_H[i] = a[0] * cfg.DH_MAX if a[0] >= 0 else a[0] * (-cfg.DH_MIN)
+            delta_D[i] = a[1] * cfg.DD_MAX if a[1] >= 0 else a[1] * (-cfg.DD_MIN)
             H_es[i] = cfg.H_ES0[i] + delta_H[i]
             D_es[i] = cfg.D_ES0[i] + delta_D[i]
 
@@ -157,9 +157,8 @@ class MultiVSGEnv:
         # 3. 构建观测
         obs = self._build_observations(result)
 
-        # 4. 计算奖励 (Eq. 17-18: 使用归一化动作，不是物理 delta_H/delta_D)
-        norm_actions = np.array([np.clip(actions[i], -1.0, 1.0) for i in range(self.N)])
-        rewards, r_f_sum, r_h_sum, r_d_sum = self._compute_rewards(result, norm_actions)
+        # 4. 计算奖励 (Eq. 17-18: 物理 delta_H/delta_D，与论文公式一致)
+        rewards, r_f_sum, r_h_sum, r_d_sum = self._compute_rewards(result, delta_H, delta_D)
 
         # 5. 终止条件
         done = self.step_count >= cfg.STEPS_PER_EPISODE
@@ -223,7 +222,7 @@ class MultiVSGEnv:
             obs[i] = o
         return obs
 
-    def _compute_rewards(self, state, norm_actions):
+    def _compute_rewards(self, state, delta_H, delta_D):
         """计算每个 agent 的奖励 (Eq. 14-18).
 
         ODE 的 omega 是 rad/s 偏差, 转换为 pu 以对齐论文 reward 量级:
@@ -231,14 +230,15 @@ class MultiVSGEnv:
 
         Args:
             state: ODE 积分结果
-            norm_actions: shape (N, 2), 归一化动作 [-1, 1]
+            delta_H: shape (N,), 物理惯量增量 ΔH (s)
+            delta_D: shape (N,), 物理阻尼增量 ΔD (p.u.)
         """
         # rad/s → Hz 转换因子 (论文 Simulink 用 Hz, 反推自 Fig.4 量级)
         _TO_HZ = 1.0 / (2 * np.pi)
 
-        # Eq. 17-18: 使用归一化动作的全局平均 (不是物理 delta_H/delta_D)
-        ah_avg = np.mean(norm_actions[:, 0])
-        ad_avg = np.mean(norm_actions[:, 1])
+        # Eq.17-18: 物理调整量全局均值 (先均值再平方)
+        ah_avg = float(np.mean(delta_H))   # ΔH_avg
+        ad_avg = float(np.mean(delta_D))   # ΔD_avg
 
         rewards = {}
         r_f_total, r_h_total, r_d_total = 0.0, 0.0, 0.0
@@ -261,10 +261,10 @@ class MultiVSGEnv:
                 if self.comm.is_link_active(i, j):
                     r_f -= (state['omega'][j] * _TO_HZ - omega_bar) ** 2
 
-            # === Eq. (17): r_h = -(a_h^avg)^2 (归一化动作全局平均) ===
+            # === Eq. (17): r_h = -(ΔH_avg)^2 ===
             r_h = -(ah_avg) ** 2
 
-            # === Eq. (18): r_d = -(a_d^avg)^2 (归一化动作全局平均) ===
+            # === Eq. (18): r_d = -(ΔD_avg)^2 ===
             r_d = -(ad_avg) ** 2
 
             # === Eq. (14): 总奖励 ===

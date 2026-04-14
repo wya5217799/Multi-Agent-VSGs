@@ -80,9 +80,8 @@ COMM_ADJ = {
 }
 
 # ========== Reward (NE39-specific) ==========
-# PHI_F: NE39 8-gen system has higher frequency coupling — 2× penalty matches
-# the larger normalized frequency deviations observed in NE39 simulations.
-PHI_F = 200.0
+# PHI_F: 100 per paper Table I (φ_f=100, φ_h=1, φ_d=1 for all experiments).
+PHI_F = 100.0
 
 # ========== SAC Hyperparameters (NE39-specific overrides) ==========
 # BATCH_SIZE: 8 agents fill buffer ~2× faster; small batch (32) avoids

@@ -36,11 +36,11 @@
     },
     {
       "key": "t_episode",
-      "value": 10.0,
-      "source": "paper + repo config",
+      "value": 5.0,
+      "source": "repo config (config_simulink.py T_EPISODE=5.0; reduced from paper 10s for faster Kundur dynamics)",
       "confidence": "high",
       "check_mode": "must_match",
-      "notes": "Episode duration in seconds."
+      "notes": "Episode duration in seconds. Kundur 4-gen nadir appears within 2-3s, 5s is sufficient."
     },
     {
       "key": "obs_dim",
@@ -80,36 +80,28 @@
       "notes": "Four-node ring communication graph."
     },
     {
-      "key": "scenario1_breaker",
-      "value": "Breaker_1",
-      "source": "repo config aligned to paper disturbance set",
+      "key": "disturbance_var1",
+      "value": "TripLoad1_P",
+      "source": "build_powerlib_kundur.m Step 9 + config_simulink.py",
       "confidence": "high",
       "check_mode": "warn_if_missing",
-      "notes": "Primary load-decrease disturbance handle."
+      "notes": "Bus14 load trip amplitude (W/phase). Set via assignin('base','TripLoad1_P',val). Default=248MW on at episode start. Dynamic Load (Three-Phase) replaces breaker architecture for FastRestart compatibility."
     },
     {
-      "key": "scenario1_time",
+      "key": "disturbance_var2",
+      "value": "TripLoad2_P",
+      "source": "build_powerlib_kundur.m Step 9 + config_simulink.py",
+      "confidence": "high",
+      "check_mode": "warn_if_missing",
+      "notes": "Bus15 load add amplitude (W/phase). Set via assignin('base','TripLoad2_P',val). Default=0 (off) at episode start. Same Dynamic Load architecture as var1."
+    },
+    {
+      "key": "disturbance_time",
       "value": 0.5,
       "source": "repo config aligned to paper disturbance set",
       "confidence": "high",
       "check_mode": "warn_if_missing",
-      "notes": "Primary disturbance time in the current implementation."
-    },
-    {
-      "key": "scenario2_breaker",
-      "value": "Breaker_2",
-      "source": "repo config aligned to paper disturbance set",
-      "confidence": "high",
-      "check_mode": "warn_if_missing",
-      "notes": "Primary load-increase disturbance handle."
-    },
-    {
-      "key": "scenario2_time",
-      "value": 0.5,
-      "source": "repo config aligned to paper disturbance set",
-      "confidence": "high",
-      "check_mode": "warn_if_missing",
-      "notes": "Secondary disturbance time in the current implementation."
+      "notes": "Disturbance trigger time (seconds into episode) for both scenarios."
     }
   ]
 }

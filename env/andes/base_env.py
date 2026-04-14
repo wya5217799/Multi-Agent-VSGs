@@ -27,6 +27,11 @@ from scenarios.contract import KUNDUR as _DEFAULT_CONTRACT
 class AndesBaseEnv(ABC):
     """ANDES 多智能体 VSG 控制环境基类."""
 
+    # Action encoding: a=0 → delta=0 (zero-centered). Used by _get_zero_action().
+    # Fixed 2026-04-14: old affine formula gave a=0 → ΔM=+10 (non-zero default).
+    # See docs/paper/yang2023-fact-base.md §10 for rationale (Eq.12-13 increment semantics).
+    ACTION_ENCODING: str = "zero_centered"
+
     # ─── 共享默认常量 (子类可覆盖) ───
     # 基类默认使用 Kundur 契约值; NE 子类覆盖 FN/N_AGENTS
     FN = _DEFAULT_CONTRACT.fn        # 标称频率 (Hz), NE 子类覆盖为 60.0
@@ -36,11 +41,18 @@ class AndesBaseEnv(ABC):
 
     # VSG 基础参数 (GENCLS: M = 2H)
     # 校准值: M0=20 (H0=10), D0=4 — 与 v1 收敛训练一致
+    # BackendProfile: ANDES-specific calibration. VSG_M0=20.0 (H0=10s) differs intentionally
+    # from Simulink side (VSG_M0=12.0, H0=6s). Both are backend-specific calibrations, not errors.
+    # Also note: root config.py still contains old H_ES0=3/D_ES0=2 (v0 system, to be retired).
     VSG_M0 = 20.0                    # 基础惯量 M = 2H (s)
     VSG_D0 = 4.0                     # 基础阻尼 D (p.u.)
     VSG_SN = 200.0                   # 额定容量 (MVA)
 
     # 动作范围 (v1: scale_H=5, scale_D=10, DH∈[-5,15], DD∈[-10,30])
+    # PENDING AUDIT: These action bounds come from "v1 config". Simulink side uses
+    # DM_MIN=-6/DM_MAX=18, DD_MIN=-1.5/DD_MAX=4.5 (40-67% narrower range).
+    # Do NOT unify until action bounds audit confirms which is physically correct.
+    # See: docs/decisions/ or paper Table I for correct ranges.
     DM_MIN = -10.0                   # = 2 * DH_MIN = 2 * (-5)
     DM_MAX = 30.0                    # = 2 * DH_MAX = 2 * 15
     DD_MIN = -10.0                   # = DD_MIN (v1 config)
@@ -59,6 +71,11 @@ class AndesBaseEnv(ABC):
     PHI_F = 100.0
     PHI_H = 1.0
     PHI_D = 1.0
+    # BackendProfile (ANDES-family augmentation): PHI_ABS adds an absolute frequency
+    # deviation penalty term to the reward. This is NOT in the paper formula (Yang et al.
+    # TPWRS 2023 Eq.15-18) and does NOT exist in the Simulink backend.
+    # Added to address Kundur tight-coupling instability in ANDES simulations.
+    # Do NOT port to Simulink without validating on that backend first.
     PHI_ABS = 50.0  # 绝对频率偏差惩罚权重 (补充项, 解决 Kundur 紧耦合问题)
 
     # 参数平滑过渡 (避免 ANDES TDS 因参数突变发散)
@@ -221,8 +238,10 @@ class AndesBaseEnv(ABC):
 
         for i in range(self.N_AGENTS):
             a = np.clip(actions[i], -1.0, 1.0)
-            delta_M[i] = (a[0] + 1) / 2 * (self.DM_MAX - self.DM_MIN) + self.DM_MIN
-            delta_D[i] = (a[1] + 1) / 2 * (self.DD_MAX - self.DD_MIN) + self.DD_MIN
+            # Zero-centered mapping: a=0 → ΔM=0 (保持基准参数，与论文 Eq.12-13 语义一致)
+            # a>0 → [0, DM_MAX]; a<0 → [DM_MIN, 0]
+            delta_M[i] = a[0] * self.DM_MAX if a[0] >= 0 else a[0] * (-self.DM_MIN)
+            delta_D[i] = a[1] * self.DD_MAX if a[1] >= 0 else a[1] * (-self.DD_MIN)
             M_new[i] = max(self.M0[i] + delta_M[i], 0.2)
             D_new[i] = max(self.D0[i] + delta_D[i], 0.1)
 
@@ -263,10 +282,9 @@ class AndesBaseEnv(ABC):
         # 4. 构建观测
         obs = self._build_obs(omega, omega_dot, P_es)
 
-        # 5. 计算奖励 (Eq. 17-18: 使用归一化动作，不是物理 delta_M/delta_D)
-        norm_actions = np.array([np.clip(actions[i], -1.0, 1.0) for i in range(self.N_AGENTS)])
+        # 5. 计算奖励 (Eq. 17-18: 物理 delta_M/delta_D，与论文公式和 Simulink 路径一致)
         rewards, r_f_sum, r_h_sum, r_d_sum = self._compute_rewards(
-            omega, omega_dot, norm_actions)
+            omega, omega_dot, delta_M, delta_D)
 
         # 6. 终止条件
         done = self.step_count >= self.STEPS_PER_EPISODE
@@ -393,23 +411,25 @@ class AndesBaseEnv(ABC):
 
     # ─── 奖励 ───
 
-    def _compute_rewards(self, omega, omega_dot, norm_actions):
+    def _compute_rewards(self, omega, omega_dot, delta_M, delta_D):
         """计算每个 agent 的奖励 (Eq. 14-18 + 绝对频率偏差补充项).
 
         - r_f (Eq.15-16): 局部邻居平均频率同步惩罚
         - r_abs: -d_omega_i^2, 绝对频率偏差惩罚 (解决紧耦合系统 r_f 信号过弱)
-        - r_h (Eq.17): -(a_h^avg)^2, 归一化动作全局平均
-        - r_d (Eq.18): -(a_d^avg)^2, 归一化动作全局平均
+        - r_h (Eq.17): -(ΔH_avg)^2, 物理惯量调整均值 (ΔH = ΔM/2, M = 2H)
+        - r_d (Eq.18): -(ΔD_avg)^2, 物理阻尼调整均值
 
         Args:
             omega: shape (N,), 转速 p.u.
             omega_dot: shape (N,), 转速变化率
-            norm_actions: shape (N, 2), 归一化动作 [-1, 1]
+            delta_M: shape (N,), 物理惯量增量 ΔM (s); ΔH = ΔM/2
+            delta_D: shape (N,), 物理阻尼增量 ΔD (p.u.)
         """
         d_omega = (omega - 1.0) * self.FN  # Hz 偏差
 
-        ah_avg = np.mean(norm_actions[:, 0])
-        ad_avg = np.mean(norm_actions[:, 1])
+        # Eq.17-18: 物理调整量全局均值 (先均值再平方, 与 Simulink 路径一致)
+        ah_avg = float(np.mean(delta_M)) / 2.0   # ΔH_avg = mean(ΔM)/2
+        ad_avg = float(np.mean(delta_D))          # ΔD_avg
 
         rewards = {}
         r_f_total, r_h_total, r_d_total = 0.0, 0.0, 0.0

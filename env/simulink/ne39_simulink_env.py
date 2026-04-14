@@ -39,54 +39,49 @@ from utils.gym_compat import gym, spaces
 
 warnings.filterwarnings("ignore", category=UserWarning, module="matlab")
 
-from scenarios.contract import NE39 as _CONTRACT
 from scenarios.config_simulink_base import (
     VSG_M0, VSG_D0, VSG_SN,
     DM_MIN, DM_MAX, DD_MIN, DD_MAX,
+    DT,
+    DIST_MIN, DIST_MAX,
+    NORM_P, NORM_FREQ, NORM_ROCOF,
+    MAX_NEIGHBORS, COMM_FAIL_PROB,
+    OBS_DIM, ACT_DIM,
+    TDS_FAIL_PENALTY,
 )
 from scenarios.new_england.config_simulink import (
     PHI_F, PHI_H, PHI_D,
     COMM_ADJ, T_EPISODE, N_SUBSTEPS, STEPS_PER_EPISODE,
     T_WARMUP,
+    N_AGENTS as N_ESS,
+    FN as F_NOM,
+    OMEGA_N,
+    VSG_RA, VSG_XD1,
+    NEW_LINE_R, NEW_LINE_X, NEW_LINE_B,
+    VSG_BUS_VN,
+    WIND_FARM_M, WIND_FARM_D, WIND_FARM_GOV_R,
+    VSG_P0 as PV_P0,
+    VSG_Q0 as PV_Q0,
+    VSG_PMAX as PV_PMAX,
+    VSG_PMIN as PV_PMIN,
+    VSG_QMAX as PV_QMAX,
+    VSG_QMIN as PV_QMIN,
+    VSG_V0 as PV_V0,
+    PQ_P2P, PQ_P2Z, PQ_Q2Q, PQ_Q2Z,
+    WIND_BUSES, ESS_BUSES,
+    SYNC_H as _SYNC_H_LIST,
+    SYNC_D as _SYNC_D_LIST,
 )
 
 # ---------------------------------------------------------------------------
 # Constants — imported from scenario config chain, NE39-specific inlined
 # ---------------------------------------------------------------------------
 
-# Number of ESS agents
-N_ESS: int = _CONTRACT.n_agents
-
-# Observation / action dimensions
-OBS_DIM: int = _CONTRACT.obs_dim   # [P_norm, freq_dev, rocof, nb1_freq, nb2_freq, nb1_rocof, nb2_rocof]
-ACT_DIM: int = _CONTRACT.act_dim   # [delta_M, delta_D]
-
-# NE39-specific VSG parameters (not in base/scenario config)
-VSG_RA: float = 0.001     # armature resistance (p.u.)
-VSG_XD1: float = 0.15     # transient reactance (p.u.)
-
-# Derived physical limits
+# Derived physical limits (computed from imported M/D base values + delta ranges)
 M_LO: float = VSG_M0 + DM_MIN   # 6.0
 M_HI: float = VSG_M0 + DM_MAX   # 30.0
 D_LO: float = VSG_D0 + DD_MIN   # 1.5
 D_HI: float = VSG_D0 + DD_MAX   # 7.5
-
-# New ESS connecting line parameters (p.u.)
-NEW_LINE_R: float = 0.001
-NEW_LINE_X: float = 0.10
-NEW_LINE_B: float = 0.0175
-
-# Bus voltage
-VSG_BUS_VN: float = 22.0  # kV
-
-# Simulation timing
-DT: float = _CONTRACT.dt  # control time-step (s)
-
-# System frequency
-F_NOM: float = _CONTRACT.fn
-OMEGA_N: float = 2.0 * np.pi * F_NOM  # rad/s
-
-TDS_FAIL_PENALTY: float = -50.0
 
 # Omega-based early-termination guard.
 # If any VSG's per-unit frequency deviates beyond this threshold the system
@@ -100,48 +95,18 @@ TDS_FAIL_PENALTY: float = -50.0
 OMEGA_TERM_THRESHOLD: float = 15.0 / F_NOM   # 0.25 pu
 OMEGA_TERM_PENALTY: float = -500.0            # per agent, lump-sum terminal reward
 
-MAX_NEIGHBORS: int = _CONTRACT.max_neighbors
-COMM_FAIL_PROB: float = 0.1
-
-# Observation normalisation (from base_env.py)
-NORM_P: float = 2.0               # P / 2.0
-NORM_FREQ: float = 3.0            # freq_dev * omega_n / 3.0
-NORM_ROCOF: float = 5.0           # rocof * omega_n / 5.0
-
-# Disturbance range (p.u.)
-DIST_MIN: float = 1.0
-DIST_MAX: float = 3.0
-
-# Wind-farm / PV interface defaults (from andes_ne_env.py)
-WIND_FARM_M: float = 0.1
-WIND_FARM_D: float = 0.0
-WIND_FARM_GOV_R: float = 999.0
-PV_P0: float = 0.5
-PV_Q0: float = 0.0
-PV_PMAX: float = 5.0
-PV_PMIN: float = 0.0
-PV_QMAX: float = 5.0
-PV_QMIN: float = -5.0
-PV_V0: float = 1.0
-
-# PQ load mode (constant-power)
-PQ_P2P: float = 1.0
-PQ_P2Z: float = 0.0
-PQ_Q2Q: float = 1.0
-PQ_Q2Z: float = 0.0
-
 # Bus mapping (andes_ne_env.py):
 #   Wind farms replace G1-G8 on buses 30-37
 #   ESS on new buses 40-47, parent buses 30-37
-WIND_BUSES: List[int] = list(range(30, 38))     # [30..37]
-ESS_BUSES: List[int] = list(range(40, 48))       # [40..47]
+# WIND_BUSES and ESS_BUSES are imported from ne39 config above.
 PARENT_MAP: Dict[int, int] = {40 + i: 30 + i for i in range(N_ESS)}
 
 # Retained synchronous generators
 SYNC_BUS_G9: int = 38
 SYNC_BUS_G10: int = 39
-SYNC_H: np.ndarray = np.array([3.45, 50.0])      # H values for G9, G10
-SYNC_D: np.ndarray = np.array([0.0, 0.0])
+# Config defines these as plain lists; wrap in ndarray to preserve existing dtype.
+SYNC_H: np.ndarray = np.array(_SYNC_H_LIST)      # H values for G9, G10
+SYNC_D: np.ndarray = np.array(_SYNC_D_LIST)
 
 
 # ---------------------------------------------------------------------------
@@ -163,6 +128,9 @@ class _NE39BaseEnv(gym.Env):
     """
 
     metadata = {"render_modes": ["human"]}
+
+    # Action encoding: affine mapping, delta=0.5*(a+1)*(MAX-MIN)+MIN. Used by _get_zero_action().
+    ACTION_ENCODING: str = "affine"
 
     def __init__(
         self,

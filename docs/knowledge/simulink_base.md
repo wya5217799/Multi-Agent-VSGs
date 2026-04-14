@@ -245,27 +245,37 @@ sim(simInW);
 ```
 
 
-## 13. Dynamic Load (AC) — 端口映射（PS 信号输入，2026-04-09 验证）
+## 13. Dynamic Load — 两种方案（2026-04-09/14 验证）
 
-**库路径**: `ee_lib/Passive/Dynamic Load`（非 Three-Phase 独立 block，通过 `load_type` 切换 AC/DC）
+### 方案 A（已实现）：单相 `Dynamic Load` × 3 + Phase Splitter
+**库路径**: `ee_lib/Passive/Dynamic Load`（通过 `load_type` 切换 AC/DC）
 
 **AC 模式端口**（`load_type = 'ee.enum.dc_ac.ac'`，LConn=3, RConn=1）：
-| 端口 | 方向 | 类型 | 含义 |
-|------|------|------|------|
-| LConn1 | 左 | 电气 + | 相线端（+） |
-| LConn2 | 顶 | Physical Signal 输入 | 有功功率 P（W） |
-| LConn3 | 顶 | Physical Signal 输入 | 无功功率 Q（var） |
-| RConn1 | 右 | 电气 - | 中性线端（接 GND） |
-
-**连接模式**（已验证）：
-```matlab
-Constant('TripLoad1_P') → Simulink-PS Converter/1 → DynLoad/LConn2  % P PS input
-Constant(0)              → Simulink-PS Converter/1 → DynLoad/LConn3  % Q PS input
-bus_node                 →                           DynLoad/LConn1  % electrical +
-DynLoad/RConn1           → Electrical Reference/LConn1               % neutral
-```
+| 端口 | 类型 | 含义 |
+|------|------|------|
+| LConn1 | 电气 + | 相线端（来自 Phase Splitter RConn1/2/3） |
+| LConn2 | Physical Signal 输入 | 有功功率 P（W/phase） |
+| LConn3 | Physical Signal 输入 | 无功功率 Q（var/phase） |
+| RConn1 | 电气 - | 中性线端（接 GND） |
 
 **三相挂载**：Phase Splitter（handle-only）+ 3 个单相 DynLoad（A/B/C）；每相独立 GND。
+Phase Splitter LConn1 可用 `add_line` / `do_wire_ee`（标准复合端口，非 ~ 型）。
+
+### 方案 B（推荐，待验证参数名）：三相 `Dynamic Load (Three-Phase)`
+**库路径**: `ee_lib/Passive`（R2025b 已移至此路径）
+**端口**：
+| 端口 | 类型 | 含义 |
+|------|------|------|
+| `~` (LConn1) | 复合三相电气端口 | 直接连 bus（无需 Phase Splitter） |
+| `P` | Physical Signal 输入 | 三相总有功功率（W） |
+| `Q` | Physical Signal 输入 | 三相总无功功率（var） |
+
+**启用外部 PQ 控制**：`set_param(block, '???', '???')` — 参数名待在 MATLAB 中查询：
+```matlab
+params = get_param([mdl '/DynLoad3ph'], 'DialogParameters');
+disp(fieldnames(params));  % 找 'External control of PQ' 对应的参数名
+```
+**优势**：无 Phase Splitter，模型更简洁，直接 `do_wire_ee` 连 bus。
 
 **关键参数**：
 - `load_type = 'ee.enum.dc_ac.ac'`
@@ -286,6 +296,11 @@ ph_splitter_h = get_param(h{1}, 'Handle');
 add_block(ph_splitter_h, [mdl '/PhSplit_1'], ...);
 ```
 Phase Splitter 端口：LConn1=composite 输入，RConn1/2/3=相 A/B/C 个体输出。
+
+**Phase Splitter 连线方式（2026-04-14 验证）**：
+- LConn1（composite 3ph 电气端口）：**可用 add_line / do_wire_ee** — 同类型为 CB/WyeLoad，不是 ~ 型端口，不需要 simscape.addConnection
+- RConn1/2/3（单相电气端口）：可用 add_line 连到 DynLoad LConn1
+- 禁止 add_line 的仅限 ~ 端口（SM、Transformer 等混合域端口）
 
 **FastRestart 中途更换 P 值**：
 ```python

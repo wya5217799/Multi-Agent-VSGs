@@ -115,6 +115,9 @@ class _KundurBaseEnv(gym.Env):
 
     metadata = {"render_modes": ["human"]}
 
+    # Action encoding: a=0 → delta=0 (zero-centered). Used by _get_zero_action().
+    ACTION_ENCODING: str = "zero_centered"
+
     def __init__(
         self,
         comm_delay_steps: int = 0,

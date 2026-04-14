@@ -35,8 +35,15 @@ class AndesNEEnv(AndesBaseEnv):
     FN = _CONTRACT.fn                # New England 标称频率 60 Hz
 
     # NE 系统需要高惯量 VSG, 否则 TDS 发散 (M0<20 → divergence)
+    # BackendProfile: ANDES-specific calibration. VSG_M0=20.0 (H0=10s) differs intentionally
+    # from Simulink side (VSG_M0=12.0, H0=6s). Both are backend-specific calibrations, not errors.
+    # Also note: root config.py still contains old H_ES0=3/D_ES0=2 (v0 system, to be retired).
     VSG_M0 = 20.0
     VSG_D0 = 4.0
+    # PENDING AUDIT: These action bounds come from "v1 config". Simulink side uses
+    # DM_MIN=-6/DM_MAX=18, DD_MIN=-1.5/DD_MAX=4.5 (40-67% narrower range).
+    # Do NOT unify until action bounds audit confirms which is physically correct.
+    # See: docs/decisions/ or paper Table I for correct ranges.
     DM_MIN = -10.0
     DM_MAX = 30.0
     DD_MIN = -10.0

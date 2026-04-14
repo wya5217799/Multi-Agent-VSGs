@@ -38,11 +38,20 @@ For project memory index, see `MEMORY.md`. For historical architecture decisions
 Bootstrap sequence enforced in `scenarios/*/train_simulink.py`:
 1. **Init** — parse args, generate `run_id`, resolve `run_dir` path (no mkdir yet)
 2. **Backend-ready** — `env.reset()` triggers MATLAB startup + warmup; if this fails, no orphaned directories are created
-3. **Commit outputs** — create `run_dir/checkpoints/`, `run_dir/logs/`, write `training_status.json` (status: running)
+3. **Commit outputs** — create {run_dir}/checkpoints/, {run_dir}/logs/, write training_status.json (status: running)
 4. **Train loop** — episode iterations with periodic checkpointing
 
 To launch from shell: `scripts/launch_training.ps1 [kundur|ne39|both]`
 To query before launch: `engine/training_launch.py::get_training_launch_status(scenario_id)` → returns `launch.python_executable`, `launch.script`, `launch.args`
+
+## Training Monitor (AI Observation)
+
+Two MCP tools for observing live and post-mortem RL training runs (implemented in `engine/training_tasks.py`):
+
+- **`training_status(scenario_id, run_id=None)`** — Tier 1 poll: merges heartbeat fields from `utils/run_protocol.py::read_training_status` with the latest_state.json snapshot. Use for routine progress checks (cheap — no JSONL scan).
+- **`training_diagnose(scenario_id, run_id=None)`** — Tier 2 deep scan: parses `events.jsonl`, classifies alerts / eval rewards / checkpoints / monitor_stop. Use only when anomalies are suspected.
+
+Both default to the most-recent run via `utils/run_protocol.py::find_latest_run` (status-aware; never raw mtime). Pass `run_id` to target a specific run.
 
 ## Default Working Mode
 

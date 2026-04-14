@@ -108,4 +108,4 @@ def make_env(scenario: str, backend: str, **kwargs: Any) -> Any:
     return factory(**kwargs)
 
 
-__all__ = ["make_env", "GymAdapter"]
+__all__ = ["make_env"]

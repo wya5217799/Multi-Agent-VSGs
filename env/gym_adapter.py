@@ -37,8 +37,13 @@ class GymAdapter:
     # ── Gymnasium-spec API ──────────────────────────────────────────────────
 
     def reset(self, **kwargs) -> tuple[Any, dict]:
-        obs = self._env.reset(**kwargs)
-        return obs, {}
+        result = self._env.reset(**kwargs)
+        # Guard against wrapped envs that have already been partially upgraded to
+        # return (obs, info) from reset().  Unpack if tuple, keep info dict if present.
+        if isinstance(result, tuple) and len(result) == 2:
+            obs, info = result
+            return obs, (info if isinstance(info, dict) else {})
+        return result, {}
 
     def step(self, actions: Any) -> tuple[Any, Any, bool, bool, dict]:
         obs, rewards, done, info = self._env.step(actions)

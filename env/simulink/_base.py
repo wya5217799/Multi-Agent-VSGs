@@ -66,9 +66,11 @@ class _SimVsgBase(gym.Env):
         self.OBS_DIM       : int
     """
 
-    # ── Class-level config (must be overridden) ──────────────────────────────
+    # ── Class-level config (must be overridden by each scenario base class) ──
+    # Use None as sentinel for required fields so omitted overrides fail loudly
+    # at iteration time rather than silently producing empty loops.
     _N_AGENTS: int = 0
-    _COMM_ADJ: Dict[int, list] = {}
+    _COMM_ADJ: Dict[int, list] = None  # type: ignore[assignment]
     _F_NOM: float = 50.0
     _OMEGA_N: float = 2.0 * np.pi * 50.0
     _NORM_P: float = 2.0
@@ -81,6 +83,17 @@ class _SimVsgBase(gym.Env):
     _DM_MAX: float = 18.0
     _DD_MIN: float = -1.5
     _DD_MAX: float = 4.5
+
+    def __init_subclass__(cls, **kwargs: object) -> None:
+        """Warn at class-definition time if a concrete subclass forgets _COMM_ADJ."""
+        super().__init_subclass__(**kwargs)
+        if cls._COMM_ADJ is None and not cls.__name__.startswith("_"):
+            import warnings
+            warnings.warn(
+                f"{cls.__name__} does not override _COMM_ADJ; "
+                "calls to _build_obs/_update_comm_buffers will raise TypeError.",
+                stacklevel=2,
+            )
 
     # ── Observation ──────────────────────────────────────────────────────────
 

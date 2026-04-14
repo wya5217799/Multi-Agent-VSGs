@@ -77,18 +77,32 @@ validation; only then can both sides be unified into ScenarioContract if equal.
 
 ## What a "Correct" ANDES DD range looks like
 
-If ANDES D0=4.0 and we want the same relative range as Simulink
-(DD_MIN/D0 = −1.5/3.0 = −0.5, DD_MAX/D0 = 4.5/3.0 = 1.5):
+Two scaling principles produce different targets; we need to pick one:
 
+**Principle A — D0-proportional (same relative range as Simulink):**
 ```
-DD_MIN_corrected = −0.5 × 4.0 = −2.0
-DD_MAX_corrected =  1.5 × 4.0 =  6.0
+Simulink: DD_MIN/D0 = −1.5/3.0 = −0.50,  DD_MAX/D0 = 4.5/3.0 = 1.50
+ANDES D0 = 4.0 → DD_MIN = −0.50 × 4.0 = −2.0,  DD_MAX = 1.50 × 4.0 = 6.0
 ```
 
-Or, if the Simulink range is expressed as ±fraction of M range (symmetric physical scale):
-DM_MAX = 18 vs DD_MAX = 4.5 → ratio = 4. Same ratio for ANDES: DM_MAX=30 → DD_MAX_corrected = 7.5.
+**Principle B — DM/DD ratio-proportional (same M:D ratio as Simulink):**
+```
+Simulink: DM_MAX/DD_MAX = 18/4.5 = 4.0
+ANDES DM_MAX = 30 → DD_MAX = 30/4.0 = 7.5,  DD_MIN = −10/4.0 = −2.5
+```
 
-Both estimates put ANDES DD_MAX in the 6–8 range, not 30.
+**Adopted decision: Principle A (D0-proportional), target [-2.0, 6.0].**
+
+Rationale: The DM bounds were established via `DM = 2 × DH`, where `DH` was
+calibrated per-backend as a fraction of H₀ (`DH_MAX = 1.5 × H₀`). The analogous
+D-based scaling is D-proportional (Principle A), not derived from DM. Principle B
+conflates the M-scale calibration with D-scale and yields an ad-hoc ratio.
+
+This decision is adopted as the specification target for the corrective PR.
+Changing DD bounds in a future PR requires:
+1. Verifying no ANDES training is running.
+2. Confirming D0-proportional bounds do not violate small-signal stability margins.
+3. Running a short training run to check for learning regression.
 
 ---
 

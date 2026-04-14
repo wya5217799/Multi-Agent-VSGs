@@ -296,6 +296,12 @@ class SimulinkBridge:
 
         if not status["success"]:
             t_start = self.t_current
+            # FastRestart solver state is corrupted after a sim() crash.
+            # Force full recompile on the next episode reset so the corrupted
+            # state is cleared (set_param FastRestart off→on).  Without this,
+            # every subsequent warmup uses the fast path and all future steps
+            # fail permanently — killing the training run.
+            self._fr_compiled = False
             raise SimulinkError(
                 f"Simulation failed at t={t_start:.3f}: {status['error']}"
             )
@@ -332,6 +338,10 @@ class SimulinkBridge:
         if np.all(result["Pe"] == 0.0):
             self._pe_zero_count += 1
             if self._pe_zero_count >= _PE_ZERO_TOLERANCE_STEPS:
+                # Note: sim() completed successfully (status["success"]=True above),
+                # so the FastRestart compiled state is NOT corrupted — _fr_compiled
+                # is intentionally left True here.  This contrasts with the sim-crash
+                # path (status["success"]=False) where _fr_compiled is reset to False.
                 raise MeasurementFailureError(
                     f"Pe=0 for all agents for {self._pe_zero_count} consecutive "
                     f"steps (t={self.t_current:.3f}s). Feedback chain is likely "

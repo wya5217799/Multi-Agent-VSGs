@@ -532,3 +532,72 @@ def test_load_or_create_log_preserves_physics_summary(tmp_path):
     assert "physics_summary" in log, "physics_summary key must survive load_or_create_log"
     assert len(log["physics_summary"]) == 1
     assert log["physics_summary"][0]["max_freq_dev_hz"] == 0.3
+
+
+# =============================================================================
+# T8: omega_unstable early termination — Kundur env
+# =============================================================================
+
+class TestKundurOmegaUnstable:
+    """
+    Kundur env must terminate early when any VSG frequency deviation exceeds
+    OMEGA_TERM_THRESHOLD (15 Hz).  Previously 'terminated = not sim_ok' only,
+    meaning MATLAB sim() would crash before the env could stop the episode.
+    """
+
+    def _make_env(self):
+        from env.simulink.kundur_simulink_env import KundurStandaloneEnv
+        env = KundurStandaloneEnv(training=False)
+        env.reset(seed=0)
+        return env
+
+    def test_normal_step_omega_unstable_false(self):
+        """No termination when omega is near nominal (1.0 p.u.)."""
+        env = self._make_env()
+        # Standalone ODE at rest should stay near nominal
+        action = np.zeros((4, 2), dtype=np.float32)
+        _, _, terminated, _, info = env.step(action)
+        assert info["omega_unstable"] is False
+        # terminated may be False (no crash, no instability)
+        assert not info["tds_failed"]
+
+    def test_high_freq_deviation_triggers_omega_unstable(self):
+        """omega > 1 + OMEGA_TERM_THRESHOLD must set omega_unstable and terminated."""
+        from env.simulink.kundur_simulink_env import (
+            KundurStandaloneEnv, OMEGA_TERM_THRESHOLD, OMEGA_TERM_PENALTY,
+        )
+        env = self._make_env()
+
+        # Inject a supercritical frequency deviation (beyond the 15 Hz threshold)
+        # then hold it by patching _step_backend and _read_measurements so that
+        # the injected omega value is preserved through the step call.
+        env._omega = np.full(4, 1.0 + OMEGA_TERM_THRESHOLD + 0.01, dtype=np.float64)
+        env._step_backend = lambda *a, **kw: None
+        env._read_measurements = lambda: None
+
+        action = np.zeros((4, 2), dtype=np.float32)
+        _, reward, terminated, _, info = env.step(action)
+
+        assert info["omega_unstable"] is True, "omega_unstable must be True"
+        assert terminated is True, "episode must terminate on omega_unstable"
+        assert info["tds_failed"] is True, "tds_failed must be True when omega_unstable"
+        assert float(reward[0]) == pytest.approx(OMEGA_TERM_PENALTY)
+
+    def test_omega_unstable_false_when_sim_fails(self):
+        """omega_unstable must be False when sim_ok is False (mutually exclusive)."""
+        from env.simulink.kundur_simulink_env import KundurStandaloneEnv
+
+        env = self._make_env()
+
+        def _raise(*a, **kw):
+            raise RuntimeError("simulated crash")
+
+        env._step_backend = _raise
+
+        action = np.zeros((4, 2), dtype=np.float32)
+        _, _, terminated, _, info = env.step(action)
+
+        assert info["omega_unstable"] is False, (
+            "omega_unstable must be False when sim_ok=False (sim never ran)"
+        )
+        assert terminated is True  # terminated via sim_ok=False path

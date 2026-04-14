@@ -154,6 +154,66 @@ class TestSimulinkBridge:
         with pytest.raises(SimulinkError, match="Divergence"):
             bridge.step(np.ones(4) * 12, np.ones(4) * 3)
 
+    @patch("engine.matlab_session.matlab_engine", create=True)
+    def test_sim_failure_resets_fr_compiled(self, mock_me):
+        """After sim() fails, _fr_compiled must be False so next warmup recompiles.
+
+        Root cause of Apr-2026 training freeze: FastRestart state becomes
+        corrupted when sim() crashes.  Without _fr_compiled=False, every
+        subsequent episode reset uses do_recompile=False (fast path) and the
+        corrupted state is never cleared — all future steps fail permanently.
+        """
+        from engine.simulink_bridge import SimulinkBridge
+        from engine.exceptions import SimulinkError
+
+        mock_eng = MagicMock()
+        mock_me.start_matlab.return_value = mock_eng
+
+        mock_state = {"omega": [[0]*4], "Pe": [[0]*4], "rocof": [[0]*4], "delta": [[0]*4], "delta_deg": [[0.0]*4]}
+        mock_status = {"success": False, "error": "NaN at t=14.7", "elapsed_ms": 5.0}
+        mock_eng.vsg_step_and_read = MagicMock(
+            return_value=(mock_state, mock_status)
+        )
+
+        cfg = _make_test_config()
+        bridge = SimulinkBridge(cfg)
+        bridge._matlab_cfg = MagicMock()
+        bridge._SimulinkBridge__mdbl = lambda x: x
+        bridge._fr_compiled = True  # simulate post-warmup state (compiled model)
+
+        with pytest.raises(SimulinkError):
+            bridge.step(np.ones(4) * 12, np.ones(4) * 3)
+
+        assert bridge._fr_compiled is False, (
+            "step() sim failure must reset _fr_compiled=False so next warmup() "
+            "forces FastRestart recompile and clears the corrupted solver state"
+        )
+
+    @patch("engine.matlab_session.matlab_engine", create=True)
+    def test_sim_failure_before_warmup_leaves_fr_compiled_false(self, mock_me):
+        """sim failure before first warmup is idempotent: _fr_compiled stays False."""
+        from engine.simulink_bridge import SimulinkBridge
+        from engine.exceptions import SimulinkError
+
+        mock_eng = MagicMock()
+        mock_me.start_matlab.return_value = mock_eng
+
+        mock_status = {"success": False, "error": "crash", "elapsed_ms": 1.0}
+        mock_state = {"omega": [[0]*4], "Pe": [[0]*4], "rocof": [[0]*4], "delta": [[0]*4], "delta_deg": [[0.0]*4]}
+        mock_eng.vsg_step_and_read = MagicMock(return_value=(mock_state, mock_status))
+
+        bridge = SimulinkBridge(_make_test_config())
+        bridge._matlab_cfg = MagicMock()
+        bridge._SimulinkBridge__mdbl = lambda x: x
+        assert bridge._fr_compiled is False  # pre-condition: never warmed up
+
+        with pytest.raises(SimulinkError):
+            bridge.step(np.ones(4) * 12, np.ones(4) * 3)
+
+        assert bridge._fr_compiled is False, (
+            "step() failure before warmup must leave _fr_compiled=False (idempotent)"
+        )
+
     def test_reset_clears_time_and_feedback_state(self):
         from engine.simulink_bridge import SimulinkBridge
         cfg = _make_test_config()
@@ -350,6 +410,66 @@ def test_kundur_build_script_uses_workspace_backed_m0_d0_constants():
 
     assert "'Value', sprintf('M0_val_ES%d', i)" in text
     assert "'Value', sprintf('D0_val_ES%d', i)" in text
+
+
+def test_kundur_build_script_uses_dynamic_load_not_breakers():
+    """Build script must use Dynamic Load + workspace variables, not breaker Step blocks.
+
+    This locks the requirement that disturbance amplitude is controlled via
+    TripLoad1_P / TripLoad2_P workspace variables so that mid-episode
+    magnitude changes work under FastRestart without topology changes.
+    """
+    script = (
+        Path(__file__).resolve().parents[1]
+        / "scenarios"
+        / "kundur"
+        / "simulink_models"
+        / "build_powerlib_kundur.m"
+    )
+    text = script.read_text(encoding="utf-8")
+
+    # Workspace variables must be referenced in the build script
+    assert "TripLoad1_P" in text, "Missing TripLoad1_P workspace variable reference"
+    assert "TripLoad2_P" in text, "Missing TripLoad2_P workspace variable reference"
+
+    # Workspace variables must be initialized via assignin
+    assert "assignin" in text, "Missing assignin() call to initialize workspace variables"
+
+    # Dynamic Load block from ee_lib must be used
+    assert "dynload_lib" in text or "Dynamic Load" in text, (
+        "Missing Dynamic Load block — disturbance subsystem must use ee_lib Dynamic Load"
+    )
+
+    # No BrkCtrl_ Step blocks in active (non-comment) add_block calls
+    active_brk_add_block = [
+        line for line in text.splitlines()
+        if "add_block" in line and "BrkCtrl" in line and not line.strip().startswith("%")
+    ]
+    assert len(active_brk_add_block) == 0, (
+        f"Found BrkCtrl_ add_block in non-comment lines (breaker-based disturbance "
+        f"blocks not permitted): {active_brk_add_block}"
+    )
+
+
+def test_kundur_build_script_uses_local_solver():
+    """SolverConfig must enable Simscape local fixed-step solver.
+
+    Required for Dynamic Load performance: without LocalSolver, variable-step
+    ode23t collapses to femtosecond steps when Dynamic Load is present.
+    See docs/knowledge/simulink_base.md §14.
+    """
+    script = (
+        Path(__file__).resolve().parents[1]
+        / "scenarios"
+        / "kundur"
+        / "simulink_models"
+        / "build_powerlib_kundur.m"
+    )
+    text = script.read_text(encoding="utf-8")
+
+    assert "UseLocalSolver" in text, "Missing UseLocalSolver in SolverConfig"
+    assert "DoFixedCost" in text, "Missing DoFixedCost in SolverConfig"
+    assert "LocalSolverSampleTime" in text, "Missing LocalSolverSampleTime in SolverConfig"
 
 
 # =============================================================================

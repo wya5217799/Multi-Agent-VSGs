@@ -71,6 +71,8 @@ OMEGA_N: float = 2.0 * np.pi * F_NOM
 SBASE: float = 100.0      # MVA
 
 TDS_FAIL_PENALTY: float = -50.0
+OMEGA_TERM_THRESHOLD: float = 15.0 / F_NOM   # 0.30 pu  (same 15 Hz cut-off as NE39)
+OMEGA_TERM_PENALTY: float = -500.0            # per agent, lump-sum terminal reward
 
 MAX_NEIGHBORS: int = _CONTRACT.max_neighbors
 COMM_FAIL_PROB: float = 0.1
@@ -228,13 +230,23 @@ class _KundurBaseEnv(gym.Env):
 
         obs = self._build_obs()
 
-        if sim_ok:
+        # Omega instability guard: terminate early when any VSG deviates beyond
+        # 15 Hz (OMEGA_TERM_THRESHOLD) so we avoid MATLAB sim() crashes on
+        # diverged trajectories and prevent polluting the replay buffer.
+        omega_unstable = sim_ok and bool(
+            np.any(np.abs(self._omega - 1.0) > OMEGA_TERM_THRESHOLD)
+        )
+
+        if omega_unstable:
+            reward = np.full(N_AGENTS, OMEGA_TERM_PENALTY, dtype=np.float32)
+            components = {"r_f": float(OMEGA_TERM_PENALTY), "r_h": 0.0, "r_d": 0.0}
+        elif sim_ok:
             reward, components = self._compute_reward(action)
         else:
             reward = np.full(N_AGENTS, TDS_FAIL_PENALTY, dtype=np.float32)
             components = {"r_f": float(TDS_FAIL_PENALTY), "r_h": 0.0, "r_d": 0.0}
 
-        terminated = not sim_ok
+        terminated = (not sim_ok) or omega_unstable
         truncated = self._step_count >= STEPS_PER_EPISODE
 
         _max_freq_dev = float(np.max(np.abs((self._omega - 1.0) * F_NOM)))
@@ -248,7 +260,8 @@ class _KundurBaseEnv(gym.Env):
             "freq_hz": self._omega * F_NOM,
             "max_freq_dev_hz": _max_freq_dev,
             "max_freq_deviation_hz": _max_freq_dev,
-            "tds_failed": not sim_ok,
+            "tds_failed": (not sim_ok) or omega_unstable,
+            "omega_unstable": omega_unstable,
             "reward_components": components,
         }
 

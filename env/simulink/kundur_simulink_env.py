@@ -71,7 +71,10 @@ OMEGA_N: float = 2.0 * np.pi * F_NOM
 SBASE: float = 100.0      # MVA
 
 TDS_FAIL_PENALTY: float = -50.0
-OMEGA_TERM_THRESHOLD: float = 15.0 / F_NOM   # 0.30 pu  (same 15 Hz cut-off as NE39)
+OMEGA_TERM_THRESHOLD: float = 15.0 / F_NOM   # 0.30 pu at 50 Hz base
+# 15 Hz matches the NE39 cut-off (NE39 uses 0.25 pu because its base is 60 Hz).
+# At this deviation the system is in transient instability; continuing would
+# crash MATLAB sim() and pollute the replay buffer.
 OMEGA_TERM_PENALTY: float = -500.0            # per agent, lump-sum terminal reward
 
 MAX_NEIGHBORS: int = _CONTRACT.max_neighbors
@@ -260,6 +263,8 @@ class _KundurBaseEnv(gym.Env):
             "freq_hz": self._omega * F_NOM,
             "max_freq_dev_hz": _max_freq_dev,
             "max_freq_deviation_hz": _max_freq_dev,
+            # tds_failed is True for any disrupted episode (sim crash OR omega
+            # instability guard).  Use omega_unstable to distinguish the two paths.
             "tds_failed": (not sim_ok) or omega_unstable,
             "omega_unstable": omega_unstable,
             "reward_components": components,

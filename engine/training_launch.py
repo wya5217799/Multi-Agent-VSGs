@@ -7,6 +7,7 @@ JSON (no new fact sources).
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -15,11 +16,42 @@ from typing import Any
 from engine.harness_reference import load_scenario_reference
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[1]
-# Resolved once at import time: the interpreter that is currently executing
-# this module.  Callers (harness, agent, scripts) must run under the correct
-# virtualenv; sys.executable propagates that choice rather than hard-coding a
-# path that breaks on other machines.
-_PYTHON_EXE = Path(sys.executable)
+
+# Training scripts guard their entry point with a [WRONG PYTHON] check that
+# requires the andes_env interpreter (which has matlab.engine installed).
+# Using sys.executable only works when this module is imported from andes_env;
+# when called from Claude Code or any other Python, it would resolve to the
+# wrong interpreter and silently fail at launch time.
+#
+# Resolution order:
+#  1. CONDA_PREFIX env var points to active conda env → use its python.exe
+#  2. Search well-known miniconda/conda paths for andes_env
+#  3. Fall back to sys.executable (works when already in andes_env)
+def _resolve_python_exe() -> Path:
+    # Check if currently inside andes_env
+    conda_prefix = os.environ.get("CONDA_PREFIX", "")
+    if conda_prefix and "andes_env" in conda_prefix:
+        candidate = Path(conda_prefix) / "python.exe"
+        if candidate.exists():
+            return candidate
+
+    # Search common miniconda/anaconda locations on Windows
+    search_roots = [
+        Path.home() / "miniconda3" / "envs" / "andes_env",
+        Path.home() / "anaconda3" / "envs" / "andes_env",
+        Path("C:/ProgramData/miniconda3/envs/andes_env"),
+        Path("C:/ProgramData/anaconda3/envs/andes_env"),
+    ]
+    for root in search_roots:
+        candidate = root / "python.exe"
+        if candidate.exists():
+            return candidate
+
+    # Fall back to current interpreter (works when already in andes_env)
+    return Path(sys.executable)
+
+
+_PYTHON_EXE = _resolve_python_exe()
 
 _TRAIN_ENTRIES = {
     "kundur": "scenarios/kundur/train_simulink.py",

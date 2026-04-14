@@ -84,6 +84,25 @@ COMM_FAIL_PROB: float = 0.1
 
 VSG_BUS_VN: float = 20.0  # kV
 
+# Physics sanity check — catches config-env wiring regressions at import time.
+# Formula: with N_AGENTS VSGs each at minimum damping D_LO, the estimated
+# steady-state frequency deviation under a DIST_MAX disturbance is:
+#   Δf_ss ≈ DIST_MAX × F_NOM / (N_AGENTS × D_LO)
+# This must stay below 85% of OMEGA_TERM_THRESHOLD × F_NOM (= 12.75 Hz) to
+# leave headroom for transient overshoot without immediate episode termination.
+_OMEGA_TERM_HZ: float = OMEGA_TERM_THRESHOLD * F_NOM
+_DIST_MAX_SAFE_HZ: float = 0.85 * _OMEGA_TERM_HZ
+_DIST_MAX_EST_HZ: float = DIST_MAX * F_NOM / (N_AGENTS * D_LO)
+if _DIST_MAX_EST_HZ > _DIST_MAX_SAFE_HZ:
+    import warnings as _warnings
+    _warnings.warn(
+        f"DIST_MAX={DIST_MAX} may cause immediate episode termination: "
+        f"estimated steady-state Δf ≈ {_DIST_MAX_EST_HZ:.1f} Hz exceeds "
+        f"safe limit {_DIST_MAX_SAFE_HZ:.1f} Hz (85% of OMEGA_TERM={_OMEGA_TERM_HZ:.0f} Hz). "
+        f"Consider reducing DIST_MAX in scenarios/kundur/config_simulink.py.",
+        stacklevel=2,
+    )
+
 
 def _map_zero_centered_action(
     action_col: np.ndarray,

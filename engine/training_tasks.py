@@ -193,6 +193,103 @@ def training_status(scenario_id: str, run_id: str | None = None) -> dict[str, An
     }
 
 
+def _diagnose_physics(
+    run_dir: Path,
+    status: dict[str, Any],
+) -> dict[str, Any]:
+    """Read metrics.jsonl and detect early-termination / stuck-at-cap patterns.
+
+    Returns a dict with:
+      - pattern: None | "early_termination" | "freq_capped" | "no_progress"
+      - evidence: human-readable summary
+      - recommendation: suggested fix
+    """
+    logs_dir_str = status.get("logs_dir")
+    logs_dir = Path(logs_dir_str) if logs_dir_str else (run_dir / "logs")
+    metrics_path = logs_dir / "metrics.jsonl"
+
+    if not metrics_path.exists():
+        return {"pattern": None, "evidence": "metrics.jsonl not found", "recommendation": None}
+
+    rows: list[dict[str, Any]] = []
+    for line in metrics_path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if line:
+            try:
+                rows.append(json.loads(line))
+            except json.JSONDecodeError:
+                pass
+
+    if not rows:
+        return {"pattern": None, "evidence": "metrics.jsonl is empty", "recommendation": None}
+
+    freq_devs = [r.get("max_freq_dev_hz") for r in rows if r.get("max_freq_dev_hz") is not None]
+    rewards = [r.get("reward") for r in rows if r.get("reward") is not None]
+    settled = [r.get("settled") for r in rows if r.get("settled") is not None]
+
+    if not freq_devs:
+        return {"pattern": None, "evidence": "no max_freq_dev_hz in metrics", "recommendation": None}
+
+    n = len(freq_devs)
+    cap_threshold = 14.5  # Hz — within 0.5 Hz of the 15 Hz termination guard
+    early_window = min(10, n)
+    cap_early = sum(1 for f in freq_devs[:early_window] if f >= cap_threshold)
+    cap_total = sum(1 for f in freq_devs if f >= cap_threshold)
+    settled_total = sum(1 for s in settled if s)
+
+    # Pattern 1: every episode hits the freq cap from ep0
+    if cap_early == early_window and cap_total >= 0.9 * n:
+        mean_reward = sum(rewards) / len(rewards) if rewards else float("nan")
+        return {
+            "pattern": "early_termination",
+            "evidence": (
+                f"{cap_total}/{n} episodes hit max_freq_dev >= {cap_threshold} Hz "
+                f"(including all first {early_window}). Mean reward={mean_reward:.0f}. "
+                f"Settled episodes: {settled_total}/{n}."
+            ),
+            "recommendation": (
+                "Physics mismatch: disturbance is too large for D_min damping. "
+                "Check DIST_MAX vs OMEGA_TERM_THRESHOLD (15 Hz). "
+                "Also verify omega integrator saturation limits in the Simulink model "
+                "(IntW block UpperSaturationLimit should match the Python guard)."
+            ),
+        }
+
+    # Pattern 2: freq always capped but not from ep0 (model saturates after warmup)
+    if cap_total >= 0.8 * n and cap_early < early_window:
+        return {
+            "pattern": "freq_capped",
+            "evidence": (
+                f"{cap_total}/{n} episodes hit max_freq_dev >= {cap_threshold} Hz, "
+                f"but first {early_window} episodes varied. Possible policy collapse."
+            ),
+            "recommendation": (
+                "Check alpha entropy coefficient — if alpha_min is too low, "
+                "policy may collapse to deterministic action that saturates omega. "
+                "Also check reward normalization."
+            ),
+        }
+
+    # Pattern 3: no progress — reward flat and zero settled_rate
+    if len(rewards) >= 20 and settled_total == 0:
+        reward_range = max(rewards) - min(rewards) if rewards else 0.0
+        if reward_range < abs(min(rewards, default=0)) * 0.05:
+            return {
+                "pattern": "no_progress",
+                "evidence": (
+                    f"Reward range over {n} episodes: {reward_range:.0f} "
+                    f"(< 5% of |min|). settled_rate=0 throughout."
+                ),
+                "recommendation": (
+                    "RL not learning. Check buffer warmup (WARMUP_STEPS), "
+                    "observation normalization (NORM_FREQ, NORM_P), "
+                    "and that env.DIST_MAX matches config (not hardcoded)."
+                ),
+            }
+
+    return {"pattern": None, "evidence": f"No anomalous pattern detected in {n} episodes.", "recommendation": None}
+
+
 def training_diagnose(
     scenario_id: str,
     run_id: str | None = None,
@@ -279,4 +376,5 @@ def training_diagnose(
             {"episode": training_end_events[0].get("episode")}
             if training_end_events else None
         ),
+        "physics_diagnosis": _diagnose_physics(run_dir, status),
     }

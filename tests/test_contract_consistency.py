@@ -303,6 +303,72 @@ def test_reference_json_matches_contract(scenario_id: str):
     assert ref_items.get("max_neighbors") == contract.max_neighbors
 
 
+# ── Harness reference t_episode ──
+
+
+@pytest.mark.parametrize(
+    "scenario_id,config_module",
+    [
+        ("kundur", "scenarios.kundur.config_simulink"),
+        ("ne39", "scenarios.new_england.config_simulink"),
+    ],
+)
+def test_reference_json_t_episode_matches_config(scenario_id: str, config_module: str):
+    """t_episode in reference manifest must match config_simulink.T_EPISODE."""
+    import importlib
+
+    cfg = importlib.import_module(config_module)
+    ref_path = _REF_PATHS[scenario_id]
+    ref_data = json.loads(ref_path.read_text(encoding="utf-8"))
+    ref_items = {item["key"]: item["value"] for item in ref_data["reference_items"]}
+
+    assert ref_items["t_episode"] == cfg.T_EPISODE, (
+        f"{scenario_id}: harness_reference t_episode={ref_items['t_episode']} "
+        f"!= config T_EPISODE={cfg.T_EPISODE}"
+    )
+
+
+def test_kundur_reference_disturbance_vars_match_bridge_config():
+    """Disturbance variable names in Kundur reference must match BridgeConfig field defaults."""
+    from scenarios.kundur.config_simulink import KUNDUR_BRIDGE_CONFIG, SCENARIO1_TIME
+
+    ref_path = _REF_PATHS["kundur"]
+    ref_data = json.loads(ref_path.read_text(encoding="utf-8"))
+    ref_items = {item["key"]: item["value"] for item in ref_data["reference_items"]}
+
+    assert ref_items["disturbance_var1"] == KUNDUR_BRIDGE_CONFIG.tripload1_p_var, (
+        f"disturbance_var1={ref_items['disturbance_var1']} != "
+        f"bridge tripload1_p_var={KUNDUR_BRIDGE_CONFIG.tripload1_p_var}"
+    )
+    assert ref_items["disturbance_var2"] == KUNDUR_BRIDGE_CONFIG.tripload2_p_var, (
+        f"disturbance_var2={ref_items['disturbance_var2']} != "
+        f"bridge tripload2_p_var={KUNDUR_BRIDGE_CONFIG.tripload2_p_var}"
+    )
+    assert ref_items["disturbance_time"] == SCENARIO1_TIME, (
+        f"disturbance_time={ref_items['disturbance_time']} != "
+        f"config SCENARIO1_TIME={SCENARIO1_TIME}"
+    )
+
+
+def test_ne39_reference_disturbance_fields_match_config():
+    """Disturbance fields in NE39 reference must match config_simulink constants."""
+    from scenarios.new_england.config_simulink import (
+        SCENARIO1_GEN_TRIP,
+        SCENARIO1_TRIP_TIME,
+        SCENARIO2_BUS,
+        SCENARIO2_TIME,
+    )
+
+    ref_path = _REF_PATHS["ne39"]
+    ref_data = json.loads(ref_path.read_text(encoding="utf-8"))
+    ref_items = {item["key"]: item["value"] for item in ref_data["reference_items"]}
+
+    assert ref_items["scenario1_gen_trip"] == SCENARIO1_GEN_TRIP
+    assert ref_items["scenario1_trip_time"] == SCENARIO1_TRIP_TIME
+    assert ref_items["scenario2_bus"] == SCENARIO2_BUS
+    assert ref_items["scenario2_time"] == SCENARIO2_TIME
+
+
 # ── BridgeConfig instantiations ──
 
 

@@ -361,3 +361,53 @@ def harness_train_smoke_poll(
 
     # Process finished but we lost the handle — exit code unknown.
     return _collect_finished(record, run_dir, scenario_id, run_id, recovered_pid, None, key)
+
+
+def harness_train_smoke_full(
+    *,
+    scenario_id: str,
+    run_id: str,
+    goal: str = "smoke_test",
+    episodes: int = 1,
+    mode: str = "simulink",
+) -> dict[str, Any]:
+    """Run scenario_status → model_report → train_smoke_start in one call.
+
+    Convenience wrapper that eliminates manual prerequisite chaining.
+    Returns the train_smoke_start result on success, or the first failure
+    with a ``smoke_full_step`` field identifying which step failed.
+    """
+    from engine.modeling_tasks import harness_scenario_status, harness_model_report
+
+    # Step 1: scenario_status (writes record to disk — required by smoke preconditions)
+    status_result = harness_scenario_status(
+        scenario_id=scenario_id,
+        run_id=run_id,
+        goal=goal,
+    )
+    if status_result.get("status") != "ok":
+        status_result["smoke_full_step"] = "scenario_status"
+        status_result["smoke_started"] = False
+        return status_result
+
+    # Step 2: model_report (writes record to disk — required by smoke preconditions)
+    report_result = harness_model_report(
+        scenario_id=scenario_id,
+        run_id=run_id,
+    )
+    run_status = report_result.get("run_status")
+    if run_status not in {"ok", "warning"}:
+        report_result["smoke_full_step"] = "model_report"
+        report_result["smoke_started"] = False
+        return report_result
+
+    # Step 3: train_smoke_start (preconditions satisfied by disk records above)
+    smoke_result = harness_train_smoke_start(
+        scenario_id=scenario_id,
+        run_id=run_id,
+        episodes=episodes,
+        mode=mode,
+    )
+    smoke_result["smoke_full_step"] = "train_smoke_start"
+    smoke_result["model_report_run_status"] = run_status
+    return smoke_result

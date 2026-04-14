@@ -21,6 +21,7 @@ from engine.smoke_tasks import (  # noqa: F401
     _SMOKE_PROCESSES,
     _parse_training_summary,
     harness_train_smoke,
+    harness_train_smoke_full,
     harness_train_smoke_poll,
     harness_train_smoke_start,
 )
@@ -43,6 +44,7 @@ __all__ = [
     "harness_model_diagnose",
     "harness_model_report",
     "harness_train_smoke",
+    "harness_train_smoke_full",
     "harness_train_smoke_start",
     "harness_train_smoke_poll",
 ]

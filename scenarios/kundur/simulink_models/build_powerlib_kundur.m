@@ -182,15 +182,15 @@ shunt_defs = struct( ...
     'bus',    {7,        9}, ...
     'Q_Mvar', {200,      350});
 
-% --- Disturbance breakers ---
-% Breaker_1 at Bus14: TripLoad_1 = 248 MW, initially CLOSED, opens at t=100
-% Breaker_2 at Bus15: TripLoad_2 = 188 MW, initially OPEN, closes at t=100
-brk_defs = struct( ...
-    'name',       {'Breaker_1',  'Breaker_2'}, ...
-    'bus',        {14,           15}, ...
-    'trip_P_MW',  {248,          188}, ...
-    'init_state', {'closed',     'open'}, ...
-    'switch_time',{100,          100});
+% --- Disturbance loads (Dynamic Load + workspace variable interface) ---
+% Bus14: TripLoad1_P = 248/3 MW per-phase (load ON at episode start)
+% Bus15: TripLoad2_P = 0 W per-phase       (load OFF at episode start)
+% Python env sets these via assignin('base', varname, value) mid-episode.
+% FastRestart-safe: no topology change, no breaker switching.
+trip_defs = {
+    'TripLoad1_P', 14, 248e6/3, 'Bus14 248MW (on at start)';
+    'TripLoad2_P', 15, 0.0,     'Bus15 188MW max (off at start)'
+};
 
 %% ======================================================================
 %  Step 0: Create new model and find ee_lib block paths
@@ -206,59 +206,37 @@ load_system('nesl_utility');
 fprintf('=== Building %s (16-bus Modified Kundur, ee_lib, Power Sensor P_e) ===\n', mdl);
 fprintf('RESULT: [0/12] start — building %s\n', mdl);
 
-% --- Find ee_lib block library paths dynamically ---
-cvs_lib = char(find_system('ee_lib/Sources', 'SearchDepth', 1, 'RegExp', 'on', 'Name', '.*Controlled Voltage.*Three.*'));
-pvs_lib = char(find_system('ee_lib/Sources', 'SearchDepth', 1, 'RegExp', 'on', 'Name', '.*Programmable Voltage.*Three.*'));
-tl_lib = char(find_system('ee_lib', 'SearchDepth', 5, 'RegExp', 'on', 'Name', '.*Transmission Line.*Three.*'));
-wl_lib = char(find_system('ee_lib', 'SearchDepth', 5, 'Name', 'Wye-Connected Load'));
-rlc3_lib = char(find_system('ee_lib/Passive/RLC Assemblies', 'SearchDepth', 1, 'Name', 'RLC (Three-Phase)'));
-gnd_lib = char(find_system('ee_lib', 'SearchDepth', 3, 'Name', 'Electrical Reference'));
-cb_lib = char(find_system('ee_lib', 'SearchDepth', 5, 'RegExp', 'on', 'Name', '.*Circuit Breaker.*Three.*'));
-ps_lib = char(find_system('ee_lib', 'SearchDepth', 5, 'RegExp', 'on', 'Name', '.*Power Sensor.*Three.*'));
-solver_lib = char(find_system('nesl_utility', 'SearchDepth', 1, 'Name', 'Solver Configuration'));
-s2ps_lib = char(find_system('nesl_utility', 'SearchDepth', 2, 'RegExp', 'on', 'Name', '.*Simulink-PS.*'));
-ps2s_lib = char(find_system('nesl_utility', 'SearchDepth', 2, 'RegExp', 'on', 'Name', '.*PS-Simulink.*'));
-if size(ps2s_lib,1) > 1, ps2s_lib = ps2s_lib(1,:); end
-ps2s_lib = strtrim(ps2s_lib);
-
-% Handle multi-row results from find_system (take first row)
-if size(cvs_lib,1) > 1, cvs_lib = cvs_lib(1,:); end
-if size(pvs_lib,1) > 1, pvs_lib = pvs_lib(1,:); end
-if size(tl_lib,1) > 1, tl_lib = tl_lib(1,:); end
-if size(wl_lib,1) > 1, wl_lib = wl_lib(1,:); end
-if size(rlc3_lib,1) > 1, rlc3_lib = rlc3_lib(1,:); end
-if size(gnd_lib,1) > 1, gnd_lib = gnd_lib(1,:); end
-if size(cb_lib,1) > 1, cb_lib = cb_lib(1,:); end
-if size(ps_lib,1) > 1, ps_lib = ps_lib(1,:); end
-if size(solver_lib,1) > 1, solver_lib = solver_lib(1,:); end
-
-cvs_lib = strtrim(cvs_lib);
-pvs_lib = strtrim(pvs_lib);
-tl_lib = strtrim(tl_lib);
-wl_lib = strtrim(wl_lib);
-rlc3_lib = strtrim(rlc3_lib);
-gnd_lib = strtrim(gnd_lib);
-cb_lib = strtrim(cb_lib);
-ps_lib = strtrim(ps_lib);
-solver_lib = strtrim(solver_lib);
-
-fprintf('  CVS lib: %s\n', cvs_lib);
-fprintf('  PVS lib: %s\n', pvs_lib);
-fprintf('  TL lib:  %s\n', tl_lib);
-fprintf('  WyeLoad: %s\n', wl_lib);
-fprintf('  RLC3ph:  %s\n', rlc3_lib);
-fprintf('  GND lib: %s\n', gnd_lib);
-fprintf('  CB lib:  %s\n', cb_lib);
-fprintf('  PSensor: %s\n', ps_lib);
-fprintf('  Solver:  %s\n', solver_lib);
+% Resolve ee_lib / nesl_utility block library paths.
+% Discovery logic lives in ee_lib_paths.m (run discover_ee_lib_paths.m for diagnostics).
+paths = ee_lib_paths();
+cvs_lib        = paths.cvs;
+pvs_lib        = paths.pvs;
+tl_lib         = paths.tl;
+wl_lib         = paths.wl;
+rlc3_lib       = paths.rlc3;
+gnd_lib        = paths.gnd;
+dynload3ph_lib = paths.dynload3ph;
+ps_lib         = paths.ps;
+solver_lib     = paths.solver;
+s2ps_lib       = paths.s2ps;
+ps2s_lib       = paths.ps2s;
 fprintf('RESULT: [0/12] ee_lib paths resolved\n');
 
 %% ======================================================================
 %  Step 1: Solver Configuration + Electrical Reference (replaces powergui)
 %% ======================================================================
 add_block(solver_lib, [mdl '/SolverConfig'], 'Position', [20 20 120 60]);
+% Enable Simscape local fixed-step solver — required for Dynamic Load performance.
+% Without this, variable-step ode23t collapses to femtosecond steps when
+% Dynamic Load blocks are present (2026-04-09 verified, see simulink_base.md §14).
+set_param([mdl '/SolverConfig'], 'DelaysMemoryBudget',    '4096');
+set_param([mdl '/SolverConfig'], 'UseLocalSolver',        'on');
+set_param([mdl '/SolverConfig'], 'DoFixedCost',           'on');
+set_param([mdl '/SolverConfig'], 'LocalSolverSampleTime', '0.02');
+set_param([mdl '/SolverConfig'], 'MaxNonlinIter',         '5');
+set_param([mdl '/SolverConfig'], 'FilteringTimeConstant', '0.02');
 % NOTE: SolverConfig connected to main network in Step 9b (after all bus topology built).
-fprintf('  Solver Configuration added (will connect to network in Step 9b).\n');
+fprintf('  Solver Configuration added with LocalSolver (T=0.02s, DoFixedCost).\n');
 
 %% ======================================================================
 %  Step 2: Bus node tracking
@@ -321,7 +299,7 @@ for gi = 1:length(gen_cfg)
     add_block('built-in/Constant', [sub_path '/D_val'], ...
         'Position', [100 180 150 200], 'Value', num2str(g.D));
     % P0 ramp: 0 → P0_pu over T_ramp seconds (avoids RL inrush collapse)
-    add_block('built-in/Ramp', [sub_path '/P0_ramp'], ...
+    add_block('simulink/Sources/Ramp', [sub_path '/P0_ramp'], ...
         'Position', [30 90 70 110], ...
         'Slope', num2str(P0_pu / T_ramp), 'Start', '0', 'X0', '0');
     add_block('built-in/Saturate', [sub_path '/P0_sat'], ...
@@ -757,7 +735,7 @@ for i = 1:n_vsg
     pref_sat_name = sprintf('PrefSat_%d', i);
     cx = bx - 120;
     cy = by - 10 + 3 * 25;  % same row as old Pref constant (4th row)
-    add_block('built-in/Ramp', [mdl '/' pref_ramp_name], ...
+    add_block('simulink/Sources/Ramp', [mdl '/' pref_ramp_name], ...
         'Position', [cx-80 cy cx-40 cy+15], ...
         'Slope', num2str(VSG_P0(i) / T_ramp), 'Start', '0', 'X0', '0');
     add_block('built-in/Saturate', [mdl '/' pref_sat_name], ...
@@ -1028,68 +1006,92 @@ for si = 1:length(shunt_defs)
 end
 
 %% ======================================================================
-%  Step 9: Disturbance breakers + trip loads
+%  Step 9: Disturbance loads — Dynamic Load (Three-Phase) + workspace variables
+%%
+%  Architecture (FastRestart-safe, amplitude-sensitive):
+%    TripLoad1_P / TripLoad2_P are MATLAB base workspace variables (W total 3ph).
+%    Python sets them via assignin('base', var, value) before each sim() call.
+%    Constant block reads workspace variable → S2PS → Dynamic Load P port.
+%    No Phase Splitter needed: 3ph composite port connects directly to bus.
+%    No breaker topology change → FastRestart compatible.
+%%
+%  Bus14: TripLoad1_P = 248e6 W total (load ON at episode start)
+%  Bus15: TripLoad2_P = 0 W total      (load OFF at episode start)
 %% ======================================================================
-fprintf('\n=== Adding disturbance breakers ===\n');
-fprintf('RESULT: [9/12] adding disturbance breakers\n');
+fprintf('\n=== Adding Dynamic Load (Three-Phase) disturbance subsystems ===\n');
+fprintf('RESULT: [9/12] adding Dynamic Load (Three-Phase) disturbance subsystems\n');
 
-for bi = 1:length(brk_defs)
-    b = brk_defs(bi);
-    brk_path = [mdl '/' b.name];
-    bx_b = 800 + (bi-1)*400;
-    by_b = 1400;
+% NOTE on workspace variable units:
+% Python bridge uses per-phase W (tripload1_p_default = 248e6/3).
+% This build script initializes 3-phase TOTAL W for the Three-Phase block.
+% The bridge's per-phase value × 3 gives total 3-phase power.
+% TripLoad1_P workspace var: bridge writes per-phase → multiply by 3 in Constant if needed.
+% SIMPLIFICATION: use per-phase value matching bridge config (248e6/3 per phase).
+% The Three-Phase block distributes equally across 3 phases internally.
+% We pass per-phase W and note this in the block annotation.
 
-    % --- Circuit Breaker (Three-Phase) ---
-    add_block(cb_lib, brk_path, 'Position', [bx_b by_b bx_b+80 by_b+50]);
+% Initialize workspace variables (match bridge config: per-phase W)
+TripLoad1_P = 248e6 / 3;  % Bus14: 248MW total → 82.67MW per phase; load ON at episode start
+TripLoad2_P = 0.0;          % Bus15: load OFF at episode start
+assignin('base', 'TripLoad1_P', TripLoad1_P);
+assignin('base', 'TripLoad2_P', TripLoad2_P);
 
-    % --- Step block for breaker control signal ---
-    % CB RConn1 = signal control input (>0.5 = closed, <0.5 = open)
-    step_name = sprintf('BrkCtrl_%d', bi);
-    step_path = [mdl '/' step_name];
-    add_block('built-in/Step', step_path, ...
-        'Position', [bx_b-80 by_b+60 bx_b-40 by_b+80]);
+for ti = 1:size(trip_defs, 1)
+    var_name    = trip_defs{ti, 1};  % 'TripLoad1_P' or 'TripLoad2_P'
+    bus_id      = trip_defs{ti, 2};
+    default_W   = trip_defs{ti, 3};
+    label       = trip_defs{ti, 4};
 
-    if strcmp(b.init_state, 'closed')
-        % Initially closed (1), opens at switch_time (→0)
-        set_param(step_path, 'Time', num2str(b.switch_time), ...
-            'Before', '1', 'After', '0');
-    else
-        % Initially open (0), closes at switch_time (→1)
-        set_param(step_path, 'Time', num2str(b.switch_time), ...
-            'Before', '0', 'After', '1');
+    bx_t = 800 + (ti-1)*600;
+    by_t = 1400;
+
+    % --- Dynamic Load (Three-Phase): composite ~ port → direct bus connection ---
+    dl3ph_name = sprintf('DynLoad_Trip%d', ti);
+    add_block(dynload3ph_lib, [mdl '/' dl3ph_name], ...
+        'Position', [bx_t by_t bx_t+80 by_t+60]);
+
+    % R2025b: Dynamic Load (Three-Phase) has no "External control of PQ" parameter.
+    % P/Q physical-signal ports (LConn2, LConn3) are always present.
+
+    % Wire composite 3ph port to bus (no Phase Splitter needed)
+    bus_nodes = do_wire_ee(mdl, bus_nodes, bus_id, dl3ph_name, '%s/LConn1');
+
+    % --- P control: Constant(workspace var) → S2PS → DynLoad LConn2 (P) ---
+    cp_name = sprintf('C_P_Trip%d', ti);
+    add_block('built-in/Constant', [mdl '/' cp_name], ...
+        'Position', [bx_t+100 by_t+70 bx_t+150 by_t+90], ...
+        'Value', var_name);
+
+    s2ps_p = sprintf('S2PS_P_Trip%d', ti);
+    add_block(s2ps_lib, [mdl '/' s2ps_p], ...
+        'Position', [bx_t+160 by_t+70 bx_t+200 by_t+90]);
+    try
+        set_param([mdl '/' s2ps_p], 'InputFilterTimeConstant', '0.02');
+    catch
     end
 
-    % Step → S2PS → CB LConn1 (signal control)
-    s2ps_brk = sprintf('S2PS_Brk%d', bi);
-    add_block(s2ps_lib, [mdl '/' s2ps_brk], ...
-        'Position', [bx_b-30 by_b+60 bx_b+10 by_b+80]);
-    add_line(mdl, [step_name '/1'], [s2ps_brk '/1'], 'autorouting', 'smart');
-    add_line(mdl, [s2ps_brk '/RConn1'], [b.name '/LConn1'], 'autorouting', 'smart');
+    add_line(mdl, [cp_name '/1'],    [s2ps_p '/1'],           'autorouting', 'smart');
+    add_line(mdl, [s2ps_p '/RConn1'], [dl3ph_name '/LConn2'], 'autorouting', 'smart');
 
-    % --- Trip load (Wye-Connected Load, purely resistive) ---
-    trip_name = sprintf('TripLoad_%d', bi);
-    trip_path = [mdl '/' trip_name];
-    add_block(wl_lib, trip_path, 'Position', [bx_b+120 by_b bx_b+180 by_b+50]);
-    set_param(trip_path, ...
-        'parameterization', '2', ...
-        'component_structure', '1', ...
-        'VRated', num2str(Vbase), ...
-        'FRated', num2str(fn), ...
-        'P', num2str(b.trip_P_MW * 1e6));
+    % --- Q control: Constant(0) → S2PS → DynLoad LConn3 (Q) ---
+    cq_name = sprintf('C_Q_Trip%d', ti);
+    add_block('built-in/Constant', [mdl '/' cq_name], ...
+        'Position', [bx_t+100 by_t+100 bx_t+150 by_t+120], ...
+        'Value', '0');
 
-    % CB LConn2 (3ph side A) → bus
-    bus_nodes = do_wire_ee(mdl, bus_nodes, b.bus, b.name, '%s/LConn2');
-    % CB RConn1 (3ph side B) → TripLoad LConn1
-    add_line(mdl, [b.name '/RConn1'], [trip_name '/LConn1'], 'autorouting', 'smart');
-    % TripLoad neutral → GND
-    gnd_count = gnd_count + 1;
-    gnd_name = sprintf('GND_%d', gnd_count);
-    add_block(gnd_lib, [mdl '/' gnd_name], ...
-        'Position', [bx_b+200 by_b bx_b+230 by_b+30]);
-    add_line(mdl, [trip_name '/RConn1'], [gnd_name '/LConn1'], 'autorouting', 'smart');
+    s2ps_q = sprintf('S2PS_Q_Trip%d', ti);
+    add_block(s2ps_lib, [mdl '/' s2ps_q], ...
+        'Position', [bx_t+160 by_t+100 bx_t+200 by_t+120]);
+    try
+        set_param([mdl '/' s2ps_q], 'InputFilterTimeConstant', '0.02');
+    catch
+    end
 
-    fprintf('  %s at Bus%d: TripLoad=%.0fMW, init=%s, switch@%.0fs\n', ...
-        b.name, b.bus, b.trip_P_MW, b.init_state, b.switch_time);
+    add_line(mdl, [cq_name '/1'],    [s2ps_q '/1'],           'autorouting', 'smart');
+    add_line(mdl, [s2ps_q '/RConn1'], [dl3ph_name '/LConn3'], 'autorouting', 'smart');
+
+    fprintf('  Trip%d at Bus%d: var=%s, default=%.0fW/phase — %s\n', ...
+        ti, bus_id, var_name, default_W, label);
 end
 
 %% ======================================================================
@@ -1136,6 +1138,15 @@ fprintf('RESULT: [11/12] model saved — %s\n', model_path);
 %% ======================================================================
 fprintf('\n=== Running 1-second test simulation ===\n');
 fprintf('RESULT: [12/12] test simulation running\n');
+
+% Initialize workspace variables required by workspace-backed Constant blocks
+for i = 1:n_vsg
+    assignin('base', sprintf('M0_val_ES%d', i), VSG_M0);
+    assignin('base', sprintf('D0_val_ES%d', i), VSG_D0);
+end
+assignin('base', 'TripLoad1_P', 248e6 / 3);
+assignin('base', 'TripLoad2_P', 0.0);
+
 try
     simOut = sim(mdl, 'StopTime', '1.0');
     fprintf('SUCCESS! 1-second simulation completed.\n');
@@ -1181,8 +1192,8 @@ fprintf('VSGs: ES1(Bus12->7), ES2(Bus16->8), ES3(Bus14->10), ES4(Bus15->9)\n');
 fprintf('  VSG feedback: Power Sensor -> P_e -> swing eq -> delta -> CVS\n');
 fprintf('Loads: Bus7=967MW, Bus9=1767MW (Wye-Connected Load)\n');
 fprintf('Shunts: Bus7=200Mvar, Bus9=350Mvar\n');
-fprintf('Breakers: Bus14(248MW,closed), Bus15(188MW,open) — Step+S2PS->CB\n');
-fprintf('Solver: ode23t variable-step, Simscape Electrical\n');
+fprintf('Disturbance: Bus14(TripLoad1_P=248MW), Bus15(TripLoad2_P=0) — Dynamic Load + workspace vars\n');
+fprintf('Solver: ode23t variable-step + Simscape LocalSolver T=0.02s (Dynamic Load perf fix)\n');
 fprintf('Total lines: %d\n', n_lines);
 
 %% ======================================================================

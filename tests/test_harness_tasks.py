@@ -516,3 +516,87 @@ def test_train_smoke_poll_recovers_pid_from_disk_after_restart(tmp_path, monkeyp
     # exit_code is None because we lost the handle, but smoke_passed inferred from artifacts.
     assert poll_result["exit_code"] is None
     assert poll_result["smoke_passed"] is True
+
+
+# ── harness_train_smoke_full ──────────────────────────────────────────────────
+
+
+def test_smoke_full_fails_at_scenario_status_for_unknown_scenario(tmp_path, monkeypatch):
+    """harness_train_smoke_full returns early at scenario_status for unknown scenario_id."""
+    from engine import harness_reports, smoke_tasks
+
+    monkeypatch.setattr(harness_reports, "HARNESS_ROOT", tmp_path / "results" / "harness")
+
+    result = smoke_tasks.harness_train_smoke_full(
+        scenario_id="invalid_xyz",
+        run_id="run-full-001",
+    )
+
+    assert result["status"] == "failed"
+    assert result["smoke_full_step"] == "scenario_status"
+    assert result["smoke_started"] is False
+
+
+def test_smoke_full_fails_at_model_report_when_modeling_failed(tmp_path, monkeypatch):
+    """harness_train_smoke_full returns early at model_report when a modeling task failed."""
+    from engine import harness_reports, smoke_tasks
+
+    monkeypatch.setattr(harness_reports, "HARNESS_ROOT", tmp_path / "results" / "harness")
+
+    run_dir = harness_reports.ensure_run_dir("kundur", "run-full-002")
+    # A failed modeling task record makes model_report return run_status="failed".
+    harness_reports.write_task_record(
+        run_dir,
+        "model_inspect",
+        {
+            "task": "model_inspect",
+            "scenario_id": "kundur",
+            "run_id": "run-full-002",
+            "status": "failed",
+        },
+    )
+
+    result = smoke_tasks.harness_train_smoke_full(
+        scenario_id="kundur",
+        run_id="run-full-002",
+    )
+
+    assert result["smoke_full_step"] == "model_report"
+    assert result["smoke_started"] is False
+    assert result.get("run_status") == "failed"
+
+
+def test_smoke_full_launches_smoke_when_prerequisites_pass(tmp_path, monkeypatch):
+    """harness_train_smoke_full proceeds to train_smoke_start when all prerequisites pass."""
+    from engine import harness_reports, smoke_tasks
+
+    monkeypatch.setattr(harness_reports, "HARNESS_ROOT", tmp_path / "results" / "harness")
+    monkeypatch.setattr(smoke_tasks, "_PROJECT_ROOT", tmp_path)
+
+    # Create a minimal fake training script.
+    train_script = tmp_path / "scenarios" / "kundur" / "train_simulink.py"
+    train_script.parent.mkdir(parents=True, exist_ok=True)
+    train_script.write_text(
+        "import argparse, pathlib, json\n"
+        "p = argparse.ArgumentParser()\n"
+        "p.add_argument('--mode'); p.add_argument('--episodes', type=int)\n"
+        "p.add_argument('--checkpoint-dir'); p.add_argument('--log-file')\n"
+        "args = p.parse_args()\n"
+        "pathlib.Path(args.checkpoint_dir).mkdir(parents=True, exist_ok=True)\n"
+        "(pathlib.Path(args.checkpoint_dir) / 'final.pt').write_text('ckpt')\n"
+        "pathlib.Path(args.log_file).parent.mkdir(parents=True, exist_ok=True)\n"
+        "pathlib.Path(args.log_file).write_text(json.dumps({}))\n",
+        encoding="utf-8",
+    )
+
+    result = smoke_tasks.harness_train_smoke_full(
+        scenario_id="kundur",
+        run_id="run-full-003",
+        episodes=1,
+        mode="simulink",
+    )
+
+    assert result["smoke_full_step"] == "train_smoke_start"
+    assert result["model_report_run_status"] == "ok"
+    assert result["smoke_started"] is True
+    assert result["status"] == "running"

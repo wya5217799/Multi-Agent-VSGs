@@ -1,8 +1,8 @@
 """engine/mcp_server.py - Python MCP server for structured Simulink and training access.
 
-Registers a curated set of ~36 workflow-level tools for Claude:
+Registers a curated set of ~37 workflow-level tools for Claude:
   - 2  training_* tools  (Training Control: evaluate_run + compare_runs)
-  - 7  harness_*  tools  (Model Control: scenario/inspect/patch/diagnose/report/smoke)
+  - 8  harness_*  tools  (Model Control: scenario/inspect/patch/diagnose/report/smoke/smoke_full)
   - 27 simulink_* tools  (model building, parameter ops, diagnostics, visual capture)
 
 Lower-level helpers remain importable from mcp_simulink_tools but are NOT
@@ -36,6 +36,7 @@ from engine.harness_tasks import (
     harness_model_patch_verify,
     harness_model_report,
     harness_scenario_status,
+    harness_train_smoke_full,
     harness_train_smoke_start,
     harness_train_smoke_poll,
 )
@@ -104,12 +105,13 @@ PUBLIC_TOOLS = [
     # --- Training Control (2) ---
     training_evaluate_run,
     training_compare_runs,
-    # --- Model Control harness (7) ---
+    # --- Model Control harness (8) ---
     harness_scenario_status,
     harness_model_inspect,
     harness_model_patch_verify,
     harness_model_diagnose,
     harness_model_report,
+    harness_train_smoke_full,
     harness_train_smoke_start,
     harness_train_smoke_poll,
     simulink_load_model,

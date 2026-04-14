@@ -187,7 +187,7 @@ def training_status(scenario_id: str, run_id: str | None = None) -> dict[str, An
         "error": status.get("error"),
         "stop_reason": status.get("stop_reason"),
         "last_eval_reward": status.get("last_eval_reward"),
-        "logs_dir": logs_dir_str,
+        "logs_dir": str(logs_dir_path),
         "run_dir": str(run_dir),
         "latest_snapshot": latest_snapshot,
     }

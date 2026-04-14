@@ -15,9 +15,8 @@ from scenarios.config_simulink_base import (
     ADAPTIVE_KH, ADAPTIVE_KD,
     DT, N_SUBSTEPS, T_WARMUP,
     DM_MIN, DM_MAX, DD_MIN, DD_MAX,
-    DIST_MIN, DIST_MAX,
     VSG_M0, VSG_D0, VSG_SN,
-    NORM_P, NORM_FREQ, NORM_ROCOF,
+    NORM_ROCOF,
     MAX_NEIGHBORS, COMM_FAIL_PROB,
     OBS_DIM, ACT_DIM,
     PHI_H, PHI_D, TDS_FAIL_PENALTY,
@@ -81,6 +80,22 @@ VSG_BUS_VN = 20.0      # kV
 # normalization of 2.0 drives observations well outside the critic's nominal
 # input scale.
 NORM_P = 4.0
+
+# Frequency observation normalization (Kundur-specific override).
+# Base NORM_FREQ=3.0 gives obs ≈ 31 at 15 Hz (0.30 pu × 314 rad/s / 3.0)
+# — well outside the critic network's nominal input range.
+# At 8.0, the same deviation gives obs ≈ 11.8, which keeps critic inputs
+# in a learnable range without gradient saturation.
+NORM_FREQ = 8.0
+
+# Disturbance magnitude range (Kundur-specific override).
+# Base DIST_MAX=3.0 allows 300 MW disturbances; with D_min=1.5 this gives
+# steady-state Δf ≈ 7.8 Hz and transient peaks near OMEGA_TERM_THRESHOLD
+# (15 Hz), causing immediate episode termination on random policies.
+# Capped at 1.5 (150 MW max) to keep freq deviation below the threshold
+# even with minimum damping, giving the RL agent a learnable signal.
+DIST_MIN = 0.5   # 50 MW minimum disturbance
+DIST_MAX = 1.5   # 150 MW maximum disturbance
 
 
 # ========== Breaker Mapping for Simulink ==========

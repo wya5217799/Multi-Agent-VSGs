@@ -41,6 +41,7 @@ from scenarios.kundur.config_simulink import (
     T_WARMUP, PHI_F, PHI_H, PHI_D,
     COMM_ADJ, T_EPISODE, N_SUBSTEPS, STEPS_PER_EPISODE,
     NORM_P, NORM_FREQ, NORM_ROCOF,
+    DIST_MIN, DIST_MAX,
     TRIPLOAD2_P_MAX_W,
 )
 
@@ -80,9 +81,6 @@ OMEGA_TERM_PENALTY: float = -500.0            # per agent, lump-sum terminal rew
 
 MAX_NEIGHBORS: int = _CONTRACT.max_neighbors
 COMM_FAIL_PROB: float = 0.1
-
-DIST_MIN: float = 1.0
-DIST_MAX: float = 3.0
 
 VSG_BUS_VN: float = 20.0  # kV
 

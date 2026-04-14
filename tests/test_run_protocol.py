@@ -155,3 +155,18 @@ def test_find_latest_run_no_running_returns_most_recent_finished(tmp_path, monke
     _write_status(newer, {"status": "completed", "finished_at": "2026-04-15T08:00:00Z"})
     result = run_protocol.find_latest_run("kundur")
     assert result == newer
+
+
+def test_find_latest_run_crashed_run_with_no_terminal_ts_sorts_last(tmp_path, monkeypatch):
+    """A run that crashed before writing finished_at/failed_at should lose to any
+    run that did write a terminal timestamp, regardless of filesystem ordering."""
+    from utils import run_protocol
+    monkeypatch.setattr(run_protocol, "_PROJECT_ROOT", tmp_path)
+    crashed = tmp_path / "results" / "sim_kundur" / "runs" / "run_crashed"
+    finished = tmp_path / "results" / "sim_kundur" / "runs" / "run_finished"
+    # Crashed run: only has last_updated, no finished_at / failed_at
+    _write_status(crashed, {"status": "failed", "last_updated": "2026-04-15T09:00:00Z"})
+    # Finished run has an older last_updated but a proper finished_at
+    _write_status(finished, {"status": "completed", "finished_at": "2026-04-14T08:00:00Z"})
+    result = run_protocol.find_latest_run("kundur")
+    assert result == finished

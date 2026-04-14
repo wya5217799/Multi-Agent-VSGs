@@ -214,7 +214,7 @@ def training_diagnose(
 
     _empty: dict[str, Any] = {
         "scenario_id": scenario_id,
-        "run_id": run_id or "unknown",
+        "run_id": None,
         "event_count": 0,
         "alerts": [],
         "monitor_stop": None,

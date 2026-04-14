@@ -151,6 +151,9 @@ def find_latest_run(scenario_id: str) -> Path | None:
         return max(running, key=lambda item: item[1].get("last_updated") or "")[0]
 
     # No running runs: use finished_at or failed_at timestamp from file content.
+    # Runs that lack both timestamps (e.g. crashed before writing them) return ""
+    # and sort last — the most-recently-terminated run wins, which is the desired
+    # behaviour: a clean finish beats an incomplete/crashed run of similar vintage.
     def _terminal_ts(item: tuple[Path, dict]) -> str:
         s = item[1]
         return s.get("finished_at") or s.get("failed_at") or ""

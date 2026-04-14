@@ -9,6 +9,8 @@ def test_public_tools_list_matches_expected_contract():
     from engine import mcp_server
 
     expected_names = [
+        "training_status",
+        "training_diagnose",
         "training_evaluate_run",
         "training_compare_runs",
         "harness_scenario_status",
@@ -16,6 +18,7 @@ def test_public_tools_list_matches_expected_contract():
         "harness_model_patch_verify",
         "harness_model_diagnose",
         "harness_model_report",
+        "harness_train_smoke_full",
         "harness_train_smoke_start",
         "harness_train_smoke_poll",
         "simulink_load_model",
@@ -53,7 +56,7 @@ def test_public_tools_list_matches_expected_contract():
 def test_public_tools_contract_has_stable_size():
     from engine import mcp_server
 
-    assert len(mcp_server.PUBLIC_TOOLS) == 36
+    assert len(mcp_server.PUBLIC_TOOLS) == 39
 
 
 def test_prepare_process_environment_sets_project_root_cwd(monkeypatch, tmp_path):
@@ -96,3 +99,15 @@ def test_server_instructions_prefer_harness_tools():
     from engine import mcp_server
 
     assert "prefer the harness_* task tools" in mcp_server.mcp.instructions.lower()
+
+
+def test_mcp_registers_training_status():
+    from engine import mcp_server
+    names = [tool.__name__ for tool in mcp_server.PUBLIC_TOOLS]
+    assert "training_status" in names
+
+
+def test_mcp_registers_training_diagnose():
+    from engine import mcp_server
+    names = [tool.__name__ for tool in mcp_server.PUBLIC_TOOLS]
+    assert "training_diagnose" in names

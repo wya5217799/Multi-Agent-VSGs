@@ -223,24 +223,11 @@ def train(args):
         if inferred_run_dir is not None:
             args.run_dir = str(inferred_run_dir)
     run_id = args.run_id
+    # Determine run_dir path (no mkdir yet — deferred until backend is ready)
     if hasattr(args, "run_dir"):
         run_dir = Path(args.run_dir)
-        (run_dir / "checkpoints").mkdir(parents=True, exist_ok=True)
-        (run_dir / "logs").mkdir(parents=True, exist_ok=True)
     else:
         run_dir = Path(args.checkpoint_dir)
-        run_dir.mkdir(parents=True, exist_ok=True)
-    print(f"[train] run_id={run_id}, output={run_dir}")
-
-    write_training_status(run_dir, {
-        "status": "running",
-        "run_id": run_id,
-        "scenario": "kundur",
-        "episodes_total": args.episodes,
-        "episodes_done": 0,
-        "started_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-        "last_reward": None,
-    })
 
     env = make_env(args)
     agent = SACAgent(
@@ -292,6 +279,31 @@ def train(args):
         start_episode = meta.get("start_episode", 0)
         print(f"Resumed from {resume_path} (starting at episode {start_episode})")
 
+    # ── Phase B: Bootstrap backend ─────────────────────────────────────────────
+    # First env.reset() triggers MATLAB startup / load_model / warmup.
+    # If this fails, raise immediately; run_dir not yet created, no orphaned files.
+    dist_mag = np.random.uniform(env.DIST_MIN, env.DIST_MAX)
+    if np.random.random() > 0.5:
+        dist_mag = -dist_mag
+    obs, _ = env.reset(options={"disturbance_magnitude": dist_mag})
+
+    # ── Phase C: Commit outputs (only after backend is ready) ──────────────────
+    if hasattr(args, "run_dir"):
+        (run_dir / "checkpoints").mkdir(parents=True, exist_ok=True)
+        (run_dir / "logs").mkdir(parents=True, exist_ok=True)
+    else:
+        run_dir.mkdir(parents=True, exist_ok=True)
+    print(f"[train] run_id={run_id}, output={run_dir}")
+
+    write_training_status(run_dir, {
+        "status": "running",
+        "run_id": run_id,
+        "scenario": "kundur",
+        "episodes_total": args.episodes,
+        "episodes_done": 0,
+        "started_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        "last_reward": None,
+    })
     os.makedirs(args.checkpoint_dir, exist_ok=True)
     os.makedirs(os.path.dirname(args.log_file), exist_ok=True)
 
@@ -325,13 +337,12 @@ def train(args):
 
     end_episode = start_episode + args.episodes
     for ep in range(start_episode, end_episode):
-        # Draw disturbance BEFORE reset so Simulink env can pre-schedule
-        # the breaker event via configure_breaker_event() → warmup() recompile.
-        dist_mag = np.random.uniform(env.DIST_MIN, env.DIST_MAX)
-        if np.random.random() > 0.5:
-            dist_mag = -dist_mag
-
-        obs, _ = env.reset(options={"disturbance_magnitude": dist_mag})
+        # Phase B already reset episode start_episode; subsequent episodes reset here.
+        if ep > start_episode:
+            dist_mag = np.random.uniform(env.DIST_MIN, env.DIST_MAX)
+            if np.random.random() > 0.5:
+                dist_mag = -dist_mag
+            obs, _ = env.reset(options={"disturbance_magnitude": dist_mag})
         ep_reward = np.zeros(env.N_ESS)
         ep_losses = {"critic": [], "policy": [], "alpha": []}
         actions_history = []

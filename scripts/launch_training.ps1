@@ -1,4 +1,4 @@
-# launch_training.ps1 — 启动训练并验证进程已就绪
+﻿# launch_training.ps1 — 启动训练并验证进程已就绪
 #
 # 用法:
 #   .\scripts\launch_training.ps1 kundur          # 只启动 Kundur

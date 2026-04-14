@@ -211,24 +211,11 @@ def train(args):
         if inferred_run_dir is not None:
             args.run_dir = str(inferred_run_dir)
     run_id = args.run_id
+    # Determine run_dir path (no mkdir yet — deferred until backend is ready)
     if hasattr(args, "run_dir"):
         run_dir = Path(args.run_dir)
-        (run_dir / "checkpoints").mkdir(parents=True, exist_ok=True)
-        (run_dir / "logs").mkdir(parents=True, exist_ok=True)
     else:
         run_dir = Path(args.checkpoint_dir)
-        run_dir.mkdir(parents=True, exist_ok=True)
-    print(f"[train] run_id={run_id}, output={run_dir}")
-
-    write_training_status(run_dir, {
-        "status": "running",
-        "run_id": run_id,
-        "scenario": "ne39",
-        "episodes_total": args.episodes,
-        "episodes_done": 0,
-        "started_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-        "last_reward": None,
-    })
 
     # Create environment and agent
     env = make_env(args)
@@ -280,6 +267,36 @@ def train(args):
         start_episode = meta.get("start_episode", 0)
         print(f"Resumed from {resume_path} (starting at episode {start_episode})")
 
+    # ── Phase B: Bootstrap backend ─────────────────────────────────────────────
+    # First env.reset() triggers MATLAB startup / load_model / warmup.
+    # If this fails, raise immediately; run_dir not yet created, no orphaned files.
+    #
+    # NE39-specific: disturbance is applied mid-episode via apply_disturbance()
+    # (at t=1.0s, see step loop below), NOT via reset options. reset() needs no
+    # disturbance_magnitude kwarg here. dist_mag is sampled after reset so it is
+    # ready for the first episode's apply_disturbance() call.
+    obs, _ = env.reset()
+    dist_mag = np.random.uniform(env.DIST_MIN, env.DIST_MAX)
+    if np.random.random() > 0.5:
+        dist_mag = -dist_mag
+
+    # ── Phase C: Commit outputs (only after backend is ready) ──────────────────
+    if hasattr(args, "run_dir"):
+        (run_dir / "checkpoints").mkdir(parents=True, exist_ok=True)
+        (run_dir / "logs").mkdir(parents=True, exist_ok=True)
+    else:
+        run_dir.mkdir(parents=True, exist_ok=True)
+    print(f"[train] run_id={run_id}, output={run_dir}")
+
+    write_training_status(run_dir, {
+        "status": "running",
+        "run_id": run_id,
+        "scenario": "ne39",
+        "episodes_total": args.episodes,
+        "episodes_done": 0,
+        "started_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        "last_reward": None,
+    })
     # Checkpoint directory
     os.makedirs(args.checkpoint_dir, exist_ok=True)
     os.makedirs(os.path.dirname(args.log_file), exist_ok=True)
@@ -316,7 +333,13 @@ def train(args):
 
     end_episode = start_episode + args.episodes
     for ep in range(start_episode, end_episode):
-        obs, _ = env.reset()
+        # Phase B already reset episode start_episode; subsequent episodes reset here.
+        # NE39: reset() takes no disturbance options; dist_mag is used by apply_disturbance().
+        if ep > start_episode:
+            obs, _ = env.reset()
+            dist_mag = np.random.uniform(env.DIST_MIN, env.DIST_MAX)
+            if np.random.random() > 0.5:
+                dist_mag = -dist_mag
         ep_reward = np.zeros(env.N_ESS)
         ep_losses = {"critic": [], "policy": [], "alpha": []}
         actions_history = []
@@ -330,11 +353,6 @@ def train(args):
         ep_tail_freq_devs = deque(maxlen=10)
         ep_P_es_min = np.full(env.N_ESS, np.inf)
         ep_P_es_max = np.full(env.N_ESS, -np.inf)
-
-        # Random disturbance at warmup end
-        dist_mag = np.random.uniform(env.DIST_MIN, env.DIST_MAX)
-        if np.random.random() > 0.5:
-            dist_mag = -dist_mag
 
         for step in range(int(env.T_EPISODE / env.DT)):
             # Apply disturbance at episode t=1.0s (step 5).

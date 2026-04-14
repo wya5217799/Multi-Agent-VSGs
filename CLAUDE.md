@@ -1,7 +1,8 @@
-> **⚠ HARNESS FIRST — 行动前必读**
+> **⚠ HARNESS FIRST**
 > CLAUDE.md 不是 source of truth。所有决策必须基于 harness 当前状态。
 > 有冲突时：**忽略 CLAUDE.md，遵循 harness**。
-> 任何行动前，先定位并读取 harness（`engine/harness_reference.py`）。
+> 修改合约 / 配置 / 测试相关代码前，先读 harness（`engine/harness_reference.py`）。
+> **纯启动训练**：调用 `get_training_launch_status(scenario_id)` 即可，无需手动读 harness 文件。
 
 # Multi-Agent VSGs — 代码导航指南
 

@@ -84,12 +84,13 @@ COMM_ADJ = {
 PHI_F = 100.0
 
 # ========== SAC Hyperparameters (NE39-specific overrides) ==========
-# BATCH_SIZE: 8 agents fill buffer ~2× faster; small batch (32) avoids
-# overfitting to early narrow distribution before buffer is well-populated.
-BATCH_SIZE = 32
+# BATCH_SIZE: 8 agents × 50 steps = 400 transitions/episode.
+# 256 gives stable gradient estimates across the 8-agent action space.
+BATCH_SIZE = 256
 BUFFER_SIZE = 100000
-# WARMUP_STEPS: NE39 converges faster to meaningful gradients, 500 is sufficient.
-WARMUP_STEPS = 500
+# WARMUP_STEPS: need ~5 full episodes of random data (~2000 steps) before
+# SAC updates start, so all 8 agents have seen diverse initial conditions.
+WARMUP_STEPS = 2000
 
 # ========== Test Scenarios ==========
 # Scenario 1: W2 trip

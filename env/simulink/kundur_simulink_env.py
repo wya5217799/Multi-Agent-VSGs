@@ -94,8 +94,7 @@ _OMEGA_TERM_HZ: float = OMEGA_TERM_THRESHOLD * F_NOM
 _DIST_MAX_SAFE_HZ: float = 0.85 * _OMEGA_TERM_HZ
 _DIST_MAX_EST_HZ: float = DIST_MAX * F_NOM / (N_AGENTS * D_LO)
 if _DIST_MAX_EST_HZ > _DIST_MAX_SAFE_HZ:
-    import warnings as _warnings
-    _warnings.warn(
+    warnings.warn(
         f"DIST_MAX={DIST_MAX} may cause immediate episode termination: "
         f"estimated steady-state Δf ≈ {_DIST_MAX_EST_HZ:.1f} Hz exceeds "
         f"safe limit {_DIST_MAX_SAFE_HZ:.1f} Hz (85% of OMEGA_TERM={_OMEGA_TERM_HZ:.0f} Hz). "

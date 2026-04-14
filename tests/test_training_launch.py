@@ -311,3 +311,54 @@ class TestFindActivePid:
         with patch("engine.training_launch.subprocess.run", side_effect=fake_run):
             self._call(r"scenarios\kundur\train_simulink.py")
         assert "kundur/train_simulink.py" in " ".join(captured["cmd"])
+
+
+# ── _resolve_python_exe ────────────────────────────────────────────────────────
+
+class TestResolvePythonExe:
+    """Tests for the andes_env interpreter detection logic."""
+
+    def _call(self, monkeypatch, conda_prefix: str | None, existing_paths: list[str]):
+        """Invoke _resolve_python_exe with controlled env and filesystem."""
+        import engine.training_launch as tl
+
+        if conda_prefix is None:
+            monkeypatch.delenv("CONDA_PREFIX", raising=False)
+        else:
+            monkeypatch.setenv("CONDA_PREFIX", conda_prefix)
+
+        existing = {Path(p) for p in existing_paths}
+        monkeypatch.setattr(Path, "exists", lambda self: self in existing)
+        return tl._resolve_python_exe()
+
+    def test_conda_prefix_andes_env_returns_prefix_python(self, monkeypatch, tmp_path):
+        prefix = str(tmp_path / "envs" / "andes_env")
+        python = str(Path(prefix) / "python.exe")
+        result = self._call(monkeypatch, prefix, [python])
+        assert result == Path(python)
+
+    def test_conda_prefix_wrong_env_skips_to_search(self, monkeypatch, tmp_path):
+        """CONDA_PREFIX pointing to a different env must not short-circuit."""
+        prefix = str(tmp_path / "envs" / "other_env")
+        # Only andes_env path exists in the search list
+        import engine.training_launch as tl
+        search_andes = str(Path.home() / "miniconda3" / "envs" / "andes_env" / "python.exe")
+        result = self._call(monkeypatch, prefix, [search_andes])
+        assert result == Path(search_andes)
+
+    def test_no_conda_prefix_searches_miniconda(self, monkeypatch):
+        miniconda_python = str(Path.home() / "miniconda3" / "envs" / "andes_env" / "python.exe")
+        result = self._call(monkeypatch, None, [miniconda_python])
+        assert result == Path(miniconda_python)
+
+    def test_falls_back_to_sys_executable_when_nothing_found(self, monkeypatch):
+        import sys
+        result = self._call(monkeypatch, None, [])   # no paths exist
+        assert result == Path(sys.executable)
+
+    def test_miniconda_searched_before_anaconda(self, monkeypatch):
+        """When both miniconda and anaconda andes_env exist, miniconda wins."""
+        miniconda = str(Path.home() / "miniconda3" / "envs" / "andes_env" / "python.exe")
+        anaconda  = str(Path.home() / "anaconda3"  / "envs" / "andes_env" / "python.exe")
+        result = self._call(monkeypatch, None, [miniconda, anaconda])
+        assert result == Path(miniconda)

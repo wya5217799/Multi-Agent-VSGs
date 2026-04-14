@@ -179,3 +179,106 @@ def test_training_diagnose_parses_events(tmp_path, monkeypatch):
     assert result["monitor_stop"] == {"episode": 87}
     assert result["checkpoints"] == [{"episode": 100, "file": "ep100.pt"}]
     assert result["training_end"] is None
+
+
+# ── _diagnose_physics ──────────────────────────────────────────────────────────
+
+def _write_metrics(logs_dir: Path, rows: list[dict]) -> None:
+    (logs_dir / "metrics.jsonl").write_text(
+        "\n".join(json.dumps(r) for r in rows), encoding="utf-8"
+    )
+
+
+def _make_metrics_run(tmp_path: Path, scenario: str, run_id: str, rows: list[dict]) -> Path:
+    run_dir = _make_run(tmp_path, scenario, run_id, {
+        "status": "completed", "run_id": run_id,
+        "episodes_total": len(rows), "episodes_done": len(rows),
+    })
+    logs = _make_logs(run_dir)
+    _write_metrics(logs, rows)
+    return run_dir
+
+
+def test_diagnose_physics_early_termination_pattern(tmp_path, monkeypatch):
+    """All episodes capped at 15 Hz from ep0 → early_termination pattern."""
+    import utils.run_protocol as rp
+    monkeypatch.setattr(rp, "_PROJECT_ROOT", tmp_path)
+
+    rows = [
+        {"episode": i, "max_freq_dev_hz": 15.0, "reward": -500.0, "settled": False}
+        for i in range(50)
+    ]
+    _make_metrics_run(tmp_path, "kundur", "run1", rows)
+
+    from engine.training_tasks import training_diagnose
+    result = training_diagnose("kundur")
+    pd = result["physics_diagnosis"]
+    assert pd["pattern"] == "early_termination"
+    assert "early_termination" in pd["pattern"]
+    assert pd["recommendation"] is not None
+    assert "DIST_MAX" in pd["recommendation"]
+
+
+def test_diagnose_physics_no_pattern_healthy(tmp_path, monkeypatch):
+    """Healthy training with declining freq dev → no pattern detected."""
+    import utils.run_protocol as rp
+    monkeypatch.setattr(rp, "_PROJECT_ROOT", tmp_path)
+
+    rows = [
+        {"episode": i, "max_freq_dev_hz": max(2.0, 12.0 - i * 0.1),
+         "reward": -5000.0 + i * 20, "settled": i > 20}
+        for i in range(100)
+    ]
+    _make_metrics_run(tmp_path, "kundur", "run1", rows)
+
+    from engine.training_tasks import training_diagnose
+    result = training_diagnose("kundur")
+    pd = result["physics_diagnosis"]
+    assert pd["pattern"] is None
+
+
+def test_diagnose_physics_no_progress_pattern(tmp_path, monkeypatch):
+    """Flat reward for 20+ episodes with zero settled rate → no_progress."""
+    import utils.run_protocol as rp
+    monkeypatch.setattr(rp, "_PROJECT_ROOT", tmp_path)
+
+    rows = [
+        {"episode": i, "max_freq_dev_hz": 8.0, "reward": -50000.0, "settled": False}
+        for i in range(30)
+    ]
+    _make_metrics_run(tmp_path, "kundur", "run1", rows)
+
+    from engine.training_tasks import training_diagnose
+    result = training_diagnose("kundur")
+    pd = result["physics_diagnosis"]
+    assert pd["pattern"] == "no_progress"
+    assert "WARMUP_STEPS" in pd["recommendation"] or "NORM_FREQ" in pd["recommendation"]
+
+
+def test_diagnose_physics_no_run_returns_no_pattern(tmp_path, monkeypatch):
+    """No run directory → _empty schema includes physics_diagnosis with no pattern."""
+    import utils.run_protocol as rp
+    monkeypatch.setattr(rp, "_PROJECT_ROOT", tmp_path)
+
+    from engine.training_tasks import training_diagnose
+    result = training_diagnose("kundur")
+    assert "physics_diagnosis" in result           # C1 fix: key must always be present
+    assert result["physics_diagnosis"]["pattern"] is None
+
+
+def test_diagnose_physics_no_metrics_file(tmp_path, monkeypatch):
+    """Run dir exists but no metrics.jsonl → no pattern, not a crash."""
+    import utils.run_protocol as rp
+    monkeypatch.setattr(rp, "_PROJECT_ROOT", tmp_path)
+
+    _make_run(tmp_path, "kundur", "run1", {
+        "status": "running", "run_id": "run1",
+        "episodes_total": 500, "episodes_done": 10,
+    })
+    _make_logs(tmp_path / "results" / "sim_kundur" / "runs" / "run1")
+
+    from engine.training_tasks import training_diagnose
+    result = training_diagnose("kundur")
+    pd = result["physics_diagnosis"]
+    assert pd["pattern"] is None
+    assert "not found" in pd["evidence"]

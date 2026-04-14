@@ -273,7 +273,7 @@ def _diagnose_physics(
     # Pattern 3: no progress — reward flat and zero settled_rate
     if len(rewards) >= 20 and settled_total == 0:
         reward_range = max(rewards) - min(rewards) if rewards else 0.0
-        if reward_range < abs(min(rewards, default=0)) * 0.05:
+        if reward_range < max(abs(min(rewards, default=0)) * 0.05, 1.0):
             return {
                 "pattern": "no_progress",
                 "evidence": (
@@ -319,6 +319,7 @@ def training_diagnose(
         "checkpoints": [],
         "training_start": None,
         "training_end": None,
+        "physics_diagnosis": {"pattern": None, "evidence": "no run found", "recommendation": None},
     }
 
     if run_dir is None:

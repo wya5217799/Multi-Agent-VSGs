@@ -30,6 +30,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 from utils.gym_compat import gym, spaces
+from env.simulink._base import _SimVsgBase
 from scenarios.contract import KUNDUR as _CONTRACT
 from scenarios.config_simulink_base import (
     VSG_M0, VSG_D0, VSG_SN,
@@ -104,7 +105,7 @@ def _map_zero_centered_action(
 # Base Environment
 # ---------------------------------------------------------------------------
 
-class _KundurBaseEnv(gym.Env):
+class _KundurBaseEnv(_SimVsgBase):
     """
     Abstract base for both standalone-ODE and MATLAB/Simulink backends.
 
@@ -117,6 +118,29 @@ class _KundurBaseEnv(gym.Env):
 
     # Action encoding: a=0 → delta=0 (zero-centered). Used by _get_zero_action().
     ACTION_ENCODING: str = "zero_centered"
+
+    # ── _SimVsgBase config (Kundur 4-agent 50 Hz) ───────────────────────────
+    _N_AGENTS   = N_AGENTS
+    _COMM_ADJ   = COMM_ADJ
+    _F_NOM      = F_NOM
+    _OMEGA_N    = OMEGA_N
+    _NORM_P     = NORM_P
+    _NORM_FREQ  = NORM_FREQ
+    _NORM_ROCOF = NORM_ROCOF
+    _PHI_F      = PHI_F
+    _PHI_H      = PHI_H
+    _PHI_D      = PHI_D
+    _DM_MIN     = DM_MIN
+    _DM_MAX     = DM_MAX
+    _DD_MIN     = DD_MIN
+    _DD_MAX     = DD_MAX
+
+    def _decode_action(self, action: np.ndarray):
+        """Zero-centered: a=0 → delta=0 (ACTION_ENCODING='zero_centered')."""
+        return (
+            _map_zero_centered_action(action[:, 0], DM_MIN, DM_MAX),
+            _map_zero_centered_action(action[:, 1], DD_MIN, DD_MAX),
+        )
 
     def __init__(
         self,
@@ -274,132 +298,6 @@ class _KundurBaseEnv(gym.Env):
         }
 
         return obs, reward, terminated, truncated, info
-
-    # ------------------------------------------------------------------
-    # Observation (Sec. III-C)
-    # ------------------------------------------------------------------
-
-    def _build_obs(self) -> np.ndarray:
-        obs = np.zeros((N_AGENTS, OBS_DIM), dtype=np.float32)
-
-        for i in range(N_AGENTS):
-            freq_dev_norm = (self._omega[i] - 1.0) * OMEGA_N / NORM_FREQ
-            if self.DT > 0:
-                rocof_norm = (
-                    (self._omega[i] - self._omega_prev[i])
-                    / self.DT * OMEGA_N / NORM_ROCOF
-                )
-            else:
-                rocof_norm = 0.0
-
-            obs[i, 0] = self._P_es[i] / NORM_P
-            obs[i, 1] = freq_dev_norm
-            obs[i, 2] = rocof_norm
-
-            for n_idx, nb in enumerate(COMM_ADJ[i]):
-                if self._comm_mask[i, n_idx]:
-                    nb_data = self._get_comm_data(i, nb)
-                    obs[i, 3 + n_idx] = nb_data["omega"]
-                    obs[i, 5 + n_idx] = nb_data["rocof"]
-
-        return obs
-
-    # ------------------------------------------------------------------
-    # Communication helpers
-    # ------------------------------------------------------------------
-
-    def _update_comm_buffers(self) -> None:
-        for i in range(N_AGENTS):
-            for nb in COMM_ADJ[i]:
-                freq_dev_norm = (self._omega[nb] - 1.0) * OMEGA_N / NORM_FREQ
-                if self.DT > 0:
-                    rocof_norm = (
-                        (self._omega[nb] - self._omega_prev[nb])
-                        / self.DT * OMEGA_N / NORM_ROCOF
-                    )
-                else:
-                    rocof_norm = 0.0
-
-                buf = self._comm_buffer[(i, nb)]
-                buf["omega"].append(freq_dev_norm)
-                buf["rocof"].append(rocof_norm)
-                max_len = self.comm_delay_steps + 2
-                if len(buf["omega"]) > max_len:
-                    buf["omega"].pop(0)
-                    buf["rocof"].pop(0)
-
-    def _get_comm_data(self, agent: int, neighbor: int) -> Dict[str, float]:
-        buf = self._comm_buffer[(agent, neighbor)]
-        idx = max(0, len(buf["omega"]) - 1 - self.comm_delay_steps)
-        return {
-            "omega": buf["omega"][idx],
-            "rocof": buf["rocof"][idx],
-        }
-
-    # ------------------------------------------------------------------
-    # Reward (Eq. 15-18)
-    # ------------------------------------------------------------------
-
-    def _compute_reward(self, action: np.ndarray) -> Tuple[np.ndarray, Dict[str, float]]:
-        """Reward per paper Eq. 14-18 (see docs/decisions/2026-04-10-paper-baseline-contract.md).
-
-        r_f (Eq. 15-16): relative sync penalty — penalises deviation from the
-            *local group average* frequency, not deviation from nominal.
-            ω̄_i = mean(Δω_i, Δω_{active neighbours})
-            r_f_i = -(Δω_i - ω̄_i)² - Σ_j (Δω_j - ω̄_i)² · η_j
-
-        r_h (Eq. 17): -(mean_i ΔH_i)²   where ΔH_i = delta_M_i / 2
-        r_d (Eq. 18): -(mean_i ΔD_i)²
-
-        r_i = φ_f · r_f_i + φ_h · r_h + φ_d · r_d
-        """
-        rewards = np.zeros(N_AGENTS, dtype=np.float32)
-        r_f_total = 0.0
-
-        # Recover physical parameter adjustments from normalized actions.
-        delta_M = _map_zero_centered_action(action[:, 0], DM_MIN, DM_MAX)
-        delta_D = _map_zero_centered_action(action[:, 1], DD_MIN, DD_MAX)
-
-        # Frequency deviations in Hz for all agents
-        dw_hz = (self._omega - 1.0) * F_NOM  # shape (N_AGENTS,)
-
-        # r_f (Eq. 15-16): relative sync penalty per agent
-        for i in range(N_AGENTS):
-            # Local group: agent i + active neighbours (masked by comm_mask)
-            group_dw = [dw_hz[i]]
-            for n_idx, nb in enumerate(COMM_ADJ[i]):
-                if self._comm_mask[i, n_idx]:
-                    group_dw.append(dw_hz[nb])
-            omega_bar_i = float(np.mean(group_dw))  # local average (Hz)
-
-            # Self term
-            r_f_i = -(dw_hz[i] - omega_bar_i) ** 2
-
-            # Neighbour terms weighted by communication success (η_j)
-            for n_idx, nb in enumerate(COMM_ADJ[i]):
-                eta_j = 1.0 if self._comm_mask[i, n_idx] else 0.0
-                r_f_i -= (dw_hz[nb] - omega_bar_i) ** 2 * eta_j
-
-            step_r_f = PHI_F * r_f_i  # r_f_i is already negative
-            rewards[i] += step_r_f
-            r_f_total += step_r_f
-
-        # r_h (Eq. 17): penalise mean inertia adjustment — (ΔH̄)² = (mean(ΔM/2))²
-        delta_H_mean = float(np.mean(delta_M)) / 2.0
-        r_h_val = delta_H_mean ** 2
-        rewards -= PHI_H * r_h_val
-
-        # r_d (Eq. 18): penalise mean damping adjustment — (ΔD̄)²
-        delta_D_mean = float(np.mean(delta_D))
-        r_d_val = delta_D_mean ** 2
-        rewards -= PHI_D * r_d_val
-
-        components: Dict[str, float] = {
-            "r_f": r_f_total / N_AGENTS,
-            "r_h": -PHI_H * r_h_val,
-            "r_d": -PHI_D * r_d_val,
-        }
-        return rewards, components
 
     # ------------------------------------------------------------------
     # Disturbance

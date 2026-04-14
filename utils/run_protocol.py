@@ -118,3 +118,41 @@ def read_training_status(run_dir: Path) -> dict[str, Any] | None:
     if not path.exists():
         return None
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def find_latest_run(scenario_id: str) -> Path | None:
+    """Return the active or most-recently-updated run_dir, or None.
+
+    Resolution priority (do NOT use raw mtime):
+    1. Exactly one run with status "running" → return it.
+    2. Multiple "running" runs → return the one with the most recent last_updated.
+    3. No running runs → return the run with the most recent finished_at / failed_at.
+    4. No runs at all → return None.
+    """
+    runs_dir = _PROJECT_ROOT / "results" / f"sim_{scenario_id}" / "runs"
+    if not runs_dir.exists():
+        return None
+
+    candidates: list[tuple[Path, dict]] = []
+    for entry in runs_dir.iterdir():
+        if not entry.is_dir():
+            continue
+        status = read_training_status(entry)
+        if status is not None:
+            candidates.append((entry, status))
+
+    if not candidates:
+        return None
+
+    running = [(d, s) for d, s in candidates if s.get("status") == "running"]
+    if len(running) == 1:
+        return running[0][0]
+    if len(running) > 1:
+        return max(running, key=lambda item: item[1].get("last_updated") or "")[0]
+
+    # No running runs: use finished_at or failed_at timestamp from file content.
+    def _terminal_ts(item: tuple[Path, dict]) -> str:
+        s = item[1]
+        return s.get("finished_at") or s.get("failed_at") or ""
+
+    return max(candidates, key=_terminal_ts)[0]

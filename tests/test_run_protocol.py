@@ -108,3 +108,50 @@ def test_ensure_run_dir_creates_directory(tmp_path, monkeypatch):
     assert (run_dir.parent.name == "runs")
     assert (run_dir / "checkpoints").exists()
     assert (run_dir / "logs").exists()
+
+
+# ── find_latest_run ────────────────────────────────────────────────────────────
+
+def _write_status(run_dir: Path, status: dict) -> None:
+    """Helper: create run_dir and write training_status.json."""
+    run_dir.mkdir(parents=True, exist_ok=True)
+    from utils.run_protocol import write_training_status
+    write_training_status(run_dir, status)
+
+
+def test_find_latest_run_returns_none_when_no_runs(tmp_path, monkeypatch):
+    from utils import run_protocol
+    monkeypatch.setattr(run_protocol, "_PROJECT_ROOT", tmp_path)
+    result = run_protocol.find_latest_run("kundur")
+    assert result is None
+
+
+def test_find_latest_run_returns_single_running_run(tmp_path, monkeypatch):
+    from utils import run_protocol
+    monkeypatch.setattr(run_protocol, "_PROJECT_ROOT", tmp_path)
+    run_dir = tmp_path / "results" / "sim_kundur" / "runs" / "run1"
+    _write_status(run_dir, {"status": "running", "last_updated": "2026-04-15T10:00:00Z"})
+    result = run_protocol.find_latest_run("kundur")
+    assert result == run_dir
+
+
+def test_find_latest_run_multiple_running_returns_most_recent_by_last_updated(tmp_path, monkeypatch):
+    from utils import run_protocol
+    monkeypatch.setattr(run_protocol, "_PROJECT_ROOT", tmp_path)
+    older = tmp_path / "results" / "sim_kundur" / "runs" / "run_old"
+    newer = tmp_path / "results" / "sim_kundur" / "runs" / "run_new"
+    _write_status(older, {"status": "running", "last_updated": "2026-04-15T09:00:00Z"})
+    _write_status(newer, {"status": "running", "last_updated": "2026-04-15T10:00:00Z"})
+    result = run_protocol.find_latest_run("kundur")
+    assert result == newer
+
+
+def test_find_latest_run_no_running_returns_most_recent_finished(tmp_path, monkeypatch):
+    from utils import run_protocol
+    monkeypatch.setattr(run_protocol, "_PROJECT_ROOT", tmp_path)
+    older = tmp_path / "results" / "sim_kundur" / "runs" / "run_old"
+    newer = tmp_path / "results" / "sim_kundur" / "runs" / "run_new"
+    _write_status(older, {"status": "completed", "finished_at": "2026-04-14T12:00:00Z"})
+    _write_status(newer, {"status": "completed", "finished_at": "2026-04-15T08:00:00Z"})
+    result = run_protocol.find_latest_run("kundur")
+    assert result == newer

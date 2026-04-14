@@ -346,14 +346,36 @@ def training_diagnose(
     training_end_events = [e for e in events if e.get("type") == "training_end"]
     monitor_stop_events = [e for e in events if e.get("type") == "monitor_stop"]
 
+    # Group alerts by check type to avoid O(N) blowup in the return payload.
+    # Real runs can fire hundreds of identical "freq_out_of_range" warns — one
+    # summary row per distinct (check, action) pair is all the caller needs.
+    _alert_groups: dict[tuple[str, str | None], dict[str, Any]] = {}
+    for _ae in events:
+        if _ae.get("type") != "monitor_alert":
+            continue
+        _rule = _ae.get("rule")
+        _check = _rule.get("check", str(_rule)) if isinstance(_rule, dict) else str(_rule)
+        _action = _rule.get("action") if isinstance(_rule, dict) else None
+        _ep = _ae.get("episode") or 0
+        _key = (_check, _action)
+        if _key not in _alert_groups:
+            _alert_groups[_key] = {
+                "check": _check,
+                "action": _action,
+                "count": 0,
+                "first_episode": _ep,
+                "last_episode": _ep,
+            }
+        _grp = _alert_groups[_key]
+        _grp["count"] += 1
+        _grp["first_episode"] = min(_grp["first_episode"], _ep)
+        _grp["last_episode"] = max(_grp["last_episode"], _ep)
+
     return {
         "scenario_id": scenario_id,
         "run_id": actual_run_id,
         "event_count": len(events),
-        "alerts": [
-            {"episode": e.get("episode"), "rule": e.get("rule")}
-            for e in events if e.get("type") == "monitor_alert"
-        ],
+        "alerts": list(_alert_groups.values()),
         "monitor_stop": (
             {"episode": monitor_stop_events[0].get("episode")}
             if monitor_stop_events else None

@@ -175,7 +175,10 @@ def test_training_diagnose_parses_events(tmp_path, monkeypatch):
     assert result["event_count"] == 5
     assert result["training_start"] == {"episode": 0, "mode": "simulink"}
     assert result["eval_rewards"] == [{"episode": 50, "eval_reward": -42.5}]
-    assert result["alerts"] == [{"episode": 85, "rule": "reward_divergence"}]
+    assert result["alerts"] == [
+        {"check": "reward_divergence", "action": None, "count": 1,
+         "first_episode": 85, "last_episode": 85}
+    ]
     assert result["monitor_stop"] == {"episode": 87}
     assert result["checkpoints"] == [{"episode": 100, "file": "ep100.pt"}]
     assert result["training_end"] is None

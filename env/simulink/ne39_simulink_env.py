@@ -948,7 +948,11 @@ class NE39BusSimulinkEnv(_NE39BaseEnv):
                 nargout=2,
             )
 
-            if warmup_status and not warmup_status.get("success", True):
+            if warmup_status is None:
+                # None return is unexpected — warn but allow training to continue.
+                # _fr_compiled stays False so the next reset forces a full recompile.
+                raise RuntimeError("vsg_warmup returned None status (unexpected)")
+            elif not warmup_status.get("success", True):
                 raise RuntimeError(
                     f"vsg_warmup failed: {warmup_status.get('error', 'unknown')}"
                 )
@@ -966,6 +970,7 @@ class NE39BusSimulinkEnv(_NE39BaseEnv):
                 ).flatten()
 
         except Exception as exc:
+            self.bridge._fr_compiled = False  # force full recompile on next reset
             print(f"[NE39Bus-Simulink] Reset failed: {exc}")
             raise
 

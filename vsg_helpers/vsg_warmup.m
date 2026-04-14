@@ -7,8 +7,9 @@ function [state, status] = vsg_warmup(model_name, agent_ids_or_duration, sbase_v
 %   warmup sim.  Python (bridge.warmup) pre-initialises workspace vars first.
 %   Returns [] for both outputs; call with nargout=0.
 %
-% NE39 (5-arg) mode:
+% NE39 (5-arg or 6-arg) mode:
 %   [state, status] = vsg_warmup(model_name, agent_ids, sbase_va, cfg, init_params)
+%   [state, status] = vsg_warmup(model_name, agent_ids, sbase_va, cfg, init_params, do_recompile)
 %   Full episode reset for NE39bus_v2.slx:
 %     1. Stop FastRestart (set_param off)
 %     2. Write all workspace vars (M0, D0, phAng, Pe, wref)

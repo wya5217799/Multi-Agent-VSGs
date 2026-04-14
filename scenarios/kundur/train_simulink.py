@@ -295,14 +295,18 @@ def train(args):
         run_dir.mkdir(parents=True, exist_ok=True)
     print(f"[train] run_id={run_id}, output={run_dir}")
 
+    _started_at = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    _logs_dir = str(Path(args.log_file).parent)
     write_training_status(run_dir, {
         "status": "running",
         "run_id": run_id,
         "scenario": "kundur",
         "episodes_total": args.episodes,
         "episodes_done": 0,
-        "started_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        "started_at": _started_at,
+        "logs_dir": _logs_dir,
         "last_reward": None,
+        "last_eval_reward": None,
     })
     os.makedirs(args.checkpoint_dir, exist_ok=True)
     os.makedirs(os.path.dirname(args.log_file), exist_ok=True)
@@ -317,6 +321,7 @@ def train(args):
     })
     _prev_trigger_len = 0
     _last_eval_reward: float | None = None
+    _stop_reason: str | None = None
 
     meta_dir = getattr(args, "run_dir", args.checkpoint_dir)
     save_run_meta(meta_dir, args, _cfg_module)
@@ -421,6 +426,9 @@ def train(args):
             "episodes_done": ep - start_episode + 1,
             "last_reward": float(mean_reward),
             "last_updated": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            "started_at": _started_at,
+            "logs_dir": _logs_dir,
+            "last_eval_reward": _last_eval_reward,
         })
 
         # compute and record episode physics_summary
@@ -475,6 +483,7 @@ def train(args):
         _prev_trigger_len = len(monitor._trigger_history)
 
         if stop_triggered:
+            _stop_reason = _new_triggers[-1] if _new_triggers else None
             writer.log_event(ep, "monitor_stop", {"triggered_by": "monitor"})
             print(f"[Monitor] Hard stop at episode {ep}. Saving checkpoint.")
             agent.save(
@@ -586,14 +595,21 @@ def train(args):
         print(f"Monitor data exported to {log_dir}/")
 
         final_status = "monitor_stopped" if monitor_stopped else "completed"
-        write_training_status(run_dir, {
+        _final_status_dict: dict = {
             "status": final_status,
             "run_id": run_id,
             "scenario": "kundur",
             "episodes_total": args.episodes,
             "episodes_done": len(log["episode_rewards"]),
+            "last_reward": float(log["episode_rewards"][-1]) if log["episode_rewards"] else None,
             "finished_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-        })
+            "started_at": _started_at,
+            "logs_dir": _logs_dir,
+            "last_eval_reward": _last_eval_reward,
+        }
+        if final_status == "monitor_stopped":
+            _final_status_dict["stop_reason"] = _stop_reason
+        write_training_status(run_dir, _final_status_dict)
     except Exception as _train_exc:
         try:
             write_training_status(run_dir, {
@@ -602,7 +618,11 @@ def train(args):
                 "scenario": "kundur",
                 "episodes_total": args.episodes,
                 "episodes_done": len(log["episode_rewards"]),
+                "last_reward": float(log["episode_rewards"][-1]) if log["episode_rewards"] else None,
                 "failed_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                "started_at": _started_at,
+                "logs_dir": _logs_dir,
+                "last_eval_reward": _last_eval_reward,
                 "error": str(_train_exc),
             })
         except Exception:

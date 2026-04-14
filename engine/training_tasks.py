@@ -170,7 +170,7 @@ def training_status(scenario_id: str, run_id: str | None = None) -> dict[str, An
                 "snapshot_age_episodes": episodes_done - snapshot_episode,
                 "snapshot_freshness": "~50-episode intervals",
             }
-        except Exception:
+        except (json.JSONDecodeError, OSError, KeyError, ValueError):
             pass  # missing or malformed snapshot is non-fatal
 
     return {

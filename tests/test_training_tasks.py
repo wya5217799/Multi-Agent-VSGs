@@ -96,6 +96,20 @@ def test_training_status_with_latest_state(tmp_path, monkeypatch):
     assert snap["snapshot_freshness"] == "~50-episode intervals"
 
 
+def test_training_status_malformed_latest_state_returns_no_snapshot(tmp_path, monkeypatch):
+    import utils.run_protocol as rp
+    monkeypatch.setattr(rp, "_PROJECT_ROOT", tmp_path)
+    run_dir = _make_run(tmp_path, "kundur", "run1", {
+        "status": "running", "run_id": "run1",
+        "episodes_total": 500, "episodes_done": 60,
+    })
+    logs = _make_logs(run_dir)
+    (logs / "latest_state.json").write_text("not valid json{", encoding="utf-8")
+    from engine.training_tasks import training_status
+    result = training_status("kundur")
+    assert result["latest_snapshot"] is None
+
+
 def test_training_status_without_latest_state(tmp_path, monkeypatch):
     import utils.run_protocol as rp
     monkeypatch.setattr(rp, "_PROJECT_ROOT", tmp_path)

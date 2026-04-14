@@ -1,4 +1,4 @@
-﻿# launch_training.ps1 — 启动训练并验证进程已就绪
+# launch_training.ps1 — 启动训练并验证进程已就绪
 #
 # 用法:
 #   .\scripts\launch_training.ps1 kundur          # 只启动 Kundur
@@ -18,30 +18,40 @@ param(
 $PYTHON = "C:\Users\27443\miniconda3\envs\andes_env\python.exe"
 $Root   = (Resolve-Path $RootDir).Path
 
+# PIDs of launched processes — used by Assert-Running for direct liveness check.
+$script:LaunchedPids = @{}
+
 function Start-Training {
     param([string]$ScenarioLabel, [string]$ScriptRelPath)
 
-    $script = Join-Path $Root $ScriptRelPath
-    $cmd    = "& '$PYTHON' '$script' --mode $Mode --episodes $Episodes"
+    $scriptPath = Join-Path $Root $ScriptRelPath
 
     Write-Host "[launch] $ScenarioLabel ..."
-    # Use -WorkingDirectory instead of cd inside -Command:
-    # paths with multiple spaces (e.g. "Multi-Agent  VSGs") cause Set-Location
-    # to fail silently when passed through -ArgumentList string expansion.
-    Start-Process powershell -WorkingDirectory $Root -ArgumentList "-NoExit", "-Command", $cmd
+    # Direct Start-Process on python.exe (not wrapped in a powershell -Command shell).
+    # -PassThru returns the Process object immediately so we get the PID before
+    # MATLAB engine finishes loading (~30-60s).  -WindowStyle Normal keeps the
+    # training window visible.
+    $proc = Start-Process $PYTHON `
+        -ArgumentList $scriptPath, "--mode", $Mode, "--episodes", $Episodes `
+        -WorkingDirectory $Root `
+        -PassThru `
+        -WindowStyle Normal
+    $script:LaunchedPids[$ScenarioLabel] = $proc.Id
+    Write-Host "         PID $($proc.Id)"
 }
 
 function Assert-Running {
-    param([string]$ScenarioLabel, [string]$ScriptPattern)
+    param([string]$ScenarioLabel)
 
-    Start-Sleep -Seconds 4
-    $proc = Get-WmiObject Win32_Process -Filter "name='python.exe'" |
-            Where-Object { $_.CommandLine -like "*$ScriptPattern*" }
-
-    if ($proc) {
-        Write-Host "[ok]     $ScenarioLabel — PID $($proc.ProcessId)"
+    $pid    = $script:LaunchedPids[$ScenarioLabel]
+    $verify = 5   # 秒：等待足够确认进程没立即崩溃（Python import ~ 2-3s）
+    Write-Host "[wait]   $ScenarioLabel — 等 ${verify}s 确认进程存活..."
+    Start-Sleep -Seconds $verify
+    $alive = Get-Process -Id $pid -ErrorAction SilentlyContinue
+    if ($alive) {
+        Write-Host "[ok]     $ScenarioLabel — PID $pid 存活 (MemMB=$([int]($alive.WorkingSet/1MB)))"
     } else {
-        Write-Error "[FAIL]   $ScenarioLabel — 进程未找到，请检查 PowerShell 窗口错误信息"
+        Write-Error "[FAIL]   $ScenarioLabel — PID $pid 已退出，请检查训练窗口错误信息"
         exit 1
     }
 }
@@ -57,13 +67,11 @@ if ($Target -in "ne39","both") {
 
 # ── 验证 ──────────────────────────────────────────────────────────────────────
 
-Write-Host "[wait]   等待进程启动..."
-
 if ($Target -in "kundur","both") {
-    Assert-Running "Kundur x Simulink" "kundur\train_simulink"
+    Assert-Running "Kundur x Simulink"
 }
 if ($Target -in "ne39","both") {
-    Assert-Running "NE39 x Simulink"   "new_england\train_simulink"
+    Assert-Running "NE39 x Simulink"
 }
 
 Write-Host "[done]   全部训练进程已就绪。"

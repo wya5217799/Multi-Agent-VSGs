@@ -48,17 +48,27 @@ problem worth investigating.
 
 | File | Writer | Write Frequency | AI Role |
 |---|---|---|---|
-| `training_status.json` | training script | on start / end / exception | Tier 1: lifecycle state |
-| `logs/latest_state.json` | `ArtifactWriter.update_state()` | ~every 50 episodes + training end | Tier 1: metrics snapshot (low-freq) |
+| `training_status.json` | training script | **every episode** (heartbeat) + final/exception | Tier 1: primary state source |
+| `logs/latest_state.json` | `ArtifactWriter.update_state()` | ~every 50 episodes + training end | Tier 1: supplemental metrics snapshot |
 | `logs/events.jsonl` | `ArtifactWriter.log_event()` | per event (append) | Tier 2: diagnostic evidence |
 | `logs/monitor_state.json` | `TrainingMonitor.save_checkpoint()` | training end only | Not used in Tier 2 for now |
 
-`latest_state.json` must be described as a **low-frequency snapshot**, not a
-per-episode live feed. MCP tool must surface this caveat to AI consumers.
+**`training_status.json` is a per-episode heartbeat.** The training loop writes
+it every episode with `last_reward` and `last_updated`. This makes it the
+primary freshness source for Tier 1. Do not regress this to start/end-only
+writes — that would break stall detection.
 
-`events.jsonl` contains the full event stream:
+Current per-episode fields (already present, must be preserved):
+`status`, `run_id`, `scenario`, `episodes_total`, `episodes_done`,
+`last_reward`, `last_updated`.
+
+`latest_state.json` is supplemental: written every ~50 episodes, provides
+additional metrics (`reward_mean_50`, `alpha`, `settled_rate_50`, `buffer_size`)
+not present in the heartbeat. MCP tool must surface that it is low-frequency.
+
+`events.jsonl` contains the full event stream — not just anomalies:
 `training_start`, `eval`, `checkpoint`, `monitor_alert`, `monitor_stop`,
-`training_end`. Not just anomalies — it is the canonical training timeline.
+`training_end`. It is the canonical training timeline.
 
 ---
 
@@ -91,15 +101,36 @@ per-episode live feed. MCP tool must surface this caveat to AI consumers.
 
 | Field | Add to | Value |
 |---|---|---|
-| `started_at` | initial `running` write | ISO timestamp at training start |
-| `logs_dir` | all status writes | relative path, e.g. `"logs"` |
+| `started_at` | initial `running` write + all subsequent writes | ISO timestamp captured once at training start |
+| `logs_dir` | all status writes | **derived from `args.log_file` at runtime**, e.g. `str(Path(args.log_file).parent)` |
+| `last_eval_reward` | per-episode write when eval ran + final write | most recent evaluation reward; `null` until first eval |
+| `stop_reason` | final `monitor_stopped` write | e.g. `"reward_divergence"`, `"physics_frozen"` — taken from the triggering monitor rule |
 
-`started_at` is currently absent from `training_status.json`; it exists only
-in `run_meta.json`. Adding it here avoids requiring MCP tool to read two files
-for a basic "how long has it been running?" query.
+**`started_at`**: currently absent from `training_status.json`; exists only in
+`run_meta.json`. Adding it avoids a two-file read for "how long has it been
+running?". Store as a local variable at training start; carry through every
+subsequent write.
 
-`logs_dir` is always `"logs"` by current convention, but making it explicit
-means AI tools do not need to hard-code path assumptions.
+**`logs_dir`**: must NOT be hardcoded as `"logs"`. Training scripts support
+custom `--log-file` paths. Derive at runtime:
+```python
+_logs_dir = str(Path(args.log_file).parent)
+```
+Store as a local variable at training start; carry through every subsequent
+write.
+
+**`last_eval_reward`**: already implicit from `events.jsonl` eval events, but
+having it in the heartbeat lets Tier 1 answer "what is the latest eval signal?"
+without escalating to Tier 2. Initialize to `None`; update whenever an eval
+episode runs.
+
+**`stop_reason`**: only written on `monitor_stopped` status. Comes from the
+monitor trigger rule name (e.g. `"reward_divergence"`). Lets Tier 1 answer
+"why did it stop?" without reading `events.jsonl`.
+
+**`last_reward`** (existing field): must be carried through to the final
+`completed` / `monitor_stopped` / `failed` writes. Currently it is dropped on
+the final write — fix this.
 
 ### No renames
 
@@ -110,16 +141,27 @@ would break existing tooling and tests with no benefit right now.
 
 ## New Helper: `find_latest_run(scenario_id)` in `run_protocol.py`
 
-MCP tools need to locate the most recent run directory without requiring an
-explicit `run_id` from the caller. Add:
+MCP tools need to locate the active or most recent run without requiring an
+explicit `run_id`. Add:
 
 ```python
 def find_latest_run(scenario_id: str) -> Path | None:
-    """Return the most-recently-modified run_dir for scenario_id, or None."""
+    """Return the active or most-recently-updated run_dir, or None."""
 ```
 
-Scans `results/sim_{scenario_id}/runs/`, returns the dir with the most recent
-`training_status.json` mtime. Returns `None` if no runs exist.
+**Resolution rule (priority order — do NOT use raw mtime):**
+
+1. **Prefer `status: "running"`** — if exactly one run has `status: "running"`,
+   return it. This is the active run.
+2. **Multiple running** (abnormal) — return the one with the most recent
+   `last_updated` timestamp from `training_status.json`.
+3. **No running runs** — return the run with the most recent `finished_at` or
+   `failed_at` timestamp across completed/monitor_stopped/failed runs.
+4. **No runs at all** — return `None`.
+
+Using `last_updated` / `finished_at` from the status file is more reliable
+than filesystem mtime, which can change for unrelated reasons (e.g. file
+system operations on a just-completed older run).
 
 ---
 
@@ -141,29 +183,38 @@ Scans `results/sim_{scenario_id}/runs/`, returns the dir with the most recent
 
 ```python
 {
-    # From training_status.json
+    # From training_status.json (heartbeat — per-episode freshness)
     "scenario_id": str,
     "run_id": str,
     "status": "running" | "completed" | "monitor_stopped" | "failed" | "no_run",
     "episodes_done": int,
     "episodes_total": int,
     "progress_pct": float,          # episodes_done / episodes_total * 100
-    "started_at": str | None,
+    "last_reward": float | None,    # most recent episode reward (already in heartbeat)
+    "last_updated": str | None,     # ISO timestamp of last heartbeat write
+    "started_at": str | None,       # NEW: when training started
     "finished_at": str | None,      # None if still running
     "error": str | None,            # populated only on status=failed
+    "stop_reason": str | None,      # NEW: populated only on status=monitor_stopped
+    "last_eval_reward": float | None, # NEW: most recent eval reward, None until first eval
+    "logs_dir": str | None,         # NEW: absolute path to logs dir (derived, not hardcoded)
     "run_dir": str,                 # absolute path as string
 
-    # From logs/latest_state.json (may be None if not yet written)
+    # From logs/latest_state.json (~50-episode freshness, supplemental)
     "latest_snapshot": {
         "episode": int,
         "reward_mean_50": float,
         "alpha": float,
         "settled_rate_50": float,
         "buffer_size": int,
+        "snapshot_age_episodes": int,  # episodes_done - snapshot.episode
         "snapshot_freshness": "~50-episode intervals"  # static caveat
     } | None,
 }
 ```
+
+`snapshot_age_episodes` = `episodes_done - latest_snapshot.episode` lets AI
+judge how stale the snapshot is without computing it itself.
 
 ### `training_diagnose(scenario_id: str, run_id: str | None = None) -> dict`
 
@@ -194,15 +245,23 @@ Scans `results/sim_{scenario_id}/runs/`, returns the dir with the most recent
 
 ---
 
-## Training Script Changes (Minimal)
+## Training Script Changes
 
 **Files:** `scenarios/kundur/train_simulink.py`,
            `scenarios/new_england/train_simulink.py`
 
-### Change 1: Add `started_at` + `logs_dir` to the initial status write
+All changes follow the same pattern in both files.
 
-Locate the `write_training_status(run_dir, {"status": "running", ...})` call
-(currently around line 299 in both scripts). Add two fields:
+### Change 1: Capture `_started_at` and `_logs_dir` as local variables at training start
+
+Before the first `write_training_status` call (around line 299):
+
+```python
+_started_at = datetime.datetime.now(datetime.timezone.utc).isoformat()
+_logs_dir = str(Path(args.log_file).parent)   # derive from actual path, never hardcode
+```
+
+### Change 2: Add new fields to the initial `running` write
 
 ```python
 write_training_status(run_dir, {
@@ -211,24 +270,48 @@ write_training_status(run_dir, {
     "scenario": SCENARIO_ID,
     "episodes_total": args.episodes,
     "episodes_done": start_episode,
-    "started_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),  # ADD
-    "logs_dir": "logs",                                                        # ADD
+    "started_at": _started_at,    # ADD
+    "logs_dir": _logs_dir,        # ADD
 })
 ```
 
-### Change 2: Carry `started_at` + `logs_dir` through all subsequent status writes
+### Change 3: Add new fields to the per-episode heartbeat write (line ~417)
 
-All other `write_training_status` calls (completed, monitor_stopped, failed)
-must also include `started_at` (read from the initial write or from
-`run_meta.json`) and `logs_dir: "logs"`.
+Also add `last_eval_reward` tracking. Initialize before training loop:
 
-Simplest approach: read `started_at` once at training start, keep it in a
-local variable, pass it to every subsequent status write.
+```python
+_last_eval_reward: float | None = None
+```
 
-### No other training script changes required.
+Update when eval runs (after eval block). In the per-episode write:
 
-`latest_state.json` write frequency (every 50 ep) stays as-is.
-The MCP tool surfaces the caveat via `snapshot_freshness` field.
+```python
+write_training_status(run_dir, {
+    "status": "running",
+    "run_id": run_id,
+    "scenario": SCENARIO_ID,
+    "episodes_total": args.episodes,
+    "episodes_done": ep - start_episode + 1,
+    "last_reward": float(mean_reward),
+    "last_updated": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+    "started_at": _started_at,        # ADD — carry through
+    "logs_dir": _logs_dir,            # ADD — carry through
+    "last_eval_reward": _last_eval_reward,  # ADD — None until first eval
+})
+```
+
+### Change 4: Carry all fields through final status writes
+
+**Completed / monitor_stopped write** (line ~590): add `last_reward`,
+`started_at`, `logs_dir`, `last_eval_reward`, and `stop_reason` (only on
+`monitor_stopped`; derive from the triggering monitor rule name).
+
+**Failed write** (line ~600): add `started_at`, `logs_dir`,
+`last_eval_reward`, `last_reward`.
+
+### `latest_state.json` write frequency unchanged
+
+Every ~50 episodes. The MCP tool accounts for this via `snapshot_age_episodes`.
 
 ---
 

@@ -19,6 +19,8 @@ import sys
 import time
 import json
 from pathlib import Path
+from tqdm import tqdm
+from torch.utils.tensorboard import SummaryWriter
 
 # Add project root to path before importing repo-local utilities.
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
@@ -38,6 +40,7 @@ from utils.run_protocol import (
     write_training_status,
 )
 from utils.training_log import load_or_create_log
+from utils.notifier import notify
 import scenarios.new_england.config_simulink as _cfg_module
 from scenarios.new_england.config_simulink import (
     N_AGENTS, OBS_DIM, ACT_DIM, HIDDEN_SIZES,
@@ -46,6 +49,32 @@ from scenarios.new_england.config_simulink import (
 )
 
 
+
+
+def _sample_disturbance(ep: int, args, env) -> "tuple[str, object]":
+    """Sample training disturbance for this episode.
+
+    Returns (mode, value):
+      ('gen_trip', 'GENROU_N') — trip a random VSG; matches the eval scenario.
+      ('apply',    magnitude)  — legacy signed Pe-step disturbance.
+
+    Curriculum transition is keyed on absolute episode index so that resumed
+    runs automatically pick up where they left off.
+    """
+    use_gen_trip = (
+        args.disturbance_mode == "gen_trip"
+        or (args.disturbance_mode == "curriculum"
+            and ep >= args.curriculum_warmup_episodes)
+    )
+    if use_gen_trip:
+        n_agents = getattr(env, "N_ESS", 8)
+        idx = int(np.random.randint(1, n_agents + 1))
+        return "gen_trip", f"GENROU_{idx}"
+    else:
+        mag = float(np.random.uniform(env.DIST_MIN, env.DIST_MAX))
+        if np.random.random() > 0.5:
+            mag = -mag
+        return "apply", mag
 
 
 def parse_args():
@@ -68,6 +97,19 @@ def parse_args():
                         help="Gradient updates per env step (10 for Simulink, 1 for standalone)")
     parser.add_argument("--log-file", default=None,
                         help="Training log JSON path (default: results/sim_ne39/runs/<run_id>/logs/training_log.json)")
+    parser.add_argument("--disturbance-mode",
+                        choices=["gen_trip", "apply", "curriculum"],
+                        default="gen_trip",
+                        help=(
+                            "Training disturbance type. "
+                            "'gen_trip': randomly trip one VSG each episode (default, matches eval). "
+                            "'apply': legacy Pe-step disturbance (±5-15 MW, much smaller than eval). "
+                            "'curriculum': use 'apply' for first --curriculum-warmup-episodes, "
+                            "then switch to 'gen_trip'."
+                        ))
+    parser.add_argument("--curriculum-warmup-episodes", type=int, default=50,
+                        help="Episodes using apply_disturbance before switching to gen_trip "
+                             "(only used when --disturbance-mode=curriculum).")
     args = parser.parse_args()
     checkpoint_was_default = args.checkpoint_dir is None
     log_was_default = args.log_file is None
@@ -147,7 +189,9 @@ def evaluate(env, agent, n_eval=3, return_details=False):
             total_rewards.append(float(ep_reward.mean()))
             per_agent_reward_rows.append(ep_reward.astype(float))
             ep_mean_freq_dev = ep_sum_freq_dev / max(ep_step_count_actual, 1)
-            ep_settled = bool(ep_tail_freq_devs and all(d < 0.1 for d in ep_tail_freq_devs))
+            ep_settled          = bool(ep_tail_freq_devs and all(d < 0.10 for d in ep_tail_freq_devs))
+            ep_settled_moderate = bool(ep_tail_freq_devs and all(d < 0.15 for d in ep_tail_freq_devs))
+            ep_settled_paper    = bool(ep_tail_freq_devs and all(d < 0.20 for d in ep_tail_freq_devs))
             if (ep_step_count_actual > 0
                     and not np.any(np.isinf(ep_P_es_max))
                     and not np.any(np.isinf(ep_P_es_min))):
@@ -155,10 +199,12 @@ def evaluate(env, agent, n_eval=3, return_details=False):
             else:
                 ep_power_swing = 0.0
             episode_physics.append({
-                "max_freq_dev_hz": float(ep_max_freq_dev),
+                "max_freq_dev_hz":  float(ep_max_freq_dev),
                 "mean_freq_dev_hz": float(ep_mean_freq_dev),
-                "settled": ep_settled,
-                "max_power_swing": ep_power_swing,
+                "settled":          ep_settled,
+                "settled_moderate": ep_settled_moderate,
+                "settled_paper":    ep_settled_paper,
+                "max_power_swing":  ep_power_swing,
             })
 
         eval_reward = float(np.mean(total_rewards)) if total_rewards else 0.0
@@ -182,11 +228,13 @@ def evaluate(env, agent, n_eval=3, return_details=False):
                 "trip_time": 0.5,
             },
             "physics": {
-                "max_freq_dev_hz": float(max((p["max_freq_dev_hz"] for p in episode_physics), default=0.0)),
-                "mean_freq_dev_hz": float(np.mean([p["mean_freq_dev_hz"] for p in episode_physics])) if episode_physics else 0.0,
-                "settled": bool(episode_physics and all(p["settled"] for p in episode_physics)),
-                "settled_rate": float(np.mean([p["settled"] for p in episode_physics])) if episode_physics else 0.0,
-                "max_power_swing": float(max((p["max_power_swing"] for p in episode_physics), default=0.0)),
+                "max_freq_dev_hz":      float(max((p["max_freq_dev_hz"] for p in episode_physics), default=0.0)),
+                "mean_freq_dev_hz":     float(np.mean([p["mean_freq_dev_hz"] for p in episode_physics])) if episode_physics else 0.0,
+                "settled":              bool(episode_physics and all(p["settled"] for p in episode_physics)),
+                "settled_rate":         float(np.mean([p["settled"] for p in episode_physics])) if episode_physics else 0.0,
+                "settled_rate_moderate":float(np.mean([p.get("settled_moderate", p["settled"]) for p in episode_physics])) if episode_physics else 0.0,
+                "settled_rate_paper":   float(np.mean([p.get("settled_paper",    p["settled"]) for p in episode_physics])) if episode_physics else 0.0,
+                "max_power_swing":      float(max((p["max_power_swing"] for p in episode_physics), default=0.0)),
             },
             "episodes": episode_physics,
         }
@@ -271,14 +319,11 @@ def train(args):
     # First env.reset() triggers MATLAB startup / load_model / warmup.
     # If this fails, raise immediately; run_dir not yet created, no orphaned files.
     #
-    # NE39-specific: disturbance is applied mid-episode via apply_disturbance()
-    # (at t=1.0s, see step loop below), NOT via reset options. reset() needs no
-    # disturbance_magnitude kwarg here. dist_mag is sampled after reset so it is
-    # ready for the first episode's apply_disturbance() call.
+    # NE39-specific: disturbance is applied mid-episode via gen_trip() or
+    # apply_disturbance() at step 5 (t=1.0s), NOT via reset options.
+    # The disturbance is sampled here so it is ready for the first episode.
     obs, _ = env.reset()
-    dist_mag = np.random.uniform(env.DIST_MIN, env.DIST_MAX)
-    if np.random.random() > 0.5:
-        dist_mag = -dist_mag
+    _ep_dist_mode, _ep_dist_val = _sample_disturbance(start_episode, args, env)
 
     # ── Phase C: Commit outputs (only after backend is ready) ──────────────────
     if hasattr(args, "run_dir"):
@@ -304,6 +349,9 @@ def train(args):
     # Checkpoint directory
     os.makedirs(args.checkpoint_dir, exist_ok=True)
     os.makedirs(os.path.dirname(args.log_file), exist_ok=True)
+    _live_log = str(Path(args.log_file).parent / "live.log")
+    tb_writer = None
+    tb_writer = SummaryWriter(log_dir=str(run_dir / "tb"))
 
     _log_dir = os.path.dirname(args.log_file)
     fresh_run = start_episode == 0
@@ -314,6 +362,8 @@ def train(args):
         "config": {
             "mode": args.mode,
             "episodes": args.episodes,
+            "disturbance_mode": args.disturbance_mode,
+            "curriculum_warmup_episodes": args.curriculum_warmup_episodes,
         },
     })
     _prev_trigger_len = 0
@@ -337,14 +387,19 @@ def train(args):
     monitor_stopped = False
 
     end_episode = start_episode + args.episodes
-    for ep in range(start_episode, end_episode):
+    _pbar = tqdm(
+        range(start_episode, end_episode),
+        desc="NE39", unit="ep",
+        total=args.episodes, initial=0,
+        dynamic_ncols=True,
+    )
+    for ep in _pbar:
         # Phase B already reset episode start_episode; subsequent episodes reset here.
-        # NE39: reset() takes no disturbance options; dist_mag is used by apply_disturbance().
+        # NE39: reset() takes no disturbance options; disturbance is sampled here
+        # and applied at step 5 (t=1.0s) in the inner loop below.
         if ep > start_episode:
             obs, _ = env.reset()
-            dist_mag = np.random.uniform(env.DIST_MIN, env.DIST_MAX)
-            if np.random.random() > 0.5:
-                dist_mag = -dist_mag
+            _ep_dist_mode, _ep_dist_val = _sample_disturbance(ep, args, env)
         ep_reward = np.zeros(env.N_ESS)
         ep_losses = {"critic": [], "policy": [], "alpha": []}
         actions_history = []
@@ -361,11 +416,13 @@ def train(args):
 
         for step in range(int(env.T_EPISODE / env.DT)):
             # Apply disturbance at episode t=1.0s (step 5).
-            # Giving the system 5 control steps (1.0s) under RL before the
-            # disturbance hits improves early-training stability: the model
-            # reaches a more settled state before the large perturbation.
+            # 5 control steps of RL before the disturbance hit improves early
+            # stability: the model reaches a more settled state first.
             if step == int(1.0 / env.DT):  # t = 1.0s into episode
-                env.apply_disturbance(magnitude=dist_mag)
+                if _ep_dist_mode == "gen_trip":
+                    env.gen_trip(_ep_dist_val, trip_time=1.0)
+                else:
+                    env.apply_disturbance(magnitude=_ep_dist_val)
 
             # Select actions (exploration during training)
             actions = agent.select_actions_multi(obs, deterministic=False)
@@ -418,6 +475,37 @@ def train(args):
         mean_reward = ep_reward.mean()
         log["episode_rewards"].append(float(mean_reward))
 
+        # --- real-time progress bar + live log --------------------------------
+        _avg10 = float(np.mean(log["episode_rewards"][-10:]))
+        _pbar.set_postfix(
+            R=f"{mean_reward:+.1f}",
+            avg10=f"{_avg10:+.1f}",
+            a=f"{agent.alpha:.3f}",
+            df=f"{ep_max_freq_dev:.2f}Hz",
+        )
+        _ts = datetime.datetime.now(datetime.timezone.utc).strftime("%H:%M:%S")
+        _elapsed = time.time() - t_start
+        try:
+            with open(_live_log, "a", encoding="utf-8") as _lf:
+                _lf.write(
+                    f"{_ts} [EP {ep+1:4d}/{end_episode}] "
+                    f"R={mean_reward:+8.2f} avg10={_avg10:+8.2f} "
+                    f"a={agent.alpha:.4f} df={ep_max_freq_dev:.3f}Hz "
+                    f"buf={len(agent.buffer)} t={_elapsed:.0f}s\n"
+                )
+        except OSError:
+            pass  # observability loss is acceptable; training must not abort
+        # --- TensorBoard -------------------------------------------------------
+        tb_writer.add_scalar("train/reward", mean_reward, ep)
+        tb_writer.add_scalar("train/avg10_reward", _avg10, ep)
+        tb_writer.add_scalar("train/alpha", agent.alpha, ep)
+        tb_writer.add_scalar("train/freq_dev_hz", ep_max_freq_dev, ep)
+        tb_writer.add_scalar("train/buffer_size", len(agent.buffer), ep)
+        if ep_losses["critic"]:
+            tb_writer.add_scalar("train/critic_loss", float(np.mean(ep_losses["critic"])), ep)
+            tb_writer.add_scalar("train/policy_loss", float(np.mean(ep_losses["policy"])), ep)
+        # -----------------------------------------------------------------------
+
         write_training_status(run_dir, {
             "status": "running",
             "run_id": run_id,
@@ -433,7 +521,11 @@ def train(args):
 
         # compute and record episode physics_summary
         ep_mean_freq_dev = ep_sum_freq_dev / max(ep_step_count_actual, 1)
-        ep_settled = bool(ep_tail_freq_devs and all(d < 0.1 for d in ep_tail_freq_devs))
+        # Three parallel settled criteria — keep strict version unchanged so
+        # historical comparisons stay valid; add paper-aligned versions.
+        ep_settled          = bool(ep_tail_freq_devs and all(d < 0.10 for d in ep_tail_freq_devs))
+        ep_settled_moderate = bool(ep_tail_freq_devs and all(d < 0.15 for d in ep_tail_freq_devs))
+        ep_settled_paper    = bool(ep_tail_freq_devs and all(d < 0.20 for d in ep_tail_freq_devs))
         if (ep_step_count_actual > 0
                 and not np.any(np.isinf(ep_P_es_max))
                 and not np.any(np.isinf(ep_P_es_min))):
@@ -441,10 +533,12 @@ def train(args):
         else:
             ep_power_swing = 0.0
         log["physics_summary"].append({
-            "max_freq_dev_hz": float(ep_max_freq_dev),
-            "mean_freq_dev_hz": float(ep_mean_freq_dev),
-            "settled": ep_settled,
-            "max_power_swing": ep_power_swing,
+            "max_freq_dev_hz":    float(ep_max_freq_dev),
+            "mean_freq_dev_hz":   float(ep_mean_freq_dev),
+            "settled":            ep_settled,           # strict  |Δf| < 0.10 Hz
+            "settled_moderate":   ep_settled_moderate,  # paper SS|Δf| < 0.15 Hz
+            "settled_paper":      ep_settled_paper,     # relaxed |Δf| < 0.20 Hz
+            "max_power_swing":    ep_power_swing,
         })
         if ep_losses["critic"]:
             log["critic_losses"].append(float(np.mean(ep_losses["critic"])))
@@ -481,7 +575,7 @@ def train(args):
         if stop_triggered:
             _stop_reason = _new_triggers[-1] if _new_triggers else None
             writer.log_event(ep, "monitor_stop", {"triggered_by": "monitor"})
-            print(f"[Monitor] Hard stop at episode {ep}. Saving checkpoint.")
+            _pbar.write(f"[Monitor] Hard stop at episode {ep}. Saving checkpoint.")
             agent.save(
                 os.path.join(args.checkpoint_dir, f"monitor_stop_ep{ep}.pt"),
                 metadata={"start_episode": ep + 1},
@@ -489,17 +583,6 @@ def train(args):
             monitor_stopped = True
             break
 
-        # Print progress
-        if (ep + 1) % 10 == 0:
-            elapsed = time.time() - t_start
-            avg_r = np.mean(log["episode_rewards"][-10:])
-            print(
-                f"[Ep {ep+1:4d}/{end_episode}] "
-                f"R={mean_reward:+8.2f} | Avg10={avg_r:+8.2f} | "
-                f"Alpha={agent.alpha:.4f} | "
-                f"Buf={len(agent.buffer)} | "
-                f"Time={elapsed:.0f}s"
-            )
 
         # Evaluation
         if (ep + 1) % args.eval_interval == 0:
@@ -510,7 +593,8 @@ def train(args):
             writer.log_metric(ep, eval_details)
             writer.log_event(ep, "eval", {"eval_reward": eval_reward})
             log["eval_rewards"].append({"episode": ep + 1, "reward": eval_reward})
-            print(f"  >>> Eval reward: {eval_reward:+.2f}")
+            _pbar.write(f"  >>> Eval reward: {eval_reward:+.2f}")
+            tb_writer.add_scalar("eval/reward", eval_reward, ep)
 
             if eval_reward > best_eval_reward:
                 best_eval_reward = eval_reward
@@ -518,7 +602,7 @@ def train(args):
                     os.path.join(args.checkpoint_dir, "best.pt"),
                     metadata={"start_episode": ep + 1},
                 )
-                print(f"  >>> New best! Saved to {args.checkpoint_dir}/best.pt")
+                _pbar.write(f"  >>> New best! Saved to {args.checkpoint_dir}/best.pt")
 
         # --- artifact writer: append episode metrics ---
         writer.log_metric(ep, {
@@ -529,10 +613,16 @@ def train(args):
             "policy_loss": float(np.mean(ep_losses["policy"])) if ep_losses["policy"] else None,
             "eval_reward": _last_eval_reward if (ep + 1) % args.eval_interval == 0 else None,
             "physics": {
-                "max_freq_dev_hz": float(ep_max_freq_dev),
+                "max_freq_dev_hz":  float(ep_max_freq_dev),
                 "mean_freq_dev_hz": float(ep_mean_freq_dev),
-                "settled": ep_settled,
-                "max_power_swing": ep_power_swing,
+                "settled":          ep_settled,
+                "settled_moderate": ep_settled_moderate,
+                "settled_paper":    ep_settled_paper,
+                "max_power_swing":  ep_power_swing,
+            },
+            "disturbance": {
+                "mode":  _ep_dist_mode,
+                "value": _ep_dist_val if _ep_dist_mode == "apply" else 0.0,
             },
         })
 
@@ -548,12 +638,18 @@ def train(args):
         if (ep + 1) % 50 == 0:
             _recent_rewards = log["episode_rewards"][-50:]
             _recent_physics = log["physics_summary"][-50:]
-            _settled_recent = [p["settled"] for p in _recent_physics]
             writer.update_state({
                 "episode": ep,
                 "reward_mean_50": float(np.mean(_recent_rewards)),
                 "alpha": float(agent.alpha),
-                "settled_rate_50": float(np.mean(_settled_recent)) if _settled_recent else 0.0,
+                "settled_rate_50": float(np.mean(
+                    [p["settled"] for p in _recent_physics])) if _recent_physics else 0.0,
+                "settled_rate_50_moderate": float(np.mean(
+                    [p.get("settled_moderate", p["settled"]) for p in _recent_physics])
+                ) if _recent_physics else 0.0,
+                "settled_rate_50_paper": float(np.mean(
+                    [p.get("settled_paper", p["settled"]) for p in _recent_physics])
+                ) if _recent_physics else 0.0,
                 "buffer_size": len(agent.buffer),
             })
 
@@ -565,13 +661,19 @@ def train(args):
         )
         _recent_rewards = log["episode_rewards"][-50:]
         _recent_physics = log["physics_summary"][-50:]
-        _settled_recent = [p["settled"] for p in _recent_physics]
         if _recent_rewards:
             writer.update_state({
                 "episode": ep,
                 "reward_mean_50": float(np.mean(_recent_rewards)),
                 "alpha": float(agent.alpha),
-                "settled_rate_50": float(np.mean(_settled_recent)) if _settled_recent else 0.0,
+                "settled_rate_50": float(np.mean(
+                    [p["settled"] for p in _recent_physics])) if _recent_physics else 0.0,
+                "settled_rate_50_moderate": float(np.mean(
+                    [p.get("settled_moderate", p["settled"]) for p in _recent_physics])
+                ) if _recent_physics else 0.0,
+                "settled_rate_50_paper": float(np.mean(
+                    [p.get("settled_paper", p["settled"]) for p in _recent_physics])
+                ) if _recent_physics else 0.0,
                 "buffer_size": len(agent.buffer),
             })
         writer.log_event(
@@ -606,6 +708,12 @@ def train(args):
         if final_status == "monitor_stopped":
             _final_status_dict["stop_reason"] = _stop_reason
         write_training_status(run_dir, _final_status_dict)
+        _eps_done = len(log["episode_rewards"])
+        _last_r = log["episode_rewards"][-1] if log["episode_rewards"] else 0.0
+        notify(
+            f"NE39 [{final_status.replace('_', ' ')}]",
+            f"{_eps_done} eps | last reward: {_last_r:+.0f} | best eval: {best_eval_reward:+.0f}",
+        )
     except Exception as _train_exc:
         try:
             write_training_status(run_dir, {
@@ -623,8 +731,12 @@ def train(args):
             })
         except Exception:
             pass
+        notify("NE39 Training FAILED", str(_train_exc)[:120])
         raise
     finally:
+        _pbar.close()
+        if tb_writer is not None:
+            tb_writer.close()
         try:
             update_run_meta(meta_dir, {
                 "finished_at": datetime.datetime.now().isoformat(),

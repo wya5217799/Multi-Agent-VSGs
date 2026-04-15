@@ -270,18 +270,24 @@ def plot_training_summary(
                    label=r"Max $\Delta f$ (Hz)")
         ax_ph.plot(phys_ep, mean_af, color=_C_INERTIA, lw=1.0, ls="--",
                    label=r"Mean $\Delta f$ (Hz)")
-        ax_ph.axhline(0.1, color="gray", lw=0.8, ls=":",
-                      label="0.1 Hz settled threshold")
+        ax_ph.axhline(0.10, color="gray",       lw=0.8, ls=":", label="0.10 Hz (strict)")
+        ax_ph.axhline(0.15, color="steelblue",  lw=0.8, ls=":", label="0.15 Hz (paper SS)")
+        ax_ph.axhline(0.20, color="mediumseagreen", lw=0.8, ls=":", label="0.20 Hz (relaxed)")
 
         unsettled_ep = [i for i, s in enumerate(settled) if not s]
         if unsettled_ep:
             unsettled_f = [max_f[i] for i in unsettled_ep]
             ax_ph.scatter(unsettled_ep, unsettled_f, s=4, color=_C_UNSETTLED,
-                          alpha=0.4, label="Not settled", zorder=3)
+                          alpha=0.4, label="Not settled (strict)", zorder=3)
 
-        settled_rate = sum(settled) / max(len(settled), 1)
+        settled_rate          = sum(settled) / max(len(settled), 1)
+        settled_moderate_list = [p.get("settled_moderate", p["settled"]) for p in physics]
+        settled_paper_list    = [p.get("settled_paper",    p["settled"]) for p in physics]
+        settled_rate_moderate = sum(settled_moderate_list) / max(len(settled_moderate_list), 1)
+        settled_rate_paper    = sum(settled_paper_list)    / max(len(settled_paper_list), 1)
         ax_ph.set_title(
-            f"(e) Frequency Deviation  —  settled rate: {settled_rate:.1%}"
+            f"(e) Frequency Deviation  —  settled: "
+            f"strict {settled_rate:.1%} | moderate {settled_rate_moderate:.1%} | paper {settled_rate_paper:.1%}"
         )
         ax_ph.set_xlabel("Episode")
         ax_ph.set_ylabel(r"$\Delta f$ (Hz)")

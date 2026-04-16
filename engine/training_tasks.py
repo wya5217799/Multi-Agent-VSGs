@@ -14,6 +14,7 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
+from engine.optimization_log import _build_opt_summary, load_log as _load_opt_log
 from utils.run_protocol import find_latest_run, get_run_dir, read_training_status
 
 # Repo root: two levels up from engine/
@@ -329,6 +330,7 @@ def training_diagnose(
         "training_start": None,
         "training_end": None,
         "physics_diagnosis": {"pattern": None, "evidence": "no run found", "recommendation": None},
+        "optimization_history": {"total": 0, "with_outcome": 0, "by_verdict": {}, "records": []},
     }
 
     if run_dir is None:
@@ -409,4 +411,5 @@ def training_diagnose(
             if training_end_events else None
         ),
         "physics_diagnosis": _diagnose_physics(run_dir, status),
+        "optimization_history": _build_opt_summary(_load_opt_log(scenario_id)),
     }

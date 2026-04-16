@@ -16,8 +16,6 @@ _CONTRACTS_DIR = _REPO_ROOT / "scenarios" / "contracts"
 
 _VALID_SCENARIOS = {"kundur", "ne39"}
 _SCENARIO_PREFIX = {"kundur": "kd", "ne39": "ne"}
-_VALID_SCOPES = {"kundur_only", "ne39_only", "transferable"}
-_VALID_STATUSES = {"applied", "proposed", "rejected"}
 _VALID_VERDICTS = {"effective", "ineffective", "inconclusive", "harmful"}
 _OPT_REQUIRED = {"scenario", "scope", "status", "problem", "hypothesis", "changes"}
 
@@ -78,9 +76,10 @@ def append_optimization(scenario: str, record: dict[str, Any]) -> str:
     if missing:
         raise ValueError(f"Missing required fields: {sorted(missing)}")
 
-    today_str = datetime.now().strftime("%Y%m%d")
+    now = datetime.now(tz=timezone.utc).astimezone()
+    today_str = now.strftime("%Y%m%d")
     opt_id = _next_opt_id(scenario, today_str)
-    ts = datetime.now(tz=timezone.utc).astimezone().isoformat()
+    ts = now.isoformat()
 
     row = {
         "type": "optimization",

@@ -89,13 +89,14 @@ NORM_P = 4.0
 NORM_FREQ = 8.0
 
 # Disturbance magnitude range (Kundur-specific override).
-# Base DIST_MAX=3.0 allows 300 MW disturbances; with D_min=1.5 this gives
-# steady-state Δf ≈ 7.8 Hz and transient peaks near OMEGA_TERM_THRESHOLD
-# (15 Hz), causing immediate episode termination on random policies.
-# Capped at 1.5 (150 MW max) to keep freq deviation below the threshold
-# even with minimum damping, giving the RL agent a learnable signal.
-DIST_MIN = 0.5   # 50 MW minimum disturbance
-DIST_MAX = 1.5   # 150 MW maximum disturbance
+# Physics (opt_kd_20260417_03): at D_LO=1.5 (min damping), DIST_MAX=0.5 →
+#   Δf_ss = (0.5×100/200/4)/1.5 × 50Hz = 2.08 Hz
+#   peak ≈ 2.08 × 2.3 (Kundur two-area oscillation factor) = 4.8 Hz
+#   Even worst-case 3× factor: 6.25 Hz — safe margin below IntW clip (±15 Hz).
+# Previous DIST_MAX=1.5 gave peak≈14.4 Hz, saturating IntW on 507/510 episodes
+# (run kundur_simulink_20260414_211958), filling replay buffer with distorted physics.
+DIST_MIN = 0.1   # 10 MW minimum disturbance
+DIST_MAX = 0.5   # 50 MW maximum disturbance — verified safe below IntW clip
 
 
 # ========== Breaker Mapping for Simulink ==========

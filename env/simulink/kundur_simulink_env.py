@@ -73,6 +73,7 @@ OMEGA_N: float = 2.0 * np.pi * F_NOM
 SBASE: float = 100.0      # MVA
 
 TDS_FAIL_PENALTY: float = -50.0
+OMEGA_SAT_DETECT_HZ: float = 13.5  # detect within 1.5 Hz of IntW clip (±15 Hz @ 50 Hz)
 
 MAX_NEIGHBORS: int = _CONTRACT.max_neighbors
 COMM_FAIL_PROB: float = 0.1
@@ -267,6 +268,7 @@ class _KundurBaseEnv(_SimVsgBase):
         truncated = self._step_count >= STEPS_PER_EPISODE
 
         _max_freq_dev = float(np.max(np.abs((self._omega - 1.0) * F_NOM)))
+        _omega_saturated = _max_freq_dev >= OMEGA_SAT_DETECT_HZ
         info: Dict[str, Any] = {
             "sim_time": self._sim_time,
             "omega": self._omega.copy(),
@@ -278,6 +280,8 @@ class _KundurBaseEnv(_SimVsgBase):
             "max_freq_dev_hz": _max_freq_dev,
             "max_freq_deviation_hz": _max_freq_dev,
             "tds_failed": not sim_ok,
+            "omega_saturated": _omega_saturated,
+            "hit_freq_clip": _omega_saturated,
             "reward_components": components,
         }
 

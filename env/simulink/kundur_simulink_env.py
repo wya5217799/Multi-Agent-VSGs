@@ -75,6 +75,14 @@ SBASE: float = 100.0      # MVA
 TDS_FAIL_PENALTY: float = -50.0
 OMEGA_SAT_DETECT_HZ: float = 13.5  # detect within 1.5 Hz of IntW clip (±15 Hz @ 50 Hz)
 
+# Rate limits for M/D parameter transitions (per DT=0.2s step).
+# Prevents abrupt jumps that excite the Kundur 0.5 Hz inter-area mode.
+# Full-range traversal takes ~10 steps (2 seconds), longer than one inter-area cycle.
+# Physics: random white-noise M/D changes at 5 Hz (1/DT) excite the 0.5 Hz mode
+# and cause IntW saturation even before any disturbance is applied.
+DELTA_M_MAX_PER_STEP: float = 2.4  # pu/step  (DM range=24, full range in ~10 steps)
+DELTA_D_MAX_PER_STEP: float = 0.6  # pu/step  (DD range=6,  full range in ~10 steps)
+
 MAX_NEIGHBORS: int = _CONTRACT.max_neighbors
 COMM_FAIL_PROB: float = 0.1
 
@@ -237,6 +245,13 @@ class _KundurBaseEnv(_SimVsgBase):
 
         M_target = np.clip(VSG_M0 + delta_M, M_LO, M_HI)
         D_target = np.clip(VSG_D0 + delta_D, D_LO, D_HI)
+
+        # Rate-limit M/D transitions: prevent abrupt per-step jumps that excite
+        # the Kundur two-area 0.5 Hz inter-area mode (opt_kd_20260417_04).
+        M_target = np.clip(M_target, self._M - DELTA_M_MAX_PER_STEP,
+                           self._M + DELTA_M_MAX_PER_STEP)
+        D_target = np.clip(D_target, self._D - DELTA_D_MAX_PER_STEP,
+                           self._D + DELTA_D_MAX_PER_STEP)
 
         sim_ok = True
         try:

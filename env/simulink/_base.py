@@ -189,9 +189,14 @@ class _SimVsgBase(gym.Env):
     ) -> Tuple[np.ndarray, Dict[str, float]]:
         """Reward per Yang et al. TPWRS 2023 Eq. 14-18.
 
-        r_f (Eq. 15-16): relative sync penalty
-            ω̄_i  = mean of Δω_i and active-neighbour frequencies (Hz)
-            r_f_i = -(Δω_i - ω̄_i)² - Σ_j η_j (Δω_j - ω̄_i)²
+        r_f (Eq. 15-16): relative sync penalty using Δω in p.u.
+            Δω_pu_i = omega_i - 1.0   (dimensionless; 1.0 = nominal)
+            ω̄_i     = mean of Δω_pu_i and active-neighbour values
+            r_f_i   = -(Δω_pu_i - ω̄_i)² - Σ_j η_j (Δω_pu_j - ω̄_i)²
+
+        NOTE: Δω must be in p.u. (not Hz) to match PHI_F=100 as calibrated
+        in the paper (Sec.IV-B). Using Hz would amplify r_f by F_NOM²=2500–3600×,
+        causing policy collapse to near-zero ΔH/ΔD actions.
 
         r_h (Eq. 17): -(mean_i ΔH_i)²  where ΔH_i = delta_M_i / 2
         r_d (Eq. 18): -(mean_i ΔD_i)²
@@ -204,21 +209,21 @@ class _SimVsgBase(gym.Env):
 
         delta_M, delta_D = self._decode_action(action)
 
-        # Frequency deviations in Hz
-        dw_hz = (self._omega - 1.0) * self._F_NOM
+        # Frequency deviations in p.u. (paper Eq.15-16 uses Δω, dimensionless)
+        dw_pu = (self._omega - 1.0)
 
         # r_f (Eq. 15-16)
         for i in range(n):
-            group_dw = [dw_hz[i]]
+            group_dw = [dw_pu[i]]
             for n_idx, nb in enumerate(self._COMM_ADJ[i]):
                 if self._comm_mask[i, n_idx]:
-                    group_dw.append(dw_hz[nb])
+                    group_dw.append(dw_pu[nb])
             omega_bar_i = float(np.mean(group_dw))
 
-            r_f_i = -(dw_hz[i] - omega_bar_i) ** 2
+            r_f_i = -(dw_pu[i] - omega_bar_i) ** 2
             for n_idx, nb in enumerate(self._COMM_ADJ[i]):
                 eta_j = 1.0 if self._comm_mask[i, n_idx] else 0.0
-                r_f_i -= (dw_hz[nb] - omega_bar_i) ** 2 * eta_j
+                r_f_i -= (dw_pu[nb] - omega_bar_i) ** 2 * eta_j
 
             step_r_f = self._PHI_F * r_f_i
             rewards[i] += step_r_f

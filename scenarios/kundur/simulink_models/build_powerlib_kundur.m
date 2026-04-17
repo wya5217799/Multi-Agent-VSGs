@@ -60,10 +60,11 @@ Vpk = Vbase * sqrt(2/3);  % Peak phase voltage for instantaneous waveform
 % Base impedance
 Zbase = Vbase^2 / Sbase;  % 529 Ohm
 
-% Generator internal impedance (on Sbase)
-% Transient reactance Xd' ~ 0.30 pu, Ra ~ 0.003 pu
-R_gen_pu = 0.003;
-X_gen_pu = 0.30;
+% ConvGen internal impedance: Xd'=0.30 pu on machine base (Sgen=900 MVA),
+% converted to system base (Sbase=100 MVA): X_sys = 0.30*(100/900) = 0.0333 pu.
+% Previous bug: used 0.30 pu on system base → P_max=333 MW < P0=700 MW → unstable.
+R_gen_pu = 0.003 * (Sbase / 900e6);   % = 3.33e-4 pu on Sbase
+X_gen_pu = 0.30  * (Sbase / 900e6);   % = 0.0333 pu on Sbase
 R_gen = R_gen_pu * Zbase;              % Ohm
 L_gen = X_gen_pu * Zbase / (2*pi*fn);  % H
 
@@ -99,10 +100,19 @@ VSG_M0 = 12.0;            % M = 2H (s), H0 = 6.0 s
 VSG_D0 = 3.0;             % Damping (p.u.)
 VSG_SN = 200e6;            % VSG rated power (VA) = 200 MVA
 
-% Initial P_e/P_ref (p.u. on VSG base), calibrated from steady-state V*I measurement.
-% These values ensure P_mech = P_e at t=0 so omega stays at 1.0.
-% Recalibrate if you change source voltages, angles, or line impedances.
-VSG_P0 = [1.8725, 1.8419, 1.7888, 1.9154];  % [ES1, ES2, ES3, ES4]
+% VSG internal impedance: Xd'=0.30 pu on VSG base (VSG_SN=200 MVA),
+% converted to system base (Sbase=100 MVA): X_sys = 0.30*(100/200) = 0.15 pu.
+% Separate from ConvGen impedance because VSG_SN ≠ 900 MVA.
+R_vsg_pu = 0.003 * (Sbase / VSG_SN);   % = 1.50e-3 pu on Sbase
+X_vsg_pu = 0.30  * (Sbase / VSG_SN);   % = 0.15 pu on Sbase
+R_vsg = R_vsg_pu * Zbase;               % Ohm
+L_vsg = X_vsg_pu * Zbase / (2*pi*fn);   % H
+
+% Initial P_e/P_ref (p.u. on VSG base). NEEDS RECALIBRATION after impedance fix.
+% With corrected X_vsg=0.15 pu the steady-state Pe will differ from old calibration.
+% Use placeholder values from old calibration — they ensure P_ref=P0 from t=0
+% but Pe(t=0) will not exactly match. Recalibrate by running slx_calibrate_vsg_p0.
+VSG_P0 = [1.8725, 1.8419, 1.7888, 1.9154];  % [ES1, ES2, ES3, ES4] — NEEDS RECAL
 
 % ESS bus assignments: ES{i} sits on a dedicated bus, connected to a main bus
 %   ES1 → Bus12, connected to Bus7
@@ -113,17 +123,20 @@ ess_bus     = [12, 16, 14, 15];
 ess_main    = [ 7,  8, 10,  9];
 
 % --- Load flow initial conditions ---
-% Rough initial angles (will be corrected by solver)
+% Power-angle estimates for corrected impedances (opt_kd_20260417_05).
+% ConvGen: delta ≈ arcsin(P*X_gen/V²) ≈ arcsin(7*0.033) ≈ 13° from local bus.
+%   Area 1 buses lead area 2 by ~25° in standard Kundur two-area case.
+% VSG: delta ≈ arcsin(P_pu_sys * X_vsg) ≈ arcsin(3.75*0.15) ≈ 34° from local bus.
 % [V_pu, angle_deg] — used for source initialization
-vlf_gen = [1.03,  0.0;    % G1 (slack equivalent)
-           1.01, -2.5;    % G2
-           1.01, -5.0];   % G3
-vlf_wind = [1.00, -1.0;   % W1
-            1.00, -4.0];  % W2
-vlf_ess = [1.00, -3.0;    % ES1
-           1.00, -4.5;    % ES2
-           1.00, -5.5;    % ES3
-           1.00, -3.5];   % ES4
+vlf_gen = [1.03,  20.0;   % G1 (Bus1, area 1 slack: ~13° lead + bus at ~7°)
+           1.01,  17.0;   % G2 (Bus2, area 1, ~2° behind G1 bus)
+           1.01,  -7.0];  % G3 (Bus3, area 2: bus~-20°, +13° lead → -7°)
+vlf_wind = [1.00,  10.0;  % W1 (Bus4, area 1)
+            1.00, -18.0]; % W2 (Bus11, area 2)
+vlf_ess = [1.00,  18.0;   % ES1 (Bus12→Bus7, area 1-2 junction: bus~-16°, +34°)
+           1.00,  10.0;   % ES2 (Bus16→Bus8, area 2: bus~-24°, +34°)
+           1.00,   7.0;   % ES3 (Bus14→Bus10, area 2: bus~-27°, +34°)
+           1.00,  12.0];  % ES4 (Bus15→Bus9, area 2: bus~-22°, +34°)
 
 % --- Transmission line parameters ---
 % Standard Kundur lines: R=0.053 Ohm/km, L=1.41 mH/km, C=0.009 uF/km
@@ -847,8 +860,8 @@ for i = 1:n_vsg
     add_block(rlc3_lib, [mdl '/' rlc_name], ...
         'Position', [bx+360 by+250 bx+430 by+330]);
     set_param([mdl '/' rlc_name], 'component_structure', '4');
-    set_param([mdl '/' rlc_name], 'R', num2str(R_gen));
-    set_param([mdl '/' rlc_name], 'L', num2str(L_gen));  % H (ee_lib expects H, not mH)
+    set_param([mdl '/' rlc_name], 'R', num2str(R_vsg));
+    set_param([mdl '/' rlc_name], 'L', num2str(L_vsg));  % H (ee_lib expects H, not mH)
     add_line(mdl, [cvs_name '/RConn1'], [rlc_name '/LConn1'], 'autorouting', 'smart');
 
     % --- Power Sensor ---

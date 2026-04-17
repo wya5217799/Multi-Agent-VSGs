@@ -5,7 +5,7 @@ short and link to the source record instead of duplicating document bodies.
 
 ## Navigation
 
-Agent entry points are defined in `AGENTS.md` (governed by `docs/navigation_manifest.toml`).
+Agent entry points are defined in `AGENTS.md` (governed by `docs/control_manifest.toml`).
 This file is an index only — do not maintain a parallel Start Here list here.
 
 ## Decisions
@@ -18,12 +18,13 @@ This file is an index only — do not maintain a parallel Start Here list here.
 - [2026-04-11 Workspace hygiene](docs/decisions/2026-04-11-workspace-hygiene.md)
 - [2026-04-11 Nav freshness system](docs/decisions/2026-04-11-nav-freshness-system.md)
 - [MCP/Simulink 系统演进计划（跨会话进度追踪）](docs/decisions/evolution-plan.md) — B/C/D/E1-E2/F/H + ACL + Z1 全部完成；E3/G directional
+- [2026-04-17 Control Surface Convention](docs/decisions/2026-04-17-control-surface-convention.md) — harness=quality gate / smoke=bridge / training=control surface；control_manifest.toml 合并两旧 manifest
 
 ## Plans (Executed)
 
-- [2026-04-12 Agent Control Layer Restructure](docs/superpowers/plans/2026-04-12-agent-control-layer-restructure.md) — 双控制线(Model+Training)+单 TOML manifest+导航可测性；Task 1-4 + Z1 全部完成(95bbca7)
-- [2026-04-12 Harness Type Contracts & Decomposition](docs/superpowers/plans/2026-04-12-harness-type-contracts-and-decomposition.md) — dataclass 合约/modeling+smoke 拆分/显式 flow gate/TrainingCallback E1-E2；Phase 1-3 + E1-E2 完成
-- [2026-04-14 Code Understanding Toolchain](docs/superpowers/plans/2026-04-14-code-understanding-toolchain.md) — pydeps + import-linter(架构边界 CI) + ast-grep(pattern 库)；全部完成(eb52937)
+- [2026-04-12 Agent Control Layer Restructure](docs/history/superpowers/plans/2026-04-12-agent-control-layer-restructure.md) — 双控制线(Model+Training)+单 TOML manifest+导航可测性；Task 1-4 + Z1 全部完成(95bbca7)
+- [2026-04-12 Harness Type Contracts & Decomposition](docs/history/superpowers/plans/2026-04-12-harness-type-contracts-and-decomposition.md) — dataclass 合约/modeling+smoke 拆分/显式 flow gate/TrainingCallback E1-E2；Phase 1-3 + E1-E2 完成
+- [2026-04-14 Code Understanding Toolchain](docs/history/superpowers/plans/2026-04-14-code-understanding-toolchain.md) — pydeps + import-linter(架构边界 CI) + ast-grep(pattern 库)；全部完成(eb52937)
 
 ## Devlog
 

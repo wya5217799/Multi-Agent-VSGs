@@ -1,16 +1,50 @@
 # AGENTS.md
 
+## Purpose
+
+This repository is a **reproduction of Yang et al. TPWRS 2023**: multi-agent SAC
+controlling virtual synchronous generator inertia (H) and damping (D).
+
+Everything here serves this single goal. When in doubt about whether to add,
+keep, or remove something, ask: **does this help reproduce a paper result, or
+does it standardize a repeated AI operation on the repo?** If neither, do not do it.
+
+- Paper facts: `docs/paper/yang2023-fact-base.md`
+- Reproduction status: `docs/paper/experiment-index.md`
+
+The **Simulink backend is the active reproduction path**. ANDES and ODE backends
+exist historically but are not the current focus — do not spend effort on them
+unless the user explicitly asks.
+
 ## Scope
 
-- Repo control model: dual control lines.
-- **Model Control** governs model correctness, diagnosis, repair, and smoke readiness.
-- **Training Control** governs run lifecycle, verdicts, and comparison of training outputs.
-- Default execution layer: MCP tools in `engine/mcp_simulink_tools.py` (model side); training-side MCP surface is thin and currently centered on smoke bridge behavior.
-- Current phase: model issues may still exist, but training is acknowledged as a parallel control line, not a permanent afterthought.
+This repo has two layers with a strict hierarchy:
+
+1. **Paper Track** (primary) — `agents/` + `env/simulink/` + `scenarios/*/train_simulink.py` + `plotting/` + `config.py`
+   - The actual work: simulate, train, plot, compare with paper.
+2. **AI Collaboration Track** (supporting) — `engine/` + `utils/` + MCP tools
+   - Exists to let Claude Code operate the Paper Track reliably across sessions.
+   - Must not absorb Paper Track logic.
+
+Within Track 2, control splits into dual lines:
+- **Model Control** — model correctness, diagnosis, repair, smoke readiness.
+- **Training Control** — run lifecycle, verdicts, comparison of training outputs.
+
+Default execution layer for Track 2: MCP tools in `engine/mcp_simulink_tools.py`.
+
+## Non-Goals
+
+AGENTS.md and the AI Collaboration Track do NOT aim to:
+- become a general AI agent framework
+- replace `env/` / `agents/` / `plotting/` with harness tasks
+- orchestrate multi-agent AI workflows (single Claude session + MCP is enough)
+- absorb ad-hoc debugging into permanent tasks (use `probes/` or throwaway scripts)
+- invest in ANDES or ODE backends beyond their current state
+- track metrics beyond what paper reproduction requires
 
 ## Start Here
 
-> Governed by `docs/navigation_manifest.toml` (single source of truth).
+> Governed by `docs/control_manifest.toml` (single source of truth).
 > Update the manifest when entries change; AGENTS.md is validated against it.
 
 1. Read `engine/harness_reference.py` - Authoritative harness state; read before any agent action (Re-evaluate when: harness architecture change)
@@ -20,53 +54,47 @@
 4. Read `results/harness/README.md` - Output directory structure; where to write harness evidence (Re-evaluate when: output artifact policy change)
 5. Read `docs/devlog/commit-guidelines.md` - Commit and devlog standards for preparing commits (Re-evaluate when: commit workflow change)
 
+For paper reproduction / physics / RL: start from `docs/paper/yang2023-fact-base.md` + `config.py`.
+
 For project memory index, see `MEMORY.md`. For historical architecture decisions, see `docs/decisions/`.
 
-## Scenario Registry
+Registry source of truth: `scenarios/contract.py` + `engine/harness_registry.py`
 
-- `kundur`
-  - model: `kundur_vsg`
-  - model dir: `scenarios/kundur/simulink_models/`
-  - training entry: `scenarios/kundur/train_simulink.py`
-- `ne39`
-  - model: `NE39bus_v2`
-  - model dir: `scenarios/new_england/simulink_models/`
-  - training entry: `scenarios/new_england/train_simulink.py`
+Launch entry: `engine/training_launch.py::get_training_launch_status(scenario_id)`
 
-## Training Launch Flow (Simulink)
-
-Bootstrap sequence enforced in `scenarios/*/train_simulink.py`:
-1. **Init** — parse args, generate `run_id`, resolve `run_dir` path (no mkdir yet)
-2. **Backend-ready** — `env.reset()` triggers MATLAB startup + warmup; if this fails, no orphaned directories are created
-3. **Commit outputs** — create {run_dir}/checkpoints/, {run_dir}/logs/, write training_status.json (status: running)
-4. **Train loop** — episode iterations with periodic checkpointing
-
-To launch from shell: `scripts/launch_training.ps1 [kundur|ne39|both]`
-To query before launch: `engine/training_launch.py::get_training_launch_status(scenario_id)` → returns `launch.python_executable`, `launch.script`, `launch.args`
-
-## Training Monitor (AI Observation)
-
-Two MCP tools for observing live and post-mortem RL training runs (implemented in `engine/training_tasks.py`):
-
-- **`training_status(scenario_id, run_id=None)`** — Tier 1 poll: merges heartbeat fields from `utils/run_protocol.py::read_training_status` with the latest_state.json snapshot. Use for routine progress checks (cheap — no JSONL scan).
-- **`training_diagnose(scenario_id, run_id=None)`** — Tier 2 deep scan: parses `events.jsonl`, classifies alerts / eval rewards / checkpoints / monitor_stop. Use only when anomalies are suspected.
-
-Both default to the most-recent run via `utils/run_protocol.py::find_latest_run` (status-aware; never raw mtime). Pass `run_id` to target a specific run.
+Monitor tools: see `engine/mcp_*.py` docstrings
 
 ## Default Working Mode
 
+0. **Paper Track first** — if the request is about reproducing a paper result
+   (figure/table/claim), start from `docs/paper/yang2023-fact-base.md` and
+   the relevant `train_simulink.py`. Do not route into Model/Training Control
+   unless training evidence demands it.
 1. Use **Model Control** when the question is about model validity, closed-loop semantics, or patching.
 2. Use **Training Control** when the question is about run quality, verdicts, comparison, or artifact interpretation.
 3. Route from training back to model work when training evidence indicates model-side physical or semantic faults.
 
-## Default Harness Order (Model Control)
+## Default Orders
 
+### Paper Track
+1. Check `docs/paper/yang2023-fact-base.md` for the paper claim to reproduce
+2. Verify `config.py` matches paper hyperparameters (values from the paper must cite it)
+3. Run training (via Training Control below)
+4. Generate figure via `plotting/` scripts
+5. Compare with paper; log outcome to `docs/paper/experiment-index.md`
+
+### Model Control
 1. `scenario_status`
 2. `model_inspect`
 3. `model_patch_verify`
 4. `model_diagnose`
 5. `model_report`
 6. `train_smoke_start` / `train_smoke_poll` only after modeling tasks are green
+
+### Training Control
+1. `get_training_launch_status` → 2. launch script
+→ 3. `training_status` (routine) → 4. `training_diagnose` (on anomaly)
+→ 5. `optimization_log.append_outcome` (post-run)
 
 ## Guardrails
 
@@ -79,5 +107,12 @@ Both default to the most-recent run via `utils/run_protocol.py::find_latest_run`
   - process notes in `docs/devlog/`
   - stable rules in `docs/decisions/`
   - paper-facing summaries in `docs/paper/`
+- **Anti-drift rule**: before adding a new harness task / engine module / utils helper,
+  answer in one sentence: *which paper result does this help reproduce, or which
+  repeated AI operation does this standardize?* If neither, do not add it.
+- **Paper parameter tracing**: any value in `config.py` that comes from the paper
+  must cite it (e.g. `# Yang 2023 Table II`).
+- **Non-paper experiments** (hyperparameter exploration, ablation) must live
+  under `scenarios/<name>/experiments/` and not pollute `train_simulink.py`.
 
 For relational navigation and drift discovery, graph output may be consulted as a secondary aid. See `docs/agent_layer/graph-policy.md`.

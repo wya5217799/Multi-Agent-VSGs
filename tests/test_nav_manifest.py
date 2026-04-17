@@ -1,7 +1,7 @@
 """Navigation manifest consistency tests.
 
 Validates that:
-1. AGENTS.md "Start Here" matches docs/navigation_manifest.toml exactly.
+1. AGENTS.md "Start Here" matches docs/control_manifest.toml exactly.
 2. All paths in the manifest exist on disk.
 3. MEMORY.md does not maintain a parallel "Start Here" section.
 """
@@ -21,7 +21,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 
 
 def _load_manifest() -> list[dict]:
-    manifest_path = REPO_ROOT / "docs" / "navigation_manifest.toml"
+    manifest_path = REPO_ROOT / "docs" / "control_manifest.toml"
     data = tomllib.loads(manifest_path.read_text(encoding="utf-8"))
     return data["start_here"]
 
@@ -57,7 +57,7 @@ def _extract_agents_start_here_entries() -> list[dict[str, str]]:
 
 
 def test_manifest_paths_exist():
-    """Every path in navigation_manifest.toml must exist on disk."""
+    """Every path in control_manifest.toml must exist on disk."""
     entries = _load_manifest()
     missing = []
     for entry in entries:
@@ -95,5 +95,5 @@ def test_memory_no_start_here():
         ), (
             "MEMORY.md contains a 'Start Here' section. "
             "Navigation entry points belong only in AGENTS.md "
-            "(governed by docs/navigation_manifest.toml)."
+            "(governed by docs/control_manifest.toml)."
         )

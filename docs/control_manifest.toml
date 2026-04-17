@@ -1,0 +1,132 @@
+# Control Manifest — Single Source of Truth
+#
+# Merges: navigation_manifest.toml + agent_control_manifest.toml
+# Validated by: tests/test_nav_manifest.py + tests/test_agent_control_manifest.py
+#
+# Three control lines (do not conflate):
+#   model_harness          = quality gate (model correctness / diagnosis / repair)
+#   smoke_bridge           = entry verification (model_harness → training_control_surface bridge)
+#   training_control_surface = observe + diagnose + evaluate (NOT a harness)
+#
+# Do NOT create a separate training_reference.py.
+# Do NOT add a second code-backed reference anchor.
+
+version = 1
+reference_py = "engine/harness_reference.py"
+
+# ---------------------------------------------------------------------------
+# Start Here — ordered reading list for agents entering the repo
+# Governed by this file (single source of truth).
+# AGENTS.md must render these entries exactly (validated by test_nav_manifest.py).
+# MEMORY.md must NOT maintain a parallel Start Here list.
+# ---------------------------------------------------------------------------
+
+[[start_here]]
+path = "engine/harness_reference.py"
+purpose = "Authoritative harness state; read before any agent action"
+trigger = "harness architecture change"
+
+[[start_here]]
+path = "scenarios/contract.py"
+purpose = "ScenarioContract; single source of truth for scenario constants"
+trigger = "scenario parameter schema change"
+
+[[start_here]]
+path = "docs/harness/2026-04-05-simulink-harness-v1.md"
+purpose = "Task contracts; defines harness task I/O and sequencing"
+trigger = "harness task definition change"
+
+[[start_here]]
+path = "results/harness/README.md"
+purpose = "Output directory structure; where to write harness evidence"
+trigger = "output artifact policy change"
+
+[[start_here]]
+path = "docs/devlog/commit-guidelines.md"
+purpose = "Commit and devlog standards for preparing commits"
+trigger = "commit workflow change"
+
+# ---------------------------------------------------------------------------
+# Model Harness — model correctness gate
+# Renamed from: model_control
+# ---------------------------------------------------------------------------
+
+[model_harness]
+entry_doc = "AGENTS.md"
+artifact_root = "results/harness"
+reference_paths = [
+  "docs/harness/2026-04-05-simulink-harness-v1.md",
+]
+task_family = [
+  "scenario_status",
+  "model_inspect",
+  "model_patch_verify",
+  "model_diagnose",
+  "model_report",
+]
+
+# ---------------------------------------------------------------------------
+# Smoke Bridge — entry verification between model_harness and training_control_surface
+# Registers train_smoke_* tools; bridge only, not a quality gate
+# ---------------------------------------------------------------------------
+
+[smoke_bridge]
+entry_doc = "AGENTS.md"
+artifact_root = "results/harness"
+task_family = [
+  "train_smoke_start",
+  "train_smoke_poll",
+  "train_smoke_full",
+]
+
+# ---------------------------------------------------------------------------
+# Training Control Surface — observe, diagnose, evaluate training runs
+# Renamed from: training_control
+# NOT a harness — does not gate model correctness
+# ---------------------------------------------------------------------------
+
+[training_control_surface]
+entry_doc = "AGENTS.md"
+artifact_root = "results/sim_*"
+reference_paths = [
+  "engine/training_launch.py",
+  "utils/run_protocol.py",
+  "utils/artifact_writer.py",
+  "utils/monitor.py",
+  "utils/evaluate_run.py",
+  "scenarios/kundur/train_simulink.py",
+  "scenarios/new_england/train_simulink.py",
+]
+task_family = [
+  "get_training_launch_status",
+  "training_status",
+  "training_diagnose",
+  "training_evaluate_run",
+  "training_compare_runs",
+]
+
+# ---------------------------------------------------------------------------
+# Scenario Registry — canonical mapping from scenario_id to file paths
+# Single source for naming drift resolution:
+#   harness uses scenario_id (kundur / ne39)
+#   artifact dirs use results/sim_kundur, results/sim_ne39
+#   slx models use kundur_vsg.slx, NE39bus_v2.slx
+# ---------------------------------------------------------------------------
+
+[[scenarios]]
+id = "kundur"
+env_class = "env/simulink/kundur_simulink_env.py::KundurSimulinkEnv"
+train_script = "scenarios/kundur/train_simulink.py"
+config = "scenarios/kundur/config_simulink.py"
+artifact_root = "results/sim_kundur"
+slx_model = "scenarios/kundur/simulink_models/kundur_vsg.slx"
+frequency_hz = 50
+
+[[scenarios]]
+id = "ne39"
+env_class = "env/simulink/ne39_simulink_env.py::NE39BusSimulinkEnv"
+train_script = "scenarios/new_england/train_simulink.py"
+config = "scenarios/new_england/config_simulink.py"
+artifact_root = "results/sim_ne39"
+slx_model = "scenarios/new_england/simulink_models/NE39bus_v2.slx"
+frequency_hz = 60

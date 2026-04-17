@@ -8,10 +8,9 @@
 ## Authority Hierarchy
 
 ```
-AGENTS.md + docs/agent_control_manifest.toml   ← authoritative
-engine/harness_reference.py                     ← code-backed reference
-docs/navigation_manifest.toml                   ← validated entry list
-graph output (graphify-out/)                    ← secondary navigation aid only
+AGENTS.md + docs/control_manifest.toml   ← authoritative
+engine/harness_reference.py              ← code-backed reference
+graph output (graphify-out/)             ← secondary navigation aid only
 ```
 
 ## When to Use Graph Output

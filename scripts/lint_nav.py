@@ -208,37 +208,37 @@ def check_harness_consistency() -> list[str]:
 
 
 def check_agent_control_manifest() -> list[str]:
-    """Validate docs/agent_control_manifest.toml structural integrity."""
+    """Validate docs/control_manifest.toml structural integrity."""
     try:
         import tomllib
     except ImportError:
         return []  # Python < 3.11 without tomllib: skip silently
 
     errors = []
-    manifest_path = REPO_ROOT / "docs" / "agent_control_manifest.toml"
+    manifest_path = REPO_ROOT / "docs" / "control_manifest.toml"
 
     if not manifest_path.exists():
-        errors.append("  agent_control_manifest.toml -> NOT FOUND at docs/agent_control_manifest.toml")
+        errors.append("  control_manifest.toml -> NOT FOUND at docs/control_manifest.toml")
         return errors
 
     try:
         data = tomllib.loads(manifest_path.read_text(encoding="utf-8"))
     except Exception as exc:
-        errors.append(f"  agent_control_manifest.toml -> PARSE ERROR: {exc}")
+        errors.append(f"  control_manifest.toml -> PARSE ERROR: {exc}")
         return errors
 
     # Check reference_py
     ref_py = data.get("reference_py", "")
     if not (REPO_ROOT / ref_py).exists():
-        errors.append(f"  agent_control_manifest.toml: reference_py `{ref_py}` -> NOT FOUND")
+        errors.append(f"  control_manifest.toml: reference_py `{ref_py}` -> NOT FOUND")
 
     # Check reference_paths for both control sections
-    for section in ("model_control", "training_control"):
+    for section in ("model_harness", "training_control_surface"):
         sec = data.get(section, {})
         for rel in sec.get("reference_paths", []):
             if not (REPO_ROOT / rel).exists():
                 errors.append(
-                    f"  agent_control_manifest.toml [{section}]: `{rel}` -> NOT FOUND"
+                    f"  control_manifest.toml [{section}]: `{rel}` -> NOT FOUND"
                 )
 
     # Check AGENTS.md mentions both control lines

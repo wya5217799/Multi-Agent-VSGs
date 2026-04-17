@@ -241,14 +241,10 @@ def check_agent_control_manifest() -> list[str]:
                     f"  control_manifest.toml [{section}]: `{rel}` -> NOT FOUND"
                 )
 
-    # Check AGENTS.md mentions both control lines
-    agents_md = REPO_ROOT / "AGENTS.md"
-    if agents_md.exists():
-        text = agents_md.read_text(encoding="utf-8")
-        if "Model Control" not in text:
-            errors.append("  AGENTS.md: must mention 'Model Control'")
-        if "Training Control" not in text:
-            errors.append("  AGENTS.md: must mention 'Training Control'")
+    # Check manifest declares all three canonical sections
+    for section in ("model_harness", "smoke_bridge", "training_control_surface"):
+        if section not in data:
+            errors.append(f"  control_manifest.toml: missing section [{section}]")
 
     return errors
 

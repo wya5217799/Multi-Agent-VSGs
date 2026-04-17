@@ -2,12 +2,11 @@
 
 Validates [[scenarios]] entries in docs/control_manifest.toml:
 - Every file path (env_class, train_script, config, slx_model) exists on disk.
-- Every scenario id matches the ids registered in engine/harness_registry.py.
+- Every scenario id matches the ids registered in scenarios/contract.py.
 - frequency_hz is set (50 or 60).
 """
 from __future__ import annotations
 
-import sys
 import tomllib
 from pathlib import Path
 
@@ -21,18 +20,9 @@ def _load_scenarios() -> list[dict]:
 
 
 def _registered_ids() -> set[str]:
-    """Read scenario ids registered in harness_registry.py via the error message."""
-    import engine.harness_registry as reg
-    # resolve_scenario raises ValueError for unknown ids; extract valid ids
-    # by trying known ids and catching failures for unknowns.
-    valid = set()
-    for candidate in ("kundur", "ne39"):
-        try:
-            reg.resolve_scenario(candidate)
-            valid.add(candidate)
-        except Exception:
-            pass
-    return valid
+    """Return scenario ids from scenarios/contract.py (the authoritative source)."""
+    from scenarios.contract import CONTRACTS
+    return set(CONTRACTS.keys())
 
 
 def test_scenario_manifest_file_paths_exist():
@@ -53,18 +43,18 @@ def test_scenario_manifest_file_paths_exist():
             full = _ROOT / path_str
             if not full.exists():
                 missing.append(f"[{sid}] {field}: {path_str}")
-    assert not missing, f"Missing paths in [[scenarios]]:\n" + "\n".join(missing)
+    assert not missing, "Missing paths in [[scenarios]]:\n" + "\n".join(missing)
 
 
 def test_scenario_ids_match_harness_registry():
-    """Scenario ids in manifest must match ids registered in harness_registry."""
+    """Scenario ids in manifest must match ids registered in scenarios/contract.py."""
     scenarios = _load_scenarios()
     manifest_ids = {s["id"] for s in scenarios}
     registry_ids = _registered_ids()
     assert manifest_ids == registry_ids, (
         f"Scenario id mismatch.\n"
         f"  manifest: {sorted(manifest_ids)}\n"
-        f"  harness_registry: {sorted(registry_ids)}"
+        f"  contract: {sorted(registry_ids)}"
     )
 
 

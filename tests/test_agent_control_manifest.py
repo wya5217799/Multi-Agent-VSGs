@@ -9,8 +9,16 @@ Validates:
 """
 from __future__ import annotations
 
-import tomllib
+import sys
 from pathlib import Path
+
+if sys.version_info >= (3, 11):
+    import tomllib
+else:
+    try:
+        import tomllib  # type: ignore[import-not-found]
+    except ImportError:
+        import tomli as tomllib  # type: ignore[import-untyped,no-redef]
 
 _ROOT = Path(__file__).parent.parent
 _MANIFEST = _ROOT / "docs" / "control_manifest.toml"
@@ -38,9 +46,10 @@ def test_agent_control_manifest_reference_paths_exist():
             assert path.exists(), f"[{section}] reference_path not found: {rel}"
 
 
-def test_agent_control_manifest_declares_two_control_lines():
+def test_agent_control_manifest_declares_three_sections():
     data = _load()
     assert "model_harness" in data, "missing model_harness section"
+    assert "smoke_bridge" in data, "missing smoke_bridge section"
     assert "training_control_surface" in data, "missing training_control_surface section"
 
 

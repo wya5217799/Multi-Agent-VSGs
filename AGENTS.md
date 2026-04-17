@@ -26,11 +26,20 @@ This repo has two layers with a strict hierarchy:
    - Exists to let Claude Code operate the Paper Track reliably across sessions.
    - Must not absorb Paper Track logic.
 
-Within Track 2, control splits into dual lines:
-- **Model Control** — model correctness, diagnosis, repair, smoke readiness.
-- **Training Control** — run lifecycle, verdicts, comparison of training outputs.
+Within Track 2, control splits into three layers (see `docs/decisions/2026-04-17-control-surface-convention.md`):
+- **Model Harness** — model correctness gate: scenario_status / model_inspect / model_patch_verify / model_diagnose / model_report.
+- **Smoke Bridge** — entry verification bridge connecting Model Harness → Training Control Surface: train_smoke_* tools.
+- **Training Control Surface** — training observation / diagnosis / evaluation (NOT a harness): get_training_launch_status / training_status / training_diagnose / training_evaluate_run / training_compare_runs.
+
+> **Terminology**: `harness` = Model Harness only. `train_smoke_*` = Smoke Bridge (not harness).
+> `training_*` = Control Surface observation tools (not harness).
+> `scenario_id` accepts only `kundur` or `ne39`; all other variants are invalid.
 
 Default execution layer for Track 2: MCP tools in `engine/mcp_simulink_tools.py`.
+
+**Directory roles** (helper scripts layer):
+- `scripts/` — general repo helper scripts (launch, lint, profiling, workspace hygiene).
+- `probes/` — scenario-specific, reusable regression probes bound to concrete model semantics (e.g. `probes/ne39/probe_phang_sensitivity.m`). One-off debugging does NOT go here.
 
 ## Non-Goals
 
@@ -68,11 +77,12 @@ Monitor tools: see `engine/mcp_*.py` docstrings
 
 0. **Paper Track first** — if the request is about reproducing a paper result
    (figure/table/claim), start from `docs/paper/yang2023-fact-base.md` and
-   the relevant `train_simulink.py`. Do not route into Model/Training Control
+   the relevant `scenarios/*/train_simulink.py`. Do not route into Model Harness / Training Control Surface
    unless training evidence demands it.
-1. Use **Model Control** when the question is about model validity, closed-loop semantics, or patching.
-2. Use **Training Control** when the question is about run quality, verdicts, comparison, or artifact interpretation.
-3. Route from training back to model work when training evidence indicates model-side physical or semantic faults.
+1. Use **Model Harness** when the question is about model validity, closed-loop semantics, or patching.
+2. Use **Smoke Bridge** (`train_smoke_*`) only after Model Harness tasks are green.
+3. Use **Training Control Surface** when the question is about run quality, verdicts, comparison, or artifact interpretation.
+4. Route from Training Control Surface back to Model Harness when training evidence indicates model-side physical or semantic faults.
 
 ## Default Orders
 
@@ -83,15 +93,18 @@ Monitor tools: see `engine/mcp_*.py` docstrings
 4. Generate figure via `plotting/` scripts
 5. Compare with paper; log outcome to `docs/paper/experiment-index.md`
 
-### Model Control
+### Model Harness
 1. `scenario_status`
 2. `model_inspect`
 3. `model_patch_verify`
 4. `model_diagnose`
 5. `model_report`
-6. `train_smoke_start` / `train_smoke_poll` only after modeling tasks are green
 
-### Training Control
+### Smoke Bridge
+1. `train_smoke_start` — only after all Model Harness tasks are green
+2. `train_smoke_poll` — poll until pass/fail verdict
+
+### Training Control Surface
 1. `get_training_launch_status` → 2. launch script
 → 3. `training_status` (routine) → 4. `training_diagnose` (on anomaly)
 → 5. `optimization_log.append_outcome` (post-run)
@@ -113,6 +126,6 @@ Monitor tools: see `engine/mcp_*.py` docstrings
 - **Paper parameter tracing**: any value in `config.py` that comes from the paper
   must cite it (e.g. `# Yang 2023 Table II`).
 - **Non-paper experiments** (hyperparameter exploration, ablation) must live
-  under `scenarios/<name>/experiments/` and not pollute `train_simulink.py`.
+  under `scenarios/<name>/experiments/` and not pollute the scenario's `scenarios/*/train_simulink.py`.
 
 For relational navigation and drift discovery, graph output may be consulted as a secondary aid. See `docs/agent_layer/graph-policy.md`.

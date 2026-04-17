@@ -141,7 +141,7 @@ sg run -p 'sys.executable' -l python .
 
 - **输出文件名只**：`sg run -p '<pattern>' -l python <path> --json | python -c "import sys,json; [print(m['file']) for m in json.load(sys.stdin)['matches']]"`
 - **结合 grep**：管道到 `grep -n` 可加行号过滤
-- **批量扫描**：将常用检查组合成 `tools/arch-check.sh`
+- **批量扫描**：将常用检查组合成 `scripts/arch-check.sh`
 - **CI 集成**：无匹配返回 exit 0，有匹配返回 exit 1 ——适合"禁止出现 X"类检查
 
 ---

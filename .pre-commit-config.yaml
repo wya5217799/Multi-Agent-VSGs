@@ -14,7 +14,7 @@ repos:
     hooks:
       - id: workspace-hygiene
         name: workspace hygiene check
-        entry: python tools/workspace_clean.py check
+        entry: python scripts/workspace_clean.py check
         language: system
         pass_filenames: false
         always_run: true

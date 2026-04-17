@@ -14,10 +14,10 @@ history. They do not keep the local working tree visually clean.
 
 Adopt a lightweight workspace hygiene mechanism:
 
-1. `tools/workspace_hygiene.toml` is the single rule source.
-2. `tools/workspace_clean.py check` reports local pollution.
-3. `tools/workspace_clean.py clean` dry-runs the move plan.
-4. `tools/workspace_clean.py clean --apply` moves matched files to
+1. `scripts/workspace_hygiene.toml` is the single rule source.
+2. `scripts/workspace_clean.py check` reports local pollution.
+3. `scripts/workspace_clean.py clean` dry-runs the move plan.
+4. `scripts/workspace_clean.py clean --apply` moves matched files to
    `C:\Users\27443\Desktop\一切\论文\Multi-Agent VSGs_cleanup_<timestamp>\`
    and writes `manifest.json`.
 5. Local git hook orchestration is managed via `.pre-commit-config.yaml`,
@@ -59,7 +59,7 @@ This balances four constraints:
 Hook orchestration is delegated to [pre-commit](https://pre-commit.com/).
 The repo ships a `.pre-commit-config.yaml` that registers two hooks:
 
-1. **workspace-hygiene** — runs `python tools/workspace_clean.py check`
+1. **workspace-hygiene** — runs `python scripts/workspace_clean.py check`
    (check-only, never moves files)
 2. **check-merge-conflict** — catches unresolved conflict markers
 

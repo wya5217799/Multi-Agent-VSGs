@@ -53,5 +53,5 @@ journey-into-multi-agent-vsgs.md
 .DS_Store
 Thumbs.db
 
-# Generated architecture diagrams (point-in-time snapshots, regenerate with tools/gen-arch-diagrams.sh)
+# Generated architecture diagrams (point-in-time snapshots, regenerate with scripts/gen-arch-diagrams.sh)
 docs/architecture/

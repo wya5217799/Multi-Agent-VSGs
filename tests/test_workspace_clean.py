@@ -6,7 +6,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from tools.workspace_clean import (
+from scripts.workspace_clean import (
     HygieneConfig,
     apply_clean,
     load_config,

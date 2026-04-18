@@ -95,6 +95,9 @@ class BridgeConfig:
     # Phase-angle feedback (NE39 only)
     phase_command_mode: str = 'passthrough'  # 'passthrough' (Kundur) or 'absolute_with_loadflow' (NE39)
     init_phang: tuple[float, ...] = ()       # load-flow initial phase angles (deg); NE39: 8-element vector
+    # Rotor angle ICs for 5/6-arg warmup seeding (Kundur only)
+    # Empty tuple → 3-arg warmup (phAng=0); non-empty → 6-arg warmup seeded with delta0_deg
+    delta0_deg: tuple[float, ...] = ()
     phase_feedback_gain: float = 1.0         # feedback gain; NE39 uses 0.3 to avoid step-induced oscillations
     # Workspace variable names referenced by M0/D0 Constant blocks (setVariable approach)
     m_var_template: str = 'M0_val_ES{idx}'   # must match Constant block Value field in .slx
@@ -142,6 +145,20 @@ class BridgeConfig:
             errors.append(
                 "pe_measurement='feedback' but pe_feedback_signal is empty"
             )
+
+        # delta0_deg: when non-empty must match n_agents and be all-finite
+        if self.delta0_deg:
+            if len(self.delta0_deg) != self.n_agents:
+                errors.append(
+                    f"delta0_deg: expected length {self.n_agents} (n_agents), "
+                    f"got {len(self.delta0_deg)}"
+                )
+            else:
+                arr = np.asarray(self.delta0_deg, dtype=np.float64)
+                if not np.isfinite(arr).all():
+                    errors.append(
+                        f"delta0_deg: all values must be finite, got {list(self.delta0_deg)}"
+                    )
 
         # Template placeholders must be present
         for field_name in ("omega_signal", "delta_signal", "m_var_template", "d_var_template"):
@@ -422,43 +439,95 @@ class SimulinkBridge:
         pe_nominal_vsg_arr = _normalize_per_agent_vector(
             'pe0_default_vsg', self.cfg.pe0_default_vsg, self.cfg.n_agents
         )
-        for i in range(1, self.cfg.n_agents + 1):
-            m_var = self.cfg.m_var_template.replace('{idx}', str(i))
-            d_var = self.cfg.d_var_template.replace('{idx}', str(i))
-            self.session.eval(
-                f"assignin('base', '{m_var}', {self.cfg.m0_default})", nargout=0
-            )
-            self.session.eval(
-                f"assignin('base', '{d_var}', {self.cfg.d0_default})", nargout=0
-            )
-            self.session.eval(
-                f"assignin('base', 'Pe_ES{i}', {pe_nominal_vsg_arr[i - 1]})", nargout=0
-            )
-            self.session.eval(
-                f"assignin('base', 'phAng_ES{i}', 0.0)", nargout=0
-            )
-            self.session.eval(
-                f"assignin('base', 'wref_{i}', 1.0)", nargout=0
-            )
-        # Disturbance loads: use CURRENT _tripload_state (set by caller before warmup).
-        # TripLoad_1/2 P values are Simscape physical params — only tunable at compile time.
-        # Caller (e.g. KundurSimulinkEnv._reset_backend) must set _tripload_state BEFORE
-        # calling warmup(), so the values are baked in when FastRestart recompiles.
-        for var, val in self._tripload_state.items():
-            self.session.eval(f"assignin('base', '{var}', {val})", nargout=0)
-        self._apply_breaker_events()
         do_recompile = not self._fr_compiled
-        self.session.call("slx_warmup", self.cfg.model_name, duration, do_recompile, nargout=0)
-        self._fr_compiled = True
-        self.t_current = duration
-
-        # Seed feedback state so the first RL step has valid Pe/delta args.
-        # pe_scale = sbase/vsg_sn = 0.5 for Kundur; dividing VSG-base by it gives sbase.
         pe_scale = self.cfg.sbase_va / self.cfg.vsg_sn_va
-        self._Pe_prev = pe_nominal_vsg_arr / pe_scale
-        self._delta_prev_deg = np.zeros(self.cfg.n_agents)
 
-        logger.debug("Warmup complete: t=%.4f s (recompile=%s)", duration, do_recompile)
+        if self.cfg.delta0_deg:
+            # 5/6-arg path: seeded warmup matching NE39 _reset_backend pattern.
+            # slx_warmup sets M/D/phAng/Pe/wref workspace vars internally from kundur_ip.
+            # Tripload and breaker vars still need Python-side setup before calling.
+            delta0 = np.asarray(self.cfg.delta0_deg, dtype=np.float64)
+            phang_str = ", ".join(f"{v:.4f}" for v in delta0)
+            pe0_str = ", ".join(f"{v:.6f}" for v in pe_nominal_vsg_arr)
+            mdbl = self._matlab_double
+            agent_ids = mdbl(list(range(1, self.cfg.n_agents + 1)))
+
+            for var, val in self._tripload_state.items():
+                self.session.eval(f"assignin('base', '{var}', {val})", nargout=0)
+            self._apply_breaker_events()
+
+            self.session.eval(
+                f"kundur_ip.M0 = {self.cfg.m0_default}; "
+                f"kundur_ip.D0 = {self.cfg.d0_default}; "
+                f"kundur_ip.phAng = [{phang_str}]; "
+                f"kundur_ip.Pe0 = [{pe0_str}]; "
+                f"kundur_ip.t_warmup = {duration};",
+                nargout=0,
+            )
+            warmup_state, warmup_status = self.session.call(
+                "slx_warmup",
+                self.cfg.model_name,
+                agent_ids,
+                float(self.cfg.sbase_va),
+                self._matlab_cfg,
+                self.session.eval("kundur_ip", nargout=1),
+                bool(do_recompile),
+                nargout=2,
+            )
+            if warmup_status is not None and not warmup_status.get("success", True):
+                raise RuntimeError(
+                    f"slx_warmup failed: {warmup_status.get('error', 'unknown')}"
+                )
+            self._fr_compiled = True
+            self.t_current = duration
+
+            # Pe stays at nominal: warmup_extract_state lacks a feedback branch
+            # and would read diverged Pe for the Kundur model.
+            self._Pe_prev = pe_nominal_vsg_arr / pe_scale
+            if warmup_state:
+                raw_delta = np.array(
+                    warmup_state.get("delta_deg", list(delta0))
+                ).flatten()
+                self._delta_prev_deg = np.clip(raw_delta, -90.0, 90.0)
+            else:
+                self._delta_prev_deg = np.clip(delta0, -90.0, 90.0)
+        else:
+            # 3-arg path (original): Python pre-initialises all workspace vars.
+            for i in range(1, self.cfg.n_agents + 1):
+                m_var = self.cfg.m_var_template.replace('{idx}', str(i))
+                d_var = self.cfg.d_var_template.replace('{idx}', str(i))
+                self.session.eval(
+                    f"assignin('base', '{m_var}', {self.cfg.m0_default})", nargout=0
+                )
+                self.session.eval(
+                    f"assignin('base', '{d_var}', {self.cfg.d0_default})", nargout=0
+                )
+                self.session.eval(
+                    f"assignin('base', 'Pe_ES{i}', {pe_nominal_vsg_arr[i - 1]})", nargout=0
+                )
+                self.session.eval(
+                    f"assignin('base', 'phAng_ES{i}', 0.0)", nargout=0
+                )
+                self.session.eval(
+                    f"assignin('base', 'wref_{i}', 1.0)", nargout=0
+                )
+            # Disturbance loads: use CURRENT _tripload_state (set by caller before warmup).
+            # TripLoad_1/2 P values are Simscape physical params — only tunable at compile time.
+            # Caller (e.g. KundurSimulinkEnv._reset_backend) must set _tripload_state BEFORE
+            # calling warmup(), so the values are baked in when FastRestart recompiles.
+            for var, val in self._tripload_state.items():
+                self.session.eval(f"assignin('base', '{var}', {val})", nargout=0)
+            self._apply_breaker_events()
+            self.session.call("slx_warmup", self.cfg.model_name, duration, do_recompile, nargout=0)
+            self._fr_compiled = True
+            self.t_current = duration
+            self._Pe_prev = pe_nominal_vsg_arr / pe_scale
+            self._delta_prev_deg = np.zeros(self.cfg.n_agents)
+
+        logger.debug(
+            "Warmup complete: t=%.4f s (recompile=%s, delta_seeded=%s)",
+            duration, do_recompile, bool(self.cfg.delta0_deg),
+        )
 
     def _apply_breaker_events(self) -> None:
         if not self.cfg.breaker_step_block_template:

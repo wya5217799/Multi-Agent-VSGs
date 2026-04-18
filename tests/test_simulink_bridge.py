@@ -110,7 +110,7 @@ class TestNE39FrCompiled:
                 @staticmethod
                 def call(fn, *args, nargout=0):
                     recorded_calls.append((fn, args))
-                    if fn == "vsg_warmup":
+                    if fn == "slx_warmup":
                         return {}, {"success": True}
                     return None
 
@@ -123,14 +123,14 @@ class TestNE39FrCompiled:
 
             # First reset: do_recompile must be True (bridge._fr_compiled=False)
             env._reset_backend()
-            warmup_call = next(c for c in recorded_calls if c[0] == "vsg_warmup")
+            warmup_call = next(c for c in recorded_calls if c[0] == "slx_warmup")
             assert warmup_call[1][-1] is True, "first reset must recompile"
             assert env.bridge._fr_compiled is True
 
             # Second reset: do_recompile must be False
             recorded_calls.clear()
             env._reset_backend()
-            warmup_call2 = next(c for c in recorded_calls if c[0] == "vsg_warmup")
+            warmup_call2 = next(c for c in recorded_calls if c[0] == "slx_warmup")
             assert warmup_call2[1][-1] is False, "second reset must skip recompile"
 
 
@@ -170,7 +170,7 @@ class TestSimulinkBridge:
                       "delta": [[0.0, 0.0, 0.0, 0.0]],
                       "delta_deg": [[0.0, 0.0, 0.0, 0.0]]}
         mock_status = {"success": True, "error": "", "elapsed_ms": 10.0}
-        mock_eng.vsg_step_and_read = MagicMock(
+        mock_eng.slx_step_and_read = MagicMock(
             return_value=(mock_state, mock_status)
         )
 
@@ -197,7 +197,7 @@ class TestSimulinkBridge:
 
         mock_state = {"omega": [[1.0]*4], "Pe": [[0.5]*4], "rocof": [[0.0]*4], "delta": [[0.0]*4], "delta_deg": [[0.0]*4]}
         mock_status = {"success": True, "error": "", "elapsed_ms": 5.0}
-        mock_eng.vsg_step_and_read = MagicMock(
+        mock_eng.slx_step_and_read = MagicMock(
             return_value=(mock_state, mock_status)
         )
 
@@ -220,7 +220,7 @@ class TestSimulinkBridge:
 
         mock_state = {"omega": [[0]*4], "Pe": [[0]*4], "rocof": [[0]*4], "delta": [[0]*4], "delta_deg": [[0.0]*4]}
         mock_status = {"success": False, "error": "Divergence at t=0.1", "elapsed_ms": 5.0}
-        mock_eng.vsg_step_and_read = MagicMock(
+        mock_eng.slx_step_and_read = MagicMock(
             return_value=(mock_state, mock_status)
         )
 
@@ -249,7 +249,7 @@ class TestSimulinkBridge:
 
         mock_state = {"omega": [[0]*4], "Pe": [[0]*4], "rocof": [[0]*4], "delta": [[0]*4], "delta_deg": [[0.0]*4]}
         mock_status = {"success": False, "error": "NaN at t=14.7", "elapsed_ms": 5.0}
-        mock_eng.vsg_step_and_read = MagicMock(
+        mock_eng.slx_step_and_read = MagicMock(
             return_value=(mock_state, mock_status)
         )
 
@@ -278,7 +278,7 @@ class TestSimulinkBridge:
 
         mock_status = {"success": False, "error": "crash", "elapsed_ms": 1.0}
         mock_state = {"omega": [[0]*4], "Pe": [[0]*4], "rocof": [[0]*4], "delta": [[0]*4], "delta_deg": [[0.0]*4]}
-        mock_eng.vsg_step_and_read = MagicMock(return_value=(mock_state, mock_status))
+        mock_eng.slx_step_and_read = MagicMock(return_value=(mock_state, mock_status))
 
         bridge = SimulinkBridge(_make_test_config())
         bridge._matlab_cfg = MagicMock()
@@ -334,7 +334,7 @@ class TestSimulinkBridge:
         cfg = _make_test_config()
         bridge = SimulinkBridge(cfg)
         bridge.session = MagicMock()
-        bridge.session.call.side_effect = MatlabCallError("vsg_close_model", (), "close failed")
+        bridge.session.call.side_effect = MatlabCallError("slx_close_model", (), "close failed")
 
         with caplog.at_level("WARNING"):
             bridge.close()
@@ -454,22 +454,23 @@ def test_kundur_positive_disturbance_scales_tripload2_with_magnitude(monkeypatch
     assert env.bridge._tripload_state[cfg.tripload2_p_var] == pytest.approx(expected_large)
 
 
-def test_vsg_step_and_read_warns_when_pe_measurement_fails():
+def test_slx_step_and_read_warns_when_pe_measurement_fails():
     helper = (
         Path(__file__).resolve().parents[1]
-        / "vsg_helpers"
-        / "vsg_step_and_read.m"
+        / "slx_helpers"
+        / "slx_step_and_read.m"
     )
     text = helper.read_text(encoding="utf-8")
 
-    assert "warning('vsg_step_and_read:PeReadFailed'" in text
+    assert "warning('slx_step_and_read:PeReadFailed'" in text
 
 
 def test_ne39_probe_sets_pe_measurement_mode():
     helper = (
         Path(__file__).resolve().parents[1]
-        / "vsg_helpers"
-        / "vsg_probe_ne39_phang_sensitivity.m"
+        / "probes"
+        / "ne39"
+        / "probe_phang_sensitivity.m"
     )
     text = helper.read_text(encoding="utf-8")
 
@@ -576,7 +577,7 @@ class TestMeasurementFailureDetection:
             "delta": [[0.0]*4], "delta_deg": [[0.0]*4],
         }
         mock_status = {"success": True, "error": "", "elapsed_ms": 5.0, "measurement_failures": []}
-        mock_eng.vsg_step_and_read = MagicMock(return_value=(mock_state, mock_status))
+        mock_eng.slx_step_and_read = MagicMock(return_value=(mock_state, mock_status))
 
         cfg = _make_test_config()
         bridge = SimulinkBridge(cfg)
@@ -616,7 +617,7 @@ class TestMeasurementFailureDetection:
             "delta": [[0.0]*4], "delta_deg": [[0.0]*4],
         }
         zero_status = {"success": True, "error": "", "elapsed_ms": 5.0, "measurement_failures": []}
-        mock_eng.vsg_step_and_read = MagicMock(return_value=(zero_state, zero_status))
+        mock_eng.slx_step_and_read = MagicMock(return_value=(zero_state, zero_status))
         bridge.step(M, D)
         bridge.step(M, D)
         assert bridge._pe_zero_count == 2
@@ -626,7 +627,7 @@ class TestMeasurementFailureDetection:
             "omega": [[1.0]*4], "Pe": [[0.5]*4], "rocof": [[0.0]*4],
             "delta": [[0.0]*4], "delta_deg": [[0.0]*4],
         }
-        mock_eng.vsg_step_and_read = MagicMock(return_value=(nonzero_state, zero_status))
+        mock_eng.slx_step_and_read = MagicMock(return_value=(nonzero_state, zero_status))
         bridge.step(M, D)
         assert bridge._pe_zero_count == 0
 
@@ -646,7 +647,7 @@ class TestMeasurementFailureDetection:
             "success": True, "error": "", "elapsed_ms": 5.0,
             "measurement_failures": ["omega:agent3:signal not found"],
         }
-        mock_eng.vsg_step_and_read = MagicMock(return_value=(mock_state, mock_status))
+        mock_eng.slx_step_and_read = MagicMock(return_value=(mock_state, mock_status))
 
         cfg = _make_test_config()
         bridge = SimulinkBridge(cfg)
@@ -790,10 +791,10 @@ class TestBridgeConfigValidation:
         )
         assert cfg.pe_measurement == "vi"
 
-    def test_kundur_config_declares_pout(self):
-        """Kundur scenario config must declare pe_measurement='pout'."""
+    def test_kundur_config_declares_feedback(self):
+        """Kundur main training path must use pe_measurement='feedback' (Phase 1 fix)."""
         from scenarios.kundur.config_simulink import KUNDUR_BRIDGE_CONFIG
-        assert KUNDUR_BRIDGE_CONFIG.pe_measurement == "pout"
+        assert KUNDUR_BRIDGE_CONFIG.pe_measurement == "feedback"
 
     def test_ne39_config_declares_vi(self):
         """NE39 scenario config must declare pe_measurement='vi'."""
@@ -834,4 +835,147 @@ class TestBridgeConfigValidation:
                 omega_signal="omega_ES{idx}",
                 vabc_signal="V{idx}",
                 iabc_signal="I{idx}",
+            )
+
+    def test_delta0_deg_wrong_length_raises(self):
+        """delta0_deg with wrong length must raise."""
+        from engine.simulink_bridge import BridgeConfig
+
+        with pytest.raises(ValueError, match="delta0_deg"):
+            BridgeConfig(
+                model_name="bad_delta",
+                model_dir="/tmp",
+                n_agents=4,
+                dt_control=0.2,
+                sbase_va=100e6,
+                m_path_template="{model}/M{idx}",
+                d_path_template="{model}/D{idx}",
+                omega_signal="omega_ES{idx}",
+                vabc_signal="V{idx}",
+                iabc_signal="I{idx}",
+                delta0_deg=(18.0, 10.0),  # length 2, not 4
+            )
+
+    def test_delta0_deg_nonfinite_raises(self):
+        """delta0_deg with NaN/inf must raise."""
+        from engine.simulink_bridge import BridgeConfig
+
+        with pytest.raises(ValueError, match="delta0_deg"):
+            BridgeConfig(
+                model_name="nan_delta",
+                model_dir="/tmp",
+                n_agents=4,
+                dt_control=0.2,
+                sbase_va=100e6,
+                m_path_template="{model}/M{idx}",
+                d_path_template="{model}/D{idx}",
+                omega_signal="omega_ES{idx}",
+                vabc_signal="V{idx}",
+                iabc_signal="I{idx}",
+                delta0_deg=(18.0, float("nan"), 7.0, 12.0),
+            )
+
+    def test_kundur_config_has_delta0_deg(self):
+        """KUNDUR_BRIDGE_CONFIG must carry vsg_delta0_deg from kundur_ic.json."""
+        from scenarios.kundur.config_simulink import KUNDUR_BRIDGE_CONFIG
+
+        assert len(KUNDUR_BRIDGE_CONFIG.delta0_deg) == 4
+        assert all(np.isfinite(v) for v in KUNDUR_BRIDGE_CONFIG.delta0_deg)
+
+
+class TestWarmupDeltaSeeding:
+    """Tests for SimulinkBridge.warmup() 3-arg vs 5/6-arg dispatch."""
+
+    def setup_method(self):
+        from engine.matlab_session import MatlabSession
+        MatlabSession._instances.clear()
+
+    def _make_bridge(self, mock_me, delta0_deg=()):
+        from engine.simulink_bridge import BridgeConfig, SimulinkBridge
+
+        mock_eng = MagicMock()
+        mock_me.start_matlab.return_value = mock_eng
+
+        cfg = BridgeConfig(
+            model_name="test_model",
+            model_dir="/tmp",
+            n_agents=4,
+            dt_control=0.2,
+            sbase_va=100e6,
+            m_path_template="{model}/VSG_ES{idx}/M0",
+            d_path_template="{model}/VSG_ES{idx}/D0",
+            omega_signal="omega_ES{idx}",
+            vabc_signal="Vabc_ES{idx}",
+            iabc_signal="Iabc_ES{idx}",
+            pe0_default_vsg=1.87,
+            delta0_deg=delta0_deg,
+        )
+        bridge = SimulinkBridge(cfg)
+        bridge._matlab_cfg = MagicMock()
+        bridge._SimulinkBridge__mdbl = lambda x: x
+        return bridge, mock_eng
+
+    @patch("engine.matlab_session.matlab_engine", create=True)
+    def test_warmup_3arg_unchanged(self, mock_me):
+        """delta0_deg=() → 3-arg slx_warmup, _delta_prev_deg=zeros."""
+        bridge, mock_eng = self._make_bridge(mock_me, delta0_deg=())
+        bridge.warmup(0.5)
+
+        # 3-arg call: (model_name, duration, do_recompile)
+        call_args_list = mock_eng.slx_warmup.call_args_list
+        assert len(call_args_list) == 1
+        args = call_args_list[0][0]
+        assert args[0] == "test_model"
+        assert args[1] == pytest.approx(0.5)
+        assert isinstance(args[2], bool)  # do_recompile flag
+
+        assert np.all(bridge._delta_prev_deg == 0.0)
+        assert bridge._delta_prev_deg.shape == (4,)
+
+    @patch("engine.matlab_session.matlab_engine", create=True)
+    def test_warmup_5arg_delta_seeded(self, mock_me):
+        """delta0_deg non-empty → 6-arg slx_warmup, _delta_prev_deg set from warmup_state."""
+        bridge, mock_eng = self._make_bridge(mock_me, delta0_deg=(18.0, 10.0, 7.0, 12.0))
+
+        # slx_warmup (6-arg) returns (warmup_state, warmup_status)
+        mock_eng.slx_warmup.return_value = (
+            {"delta_deg": [17.8, 9.9, 6.8, 11.9], "Pe": [1.0, 1.0, 1.0, 1.0]},
+            {"success": True},
+        )
+        # session.eval("kundur_ip", nargout=1) returns the struct
+        mock_eng.eval.return_value = {}
+
+        bridge.warmup(0.5)
+
+        # 6-arg call: (model_name, agent_ids, sbase_va, cfg, kundur_ip, do_recompile)
+        call_args_list = mock_eng.slx_warmup.call_args_list
+        assert len(call_args_list) == 1
+        args = call_args_list[0][0]
+        assert args[0] == "test_model"
+        assert len(args) == 6
+
+        # _delta_prev_deg comes from warmup_state (clipped ±90°)
+        assert np.allclose(bridge._delta_prev_deg, [17.8, 9.9, 6.8, 11.9], atol=1e-6)
+
+    @patch("engine.matlab_session.matlab_engine", create=True)
+    def test_warmup_pe_prev_nominal(self, mock_me):
+        """_Pe_prev = nominal seed regardless of 3-arg or 6-arg path."""
+        for delta0 in [(), (18.0, 10.0, 7.0, 12.0)]:
+            from engine.matlab_session import MatlabSession
+            MatlabSession._instances.clear()
+
+            bridge, mock_eng = self._make_bridge(mock_me, delta0_deg=delta0)
+            if delta0:
+                mock_eng.slx_warmup.return_value = (
+                    {"delta_deg": list(delta0), "Pe": [1.0, 1.0, 1.0, 1.0]},
+                    {"success": True},
+                )
+                mock_eng.eval.return_value = {}
+
+            bridge.warmup(0.5)
+
+            expected_pe = 1.87 / (100e6 / 200e6)  # pe_nominal_vsg / pe_scale = 1.87 * 2
+            assert np.allclose(bridge._Pe_prev, np.full(4, expected_pe), rtol=1e-4), (
+                f"delta0_deg={delta0}: _Pe_prev should be nominal {expected_pe:.4f}, "
+                f"got {bridge._Pe_prev}"
             )

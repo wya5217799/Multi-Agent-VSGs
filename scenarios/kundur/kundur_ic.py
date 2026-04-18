@@ -27,6 +27,9 @@ _VALID_CALIBRATION_STATUSES = frozenset({
 })
 _SOURCE_HASH_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
 
+# Source: build_powerlib_kundur.m vlf_ess(:,2) — VSG rotor angle ICs [deg]
+_DELTA0_DEG_DEFAULT: tuple[float, ...] = (18.0, 10.0, 7.0, 12.0)
+
 
 @dataclass(frozen=True)
 class KundurIC:
@@ -40,6 +43,7 @@ class KundurIC:
     calibration_status: str
     vsg_p0_vsg_base_pu: tuple[float, ...]
     source_hash: str
+    vsg_delta0_deg: tuple[float, ...] = _DELTA0_DEG_DEFAULT
 
     def __post_init__(self) -> None:
         errors: list[str] = []
@@ -70,6 +74,17 @@ class KundurIC:
             errors.append(
                 f"source_hash={self.source_hash!r} must match sha256:<64-hex-chars>"
             )
+
+        if len(self.vsg_delta0_deg) != 4:
+            errors.append(
+                f"vsg_delta0_deg must have length 4, got {len(self.vsg_delta0_deg)}"
+            )
+        else:
+            arr = np.asarray(self.vsg_delta0_deg, dtype=np.float64)
+            if not np.isfinite(arr).all():
+                errors.append(
+                    f"vsg_delta0_deg: all values must be finite, got {list(self.vsg_delta0_deg)}"
+                )
 
         if errors:
             raise ValueError(
@@ -121,9 +136,16 @@ def load_kundur_ic(path: str | Path | None = None) -> KundurIC:
             f"got {units.get('vsg_p0_vsg_base_pu')!r}"
         )
 
+    delta0_raw = data.get("vsg_delta0_deg")
+    vsg_delta0_deg = (
+        tuple(float(v) for v in delta0_raw) if delta0_raw is not None
+        else _DELTA0_DEG_DEFAULT
+    )
+
     return KundurIC(
         schema_version=int(data["schema_version"]),
         calibration_status=str(data["calibration_status"]),
         vsg_p0_vsg_base_pu=tuple(float(v) for v in data["vsg_p0_vsg_base_pu"]),
         source_hash=str(data["source_hash"]),
+        vsg_delta0_deg=vsg_delta0_deg,
     )

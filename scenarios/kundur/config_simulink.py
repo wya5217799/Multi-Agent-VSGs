@@ -161,6 +161,7 @@ KUNDUR_BRIDGE_CONFIG = BridgeConfig(
     tripload1_p_default=248e6 / 3,       # ~82.67 MW per phase
     tripload2_p_default=0.0,             # Bus15 off at episode start
     pe0_default_vsg=tuple(VSG_P0_VSG_BASE.tolist()),  # per-agent VSG-base pu
+    delta0_deg=tuple(_ic.vsg_delta0_deg),             # rotor angle ICs [deg]; seeds 6-arg warmup
     # No breaker Step blocks in new model
     breaker_step_block_template='',
     breaker_count=0,

@@ -8,6 +8,7 @@ Adapted for 4-agent, 50 Hz Kundur system.
 import numpy as np
 
 from scenarios.contract import KUNDUR as _CONTRACT
+from scenarios.kundur.kundur_ic import load_kundur_ic
 from scenarios.config_simulink_base import (
     LR, GAMMA, TAU_SOFT, HIDDEN_SIZES,
     DEFAULT_EPISODES, MAX_EPISODES,
@@ -63,10 +64,10 @@ B_MATRIX = np.array([
     [0,   0, 10,  0],
 ], dtype=np.float64)
 
-# Generator initial dispatch (p.u. on VSG base = 200 MVA)
-# Calibrated from steady-state V*I measurement in 16-bus model.
-# Each ESS outputs ~375 MW due to network power sharing.
-VSG_P0 = 1.87           # avg ~375 MW each on VSG base
+# Generator initial dispatch — loaded from canonical source (kundur_ic.json)
+_ic = load_kundur_ic()
+VSG_P0_VSG_BASE: np.ndarray = np.asarray(_ic.vsg_p0_vsg_base_pu, dtype=np.float64)  # shape (4,)
+VSG_P0_SBASE: np.ndarray = _ic.to_sbase_pu(vsg_sn_mva=VSG_SN, sbase_mva=SBASE)
 
 # Load (original Kundur values, for reference)
 LOAD_BUS7_MW = 967.0
@@ -151,15 +152,21 @@ KUNDUR_BRIDGE_CONFIG = BridgeConfig(
     iabc_signal='Iabc_ES{idx}',
     pe_path_template='{model}/Pe_{idx}',
     src_path_template='{model}/VSrc_ES{idx}',
-    p_out_signal='P_out_ES{idx}',   # Kundur logs P_out (swing eq output) not V×I
-    pe_measurement='pout',           # Kundur: Pe from P_out ToWorkspace (swing eq output)
+    p_out_signal='P_out_ES{idx}',        # DEBUG ONLY — swing eq output, not for training
+    pe_measurement='feedback',            # true electrical Pe from PeGain_ES ToWorkspace
+    pe_feedback_signal='PeFb_ES{idx}',   # PeGain_ES{idx} output, VSG-base pu
     # Dynamic Load disturbance: per-phase W stored in base workspace.
     # Bus14: TripLoad1_P = 248/3 MW per phase (nominal load on).
     # Bus15: TripLoad2_P = 0 W (nominal load off; set to 188/3 MW on disturbance).
-    tripload1_p_default=248e6 / 3,   # ~82.67 MW per phase
-    tripload2_p_default=0.0,          # Bus15 off at episode start
-    pe0_default_vsg=VSG_P0,
+    tripload1_p_default=248e6 / 3,       # ~82.67 MW per phase
+    tripload2_p_default=0.0,             # Bus15 off at episode start
+    pe0_default_vsg=tuple(VSG_P0_VSG_BASE.tolist()),  # per-agent VSG-base pu
     # No breaker Step blocks in new model
     breaker_step_block_template='',
     breaker_count=0,
 )
+
+if KUNDUR_BRIDGE_CONFIG.pe_measurement != 'feedback':
+    raise ValueError(
+        "Kundur main training path must use 'feedback' mode; 'pout' is debug only."
+    )

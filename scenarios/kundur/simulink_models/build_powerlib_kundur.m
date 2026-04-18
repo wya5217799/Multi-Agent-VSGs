@@ -108,11 +108,11 @@ X_vsg_pu = 0.30  * (Sbase / VSG_SN);   % = 0.15 pu on Sbase
 R_vsg = R_vsg_pu * Zbase;               % Ohm
 L_vsg = X_vsg_pu * Zbase / (2*pi*fn);   % H
 
-% Initial P_e/P_ref (p.u. on VSG base). NEEDS RECALIBRATION after impedance fix.
-% With corrected X_vsg=0.15 pu the steady-state Pe will differ from old calibration.
-% Use placeholder values from old calibration — they ensure P_ref=P0 from t=0
-% but Pe(t=0) will not exactly match. Recalibrate by running slx_calibrate_vsg_p0.
-VSG_P0 = [1.8725, 1.8419, 1.7888, 1.9154];  % [ES1, ES2, ES3, ES4] — NEEDS RECAL
+% Initial P_e/P_ref — loaded from canonical source (kundur_ic.json).
+script_dir   = fileparts(mfilename('fullpath'));
+scenario_dir = fileparts(script_dir);
+ic = slx_load_kundur_ic(fullfile(scenario_dir, 'kundur_ic.json'));
+VSG_P0 = ic.vsg_p0_vsg_base_pu;  % 1×4 VSG-base pu [ES1, ES2, ES3, ES4]
 
 % ESS bus assignments: ES{i} sits on a dedicated bus, connected to a main bus
 %   ES1 → Bus12, connected to Bus7
@@ -886,7 +886,16 @@ for i = 1:n_vsg
     add_line(mdl, [ps2s_name '/1'], [pe_gain_name '/1'], 'autorouting', 'smart');
     add_line(mdl, [pe_gain_name '/1'], sprintf('%s/5', vsg_name), 'autorouting', 'smart');
 
+    % PeFb_ES{i}: training Pe feedback signal — branches from PeGain_ES{i} output
+    pefb_log_name = sprintf('Log_PeFb_ES%d', i);
+    add_block('built-in/ToWorkspace', [mdl '/' pefb_log_name], ...
+        'Position', [bx+610 by+305 bx+670 by+325], ...
+        'VariableName', sprintf('PeFb_ES%d', i), ...
+        'SaveFormat', 'Timeseries');
+    add_line(mdl, [pe_gain_name '/1'], [pefb_log_name '/1'], 'autorouting', 'smart');
+
     % --- ToWorkspace loggers for VSG outputs ---
+    % P_out_ES{i} = swing eq output (P_ref - D*Δω) — DEBUG ONLY, not for training
     out_log_names = {'omega', 'delta', 'P_out'};
     for out_idx = 1:3
         log_name = sprintf('Log_%s_ES%d', out_log_names{out_idx}, i);

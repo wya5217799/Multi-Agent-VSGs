@@ -2,6 +2,10 @@
 Modified Kundur Two-Area System -- Gymnasium Environment
 =========================================================
 
+⚠️ 修改前先读 scenarios/kundur/NOTES.md（已知事实 / 试过没用的 / 当前在修）
+
+
+
 Two simulation backends (following NE39 project pattern):
 
 1. **Standalone ODE mode** (``KundurStandaloneEnv``):
@@ -43,6 +47,7 @@ from scenarios.kundur.config_simulink import (
     NORM_P, NORM_FREQ, NORM_ROCOF,
     DIST_MIN, DIST_MAX,
     TRIPLOAD2_P_MAX_W,
+    VSG_P0_SBASE,
 )
 
 warnings.filterwarnings("ignore", category=UserWarning, module="matlab")
@@ -58,7 +63,6 @@ ACT_DIM: int = _CONTRACT.act_dim
 # Kundur-specific VSG parameters (not in base/scenario config)
 VSG_RA: float = 0.003
 VSG_XD1: float = 0.30
-VSG_P0: float = 0.5       # p.u. on VSG base
 
 # Derived physical limits
 M_LO: float = VSG_M0 + DM_MIN
@@ -179,7 +183,7 @@ class _KundurBaseEnv(_SimVsgBase):
         self._sim_time: float = 0.0
         self._omega: np.ndarray = np.ones(N_AGENTS)
         self._omega_prev: np.ndarray = np.ones(N_AGENTS)
-        self._P_es: np.ndarray = np.full(N_AGENTS, VSG_P0)
+        self._P_es: np.ndarray = VSG_P0_SBASE.copy()  # system-base pu, shape (N_AGENTS,)
         self._M: np.ndarray = np.full(N_AGENTS, VSG_M0)
         self._D: np.ndarray = np.full(N_AGENTS, VSG_D0)
 
@@ -212,7 +216,7 @@ class _KundurBaseEnv(_SimVsgBase):
         self._sim_time = 0.0
         self._omega = np.ones(N_AGENTS)
         self._omega_prev = np.ones(N_AGENTS)
-        self._P_es = np.full(N_AGENTS, VSG_P0)
+        self._P_es = VSG_P0_SBASE.copy()  # system-base pu, shape (N_AGENTS,)
         self._M = np.full(N_AGENTS, VSG_M0)
         self._D = np.full(N_AGENTS, VSG_D0)
 
@@ -389,7 +393,10 @@ class KundurStandaloneEnv(_KundurBaseEnv):
             training=training,
         )
         self._delta: np.ndarray = np.zeros(N_AGENTS)
-        self._P_mech: np.ndarray = np.full(N_AGENTS, VSG_P0)
+        # TODO(2026-04-18 Kundur Pe contract fix): _P_mech=0.5 is VSG-base pu,
+        # inconsistent with SimulinkEnv path which uses VSG_P0_SBASE. ODE backend
+        # not in scope for this fix. Track in scenarios/kundur/NOTES.md.
+        self._P_mech: np.ndarray = np.full(N_AGENTS, 0.5)
 
         # Load conductance (for power balance at steady state)
         # Total gen on sys base: 4 * 0.5 * 200/100 = 4.0 p.u.
@@ -468,7 +475,10 @@ class KundurStandaloneEnv(_KundurBaseEnv):
     # ------------------------------------------------------------------
 
     def _reset_backend(self, options: Optional[dict] = None) -> None:
-        self._P_mech = np.full(N_AGENTS, VSG_P0)
+        # TODO(2026-04-18 Kundur Pe contract fix): _P_mech=0.5 is VSG-base pu,
+        # inconsistent with SimulinkEnv path which uses VSG_P0_SBASE. ODE backend
+        # not in scope for this fix. Track in scenarios/kundur/NOTES.md.
+        self._P_mech = np.full(N_AGENTS, 0.5)
         self._delta = np.zeros(N_AGENTS)
 
         # Solve for initial angles (Newton-Raphson power flow)

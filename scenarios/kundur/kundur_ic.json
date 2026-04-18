@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "calibration_status": "placeholder_pre_impedance_fix",
+  "vsg_p0_vsg_base_pu": [1.8725, 1.8419, 1.7888, 1.9154],
+  "units": {
+    "vsg_p0_vsg_base_pu": "pu_on_vsg_base"
+  },
+  "source_hash": "sha256:7c45813b85e737ed8396815e963fcc2f7646447d6e228ffd996d05686eaa5d58"
+}

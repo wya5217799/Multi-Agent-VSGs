@@ -1,8 +1,11 @@
 # engine/simulink_bridge.py
 """Layer 3a: SimulinkBridge — RL training co-simulation interface.
 
-Wraps vsg_step_and_read.m into a clean step()/reset()/close() API
+Wraps slx_step_and_read.m into a clean step()/reset()/close() API
 for use by KundurSimulinkEnv and NE39BusSimulinkEnv.
+
+⚠️ 修改前先读 env/simulink/COMMON_NOTES.md + scenarios/{kundur,new_england}/NOTES.md
+   （Bridge 是共享层，改动同时影响两个场景）
 """
 
 from __future__ import annotations
@@ -10,7 +13,7 @@ from __future__ import annotations
 import logging
 import time
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Sequence
 
 import numpy as np
 
@@ -43,9 +46,24 @@ def list_active_bridges() -> list[str]:
 
 # Valid Pe measurement strategies:
 #   "vi"             — V×I from Vabc/Iabc ToWorkspace (NE39)
-#   "pout"           — P_out from swing equation ToWorkspace (Kundur)
+#   "pout"           — P_out from swing equation ToWorkspace (debug only)
 #   "vi_then_pout"   — try V×I first, fall back to P_out (legacy/transition)
-PE_MEASUREMENT_MODES = ("vi", "pout", "vi_then_pout")
+#   "feedback"       — PeGain_ES{idx} ToWorkspace, true electrical Pe (Kundur main)
+PE_MEASUREMENT_MODES = ("vi", "pout", "vi_then_pout", "feedback")
+
+
+def _normalize_per_agent_vector(
+    name: str, value: "float | Sequence[float]", n_agents: int
+) -> np.ndarray:
+    """Validate scalar or sequence; broadcast to shape (n_agents,)."""
+    arr = np.atleast_1d(np.asarray(value, dtype=np.float64))
+    if arr.size == 1:
+        arr = np.full(n_agents, arr.item())
+    if arr.shape != (n_agents,):
+        raise ValueError(
+            f"{name}: expected scalar or length-{n_agents} sequence, got {arr.shape}"
+        )
+    return arr
 
 
 @dataclass(frozen=True)
@@ -53,7 +71,7 @@ class BridgeConfig:
     """Scenario-specific Simulink bridge configuration.
 
     Template strings use {model} and {idx} placeholders that get
-    substituted by vsg_step_and_read.m at runtime.
+    substituted by slx_step_and_read.m at runtime.
     """
 
     model_name: str        # 'kundur_vsg' or 'NE39bus_v2'
@@ -70,9 +88,14 @@ class BridgeConfig:
     src_path_template: str = ''     # '{model}/VSrc_ES{idx}' — source block (optional)
     vsg_sn_va: float = 200e6        # VSG rated power in VA for Pe base conversion
     delta_signal: str = 'delta_ES{idx}'  # rotor angle ToWorkspace signal template
-    p_out_signal: str = ''          # 'P_out_ES{idx}' — Power Sensor ToWorkspace (W); if set, Pe read from here instead of V×I
-    pe_measurement: str = 'vi_then_pout'  # Pe strategy: "vi", "pout", or "vi_then_pout"
-    pe0_default_vsg: float = 0.5    # nominal Pe seed in VSG-base p.u. for warmup/first-step feedback
+    p_out_signal: str = ''          # 'P_out_ES{idx}' — swing eq output ToWorkspace (debug only)
+    pe_measurement: str = 'vi_then_pout'  # Pe strategy: "vi", "pout", "vi_then_pout", or "feedback"
+    pe0_default_vsg: float | tuple = 0.5  # nominal Pe seed (VSG-base pu); scalar or per-agent sequence
+    pe_feedback_signal: str = ''    # 'PeFb_ES{idx}' — PeGain_ES ToWorkspace (feedback mode only)
+    # Phase-angle feedback (NE39 only)
+    phase_command_mode: str = 'passthrough'  # 'passthrough' (Kundur) or 'absolute_with_loadflow' (NE39)
+    init_phang: tuple[float, ...] = ()       # load-flow initial phase angles (deg); NE39: 8-element vector
+    phase_feedback_gain: float = 1.0         # feedback gain; NE39 uses 0.3 to avoid step-induced oscillations
     # Workspace variable names referenced by M0/D0 Constant blocks (setVariable approach)
     m_var_template: str = 'M0_val_ES{idx}'   # must match Constant block Value field in .slx
     d_var_template: str = 'D0_val_ES{idx}'
@@ -115,6 +138,10 @@ class BridgeConfig:
             errors.append(
                 "pe_measurement='vi_then_pout' but neither V×I nor p_out_signal configured"
             )
+        elif self.pe_measurement == "feedback" and not self.pe_feedback_signal:
+            errors.append(
+                "pe_measurement='feedback' but pe_feedback_signal is empty"
+            )
 
         # Template placeholders must be present
         for field_name in ("omega_signal", "delta_signal", "m_var_template", "d_var_template"):
@@ -138,7 +165,7 @@ class BridgeConfig:
 class MeasurementFailureError(SimulinkError):
     """Raised when measurement signals are unavailable or stuck at zero.
 
-    Carries structured failure details from vsg_step_and_read.m so callers
+    Carries structured failure details from slx_step_and_read.m so callers
     can distinguish transient glitches from persistent feedback chain breaks.
     """
 
@@ -161,7 +188,7 @@ _STEP_SLOW_THRESHOLD_S: float = 25.0
 class SimulinkBridge:
     """High-level interface for RL training with Simulink models.
 
-    Wraps vsg_step_and_read.m to provide step()/reset()/close():
+    Wraps slx_step_and_read.m to provide step()/reset()/close():
     - One IPC call per control step (batches N-agent param sets)
     - Manages simulation time and final state across steps
     - Handles numpy <-> matlab.double conversion
@@ -223,14 +250,15 @@ class SimulinkBridge:
         logger.info("Loaded Simulink model: %s", self.cfg.model_name)
 
     def _build_matlab_cfg(self) -> Any:
-        """Build a MATLAB struct from BridgeConfig via vsg_build_bridge_config.
+        """Build a MATLAB struct from BridgeConfig via slx_build_bridge_config.
 
         Replaces the fragile string-eval pattern with a typed MATLAB function
         call.  Field name mismatches cause an immediate MATLAB error instead of
         silently using wrong defaults.
         """
+        mdbl = self._matlab_double
         return self.session.call(
-            "vsg_build_bridge_config",
+            "slx_build_bridge_config",
             self.cfg.m_path_template,
             self.cfg.d_path_template,
             self.cfg.omega_signal,
@@ -244,6 +272,10 @@ class SimulinkBridge:
             self.cfg.m_var_template,
             self.cfg.d_var_template,
             self.cfg.pe_measurement,
+            self.cfg.phase_command_mode,
+            mdbl(list(self.cfg.init_phang)),
+            float(self.cfg.phase_feedback_gain),
+            self.cfg.pe_feedback_signal,
             nargout=1,
         )
 
@@ -273,7 +305,7 @@ class SimulinkBridge:
         # New 2-return signature: (model, agent_ids, M, D, t_stop, sbase, cfg, Pe_prev, delta_prev_deg)
         wall_t0 = time.perf_counter()
         state, status = self.session.call(
-            "vsg_step_and_read",
+            "slx_step_and_read",
             self.cfg.model_name,
             agent_ids,
             mdbl(M.tolist()),
@@ -374,20 +406,22 @@ class SimulinkBridge:
 
         Workspace variables for M/D Constant blocks are initialised here so
         the model can compile without "Undefined variable" errors.  Actual
-        per-step values are overridden by setVariable inside vsg_step_and_read.
+        per-step values are overridden by setVariable inside slx_step_and_read.
 
         Also initialises Pe/phAng/wref feedback variables and seeds
         ``_Pe_prev`` / ``_delta_prev_deg`` so the first RL step sends valid
-        feedback to vsg_step_and_read.m (fixes max_power_swing=0 symptom).
+        feedback to slx_step_and_read.m (fixes max_power_swing=0 symptom).
         """
         # Constant blocks reference workspace variables by name (e.g. 'M0_val_ES1').
         # These must exist in the base workspace before the model is first compiled.
         #
-        # Pe/phAng/wref feedback vars: without these, vsg_step_and_read skips
+        # Pe/phAng/wref feedback vars: without these, slx_step_and_read skips
         # the Pe writeback (``if ~isempty(Pe_prev)`` → false) and the electrical
         # power never responds to M/D changes.  NE39's 5-arg warmup sets these
         # in MATLAB; the Kundur 3-arg path must do it here in Python.
-        pe_nominal_vsg = self.cfg.pe0_default_vsg
+        pe_nominal_vsg_arr = _normalize_per_agent_vector(
+            'pe0_default_vsg', self.cfg.pe0_default_vsg, self.cfg.n_agents
+        )
         for i in range(1, self.cfg.n_agents + 1):
             m_var = self.cfg.m_var_template.replace('{idx}', str(i))
             d_var = self.cfg.d_var_template.replace('{idx}', str(i))
@@ -398,7 +432,7 @@ class SimulinkBridge:
                 f"assignin('base', '{d_var}', {self.cfg.d0_default})", nargout=0
             )
             self.session.eval(
-                f"assignin('base', 'Pe_ES{i}', {pe_nominal_vsg})", nargout=0
+                f"assignin('base', 'Pe_ES{i}', {pe_nominal_vsg_arr[i - 1]})", nargout=0
             )
             self.session.eval(
                 f"assignin('base', 'phAng_ES{i}', 0.0)", nargout=0
@@ -414,14 +448,14 @@ class SimulinkBridge:
             self.session.eval(f"assignin('base', '{var}', {val})", nargout=0)
         self._apply_breaker_events()
         do_recompile = not self._fr_compiled
-        self.session.call("vsg_warmup", self.cfg.model_name, duration, do_recompile, nargout=0)
+        self.session.call("slx_warmup", self.cfg.model_name, duration, do_recompile, nargout=0)
         self._fr_compiled = True
         self.t_current = duration
 
         # Seed feedback state so the first RL step has valid Pe/delta args.
-        # pe_scale converts sbase p.u. → VSG base p.u.; invert to get sbase.
+        # pe_scale = sbase/vsg_sn = 0.5 for Kundur; dividing VSG-base by it gives sbase.
         pe_scale = self.cfg.sbase_va / self.cfg.vsg_sn_va
-        self._Pe_prev = np.full(self.cfg.n_agents, pe_nominal_vsg / pe_scale)
+        self._Pe_prev = pe_nominal_vsg_arr / pe_scale
         self._delta_prev_deg = np.zeros(self.cfg.n_agents)
 
         logger.debug("Warmup complete: t=%.4f s (recompile=%s)", duration, do_recompile)
@@ -496,7 +530,7 @@ class SimulinkBridge:
 
     def reset(self) -> None:
         """Reset Python-side counters.  Physical state is reset by warmup()
-        which runs vsg_warmup with StartTime=0 — FastRestart detects the
+        which runs slx_warmup with StartTime=0 — FastRestart detects the
         time discontinuity and resets Simscape state to model initial conditions.
         """
         self.t_current       = 0.0
@@ -512,7 +546,7 @@ class SimulinkBridge:
         warmup() correctly triggers a full recompile on an uncompiled model.
         """
         try:
-            self.session.call("vsg_close_model", self.cfg.model_name, nargout=0)
+            self.session.call("slx_close_model", self.cfg.model_name, nargout=0)
         except MatlabCallError as exc:
             logger.warning(
                 "Failed to close Simulink model %s cleanly: %s",

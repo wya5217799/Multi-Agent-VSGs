@@ -201,7 +201,7 @@ def harness_model_inspect(
     Opt-in heavy operations (set to True when you need them):
       - focus_paths: run query_params on the listed block paths (1 IPC call)
       - include_block_tree: run get_block_tree on each focus_path (1 IPC/path)
-      - include_check_params: run check_params (scans full model tree, ~5s)
+      - include_check_params: deprecated no-op (slx_check_params.m removed)
       - query_params: restrict queried params to this list (used with focus_paths)
     """
     focus_paths = focus_paths or []
@@ -247,7 +247,7 @@ def harness_model_inspect(
         # --- Step 3 (1 IPC): solver audit — skipped if no focus ---
         _t2 = _time.monotonic()
         solver_audit: dict[str, Any] = {}
-        if focus_paths or include_check_params:
+        if focus_paths:
             solver_audit = simulink_solver_audit(spec.model_name)
         _timings["solver_audit"] = round(_time.monotonic() - _t2, 2)
         _timings["total"] = round(_time.monotonic() - _t0, 2)
@@ -483,7 +483,7 @@ def harness_model_diagnose(
             diag_hint = "Model not loaded. Run model_inspect first to ensure the model is open in MATLAB."
         elif "compile_diagnostics" in exc_str or "update_diagram" in exc_str.lower():
             diag_failure_class = "compile_error"
-            diag_hint = "Compile diagnostics failed. The model may be in an invalid state. Run model_inspect with include_check_params=True."
+            diag_hint = "Compile diagnostics failed. The model may be in an invalid state. Run model_inspect with focus_paths set to examine blocks."
         elif "step_diagnostics" in exc_str or "sim(" in exc_str.lower():
             diag_failure_class = "simulation_error"
             diag_hint = "Step diagnostics failed. Check diagnostic_window values are valid for this model."

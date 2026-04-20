@@ -87,12 +87,12 @@ def test_model_inspect_queries_underlying_tools(tmp_path, monkeypatch):
     )
     monkeypatch.setattr(
         modeling_tasks,
-        "simulink_loaded_models",
+        "_simulink_loaded_models_raw",
         lambda: ["kundur_vsg"],
     )
     monkeypatch.setattr(
         modeling_tasks,
-        "simulink_get_block_tree",
+        "_simulink_get_block_tree_raw",
         lambda model_name, root_path=None, max_depth=3: {
             "path": root_path or model_name,
             "children": [],
@@ -134,12 +134,12 @@ def test_model_inspect_downgrades_to_warning_on_reference_mismatch(tmp_path, mon
     )
     monkeypatch.setattr(
         modeling_tasks,
-        "simulink_loaded_models",
+        "_simulink_loaded_models_raw",
         lambda: ["kundur_vsg"],
     )
     monkeypatch.setattr(
         modeling_tasks,
-        "simulink_get_block_tree",
+        "_simulink_get_block_tree_raw",
         lambda model_name, root_path=None, max_depth=3: {"path": root_path or model_name, "children": []},
     )
     monkeypatch.setattr(

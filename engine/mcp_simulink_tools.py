@@ -202,30 +202,10 @@ def simulink_get_multiple_block_params(model_name: str, block_paths: list[str]) 
     .. deprecated::
         Use :func:`simulink_query_params` instead (unified replacement).
     """
-    import warnings
-    warnings.warn(
-        "simulink_get_multiple_block_params is deprecated; use simulink_query_params instead.",
-        DeprecationWarning,
-        stacklevel=2,
+    raise NotImplementedError(
+        "simulink_get_multiple_block_params is removed; use simulink_query_params instead. "
+        "slx_batch_query_cell.m no longer exists."
     )
-    session = MatlabSession.get()
-    loaded_model_name = _ensure_model_bootstrapped(session, model_name)
-    raw = session.call("slx_batch_query_cell", loaded_model_name, block_paths, nargout=1)
-    items = []
-    for row in _to_list(raw):
-        if not isinstance(row, dict):
-            continue
-        params_raw = row.get("params", {})
-        params = (
-            {str(k): str(v) for k, v in params_raw.items()}
-            if isinstance(params_raw, dict) else {}
-        )
-        items.append({
-            "block_path": str(row.get("block", "")),
-            "params": params,
-            "error": str(row.get("error", "")),
-        })
-    return {"items": items}
 
 
 def simulink_load_model(model_name: str) -> dict:
@@ -942,35 +922,10 @@ def simulink_add_line_by_handles(
         instead.  If handle-based addressing is required, it is currently
         unsupported; please open an issue.
     """
-    import warnings
-    warnings.warn(
-        "simulink_add_line_by_handles is deprecated and has no handle-based replacement. "
-        "simulink_connect_ports(addressing='handle') raises ValueError and must not be used. "
-        "Switch to name-based addressing: simulink_connect_ports(src_port='Block/PortIndex', "
-        "dst_port='Block/PortIndex'). If handle addressing is required, it is currently "
-        "unsupported — please open an issue.",
-        DeprecationWarning,
-        stacklevel=2,
+    raise NotImplementedError(
+        "simulink_add_line_by_handles is removed; slx_add_line_by_handles.m no longer exists. "
+        "Use simulink_connect_ports(src_port='Block/PortIndex', dst_port='Block/PortIndex') instead."
     )
-    session = MatlabSession.get()
-    model_name = str(system_path).split("/")[0]
-    _ensure_model_bootstrapped(session, model_name)
-    raw = session.call(
-        "slx_add_line_by_handles",
-        system_path,
-        float(src_handle),
-        float(dst_handle),
-        bool(allow_branch),
-        bool(autorouting),
-        nargout=1,
-    )
-    return {
-        "ok": bool(raw.get("ok", False)),
-        "line_handle": _to_int(raw.get("line_handle", 0)),
-        "created_branch": bool(raw.get("created_branch", False)),
-        "important_lines": _to_list(raw.get("important_lines", [])),
-        "error_message": str(raw.get("error_message", "")),
-    }
 
 
 def simulink_compile_diagnostics(model_name: str, mode: str = "update") -> dict:

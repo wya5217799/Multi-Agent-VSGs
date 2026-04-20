@@ -28,6 +28,32 @@ def _write_green_modeling_records(harness_reports, scenario_id: str, run_id: str
     return run_dir
 
 
+def make_fake_train_script(tmp_path, log_content=None):
+    """Write a minimal fake training script that supports --checkpoint-dir and --log-file.
+
+    Args:
+        tmp_path: base directory (typically pytest's tmp_path fixture value).
+        log_content: Python object to serialise as JSON into the log file.
+            Defaults to {"ok": True} when None.
+    """
+    script = tmp_path / "scenarios" / "kundur" / "train_simulink.py"
+    script.parent.mkdir(parents=True, exist_ok=True)
+    log_str = json.dumps(json.dumps(log_content)) if log_content is not None else 'json.dumps({"ok": True})'
+    script.write_text(
+        "import argparse, pathlib, json\n"
+        "p = argparse.ArgumentParser()\n"
+        "p.add_argument('--mode'); p.add_argument('--episodes', type=int)\n"
+        "p.add_argument('--checkpoint-dir'); p.add_argument('--log-file')\n"
+        "args = p.parse_args()\n"
+        "pathlib.Path(args.checkpoint_dir).mkdir(parents=True, exist_ok=True)\n"
+        "(pathlib.Path(args.checkpoint_dir) / 'final.pt').write_text('ckpt')\n"
+        "pathlib.Path(args.log_file).parent.mkdir(parents=True, exist_ok=True)\n"
+        f"pathlib.Path(args.log_file).write_text({log_str})\n",
+        encoding="utf-8",
+    )
+    return script
+
+
 def test_scenario_status_resolves_registry_and_writes_manifest(tmp_path, monkeypatch):
     from engine import harness_reports, harness_tasks
 
@@ -217,12 +243,14 @@ def test_train_smoke_is_deprecated_and_fails_fast(tmp_path, monkeypatch):
     """harness_train_smoke (sync) must fail immediately with contract_error.
 
     The synchronous version blocks the MCP server for the full training
-    duration and will time out.  It should never reach subprocess.run.
+    duration and will time out.  It should never reach subprocess.run —
+    even when all modeling preconditions are green.
     """
     from engine import harness_reports, smoke_tasks
 
     monkeypatch.setattr(harness_reports, "HARNESS_ROOT", tmp_path / "results" / "harness")
-    harness_reports.ensure_run_dir("kundur", "run-001")
+    monkeypatch.setattr(smoke_tasks, "_PROJECT_ROOT", tmp_path)
+    run_dir = _write_green_modeling_records(harness_reports, "kundur", "run-001")
 
     called = False
 
@@ -245,39 +273,7 @@ def test_train_smoke_is_deprecated_and_fails_fast(tmp_path, monkeypatch):
     assert result["failures"][0]["failure_class"] == "contract_error"
     assert "harness_train_smoke_start" in result["failures"][0]["message"]
     assert called is False
-
-
-def test_train_smoke_is_deprecated_even_with_green_preconditions(tmp_path, monkeypatch):
-    """sync harness_train_smoke must fail with contract_error even when preconditions are green."""
-    from engine import harness_reports, smoke_tasks
-
-    monkeypatch.setattr(harness_reports, "HARNESS_ROOT", tmp_path / "results" / "harness")
-    monkeypatch.setattr(smoke_tasks, "_PROJECT_ROOT", tmp_path)
-    run_dir = _write_green_modeling_records(harness_reports, "kundur", "run-002")
-
-    called = False
-
-    def _never_run(*args, **kwargs):
-        nonlocal called
-        called = True
-        raise AssertionError("subprocess should not run for deprecated sync train_smoke")
-
-    monkeypatch.setattr(smoke_tasks.subprocess, "run", _never_run)
-
-    result = smoke_tasks.harness_train_smoke(
-        scenario_id="kundur",
-        run_id="run-002",
-        episodes=1,
-        mode="simulink",
-    )
-
-    assert result["status"] == "failed"
-    assert result["smoke_passed"] is False
-    assert result["failures"][0]["failure_class"] == "contract_error"
-    assert "harness_train_smoke_start" in result["failures"][0]["message"]
-    assert called is False
-    train_smoke_path = run_dir / "train_smoke.json"
-    assert train_smoke_path.exists()
+    assert (run_dir / "train_smoke.json").exists()
 
 
 def test_train_smoke_start_launches_and_poll_collects(tmp_path, monkeypatch):
@@ -288,22 +284,7 @@ def test_train_smoke_start_launches_and_poll_collects(tmp_path, monkeypatch):
     _write_green_modeling_records(harness_reports, "kundur", "run-async")
 
     # Create a fake training script that writes expected artifacts.
-    train_script = tmp_path / "scenarios" / "kundur" / "train_simulink.py"
-    train_script.parent.mkdir(parents=True, exist_ok=True)
-    train_script.write_text(
-        "import argparse, pathlib, json, sys\n"
-        "p = argparse.ArgumentParser()\n"
-        "p.add_argument('--mode')\n"
-        "p.add_argument('--episodes', type=int)\n"
-        "p.add_argument('--checkpoint-dir')\n"
-        "p.add_argument('--log-file')\n"
-        "args = p.parse_args()\n"
-        "pathlib.Path(args.checkpoint_dir).mkdir(parents=True, exist_ok=True)\n"
-        "(pathlib.Path(args.checkpoint_dir) / 'final.pt').write_text('ckpt')\n"
-        "pathlib.Path(args.log_file).parent.mkdir(parents=True, exist_ok=True)\n"
-        "pathlib.Path(args.log_file).write_text(json.dumps({'ok': True}))\n",
-        encoding="utf-8",
-    )
+    make_fake_train_script(tmp_path)
 
     # Start
     start_result = smoke_tasks.harness_train_smoke_start(
@@ -390,20 +371,7 @@ def test_poll_training_summary_populated_from_complete_log(tmp_path, monkeypatch
         ],
     })
 
-    train_script = tmp_path / "scenarios" / "kundur" / "train_simulink.py"
-    train_script.parent.mkdir(parents=True, exist_ok=True)
-    train_script.write_text(
-        "import argparse, pathlib, json\n"
-        "p = argparse.ArgumentParser()\n"
-        "p.add_argument('--mode'); p.add_argument('--episodes', type=int)\n"
-        "p.add_argument('--checkpoint-dir'); p.add_argument('--log-file')\n"
-        "args = p.parse_args()\n"
-        "pathlib.Path(args.checkpoint_dir).mkdir(parents=True, exist_ok=True)\n"
-        "(pathlib.Path(args.checkpoint_dir) / 'final.pt').write_text('ckpt')\n"
-        "pathlib.Path(args.log_file).parent.mkdir(parents=True, exist_ok=True)\n"
-        f"pathlib.Path(args.log_file).write_text({repr(log_content)})\n",
-        encoding="utf-8",
-    )
+    make_fake_train_script(tmp_path, log_content=json.loads(log_content))
 
     start_result = smoke_tasks.harness_train_smoke_start(
         scenario_id="kundur", run_id="run-tsum", episodes=1, mode="simulink",
@@ -468,22 +436,7 @@ def test_train_smoke_poll_recovers_pid_from_disk_after_restart(tmp_path, monkeyp
     run_dir = _write_green_modeling_records(harness_reports, "kundur", "run-recover")
 
     # Create a fake train_script that exits quickly.
-    train_script = tmp_path / "scenarios" / "kundur" / "train_simulink.py"
-    train_script.parent.mkdir(parents=True, exist_ok=True)
-    train_script.write_text(
-        "import argparse, pathlib, json\n"
-        "p = argparse.ArgumentParser()\n"
-        "p.add_argument('--mode')\n"
-        "p.add_argument('--episodes', type=int)\n"
-        "p.add_argument('--checkpoint-dir')\n"
-        "p.add_argument('--log-file')\n"
-        "args = p.parse_args()\n"
-        "pathlib.Path(args.checkpoint_dir).mkdir(parents=True, exist_ok=True)\n"
-        "(pathlib.Path(args.checkpoint_dir) / 'final.pt').write_text('ckpt')\n"
-        "pathlib.Path(args.log_file).parent.mkdir(parents=True, exist_ok=True)\n"
-        "pathlib.Path(args.log_file).write_text(json.dumps({'ok': True}))\n",
-        encoding="utf-8",
-    )
+    make_fake_train_script(tmp_path)
 
     # Start normally.
     start_result = smoke_tasks.harness_train_smoke_start(
@@ -574,20 +527,7 @@ def test_smoke_full_launches_smoke_when_prerequisites_pass(tmp_path, monkeypatch
     monkeypatch.setattr(smoke_tasks, "_PROJECT_ROOT", tmp_path)
 
     # Create a minimal fake training script.
-    train_script = tmp_path / "scenarios" / "kundur" / "train_simulink.py"
-    train_script.parent.mkdir(parents=True, exist_ok=True)
-    train_script.write_text(
-        "import argparse, pathlib, json\n"
-        "p = argparse.ArgumentParser()\n"
-        "p.add_argument('--mode'); p.add_argument('--episodes', type=int)\n"
-        "p.add_argument('--checkpoint-dir'); p.add_argument('--log-file')\n"
-        "args = p.parse_args()\n"
-        "pathlib.Path(args.checkpoint_dir).mkdir(parents=True, exist_ok=True)\n"
-        "(pathlib.Path(args.checkpoint_dir) / 'final.pt').write_text('ckpt')\n"
-        "pathlib.Path(args.log_file).parent.mkdir(parents=True, exist_ok=True)\n"
-        "pathlib.Path(args.log_file).write_text(json.dumps({}))\n",
-        encoding="utf-8",
-    )
+    make_fake_train_script(tmp_path)
 
     result = smoke_tasks.harness_train_smoke_full(
         scenario_id="kundur",

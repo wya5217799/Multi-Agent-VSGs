@@ -287,10 +287,10 @@ def harness_model_inspect(
                 "Check that the .slx file exists under scenarios/ and that the "
                 "MATLAB engine is running (try simulink_loaded_models first)."
             )
-        elif "scalar struct" in exc_str or "vsg_batch_query" in exc_str:
+        elif "scalar struct" in exc_str or "slx_batch_query" in exc_str:
             failure_class = "matlab_return_type"
             hint = (
-                "vsg_batch_query returned an unexpected type (likely scalar struct). "
+                "slx_batch_query returned an unexpected type (likely scalar struct). "
                 "This can happen when the model is not fully initialised. "
                 "Retry with no focus_paths first to confirm the model loads cleanly."
             )
@@ -553,7 +553,7 @@ def harness_model_report(
     key_findings = _collect_findings(prior_records)
     # recommended_followups: optional suggestions for the caller — not facts,
     # not used as preconditions by any harness task (preconditions read run_status
-    # and blocked_tasks only).
+    # and failed_tasks only).
     recommended_followups = (
         ["Run train_smoke"]
         if run_status in {"ok", "warning"}
@@ -563,7 +563,8 @@ def harness_model_report(
     extra = {
         "run_status": run_status,
         "completed_tasks": completed_tasks,
-        "blocked_tasks": failed_tasks,
+        "failed_tasks": failed_tasks,
+        "precondition_failed": run_status == "failed",
         "key_findings": key_findings,
         "recommended_followups": recommended_followups,
         "memory_hints": memory_hints,

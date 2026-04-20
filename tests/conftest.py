@@ -3,11 +3,12 @@ import pytest
 import numpy as np
 
 from plotting.configs import SCENARIOS, IO_PRESETS, CommConfig
-from plotting.evaluate import create_env, load_agents, _get_zero_action
+from plotting.evaluate import create_env, load_agents, get_zero_action
 
 
 def pytest_configure(config):
     config.addinivalue_line("markers", "slow: requires model loading or long simulation")
+    config.addinivalue_line("markers", "matlab: requires live MATLAB engine (skip offline)")
 
 
 @pytest.fixture(scope="module", params=list(SCENARIOS.keys()))
@@ -48,7 +49,7 @@ def baseline_reward(env, scenario):
     """No-control baseline cumulative reward, run once per module."""
     env.reset()
     total = 0.0
-    zero_act = _get_zero_action(env)
+    zero_act = get_zero_action(env)
     for _ in range(env.STEPS_PER_EPISODE):
         actions = {i: zero_act.copy() for i in range(scenario.n_agents)}
         _, rewards, done, _ = env.step(actions)

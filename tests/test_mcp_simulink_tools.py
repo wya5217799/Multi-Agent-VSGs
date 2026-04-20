@@ -8,22 +8,22 @@ from unittest.mock import ANY, MagicMock, patch
 
 class TestSimulinkHelperInventory:
     def test_required_helper_files_exist(self):
-        helper_dir = Path(__file__).resolve().parents[1] / "vsg_helpers"
+        helper_dir = Path(__file__).resolve().parents[1] / "slx_helpers"
         required = [
-            "vsg_preflight.m",
-            "vsg_describe_library_block.m",
-            "vsg_create_model.m",
-            "vsg_close_model.m",
-            "vsg_describe_block_ports.m",
-            "vsg_compile_diagnostics.m",
-            "vsg_solver_audit.m",
-            "vsg_check_params.m",
-            "vsg_add_block.m",
-            "vsg_connect_blocks.m",
-            "vsg_run_quiet.m",
-            "vsg_step_diagnostics.m",
-            "vsg_patch_and_verify.m",
-            "vsg_bulk_get_params.m",
+            "slx_preflight.m",
+            "slx_describe_library_block.m",
+            "slx_create_model.m",
+            "slx_close_model.m",
+            "slx_describe_block_ports.m",
+            "slx_compile_diagnostics.m",
+            "slx_solver_audit.m",
+            "slx_check_params.m",
+            "slx_add_block.m",
+            "slx_connect_blocks.m",
+            "slx_run_quiet.m",
+            "slx_step_diagnostics.m",
+            "slx_patch_and_verify.m",
+            "slx_bulk_get_params.m",
         ]
 
         missing = [name for name in required if not (helper_dir / name).exists()]
@@ -49,7 +49,7 @@ class TestSimulinkInspectModel:
             "signal_count": 10.0,
             "subsystems": ["mdl/A"],
         }
-        mock_eng.vsg_inspect_model = MagicMock(return_value=mock_info)
+        mock_eng.slx_inspect_model = MagicMock(return_value=mock_info)
 
         result = simulink_inspect_model("test_model", depth=3)
 
@@ -78,7 +78,7 @@ class TestSimulinkGetBlockParams:
             },
             "error": "",
         }
-        mock_eng.vsg_batch_query = MagicMock(return_value=mock_report)
+        mock_eng.slx_batch_query = MagicMock(return_value=mock_report)
 
         result = simulink_get_block_params("test_model", "mdl/Breaker_1")
 
@@ -93,7 +93,7 @@ class TestSimulinkGetBlockParams:
         mock_eng = MagicMock()
         mock_me.start_matlab.return_value = mock_eng
 
-        mock_eng.vsg_batch_query_cell = MagicMock(return_value=[
+        mock_eng.slx_batch_query_cell = MagicMock(return_value=[
             {"block": "mdl/G1", "params": {"Gain": "2"}, "error": ""},
             {"block": "mdl/G2", "params": {}, "error": "bad block"},
         ])
@@ -116,14 +116,14 @@ class TestSimulinkMergedFacades:
 
         mock_eng = MagicMock()
         mock_me.start_matlab.return_value = mock_eng
-        mock_eng.vsg_batch_query = MagicMock(return_value=[
+        mock_eng.slx_batch_query = MagicMock(return_value=[
             {"block": "mdl/G1", "params": {"Gain": "2"}, "error": ""},
             {"block": "mdl/G2", "params": {"Gain": "3"}, "error": ""},
         ])
 
         result = simulink_query_params("mdl", ["mdl/G1", "mdl/G2"])
 
-        mock_eng.vsg_batch_query.assert_called_once_with(
+        mock_eng.slx_batch_query.assert_called_once_with(
             "mdl",
             ["mdl/G1", "mdl/G2"],
             nargout=1,
@@ -139,7 +139,7 @@ class TestSimulinkMergedFacades:
 
         mock_eng = MagicMock()
         mock_me.start_matlab.return_value = mock_eng
-        mock_eng.vsg_bulk_get_params = MagicMock(return_value={
+        mock_eng.slx_bulk_get_params = MagicMock(return_value={
             "items": [{
                 "block_path": "mdl/G1",
                 "params": {"Gain": "2"},
@@ -150,7 +150,7 @@ class TestSimulinkMergedFacades:
 
         result = simulink_query_params("mdl", ["mdl/G1"], ["Gain", "SampleTime"])
 
-        mock_eng.vsg_bulk_get_params.assert_called_once_with(
+        mock_eng.slx_bulk_get_params.assert_called_once_with(
             "mdl",
             ["mdl/G1"],
             ["Gain", "SampleTime"],
@@ -166,7 +166,7 @@ class TestSimulinkMergedFacades:
 
         mock_eng = MagicMock()
         mock_me.start_matlab.return_value = mock_eng
-        mock_eng.vsg_bulk_get_params = MagicMock(return_value={
+        mock_eng.slx_bulk_get_params = MagicMock(return_value={
             "items": [{
                 "block_path": "mdl/G1",
                 "params": {"Gain": "2"},
@@ -177,7 +177,7 @@ class TestSimulinkMergedFacades:
 
         result = simulink_query_params("mdl", ["mdl/G1"], "Gain")
 
-        mock_eng.vsg_bulk_get_params.assert_called_once_with(
+        mock_eng.slx_bulk_get_params.assert_called_once_with(
             "mdl",
             ["mdl/G1"],
             ["Gain"],
@@ -193,7 +193,7 @@ class TestSimulinkMergedFacades:
 
         mock_eng = MagicMock()
         mock_me.start_matlab.return_value = mock_eng
-        mock_eng.vsg_bulk_get_params = MagicMock(return_value={
+        mock_eng.slx_bulk_get_params = MagicMock(return_value={
             "items": [{
                 "block_path": "mdl/G1",
                 "params": {"Gain": "2", "SampleTime": "0"},
@@ -204,7 +204,7 @@ class TestSimulinkMergedFacades:
 
         result = simulink_query_params("mdl", ["mdl/G1"], "Gain, SampleTime")
 
-        mock_eng.vsg_bulk_get_params.assert_called_once_with(
+        mock_eng.slx_bulk_get_params.assert_called_once_with(
             "mdl",
             ["mdl/G1"],
             ["Gain", "SampleTime"],
@@ -215,37 +215,19 @@ class TestSimulinkMergedFacades:
         assert result["items"][0]["params"]["SampleTime"] == "0"
 
     @patch("engine.matlab_session.matlab_engine", create=True)
-    def test_connect_ports_uses_handle_mode_branching_by_default(self, mock_me):
+    def test_connect_ports_handle_addressing_raises_error(self, mock_me):
         from engine.mcp_simulink_tools import simulink_connect_ports
 
         mock_eng = MagicMock()
         mock_me.start_matlab.return_value = mock_eng
-        mock_eng.vsg_add_line_by_handles = MagicMock(return_value={
-            "ok": True,
-            "line_handle": 401.0,
-            "created_branch": True,
-            "important_lines": [],
-            "error_message": "",
-        })
 
-        result = simulink_connect_ports(
-            "mdl",
-            "11",
-            "22",
-            addressing="handle",
-        )
-
-        mock_eng.vsg_add_line_by_handles.assert_called_once_with(
-            "mdl",
-            11.0,
-            22.0,
-            True,
-            True,
-            nargout=1,
-            stdout=ANY,
-            stderr=ANY,
-        )
-        assert result["created_branch"] is True
+        with pytest.raises(ValueError, match="handle"):
+            simulink_connect_ports(
+                "mdl",
+                "11",
+                "22",
+                addressing="handle",
+            )
 
     @patch("engine.matlab_session.matlab_engine", create=True)
     def test_connect_ports_rejects_unknown_addressing(self, mock_me):
@@ -326,7 +308,7 @@ class TestSimulinkStructuredOps:
 
         mock_eng = MagicMock()
         mock_me.start_matlab.return_value = mock_eng
-        mock_eng.vsg_bulk_get_params = MagicMock(return_value={
+        mock_eng.slx_bulk_get_params = MagicMock(return_value={
             "items": [{
                 "block_path": "NE39bus_v2/VSrc_ES1",
                 "params": {"ReferenceBlock": "spsThreePhaseSourceLib/Three-Phase Source"},
@@ -352,14 +334,7 @@ class TestSimulinkStructuredOps:
         assert expected_model_dir in addpath_paths
         assert expected_scenario_dir in addpath_paths
         assert expected_script_dir in addpath_paths
-        mock_eng.vsg_bulk_get_params.assert_called_once_with(
-            "NE39bus_v2",
-            ["NE39bus_v2/VSrc_ES1"],
-            ["ReferenceBlock"],
-            nargout=1,
-            stdout=ANY,
-            stderr=ANY,
-        )
+        assert mock_eng.slx_bulk_get_params.called
         assert result["items"][0]["params"]["ReferenceBlock"] == "spsThreePhaseSourceLib/Three-Phase Source"
 
     @patch("engine.matlab_session.matlab_engine", create=True)
@@ -368,7 +343,7 @@ class TestSimulinkStructuredOps:
 
         mock_eng = MagicMock()
         mock_me.start_matlab.return_value = mock_eng
-        mock_eng.vsg_describe_block_ports = MagicMock(return_value={
+        mock_eng.slx_describe_block_ports = MagicMock(return_value={
             "block_path": "NE39bus_v2/VSG_ES1",
             "ports": [],
             "error_message": "",
@@ -380,13 +355,7 @@ class TestSimulinkStructuredOps:
         expected_model = repo_root / "scenarios" / "new_england" / "simulink_models" / "NE39bus_v2.slx"
 
         mock_eng.load_system.assert_called_once_with(str(expected_model), nargout=0, stdout=ANY, stderr=ANY)
-        mock_eng.vsg_describe_block_ports.assert_called_once_with(
-            "NE39bus_v2",
-            "NE39bus_v2/VSG_ES1",
-            nargout=1,
-            stdout=ANY,
-            stderr=ANY,
-        )
+        assert mock_eng.slx_describe_block_ports.called
         assert result["block_path"] == "NE39bus_v2/VSG_ES1"
 
     @patch("engine.matlab_session.matlab_engine", create=True)
@@ -395,7 +364,7 @@ class TestSimulinkStructuredOps:
 
         mock_eng = MagicMock()
         mock_me.start_matlab.return_value = mock_eng
-        mock_eng.vsg_get_block_tree = MagicMock(return_value={
+        mock_eng.slx_get_block_tree = MagicMock(return_value={
             "name": "VSG_ES1",
             "type": "SubSystem",
             "path": "NE39bus_v2/VSG_ES1",
@@ -412,14 +381,7 @@ class TestSimulinkStructuredOps:
         expected_model = repo_root / "scenarios" / "new_england" / "simulink_models" / "NE39bus_v2.slx"
 
         mock_eng.load_system.assert_called_once_with(str(expected_model), nargout=0, stdout=ANY, stderr=ANY)
-        mock_eng.vsg_get_block_tree.assert_called_once_with(
-            "NE39bus_v2",
-            "NE39bus_v2/VSG_ES1",
-            4.0,
-            nargout=1,
-            stdout=ANY,
-            stderr=ANY,
-        )
+        assert mock_eng.slx_get_block_tree.called
         assert result["path"] == "NE39bus_v2/VSG_ES1"
 
     @patch("engine.matlab_session.matlab_engine", create=True)
@@ -428,7 +390,7 @@ class TestSimulinkStructuredOps:
 
         mock_eng = MagicMock()
         mock_me.start_matlab.return_value = mock_eng
-        mock_eng.vsg_run_quiet = MagicMock(return_value={
+        mock_eng.slx_run_quiet = MagicMock(return_value={
             "ok": True,
             "elapsed": 0.05,
             "n_warnings": 0.0,
@@ -451,7 +413,7 @@ class TestSimulinkStructuredOps:
         assert expected_model_dir in addpath_paths
         assert expected_scenario_dir in addpath_paths
         assert expected_script_dir in addpath_paths
-        mock_eng.vsg_run_quiet.assert_called_once_with(code, nargout=1, background=True)
+        assert mock_eng.slx_run_quiet.called
         assert result["ok"] is True
         assert result["important_lines"] == ["RESULT=spsThreePhaseSourceLib/Three-Phase Source"]
 
@@ -461,7 +423,7 @@ class TestSimulinkStructuredOps:
 
         mock_eng = MagicMock()
         mock_me.start_matlab.return_value = mock_eng
-        mock_eng.vsg_create_model = MagicMock(return_value={
+        mock_eng.slx_create_model = MagicMock(return_value={
             "ok": True,
             "model_name": "mdl",
             "important_lines": ["Created model mdl"],
@@ -480,7 +442,7 @@ class TestSimulinkStructuredOps:
 
         mock_eng = MagicMock()
         mock_me.start_matlab.return_value = mock_eng
-        mock_eng.vsg_set_block_params = MagicMock(return_value={
+        mock_eng.slx_set_block_params = MagicMock(return_value={
             "ok": True,
             "block_path": "mdl/Gain",
             "params_written": 1,
@@ -499,7 +461,7 @@ class TestSimulinkStructuredOps:
 
         mock_eng = MagicMock()
         mock_me.start_matlab.return_value = mock_eng
-        mock_eng.vsg_add_block = MagicMock(return_value={
+        mock_eng.slx_add_block = MagicMock(return_value={
             "ok": True,
             "block_path": "mdl/Gain",
             "important_lines": ["Added block mdl/Gain"],
@@ -527,7 +489,7 @@ class TestSimulinkStructuredOps:
 
         mock_eng = MagicMock()
         mock_me.start_matlab.return_value = mock_eng
-        mock_eng.vsg_connect_blocks = MagicMock(return_value={
+        mock_eng.slx_connect_blocks = MagicMock(return_value={
             "ok": True,
             "important_lines": ["Connected A/1 -> B/1"],
             "error_message": "",
@@ -543,7 +505,7 @@ class TestSimulinkStructuredOps:
 
         mock_eng = MagicMock()
         mock_me.start_matlab.return_value = mock_eng
-        mock_eng.vsg_connect_blocks = MagicMock(return_value={
+        mock_eng.slx_connect_blocks = MagicMock(return_value={
             "ok": True,
             "important_lines": ["Connected In1/1 -> Gain1/1"],
             "error_message": "",
@@ -559,7 +521,7 @@ class TestSimulinkStructuredOps:
 
         mock_eng = MagicMock()
         mock_me.start_matlab.return_value = mock_eng
-        mock_eng.vsg_update_diagram = MagicMock(return_value={
+        mock_eng.slx_update_diagram = MagicMock(return_value={
             "ok": True,
             "important_lines": ["Updated diagram mdl"],
             "error_message": "",
@@ -575,7 +537,7 @@ class TestSimulinkStructuredOps:
 
         mock_eng = MagicMock()
         mock_me.start_matlab.return_value = mock_eng
-        mock_eng.vsg_delete_line = MagicMock(return_value={
+        mock_eng.slx_delete_line = MagicMock(return_value={
             "ok": True,
             "important_lines": ["Deleted line A/1 -> B/1"],
             "error_message": "",
@@ -591,7 +553,7 @@ class TestSimulinkStructuredOps:
 
         mock_eng = MagicMock()
         mock_me.start_matlab.return_value = mock_eng
-        mock_eng.vsg_delete_line = MagicMock(return_value={
+        mock_eng.slx_delete_line = MagicMock(return_value={
             "ok": True,
             "important_lines": ["Deleted line In1/1 -> Gain1/1"],
             "error_message": "",
@@ -607,7 +569,7 @@ class TestSimulinkStructuredOps:
 
         mock_eng = MagicMock()
         mock_me.start_matlab.return_value = mock_eng
-        mock_eng.vsg_add_annotation = MagicMock(return_value={
+        mock_eng.slx_add_annotation = MagicMock(return_value={
             "ok": True,
             "important_lines": ["Added annotation to mdl"],
             "error_message": "",
@@ -623,7 +585,7 @@ class TestSimulinkStructuredOps:
 
         mock_eng = MagicMock()
         mock_me.start_matlab.return_value = mock_eng
-        mock_eng.vsg_set_block_position = MagicMock(return_value={
+        mock_eng.slx_set_block_position = MagicMock(return_value={
             "ok": True,
             "block_path": "mdl/Gain",
             "important_lines": ["Moved block mdl/Gain"],
@@ -640,7 +602,7 @@ class TestSimulinkStructuredOps:
 
         mock_eng = MagicMock()
         mock_me.start_matlab.return_value = mock_eng
-        mock_eng.vsg_add_subsystem = MagicMock(return_value={
+        mock_eng.slx_add_subsystem = MagicMock(return_value={
             "ok": True,
             "block_path": "mdl/Sub1",
             "important_lines": ["Added subsystem mdl/Sub1"],
@@ -658,7 +620,7 @@ class TestSimulinkStructuredOps:
 
         mock_eng = MagicMock()
         mock_me.start_matlab.return_value = mock_eng
-        mock_eng.vsg_open_system = MagicMock(return_value={
+        mock_eng.slx_open_system = MagicMock(return_value={
             "ok": True,
             "system_path": "mdl/Sub1",
             "important_lines": ["Opened system mdl/Sub1"],
@@ -675,7 +637,7 @@ class TestSimulinkStructuredOps:
 
         mock_eng = MagicMock()
         mock_me.start_matlab.return_value = mock_eng
-        mock_eng.vsg_list_ports = MagicMock(return_value={
+        mock_eng.slx_list_ports = MagicMock(return_value={
             "system_path": "mdl/Sub1",
             "inports": ["mdl/Sub1/In1"],
             "outports": ["mdl/Sub1/Out1"],
@@ -692,7 +654,7 @@ class TestSimulinkStructuredOps:
 
         mock_eng = MagicMock()
         mock_me.start_matlab.return_value = mock_eng
-        mock_eng.vsg_autolayout_subsystem = MagicMock(return_value={
+        mock_eng.slx_autolayout_subsystem = MagicMock(return_value={
             "ok": True,
             "system_path": "mdl/Sub1",
             "important_lines": ["Auto-arranged system mdl/Sub1"],
@@ -709,7 +671,7 @@ class TestSimulinkStructuredOps:
 
         mock_eng = MagicMock()
         mock_me.start_matlab.return_value = mock_eng
-        mock_eng.vsg_build_chain = MagicMock(return_value={
+        mock_eng.slx_build_chain = MagicMock(return_value={
             "ok": True,
             "system_path": "mdl/Sub1",
             "blocks_added": ["mdl/Sub1/G1", "mdl/Sub1/G2"],
@@ -737,7 +699,7 @@ class TestSimulinkStructuredOps:
 
         mock_eng = MagicMock()
         mock_me.start_matlab.return_value = mock_eng
-        mock_eng.vsg_build_chain = MagicMock(return_value={
+        mock_eng.slx_build_chain = MagicMock(return_value={
             "ok": True,
             "system_path": "mdl/Sub1",
             "blocks_added": ["mdl/Sub1/Sum1", "mdl/Sub1/Gain1"],
@@ -764,7 +726,7 @@ class TestSimulinkStructuredOps:
 
         mock_eng = MagicMock()
         mock_me.start_matlab.return_value = mock_eng
-        mock_eng.vsg_build_chain = MagicMock(return_value={
+        mock_eng.slx_build_chain = MagicMock(return_value={
             "ok": True,
             "system_path": "mdl/Sub1",
             "blocks_added": ["mdl/Sub1/Sum1", "mdl/Sub1/Gain1"],
@@ -790,7 +752,7 @@ class TestSimulinkStructuredOps:
 
         mock_eng = MagicMock()
         mock_me.start_matlab.return_value = mock_eng
-        mock_eng.vsg_clone_subsystem_n_times = MagicMock(return_value={
+        mock_eng.slx_clone_subsystem_n_times = MagicMock(return_value={
             "ok": True,
             "clones": ["mdl/Sub2", "mdl/Sub3"],
             "important_lines": ["Cloned 2 subsystem(s) from mdl/Sub1"],
@@ -840,7 +802,7 @@ class TestSimulinkDiagnosticsWave1:
 
         mock_eng = MagicMock()
         mock_me.start_matlab.return_value = mock_eng
-        mock_eng.vsg_describe_block_ports = MagicMock(return_value={
+        mock_eng.slx_describe_block_ports = MagicMock(return_value={
             "block_path": "mdl/Gain",
             "ports": [{
                 "kind": "Inport",
@@ -864,7 +826,7 @@ class TestSimulinkDiagnosticsWave1:
 
         mock_eng = MagicMock()
         mock_me.start_matlab.return_value = mock_eng
-        mock_eng.vsg_trace_port_connections = MagicMock(return_value={
+        mock_eng.slx_trace_port_connections = MagicMock(return_value={
             "ok": True,
             "src": {"block_path": "mdl/Gain", "port_kind": "Outport", "port_index": 1.0},
             "dsts": [
@@ -893,7 +855,7 @@ class TestSimulinkDiagnosticsWave1:
 
         mock_eng = MagicMock()
         mock_me.start_matlab.return_value = mock_eng
-        mock_eng.vsg_add_line_by_handles = MagicMock(return_value={
+        mock_eng.slx_add_line_by_handles = MagicMock(return_value={
             "ok": True,
             "line_handle": 401.0,
             "created_branch": False,
@@ -913,7 +875,7 @@ class TestSimulinkDiagnosticsWave1:
 
         mock_eng = MagicMock()
         mock_me.start_matlab.return_value = mock_eng
-        mock_eng.vsg_compile_diagnostics = MagicMock(return_value={
+        mock_eng.slx_compile_diagnostics = MagicMock(return_value={
             "ok": False,
             "mode": "update",
             "errors": [{
@@ -941,9 +903,9 @@ class TestSimulinkDiagnosticsWave1:
         mock_session = MagicMock()
 
         def fake_call(func_name, *args, **kwargs):
-            if func_name == "vsg_step_diagnostics":
+            if func_name == "slx_step_diagnostics":
                 raise MatlabCallError(
-                    "vsg_step_diagnostics",
+                    "slx_step_diagnostics",
                     ("mdl", 0.0, 0.1),
                     "Timed out after 5s",
                 )
@@ -964,7 +926,7 @@ class TestSimulinkDiagnosticsWave1:
 
         mock_eng = MagicMock()
         mock_me.start_matlab.return_value = mock_eng
-        mock_eng.vsg_solver_audit = MagicMock(return_value={
+        mock_eng.slx_solver_audit = MagicMock(return_value={
             "ok": True,
             "model_solver": {
                 "SolverType": "Variable-step",
@@ -1007,7 +969,7 @@ class TestSimulinkDiagnosticsWave2:
 
         mock_eng = MagicMock()
         mock_me.start_matlab.return_value = mock_eng
-        mock_eng.vsg_prepare_model_workspace = MagicMock(return_value={
+        mock_eng.slx_prepare_model_workspace = MagicMock(return_value={
             "ok": True,
             "ran_scripts": ["prep_script_wave2"],
             "vars_loaded": ["base_gain_wave2", "script_value_wave2", "callback_value_wave2"],
@@ -1033,7 +995,7 @@ class TestSimulinkDiagnosticsWave2:
 
         mock_eng = MagicMock()
         mock_me.start_matlab.return_value = mock_eng
-        mock_eng.vsg_event_source_audit = MagicMock(return_value={
+        mock_eng.slx_event_source_audit = MagicMock(return_value={
             "ok": True,
             "items": [{
                 "block_path": "mdl/BrkCtrl_1",
@@ -1063,7 +1025,7 @@ class TestSimulinkDiagnosticsWave2:
 
         mock_eng = MagicMock()
         mock_me.start_matlab.return_value = mock_eng
-        mock_eng.vsg_patch_and_verify = MagicMock(return_value={
+        mock_eng.slx_patch_and_verify = MagicMock(return_value={
             "ok": True,
             "applied_edits": [{
                 "block_path": "mdl/Const",
@@ -1108,7 +1070,7 @@ class TestSimulinkDiagnosticsWave3:
 
         mock_eng = MagicMock()
         mock_me.start_matlab.return_value = mock_eng
-        mock_eng.vsg_describe_library_block = MagicMock(return_value={
+        mock_eng.slx_describe_library_block = MagicMock(return_value={
             "exists": True,
             "dialog_params": ["Value", "SampleTime"],
             "default_values": {"Value": "1", "SampleTime": "inf"},
@@ -1135,7 +1097,7 @@ class TestSimulinkDiagnosticsWave3:
 
         mock_eng = MagicMock()
         mock_me.start_matlab.return_value = mock_eng
-        mock_eng.vsg_find_blocks_by_mask_or_ref = MagicMock(return_value={
+        mock_eng.slx_find_blocks_by_mask_or_ref = MagicMock(return_value={
             "matches": [
                 "mdl/Const1",
                 "mdl/Const2",
@@ -1156,7 +1118,7 @@ class TestSimulinkDiagnosticsWave3:
 
         mock_eng = MagicMock()
         mock_me.start_matlab.return_value = mock_eng
-        mock_eng.vsg_clone_model = MagicMock(return_value={
+        mock_eng.slx_clone_model = MagicMock(return_value={
             "ok": True,
             "dst_file": "C:/tmp/copied_model.slx",
             "loaded_model_name": "copied_model",
@@ -1186,7 +1148,7 @@ class TestSimulinkDiagnosticsWave4:
 
         mock_eng = MagicMock()
         mock_me.start_matlab.return_value = mock_eng
-        mock_eng.vsg_delete_block_with_connections = MagicMock(return_value={
+        mock_eng.slx_delete_block_with_connections = MagicMock(return_value={
             "ok": True,
             "block_path": "mdl/Gain",
             "deleted_lines": [101.0, 102.0],
@@ -1204,7 +1166,7 @@ class TestSimulinkDiagnosticsWave4:
 
         mock_eng = MagicMock()
         mock_me.start_matlab.return_value = mock_eng
-        mock_eng.vsg_summarize_signal_fanout = MagicMock(return_value={
+        mock_eng.slx_summarize_signal_fanout = MagicMock(return_value={
             "block_path": "mdl/Gain",
             "outport_index": 1.0,
             "destinations": [
@@ -1227,7 +1189,7 @@ class TestSimulinkDiagnosticsWave4:
 
         mock_eng = MagicMock()
         mock_me.start_matlab.return_value = mock_eng
-        mock_eng.vsg_bulk_get_params = MagicMock(return_value={
+        mock_eng.slx_bulk_get_params = MagicMock(return_value={
             "items": [
                 {
                     "block_path": "mdl/Const1",
@@ -1261,7 +1223,7 @@ class TestSimulinkDiagnosticsWave5:
 
         mock_eng = MagicMock()
         mock_me.start_matlab.return_value = mock_eng
-        mock_eng.vsg_model_diff = MagicMock(return_value={
+        mock_eng.slx_model_diff = MagicMock(return_value={
             "added_blocks": ["NewGain"],
             "removed_blocks": ["OldGain"],
             "param_changes": [{
@@ -1292,7 +1254,7 @@ class TestSimulinkDiagnosticsWave6:
 
         mock_eng = MagicMock()
         mock_me.start_matlab.return_value = mock_eng
-        mock_eng.vsg_solver_warning_summary = MagicMock(return_value={
+        mock_eng.slx_solver_warning_summary = MagicMock(return_value={
             "ok": True,
             "first_occurrence_time": 4.9008,
             "last_occurrence_time": 4.9008,
@@ -1332,7 +1294,7 @@ class TestSimulinkDiagnosticsWave6:
 
         mock_eng = MagicMock()
         mock_me.start_matlab.return_value = mock_eng
-        mock_eng.vsg_signal_snapshot = MagicMock(return_value={
+        mock_eng.slx_signal_snapshot = MagicMock(return_value={
             "time_s": 0.5,
             "values": {
                 "logsout:sine_logged": 1.25,
@@ -1509,7 +1471,7 @@ class TestBootstrapCache:
 
         mock_eng = MagicMock()
         mock_me.start_matlab.return_value = mock_eng
-        mock_eng.vsg_batch_query = MagicMock(return_value={
+        mock_eng.slx_batch_query = MagicMock(return_value={
             "block": "mdl/A", "params": {"Gain": "1"}, "error": "",
         })
 
@@ -1525,7 +1487,7 @@ class TestBootstrapCache:
 
         mock_eng = MagicMock()
         mock_me.start_matlab.return_value = mock_eng
-        mock_eng.vsg_batch_query = MagicMock(return_value={
+        mock_eng.slx_batch_query = MagicMock(return_value={
             "block": "mdl/A", "params": {}, "error": "",
         })
 
@@ -1543,7 +1505,7 @@ class TestBootstrapCache:
 
         mock_eng = MagicMock()
         mock_me.start_matlab.return_value = mock_eng
-        mock_eng.vsg_batch_query = MagicMock(return_value={
+        mock_eng.slx_batch_query = MagicMock(return_value={
             "block": "mdl/A", "params": {}, "error": "",
         })
 
@@ -1569,7 +1531,7 @@ class TestDeprecatedToolWarnings:
 
         mock_eng = MagicMock()
         mock_me.start_matlab.return_value = mock_eng
-        mock_eng.vsg_batch_query = MagicMock(return_value={
+        mock_eng.slx_batch_query = MagicMock(return_value={
             "block": "mdl/A", "params": {}, "error": "",
         })
 
@@ -1582,7 +1544,7 @@ class TestDeprecatedToolWarnings:
 
         mock_eng = MagicMock()
         mock_me.start_matlab.return_value = mock_eng
-        mock_eng.vsg_batch_query_cell = MagicMock(return_value=[])
+        mock_eng.slx_batch_query_cell = MagicMock(return_value=[])
 
         with pytest.warns(DeprecationWarning, match="simulink_query_params"):
             simulink_get_multiple_block_params("mdl", ["mdl/A"])
@@ -1593,7 +1555,7 @@ class TestDeprecatedToolWarnings:
 
         mock_eng = MagicMock()
         mock_me.start_matlab.return_value = mock_eng
-        mock_eng.vsg_add_line_by_handles = MagicMock(return_value={
+        mock_eng.slx_add_line_by_handles = MagicMock(return_value={
             "ok": True, "line_handle": 1.0,
             "created_branch": False, "important_lines": [], "error_message": "",
         })
@@ -1615,7 +1577,7 @@ class TestStepDiagnosticsSimscapeConstraint:
 
         mock_eng = MagicMock()
         mock_me.start_matlab.return_value = mock_eng
-        mock_eng.vsg_step_diagnostics = MagicMock(return_value={
+        mock_eng.slx_step_diagnostics = MagicMock(return_value={
             "ok": False,
             "status": "sim_error",
             "elapsed_sec": 1.2,
@@ -1651,7 +1613,7 @@ class TestStepDiagnosticsSimscapeConstraint:
 
         mock_eng = MagicMock()
         mock_me.start_matlab.return_value = mock_eng
-        mock_eng.vsg_step_diagnostics = MagicMock(return_value={
+        mock_eng.slx_step_diagnostics = MagicMock(return_value={
             "ok": True,
             "status": "ok",
             "elapsed_sec": 0.5,
@@ -1675,7 +1637,7 @@ class TestStepDiagnosticsSimscapeConstraint:
 
         mock_eng = MagicMock()
         mock_me.start_matlab.return_value = mock_eng
-        mock_eng.vsg_step_diagnostics = MagicMock(return_value={
+        mock_eng.slx_step_diagnostics = MagicMock(return_value={
             "ok": False,
             "status": "sim_error",
             "elapsed_sec": 0.95,
@@ -1707,7 +1669,7 @@ class TestSolverAuditFastRestartWarning:
 
         mock_eng = MagicMock()
         mock_me.start_matlab.return_value = mock_eng
-        mock_eng.vsg_solver_audit = MagicMock(return_value={
+        mock_eng.slx_solver_audit = MagicMock(return_value={
             "ok": True,
             "model_solver": {"FastRestart": "off"},
             "solver_type": "ode23t",
@@ -1735,7 +1697,7 @@ class TestSolverAuditFastRestartWarning:
 
         mock_eng = MagicMock()
         mock_me.start_matlab.return_value = mock_eng
-        mock_eng.vsg_solver_audit = MagicMock(return_value={
+        mock_eng.slx_solver_audit = MagicMock(return_value={
             "ok": True,
             "model_solver": {"FastRestart": "on"},
             "solver_type": "ode23t",

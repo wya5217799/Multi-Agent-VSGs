@@ -164,7 +164,7 @@ class ModelDiagnoseResult:
 class ModelReportResult:
     run_status: str = ""
     completed_tasks: list[str] = field(default_factory=list)
-    blocked_tasks: list[str] = field(default_factory=list)
+    failed_tasks: list[str] = field(default_factory=list)
     key_findings: list[str] = field(default_factory=list)
     recommended_followups: list[str] = field(default_factory=list)
     memory_hints: dict[str, Any] = field(default_factory=dict)

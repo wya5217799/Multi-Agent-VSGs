@@ -366,7 +366,7 @@ def harness_train_smoke_poll(
     return _collect_finished(record, run_dir, scenario_id, run_id, recovered_pid, None, key)
 
 
-def harness_train_smoke_full(
+def harness_train_smoke_minimal(
     *,
     scenario_id: str,
     run_id: str,
@@ -414,3 +414,6 @@ def harness_train_smoke_full(
     smoke_result["smoke_full_step"] = "train_smoke_start"
     smoke_result["model_report_run_status"] = run_status
     return smoke_result
+
+
+harness_train_smoke_full = harness_train_smoke_minimal  # deprecated alias

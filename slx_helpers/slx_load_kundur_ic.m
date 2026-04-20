@@ -11,6 +11,7 @@ function ic = slx_load_kundur_ic(json_path)
 %     ic.schema_version       — integer (must be 1)
 %     ic.calibration_status   — string
 %     ic.vsg_p0_vsg_base_pu  — 1×4 double row vector, VSG-base pu
+%     ic.vsg_delta0_deg       — 1×4 double row vector, rotor angle ICs [deg]
 %     ic.source_hash          — string ('sha256:<64-hex>')
 %
 %   Raises:
@@ -34,7 +35,7 @@ function ic = slx_load_kundur_ic(json_path)
     end
 
     % calibration_status
-    valid_statuses = {'placeholder_pre_impedance_fix', 'calibrated'};
+    valid_statuses = {'placeholder_pre_impedance_fix', 'calibrated', 'powerflow_parametric'};
     if ~isfield(data, 'calibration_status') || ...
             ~any(strcmp(data.calibration_status, valid_statuses))
         errors{end+1} = sprintf('calibration_status=%s is not valid', ...
@@ -61,6 +62,19 @@ function ic = slx_load_kundur_ic(json_path)
         end
     end
 
+    % vsg_delta0_deg: optional (defaults to [18,10,7,12] if absent), must be length-4 finite
+    delta0_default = [18.0, 10.0, 7.0, 12.0];
+    if isfield(data, 'vsg_delta0_deg')
+        d0 = double(data.vsg_delta0_deg(:)');
+        if numel(d0) ~= 4
+            errors{end+1} = sprintf('vsg_delta0_deg must have 4 elements, got %d', numel(d0));
+        elseif any(~isfinite(d0))
+            errors{end+1} = 'all vsg_delta0_deg values must be finite';
+        end
+    else
+        d0 = delta0_default;
+    end
+
     % source_hash: must start with 'sha256:' followed by 64 hex chars
     if ~isfield(data, 'source_hash') || ...
             isempty(regexp(data.source_hash, '^sha256:[0-9a-f]{64}$', 'once'))
@@ -77,5 +91,6 @@ function ic = slx_load_kundur_ic(json_path)
     ic.schema_version      = data.schema_version;
     ic.calibration_status  = data.calibration_status;
     ic.vsg_p0_vsg_base_pu = double(data.vsg_p0_vsg_base_pu(:)');  % 1×4 row vector
+    ic.vsg_delta0_deg      = d0;                                   % 1×4 row vector [deg]
     ic.source_hash         = data.source_hash;
 end

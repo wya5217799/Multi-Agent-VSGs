@@ -36,7 +36,7 @@ from engine.harness_tasks import (
     harness_model_patch_verify,
     harness_model_report,
     harness_scenario_status,
-    harness_train_smoke_full,
+    harness_train_smoke_minimal,
     harness_train_smoke_start,
     harness_train_smoke_poll,
 )
@@ -59,17 +59,15 @@ from engine.mcp_simulink_tools import (
     simulink_describe_block_ports,
     simulink_trace_port_connections,
     simulink_explore_block,          # 1-call block exploration: ports + connected_block_paths
-    # --- Parameter operations (4) ---
+    # --- Parameter operations (3) ---
     simulink_query_params,          # merged: get_block_params + get_multiple + bulk_get
     simulink_set_block_params,
-    simulink_check_params,
-    simulink_preflight,
+    simulink_library_lookup,
     # --- Modeling operations (5) ---
     simulink_add_block,
     simulink_add_subsystem,
     simulink_connect_ports,         # merged: connect_blocks + add_line_branch + add_line_by_handles
     simulink_delete_block,          # merged: delete_block + delete_block_with_connections
-    simulink_build_chain,
     # --- Diagnostics (3) ---
     simulink_compile_diagnostics,
     simulink_step_diagnostics,
@@ -93,14 +91,14 @@ mcp = FastMCP(
         "Use training_status to poll live training progress (Tier 1). "
         "Use training_diagnose only when training_status shows anomaly/failure (Tier 2). "
         "Use training_evaluate_run / training_compare_runs for post-run Training Control workflows. "
-        "Prefer the harness_* task tools for Kundur/NE39 Simulink workflows. "
-        "Use simulink_preflight to discover block parameters before placing. "
+        "Use simulink_library_lookup to discover block parameters before placing. "
         "Use simulink_run_script to run build scripts or set_param operations "
         "(prefix output lines with 'RESULT: ' to surface them in important_lines). "
         "Use simulink_query_params for reading params (1 or N blocks, all or selected params). "
-        "Use simulink_connect_ports for all connection operations (name or handle addressing). "
+        "Use simulink_connect_ports for all connection operations (name addressing only). "
         "Use simulink_explore_block to get ports + all connections of one block in a single call "
         "(replaces describe_block_ports + multiple trace_port_connections round-trips). "
+        "For project-specific workflows (harness, training) see AGENTS.md. "
         "All tools share one MATLAB engine (lazy-started on first call, ~20s cold start)."
     ),
 )
@@ -118,7 +116,7 @@ PUBLIC_TOOLS = [
     harness_model_patch_verify,
     harness_model_diagnose,
     harness_model_report,
-    harness_train_smoke_full,
+    harness_train_smoke_minimal,
     harness_train_smoke_start,
     harness_train_smoke_poll,
     simulink_load_model,
@@ -132,13 +130,11 @@ PUBLIC_TOOLS = [
     simulink_explore_block,
     simulink_query_params,
     simulink_set_block_params,
-    simulink_check_params,
-    simulink_preflight,
+    simulink_library_lookup,
     simulink_add_block,
     simulink_add_subsystem,
     simulink_connect_ports,
     simulink_delete_block,
-    simulink_build_chain,
     simulink_compile_diagnostics,
     simulink_step_diagnostics,
     simulink_solver_audit,

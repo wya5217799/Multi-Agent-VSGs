@@ -33,6 +33,16 @@ class LineTripEvent:
     bus_i: int
     bus_j: int
 
+    def __post_init__(self) -> None:
+        if self.bus_i == self.bus_j:
+            raise ValueError(
+                f"LineTripEvent: bus_i and bus_j must differ, got {self.bus_i}"
+            )
+        if self.bus_i < 0 or self.bus_j < 0:
+            raise ValueError(
+                f"LineTripEvent: bus indices must be non-negative, got ({self.bus_i}, {self.bus_j})"
+            )
+
 
 Event = Union[DisturbanceEvent, LineTripEvent]
 
@@ -51,6 +61,17 @@ class EventSchedule:
             raise ValueError(f"Event times must be non-decreasing, got {times}")
         if any(t < 0 for t in times):
             raise ValueError(f"Event times must be non-negative, got {times}")
+        # Detect duplicate LineTripEvent for the same (i,j) pair
+        tripped: set[tuple[int, int]] = set()
+        for ev in self.events:
+            if isinstance(ev, LineTripEvent):
+                key = (min(ev.bus_i, ev.bus_j), max(ev.bus_i, ev.bus_j))
+                if key in tripped:
+                    raise ValueError(
+                        f"EventSchedule: duplicate LineTripEvent for edge "
+                        f"({ev.bus_i}, {ev.bus_j})"
+                    )
+                tripped.add(key)
 
     def events_in_window(self, t0: float, t1: float) -> list[Event]:
         """Return events with t0 <= e.t < t1 (half-open, aligns with step start)."""

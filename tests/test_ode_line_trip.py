@@ -98,3 +98,18 @@ def test_reset_restores_original_topology():
     ps.reset(delta_u=np.array([1.0, 0.0, -1.0, 0.0]))
     assert ps.B_matrix[1, 2] == 4.0, "topology should be restored after reset()"
     assert ps.B_matrix[2, 1] == 4.0
+
+
+def test_line_trip_rejects_self_loop():
+    import pytest
+    with pytest.raises(ValueError):
+        LineTripEvent(t=1.0, bus_i=2, bus_j=2)
+
+
+def test_event_schedule_rejects_duplicate_trip():
+    import pytest
+    with pytest.raises(ValueError):
+        EventSchedule(events=(
+            LineTripEvent(t=1.0, bus_i=1, bus_j=2),
+            LineTripEvent(t=2.0, bus_i=2, bus_j=1),  # same edge, reversed indices
+        ))

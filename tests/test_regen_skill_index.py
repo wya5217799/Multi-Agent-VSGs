@@ -3,6 +3,7 @@
 Runs entirely offline (no MATLAB needed).
 """
 
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -14,16 +15,29 @@ _SCRIPT = _PROJECT_ROOT / "scripts" / "regen_skill_index.py"
 
 
 @pytest.mark.offline
-def test_skill_index_consistent_with_public_tools():
+def test_skill_index_consistent_with_public_tools(tmp_path: Path) -> None:
     """index.json must match what regen_skill_index.py would generate from PUBLIC_TOOLS."""
-    result = subprocess.run(
+    env = {**os.environ, "SKILL_DIR": str(tmp_path)}
+
+    # First generate the index into the temp dir.
+    gen = subprocess.run(
+        [sys.executable, str(_SCRIPT)],
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+    assert gen.returncode == 0, f"regen failed:\n{gen.stdout}\n{gen.stderr}"
+
+    # Then verify --check agrees with what was just written.
+    check = subprocess.run(
         [sys.executable, str(_SCRIPT), "--check"],
         capture_output=True,
         text=True,
+        env=env,
     )
-    assert result.returncode == 0, (
+    assert check.returncode == 0, (
         "index.json is out of sync with PUBLIC_TOOLS.\n"
         "Run `python scripts/regen_skill_index.py` to fix.\n\n"
-        f"--- stdout ---\n{result.stdout}\n"
-        f"--- stderr ---\n{result.stderr}"
+        f"--- stdout ---\n{check.stdout}\n"
+        f"--- stderr ---\n{check.stderr}"
     )

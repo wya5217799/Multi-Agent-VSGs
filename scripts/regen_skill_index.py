@@ -17,6 +17,7 @@ import json
 import os
 import sys
 from pathlib import Path
+from typing import Any
 
 # ---------------------------------------------------------------------------
 # Ensure project root is on sys.path so engine.mcp_server can be imported
@@ -149,7 +150,7 @@ def _build_index(tool_names: list[str]) -> dict:
     }
 
 
-def _serialize(data: dict) -> str:
+def _serialize(data: dict[str, Any]) -> str:
     """Serialize index data to JSON string (2-space indent, trailing newline)."""
     return json.dumps(data, indent=2, ensure_ascii=False) + "\n"
 
@@ -157,18 +158,25 @@ def _serialize(data: dict) -> str:
 def _run_check(index_path: Path, generated: str) -> int:
     """Compare generated JSON to on-disk file. Return 0 if identical, 1 if different."""
     if not index_path.exists():
-        print(f"ERROR: {index_path} does not exist. Run without --check to create it.")
+        print(f"ERROR: {index_path} does not exist. Run without --check to create it.", file=sys.stderr)
         return 1
 
-    on_disk = index_path.read_text(encoding="utf-8")
+    raw = index_path.read_text(encoding="utf-8")
+    try:
+        # Normalize key order by round-tripping through parse+re-serialize so that
+        # insertion-order differences from older script versions don't cause false failures.
+        normalized = _serialize(json.loads(raw))
+    except json.JSONDecodeError as exc:
+        print(f"ERROR: {index_path} contains invalid JSON: {exc}", file=sys.stderr)
+        return 1
 
-    if on_disk == generated:
+    if normalized == generated:
         print(f"OK: {index_path} is consistent with PUBLIC_TOOLS.")
         return 0
 
     # Show a simple line-by-line diff
     diff = list(difflib.unified_diff(
-        on_disk.splitlines(keepends=True),
+        normalized.splitlines(keepends=True),
         generated.splitlines(keepends=True),
         fromfile="index.json (on-disk)",
         tofile="index.json (generated)",

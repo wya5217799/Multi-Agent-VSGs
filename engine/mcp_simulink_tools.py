@@ -91,6 +91,16 @@ def simulink_inspect_model(
 
 
 
+def _simulink_trace_signal_raw(model_name: str, signal_name: str) -> dict:
+    session = MatlabSession.get()
+    loaded_model_name = _ensure_model_bootstrapped(session, model_name)
+    path = session.call("slx_trace_signal", loaded_model_name, signal_name)
+    return {
+        "source": str(path["source"]),
+        "sinks": _to_list(path["sinks"]),
+    }
+
+
 def simulink_trace_signal(model_name: str, signal_name: str) -> dict:
     """Trace a signal from source to all sinks.
 
@@ -99,15 +109,25 @@ def simulink_trace_signal(model_name: str, signal_name: str) -> dict:
         signal_name: Signal/port name to trace
 
     Returns:
-        dict with source (str), sinks (list[str])
+        dict with ok (bool), data (dict with source/sinks), error (str|None)
     """
+    try:
+        data = _simulink_trace_signal_raw(model_name, signal_name)
+        return {"ok": True, "data": data, "error": None}
+    except Exception as exc:
+        return {"ok": False, "data": {}, "error": str(exc)}
+
+
+def _simulink_get_block_tree_raw(
+    model_name: str, root_path: str | None = None, max_depth: _IntArg = 3
+) -> dict:
     session = MatlabSession.get()
     loaded_model_name = _ensure_model_bootstrapped(session, model_name)
-    path = session.call("slx_trace_signal", loaded_model_name, signal_name)
-    return {
-        "source": str(path["source"]),
-        "sinks": _to_list(path["sinks"]),
-    }
+    if root_path is None:
+        tree = session.call("slx_get_block_tree", loaded_model_name, loaded_model_name, float(max_depth))
+    else:
+        tree = session.call("slx_get_block_tree", loaded_model_name, root_path, float(max_depth))
+    return _convert_tree(tree)
 
 
 def simulink_get_block_tree(
@@ -121,15 +141,13 @@ def simulink_get_block_tree(
         max_depth: Maximum tree depth (default 3)
 
     Returns:
-        Nested dict with name, type, path, children
+        dict with ok (bool), data (nested block tree dict), error (str|None)
     """
-    session = MatlabSession.get()
-    loaded_model_name = _ensure_model_bootstrapped(session, model_name)
-    if root_path is None:
-        tree = session.call("slx_get_block_tree", loaded_model_name, loaded_model_name, float(max_depth))
-    else:
-        tree = session.call("slx_get_block_tree", loaded_model_name, root_path, float(max_depth))
-    return _convert_tree(tree)
+    try:
+        data = _simulink_get_block_tree_raw(model_name, root_path, max_depth)
+        return {"ok": True, "data": data, "error": None}
+    except Exception as exc:
+        return {"ok": False, "data": {}, "error": str(exc)}
 
 
 def simulink_get_block_params(model_name: str, block_path: str) -> dict:
@@ -220,7 +238,7 @@ def simulink_load_model(model_name: str) -> dict:
         "model_name": loaded_model_name,
         "load_target": load_target,
         "bootstrap_paths": bootstrap_paths,
-        "loaded_models": simulink_loaded_models(),
+        "loaded_models": _simulink_loaded_models_raw(),
     }
 
 
@@ -231,7 +249,7 @@ def simulink_create_model(model_name: str, open_model: _BoolArg = True) -> dict:
     return {
         "ok": bool(summary.get("ok", False)),
         "model_name": str(summary.get("model_name", model_name)),
-        "loaded_models": simulink_loaded_models() if bool(summary.get("ok", False)) else [],
+        "loaded_models": _simulink_loaded_models_raw() if bool(summary.get("ok", False)) else [],
         "important_lines": _to_list(summary.get("important_lines", [])),
         "error_message": str(summary.get("error_message", "")),
     }
@@ -246,7 +264,7 @@ def simulink_close_model(model_name: str, save: _BoolArg = False) -> dict:
     return {
         "ok": True,
         "model_name": model_name,
-        "loaded_models": simulink_loaded_models(),
+        "loaded_models": _simulink_loaded_models_raw(),
     }
 
 
@@ -623,46 +641,6 @@ def simulink_clone_subsystem_n_times(
     return {
         "ok": bool(summary.get("ok", False)),
         "clones": _to_list(summary.get("clones", [])),
-        "important_lines": _to_list(summary.get("important_lines", [])),
-        "error_message": str(summary.get("error_message", "")),
-    }
-
-
-def simulink_build_vsg_stub(
-    model_name: str,
-    count: _IntArg,
-    start_index: _IntArg = 1,
-    subsystem_prefix: str = "VSG_ES",
-    system_path: str | None = None,
-    add_workspace_logs: _BoolArg = True,
-    add_measurement_outports: _BoolArg = True,
-) -> dict:
-    """Build project-aligned VSG stub subsystems for this repository.
-
-    Generated block naming follows the current bridge convention:
-      - subsystems: VSG_ES{i}
-      - constants: M0 / D0 with Value=M0_val_ES{i} / D0_val_ES{i}
-
-    Workspace logs intentionally use stub-specific names to avoid being
-    mistaken for production bridge signals.
-    """
-    session = MatlabSession.get()
-    loaded_model_name = _ensure_model_bootstrapped(session, model_name)
-    parent_system = system_path or loaded_model_name
-    summary = session.call(
-        "vsg_build_vsg_stub",
-        parent_system,
-        int(count),
-        int(start_index),
-        subsystem_prefix,
-        bool(add_workspace_logs),
-        bool(add_measurement_outports),
-        nargout=1,
-    )
-    return {
-        "ok": bool(summary.get("ok", False)),
-        "system_path": str(summary.get("system_path", parent_system)),
-        "subsystems": _to_list(summary.get("subsystems", [])),
         "important_lines": _to_list(summary.get("important_lines", [])),
         "error_message": str(summary.get("error_message", "")),
     }
@@ -1071,7 +1049,13 @@ def simulink_list_models() -> list[str]:
     return models
 
 
-def simulink_loaded_models() -> list[str]:
+def _simulink_loaded_models_raw() -> list[str]:
+    session = MatlabSession.get()
+    result = session.eval("find_system('type', 'block_diagram')", nargout=1)
+    return _to_list(result)
+
+
+def simulink_loaded_models() -> dict:
     """List Simulink models currently open in the MATLAB engine.
 
     Queries MATLAB's live block diagram registry — shows only models that
@@ -1080,11 +1064,13 @@ def simulink_loaded_models() -> list[str]:
     inspect/params/tree tools.
 
     Returns:
-        List of model names currently loaded in MATLAB (e.g. ['kundur_vsg'])
+        dict with ok (bool), data (list[str] of loaded model names), error (str|None)
     """
-    session = MatlabSession.get()
-    result = session.eval("find_system('type', 'block_diagram')", nargout=1)
-    return _to_list(result)
+    try:
+        data = _simulink_loaded_models_raw()
+        return {"ok": True, "data": data, "error": None}
+    except Exception as exc:
+        return {"ok": False, "data": [], "error": str(exc)}
 
 
 def simulink_bridge_status(model_name: str) -> dict:

@@ -31,6 +31,8 @@ from engine.harness_reference import (
 from engine.harness_registry import resolve_scenario
 from engine.harness_repair import generate_repair_hints
 from engine.mcp_simulink_tools import (
+    _simulink_get_block_tree_raw,
+    _simulink_loaded_models_raw,
     simulink_check_params,
     simulink_compile_diagnostics,
     simulink_get_block_tree,
@@ -54,8 +56,8 @@ def _ensure_loaded(spec) -> dict[str, Any]:
     "any model loaded" — so a stale model from another scenario never
     causes a false skip.
     """
-    already = simulink_loaded_models()
-    if spec.model_name in (already if isinstance(already, list) else already.get("result", [])):
+    already = _simulink_loaded_models_raw()
+    if spec.model_name in already:
         return {"ok": True, "model_name": spec.model_name, "loaded_models": already, "skipped_load": True}
     return simulink_load_model(spec.model_name)
 
@@ -257,7 +259,7 @@ def harness_model_inspect(
         focus_blocks: list[Any] = []
         if include_block_tree and focus_paths:
             focus_blocks = [
-                simulink_get_block_tree(spec.model_name, root_path=path, max_depth=3)
+                _simulink_get_block_tree_raw(spec.model_name, root_path=path, max_depth=3)
                 for path in focus_paths
             ]
 
@@ -299,7 +301,7 @@ def harness_model_inspect(
             hint = "Check the MATLAB engine and model file path."
         record_failure(record, failure_class, "Model inspection failed", {"error": exc_str, "hint": hint})
         try:
-            loaded = simulink_loaded_models()
+            loaded = _simulink_loaded_models_raw()
         except Exception:
             loaded = []
         extra = {

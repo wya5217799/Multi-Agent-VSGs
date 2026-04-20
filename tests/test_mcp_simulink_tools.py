@@ -382,7 +382,8 @@ class TestSimulinkStructuredOps:
 
         mock_eng.load_system.assert_called_once_with(str(expected_model), nargout=0, stdout=ANY, stderr=ANY)
         assert mock_eng.slx_get_block_tree.called
-        assert result["path"] == "NE39bus_v2/VSG_ES1"
+        assert result["ok"] is True
+        assert result["data"]["path"] == "NE39bus_v2/VSG_ES1"
 
     @patch("engine.matlab_session.matlab_engine", create=True)
     def test_run_script_bootstraps_known_model_reference_before_exec(self, mock_me):
@@ -766,7 +767,7 @@ class TestSimulinkStructuredOps:
 
     @patch("engine.matlab_session.matlab_engine", create=True)
     def test_build_vsg_stub_returns_subsystems(self, mock_me):
-        from engine.mcp_simulink_tools import simulink_build_vsg_stub
+        from engine.vsg_project_tools import vsg_build_stub
 
         mock_eng = MagicMock()
         mock_me.start_matlab.return_value = mock_eng
@@ -778,7 +779,7 @@ class TestSimulinkStructuredOps:
             "error_message": "",
         })
 
-        result = simulink_build_vsg_stub("mdl", 2)
+        result = vsg_build_stub("mdl", 2)
 
         assert result["ok"] is True
         assert result["subsystems"] == ["mdl/VSG_ES1", "mdl/VSG_ES2"]

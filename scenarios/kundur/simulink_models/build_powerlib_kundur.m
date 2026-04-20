@@ -48,6 +48,18 @@
 
 clear all; close all; clc;
 
+% Ensure slx_helpers/ and kundur matlab_scripts/ are on the MATLAB path
+build_script_dir  = fileparts(mfilename('fullpath'));
+repo_root         = fileparts(fileparts(build_script_dir));
+slx_helpers_path  = fullfile(repo_root, 'slx_helpers');
+if exist(slx_helpers_path, 'dir') && ~any(strcmp(strsplit(path, pathsep), slx_helpers_path))
+    addpath(slx_helpers_path);
+end
+matlab_scripts_path = fullfile(repo_root, 'scenarios', 'kundur', 'matlab_scripts');
+if exist(matlab_scripts_path, 'dir') && ~any(strcmp(strsplit(path, pathsep), matlab_scripts_path))
+    addpath(matlab_scripts_path);
+end
+
 %% ======================================================================
 %  Parameters
 %% ======================================================================
@@ -111,8 +123,62 @@ L_vsg = X_vsg_pu * Zbase / (2*pi*fn);   % H
 % Initial P_e/P_ref — loaded from canonical source (kundur_ic.json).
 script_dir   = fileparts(mfilename('fullpath'));
 scenario_dir = fileparts(script_dir);
-ic = slx_load_kundur_ic(fullfile(scenario_dir, 'kundur_ic.json'));
+ic_path      = fullfile(scenario_dir, 'kundur_ic.json');
+ic = slx_load_kundur_ic(ic_path);
 VSG_P0 = ic.vsg_p0_vsg_base_pu;  % 1×4 VSG-base pu [ES1, ES2, ES3, ES4]
+
+% --- Compute VSG equilibrium delta angles via Newton-Raphson power flow ---
+% compute_kundur_powerflow uses the same network parameters as this script.
+% It returns ess_delta_deg: the VSG internal EMF angle (IntD IC) in the
+% absolute simulation frame (Bus1 at 20°).  Writing the result back to JSON
+% makes the delta ICs parametric: change P0 → rebuild → correct deltas.
+fprintf('Running Newton-Raphson power flow for ESS delta0 computation...\n');
+pf = compute_kundur_powerflow(ic_path);
+
+if ~pf.converged
+    warning('build_powerlib_kundur:pfNotConverged', ...
+        ['Power flow did not converge (max_mismatch=%.2e). ' ...
+        'ESS delta ICs may be inaccurate. Check P0 values.'], pf.max_mismatch);
+end
+
+ess_delta0_deg = pf.ess_delta_deg(:)';   % 1×4 [ES1,ES2,ES3,ES4] degrees
+
+% Write updated delta back to kundur_ic.json
+pf_json.schema_version     = 1;
+pf_json.calibration_status = 'powerflow_parametric';
+pf_json.vsg_p0_vsg_base_pu = ic.vsg_p0_vsg_base_pu;
+pf_json.vsg_delta0_deg     = ess_delta0_deg;
+pf_json.units.vsg_p0_vsg_base_pu = 'pu_on_vsg_base';
+pf_json.units.vsg_delta0_deg     = 'degrees';
+pf_json.powerflow_meta.converged     = pf.converged;
+pf_json.powerflow_meta.max_mismatch  = pf.max_mismatch;
+pf_json.powerflow_meta.iterations    = pf.iterations;
+
+% Compute source_hash: SHA-256 of canonical parameter string so the hash
+% changes when network parameters change.
+param_str = sprintf('fn=%g,Sbase=%g,Vbase=%g,VSG_SN=%g,X_vsg=0.30,P0=%s', ...
+    fn, Sbase, Vbase, VSG_SN, mat2str(VSG_P0, 8));
+try
+    md = java.security.MessageDigest.getInstance('SHA-256');
+    hash_bytes = md.digest(uint8(param_str));
+    hex_chars  = lower(reshape(dec2hex(typecast(int8(hash_bytes), 'uint8'), 2)', 1, []));
+    pf_json.source_hash = ['sha256:' hex_chars];
+catch
+    pf_json.source_hash = ['sha256:' repmat('0', 1, 64)];
+end
+
+json_str = jsonencode(pf_json);
+% Pretty-print: insert newlines after commas at top level
+fid = fopen(ic_path, 'w');
+if fid == -1
+    warning('build_powerlib_kundur:jsonWriteFailed', ...
+        'Could not write updated delta0 to %s', ic_path);
+else
+    fprintf(fid, '%s\n', json_str);
+    fclose(fid);
+    fprintf('Updated kundur_ic.json with powerflow_parametric delta0: [%.2f, %.2f, %.2f, %.2f] deg\n', ...
+        ess_delta0_deg);
+end
 
 % ESS bus assignments: ES{i} sits on a dedicated bus, connected to a main bus
 %   ES1 → Bus12, connected to Bus7
@@ -123,20 +189,29 @@ ess_bus     = [12, 16, 14, 15];
 ess_main    = [ 7,  8, 10,  9];
 
 % --- Load flow initial conditions ---
-% Power-angle estimates for corrected impedances (opt_kd_20260417_05).
-% ConvGen: delta ≈ arcsin(P*X_gen/V²) ≈ arcsin(7*0.033) ≈ 13° from local bus.
-%   Area 1 buses lead area 2 by ~25° in standard Kundur two-area case.
-% VSG: delta ≈ arcsin(P_pu_sys * X_vsg) ≈ arcsin(3.75*0.15) ≈ 34° from local bus.
-% [V_pu, angle_deg] — used for source initialization
-vlf_gen = [1.03,  20.0;   % G1 (Bus1, area 1 slack: ~13° lead + bus at ~7°)
-           1.01,  17.0;   % G2 (Bus2, area 1, ~2° behind G1 bus)
-           1.01,  -7.0];  % G3 (Bus3, area 2: bus~-20°, +13° lead → -7°)
-vlf_wind = [1.00,  10.0;  % W1 (Bus4, area 1)
-            1.00, -18.0]; % W2 (Bus11, area 2)
-vlf_ess = [1.00,  18.0;   % ES1 (Bus12→Bus7, area 1-2 junction: bus~-16°, +34°)
-           1.00,  10.0;   % ES2 (Bus16→Bus8, area 2: bus~-24°, +34°)
-           1.00,   7.0;   % ES3 (Bus14→Bus10, area 2: bus~-27°, +34°)
-           1.00,  12.0];  % ES4 (Bus15→Bus9, area 2: bus~-22°, +34°)
+% [V_pu, angle_deg] — used for source initialization.
+% ESS delta angles come from Newton-Raphson power flow (computed above).
+vlf_gen = [1.03,  20.0;   % G1 (Bus1, area 1 slack) — fixed reference
+           1.01,  17.0;   % G2 (Bus2, area 1) — placeholder, overridden below
+           1.01,  -7.0];  % G3 (Bus3, area 2) — placeholder, overridden below
+vlf_wind = [1.00,  10.0;  % W1 (Bus4, area 1)  — placeholder, overridden below
+            1.00, -18.0]; % W2 (Bus11, area 2) — placeholder, overridden below
+
+% Override ALL source angles with EMF angles from NR PF equilibrium.
+% EMF angle = terminal_angle + atan(X*P/V²) > terminal angle.
+% Using terminal angles gives Pe≈0 at t=0 (V_src ≈ V_bus → I≈0 through Z),
+% causing all generators to accelerate simultaneously and destabilising the grid.
+vlf_gen(1, 2)  = pf.G1_emf_deg;           % G1 EMF angle (was hardcoded 20° = terminal)
+vlf_gen(2, 2)  = pf.gen_emf_deg_ext(1);   % G2 EMF angle (was terminal angle)
+vlf_gen(3, 2)  = pf.gen_emf_deg_ext(2);   % G3 EMF angle (was terminal angle)
+vlf_wind(1, 2) = pf.gen_emf_deg_ext(3);   % W1 EMF angle (was terminal angle)
+vlf_wind(2, 2) = pf.gen_emf_deg_ext(4);   % W2 EMF angle (was terminal angle)
+fprintf('vlf_gen EMF angles (abs): G1=%.4f, G2=%.4f, G3=%.4f deg\n', ...
+    vlf_gen(1,2), vlf_gen(2,2), vlf_gen(3,2));
+fprintf('vlf_wind EMF angles (abs): W1=%.4f, W2=%.4f deg\n', ...
+    vlf_wind(1,2), vlf_wind(2,2));
+
+vlf_ess = [ones(4,1), ess_delta0_deg(:)];
 
 % --- Transmission line parameters ---
 % Standard Kundur lines: R=0.053 Ohm/km, L=1.41 mH/km, C=0.009 uF/km
@@ -311,13 +386,16 @@ for gi = 1:length(gen_cfg)
         'Position', [100 10 150 30], 'Value', num2str(M));
     add_block('built-in/Constant', [sub_path '/D_val'], ...
         'Position', [100 180 150 200], 'Value', num2str(g.D));
-    % P0 ramp: starts at P0_pu (X0=P0_pu) so P_ref=P0 from t=0.
-    % Slope still positive so the Saturate clamps it at P0_pu on every call.
-    % Fixes: ramp from 0 caused omega to clip at IntW lower limit (−15 Hz)
-    % during warmup, corrupting all episode observations.
+    % P0 ramp: starts at 0 and rises to P0_pu over T_ramp seconds.
+    % X0=0 ensures P_ref=0 at t=0, matching Pe=0 from Simscape DC IC
+    % (IL=0 for RL filters at t=0).  P_accel = P_ref - Pe = 0 at t=0 →
+    % omega stays at 1, delta stays at IC, no warmup instability.
+    % Previously X0=P0_pu caused P_accel=P0/M≈0.78 pu/s at t=0 (since
+    % Pe=0 from IL=0), driving ConvGen delta to surge 140°/0.1s and
+    % collapsing VSG equilibrium.
     add_block('simulink/Sources/Ramp', [sub_path '/P0_ramp'], ...
         'Position', [30 90 70 110], ...
-        'Slope', num2str(P0_pu / T_ramp), 'Start', '0', 'X0', num2str(P0_pu));
+        'Slope', num2str(P0_pu / T_ramp), 'Start', '0', 'X0', '0');
     add_block('built-in/Saturate', [sub_path '/P0_sat'], ...
         'Position', [100 90 140 110], ...
         'UpperLimit', num2str(P0_pu), 'LowerLimit', '0');
@@ -752,14 +830,15 @@ for i = 1:n_vsg
     end
 
     % --- P_ref ramp for port 4: 0 → VSG_P0(i) over T_ramp seconds ---
+    % X0=0: P_ref starts at 0 at t=0 to match Pe=0 from Simscape DC IC.
     pref_ramp_name = sprintf('PrefRamp_%d', i);
     pref_sat_name = sprintf('PrefSat_%d', i);
     cx = bx - 120;
     cy = by - 10 + 3 * 25;  % same row as old Pref constant (4th row)
-    % P_ref ramp: starts at VSG_P0(i) so P_ref=P0 from t=0 (same fix as ConvGen).
+    % P_ref ramp: X0=0 so P_ref starts at 0, matching Pe=0 from Simscape DC IC.
     add_block('simulink/Sources/Ramp', [mdl '/' pref_ramp_name], ...
         'Position', [cx-80 cy cx-40 cy+15], ...
-        'Slope', num2str(VSG_P0(i) / T_ramp), 'Start', '0', 'X0', num2str(VSG_P0(i)));
+        'Slope', num2str(VSG_P0(i) / T_ramp), 'Start', '0', 'X0', '0');
     add_block('built-in/Saturate', [mdl '/' pref_sat_name], ...
         'Position', [cx cy cx+40 cy+15], ...
         'UpperLimit', num2str(VSG_P0(i)), 'LowerLimit', '0');
@@ -914,6 +993,42 @@ for i = 1:n_vsg
         i, bus_id, ess_main(i), VSG_M0, VSG_D0, VSG_P0(i));
 end
 fprintf('RESULT: [5/12] VSG/ESS done (%d)\n', n_vsg);
+
+%% ======================================================================
+%  Step 5b: Set AC phasor IL on all RL filter blocks
+%% ======================================================================
+% Simscape local fixed-step solver initialises inductor currents to DC
+% steady-state (I_DC = V/R ≈ 0 for a sinusoidal source at 50 Hz).  This
+% produces a large half-cycle DC transient that drives omega below 1 and
+% forces the IntD integrators to saturate at -90°.  Setting IL to the
+% power-flow equilibrium value eliminates this transient entirely.
+fprintf('\n=== Setting AC phasor IL on RL filter blocks ===\n');
+fprintf('RESULT: [5b/12] setting RL initial currents\n');
+
+gen_names_il = {'G1', 'G2', 'G3'};
+gen_il_all   = [pf.src_il_G1_A; pf.src_il_G23_A];   % 3×3
+for gi = 1:3
+    blk = [mdl '/Zgen_' gen_names_il{gi}];
+    set_param(blk, 'IL_specify', 'on');
+    set_param(blk, 'IL', sprintf('[%.4f, %.4f, %.4f]', gen_il_all(gi,:)));
+    fprintf('  Zgen_%s IL = [%.1f, %.1f, %.1f] A\n', gen_names_il{gi}, gen_il_all(gi,:));
+end
+
+wind_names_il = {'W1', 'W2'};
+for wi = 1:2
+    blk = [mdl '/Zw_' wind_names_il{wi}];
+    set_param(blk, 'IL_specify', 'on');
+    set_param(blk, 'IL', sprintf('[%.4f, %.4f, %.4f]', pf.src_il_W12_A(wi,:)));
+    fprintf('  Zw_%s IL = [%.1f, %.1f, %.1f] A\n', wind_names_il{wi}, pf.src_il_W12_A(wi,:));
+end
+
+for i = 1:4
+    blk = [mdl '/Zess_' num2str(i)];
+    set_param(blk, 'IL_specify', 'on');
+    set_param(blk, 'IL', sprintf('[%.4f, %.4f, %.4f]', pf.ess_il_A(i,:)));
+    fprintf('  Zess_%d IL = [%.1f, %.1f, %.1f] A\n', i, pf.ess_il_A(i,:));
+end
+fprintf('RESULT: [5b/12] RL initial currents set (9 blocks)\n');
 
 %% ======================================================================
 %  Step 6: Transmission lines (Transmission Line Three-Phase)

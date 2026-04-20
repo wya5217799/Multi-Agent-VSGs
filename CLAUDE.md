@@ -8,6 +8,7 @@
 | `scenarios/kundur/*`、`env/simulink/kundur_simulink_env.py` | `scenarios/kundur/NOTES.md` |
 | `scenarios/new_england/*`、`env/simulink/ne39_simulink_env.py` | `scenarios/new_england/NOTES.md` |
 | `env/simulink/_base.py`、`plotting/evaluate.py`、`utils/training_viz.py`、`engine/simulink_bridge.py` | `env/simulink/COMMON_NOTES.md` + 两份场景 NOTES |
+| `env/ode/*`、`scenarios/*/train_ode.py` | `env/ode/NOTES.md` |
 
 改完顺手更新对应 NOTES：新发现加到"已知事实"，失效的直接删，证伪的尝试加到"试过没用的"。
 

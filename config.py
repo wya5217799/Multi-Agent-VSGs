@@ -125,3 +125,6 @@ ODE_H_SPREAD = 0.30                # +/-30 % around each H_ES0[i]
 ODE_D_SPREAD = 0.30
 ODE_HETEROGENEITY_SEED = 2023      # deterministic spread
 ODE_NETWORK_MODE = 'linear'        # 'linear' | 'nonlinear'
+ODE_GOVERNOR_ENABLED = False
+ODE_GOVERNOR_R = 0.05              # p.u. droop (5 %)
+ODE_GOVERNOR_TAU_G = 0.5           # turbine lag (s)

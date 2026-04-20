@@ -49,6 +49,9 @@ class MultiVSGEnv:
             B_matrix=getattr(cfg, 'B_MATRIX', None),
             V_bus=getattr(cfg, 'V_BUS', None),
             network_mode=getattr(cfg, 'ODE_NETWORK_MODE', 'linear'),
+            governor_enabled=getattr(cfg, 'ODE_GOVERNOR_ENABLED', False),
+            governor_R=getattr(cfg, 'ODE_GOVERNOR_R', 0.05),
+            governor_tau_g=getattr(cfg, 'ODE_GOVERNOR_TAU_G', 0.5),
         )
 
         # 随机数生成器

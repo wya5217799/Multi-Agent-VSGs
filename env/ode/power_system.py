@@ -28,7 +28,8 @@ class PowerSystem:
     """4 母线两区域系统频率动态仿真."""
 
     def __init__(self, L, H_es0, D_es0, dt=0.2, fn=50.0,
-                 B_matrix=None, V_bus=None, network_mode='linear'):
+                 B_matrix=None, V_bus=None, network_mode='linear',
+                 governor_enabled=False, governor_R=0.05, governor_tau_g=0.5):
         """
         Parameters
         ----------
@@ -55,9 +56,6 @@ class PowerSystem:
         self.H_es = H_es0.copy()
         self.D_es = D_es0.copy()
 
-        # 状态: [Δθ_0..Δθ_{N-1}, Δω_0..Δω_{N-1}]
-        self.state = np.zeros(2 * self.N)
-
         # 扰动
         self.delta_u = np.zeros(self.N)
 
@@ -75,6 +73,18 @@ class PowerSystem:
         if network_mode == 'nonlinear' and (B_matrix is None or V_bus is None):
             raise ValueError("network_mode='nonlinear' requires B_matrix and V_bus")
 
+        self.governor_enabled = bool(governor_enabled)
+        if self.governor_enabled:
+            if governor_R <= 0:
+                raise ValueError(f"governor_R must be > 0, got {governor_R}")
+            if governor_tau_g <= 0:
+                raise ValueError(f"governor_tau_g must be > 0, got {governor_tau_g}")
+        self.governor_R = float(governor_R)
+        self.governor_tau_g = float(governor_tau_g)
+
+        state_dim = 3 * self.N if self.governor_enabled else 2 * self.N
+        self.state = np.zeros(state_dim)
+
     def reset(self, delta_u=None, event_schedule=None):
         """重置系统到稳态.
 
@@ -85,7 +95,7 @@ class PowerSystem:
         event_schedule : EventSchedule, optional
             时变扰动/拓扑事件序列. 事件在 step 起始时刻生效.
         """
-        self.state = np.zeros(2 * self.N)
+        self.state = np.zeros(self.state.shape[0])
         self.H_es = self.H_es0.copy()
         self.D_es = self.D_es0.copy()
         self.current_time = 0.0
@@ -142,19 +152,32 @@ class PowerSystem:
         """
         ODE 右端项 (Eq. 4).
 
-        state = [Δθ_0..Δθ_{N-1}, Δω_0..Δω_{N-1}]
+        Without governor (2N state):
+            state = [Δθ_0..Δθ_{N-1}, Δω_0..Δω_{N-1}]
+            Δθ̇ = Δω
+            Δω̇ = (2H)⁻¹ · (Δu - L · Δθ - D · Δω)
 
-        Δθ̇ = Δω
-        Δω̇ = (2H)⁻¹ · (Δu - L · Δθ - D · Δω)   ← 论文 Eq.4: 2H·Δω̇ = ...
+        With governor (3N state):
+            state = [Δθ, Δω, P_gov]
+            Δθ̇ = Δω
+            2H · Δω̇ = ω_s · (Δu + P_gov - coupling) - D · Δω
+            τ_G · dP_gov/dt = -(P_gov + (ω/ω_s) / R)
         """
         theta = state[:self.N]
-        omega = state[self.N:]
-        M_inv = 1.0 / (2.0 * self.H_es)  # 论文 Eq.4: 2H·dω/dt = ..., 所以 dω/dt = 1/(2H)·(...)
-
-        dtheta_dt = omega
+        omega = state[self.N:2 * self.N]
+        M_inv = 1.0 / (2.0 * self.H_es)
         coupling = self._coupling(theta)
-        domega_dt = M_inv * (self.omega_s * (self.delta_u - coupling) - self.D_es * omega)
+        dtheta_dt = omega
 
+        if self.governor_enabled:
+            P_gov = state[2 * self.N:3 * self.N]
+            domega_dt = M_inv * (
+                self.omega_s * (self.delta_u + P_gov - coupling) - self.D_es * omega
+            )
+            dP_gov_dt = -(P_gov + (omega / self.omega_s) / self.governor_R) / self.governor_tau_g
+            return np.concatenate([dtheta_dt, domega_dt, dP_gov_dt])
+
+        domega_dt = M_inv * (self.omega_s * (self.delta_u - coupling) - self.D_es * omega)
         return np.concatenate([dtheta_dt, domega_dt])
 
     def step(self):
@@ -191,17 +214,19 @@ class PowerSystem:
         self._step_count += 1
 
         theta = self.state[:self.N]
-        omega = self.state[self.N:]
-
-        # 频率变化率 (从动力学方程直接计算)
-        M_inv = 1.0 / (2.0 * self.H_es)  # Eq.4: 2H·dω/dt = ...
+        omega = self.state[self.N:2 * self.N]
+        M_inv = 1.0 / (2.0 * self.H_es)
         coupling = self._coupling(theta)
-        omega_dot = M_inv * (self.omega_s * (self.delta_u - coupling) - self.D_es * omega)
-
-        # 储能输出功率 ΔP_es = (L · Δθ)_i (Eq. 3)
+        if self.governor_enabled:
+            P_gov = self.state[2 * self.N:3 * self.N]
+            omega_dot = M_inv * (
+                self.omega_s * (self.delta_u + P_gov - coupling) - self.D_es * omega
+            )
+        else:
+            omega_dot = M_inv * (
+                self.omega_s * (self.delta_u - coupling) - self.D_es * omega
+            )
         P_es = coupling
-
-        # 频率 (Hz)
         freq_hz = self.fn + omega / (2 * np.pi)
 
         return {
@@ -216,10 +241,18 @@ class PowerSystem:
     def get_state(self):
         """返回当前状态的快照."""
         theta = self.state[:self.N]
-        omega = self.state[self.N:]
-        M_inv = 1.0 / (2.0 * self.H_es)  # Eq.4: 2H·dω/dt = ...
+        omega = self.state[self.N:2 * self.N]
+        M_inv = 1.0 / (2.0 * self.H_es)
         coupling = self._coupling(theta)
-        omega_dot = M_inv * (self.omega_s * (self.delta_u - coupling) - self.D_es * omega)
+        if self.governor_enabled:
+            P_gov = self.state[2 * self.N:3 * self.N]
+            omega_dot = M_inv * (
+                self.omega_s * (self.delta_u + P_gov - coupling) - self.D_es * omega
+            )
+        else:
+            omega_dot = M_inv * (
+                self.omega_s * (self.delta_u - coupling) - self.D_es * omega
+            )
         P_es = coupling
         freq_hz = self.fn + omega / (2 * np.pi)
         return {

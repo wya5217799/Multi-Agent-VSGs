@@ -1,5 +1,6 @@
 """Intra-episode disturbance scheduling tests."""
 import numpy as np
+import pytest
 
 from env.network_topology import build_laplacian
 from env.ode.power_system import PowerSystem
@@ -59,7 +60,6 @@ def test_mid_episode_event_changes_trajectory():
 
 
 def test_schedule_rejects_non_monotonic_times():
-    import pytest
     with pytest.raises(ValueError):
         EventSchedule(events=(
             DisturbanceEvent(t=2.0, delta_u=np.zeros(4)),

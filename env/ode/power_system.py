@@ -19,7 +19,7 @@ import numpy as np
 from scipy.integrate import solve_ivp
 from utils.ode_events import (
     DisturbanceEvent,
-    LineTripEvent,
+    LineTripEvent,  # noqa: F401 — used in Task 5 (line-trip events)
     EventSchedule,
 )
 

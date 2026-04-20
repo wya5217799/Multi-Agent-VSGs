@@ -11,9 +11,13 @@ from typing import Union
 import numpy as np
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, eq=False)
 class DisturbanceEvent:
-    """Replace the current network-wide Δu vector at time `t` (s)."""
+    """Replace the current network-wide Δu vector at time `t` (s).
+
+    Note: eq=False disables auto-generated __eq__/__hash__ — ndarray fields
+    are not hashable. Use object identity for comparison.
+    """
     t: float
     delta_u: np.ndarray  # shape (N,)
 
@@ -35,7 +39,10 @@ Event = Union[DisturbanceEvent, LineTripEvent]
 
 @dataclass(frozen=True)
 class EventSchedule:
-    """Sorted, immutable list of events applied in order of `t`."""
+    """Sorted, immutable list of events applied in order of `t`.
+
+    Hashable because it contains only a tuple of events (no direct ndarray).
+    """
     events: tuple[Event, ...] = field(default_factory=tuple)
 
     def __post_init__(self) -> None:

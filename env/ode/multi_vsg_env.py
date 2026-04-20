@@ -12,6 +12,7 @@ import numpy as np
 from env.ode.power_system import PowerSystem
 from env.network_topology import build_laplacian, CommunicationGraph
 import config as cfg
+from utils.ode_heterogeneity import generate_heterogeneous_params
 
 
 class MultiVSGEnv:
@@ -42,9 +43,23 @@ class MultiVSGEnv:
         self.comm = CommunicationGraph(cfg.COMM_ADJACENCY, fail_prob=fail_prob)
         self.forced_link_failures = forced_link_failures
 
+        # 异质化基准参数
+        H_base = cfg.H_ES0.copy()
+        D_base = cfg.D_ES0.copy()
+        if getattr(cfg, 'ODE_HETEROGENEOUS', False):
+            seed = getattr(cfg, 'ODE_HETEROGENEITY_SEED', 2023)
+            H_base = generate_heterogeneous_params(
+                H_base, getattr(cfg, 'ODE_H_SPREAD', 0.30), seed,
+            )
+            D_base = generate_heterogeneous_params(
+                D_base, getattr(cfg, 'ODE_D_SPREAD', 0.30), seed + 1,
+            )
+        self._H_base = H_base
+        self._D_base = D_base
+
         # 电力系统
         self.ps = PowerSystem(
-            self.L, cfg.H_ES0, cfg.D_ES0,
+            self.L, H_base, D_base,
             dt=cfg.DT, fn=cfg.OMEGA_N / (2 * np.pi),
             B_matrix=getattr(cfg, 'B_MATRIX', None),
             V_bus=getattr(cfg, 'V_BUS', None),
@@ -130,8 +145,8 @@ class MultiVSGEnv:
         info : dict
         """
         # 1. 解码动作: [-1,1] → [min, max]
-        H_es = np.copy(cfg.H_ES0)
-        D_es = np.copy(cfg.D_ES0)
+        H_es = np.copy(self._H_base)
+        D_es = np.copy(self._D_base)
         delta_H = np.zeros(self.N)
         delta_D = np.zeros(self.N)
 
@@ -140,8 +155,8 @@ class MultiVSGEnv:
             # Zero-centered mapping: a=0 → ΔH=0 (保持基准参数，与论文 Eq.12-13 语义一致)
             delta_H[i] = a[0] * cfg.DH_MAX if a[0] >= 0 else a[0] * (-cfg.DH_MIN)
             delta_D[i] = a[1] * cfg.DD_MAX if a[1] >= 0 else a[1] * (-cfg.DD_MIN)
-            H_es[i] = cfg.H_ES0[i] + delta_H[i]
-            D_es[i] = cfg.D_ES0[i] + delta_D[i]
+            H_es[i] = self._H_base[i] + delta_H[i]
+            D_es[i] = self._D_base[i] + delta_D[i]
 
         # 确保 H > 0, D > 0 (物理约束)
         H_es = np.maximum(H_es, 8.0)

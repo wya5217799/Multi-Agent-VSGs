@@ -1,5 +1,11 @@
 # Kundur IntW Saturation Fix — Implementation Plan
 
+> ⚠️ **DEPRECATED 2026-04-18**: `optimization_log` 已停用。
+> - Task 3（修改 `optimization_log_kundur.jsonl`）：**跳过**。
+> - Task 6（`append_outcome`）：改为在训练完成后手动更新 `scenarios/kundur/NOTES.md`（新发现加到"已知事实"、失效结论直接删、证伪的尝试加到"试过没用的"）。
+> - 其余 Task 1/2/4/5（代码改动、测试、commit）仍然有效。
+> - 注：本 plan 的 DIST_MAX 1.5→0.5 思路已被 opt_kd_05 的阻抗 base 修复（commit 216d8b9）绕过，若现在执行需重新评估 Task 1 是否仍必要；见 `scenarios/kundur/NOTES.md` 当前状态。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
 **Goal:** Fix the root cause of Kundur Simulink training failure: IntW integrator saturation at ±15 Hz that corrupts the replay buffer with physically distorted observations.

@@ -118,13 +118,6 @@ def test_build_chain_not_in_public_tools():
     )
 
 
-def test_check_params_not_in_public_tools():
-    names = _parse_public_tool_names()
-    assert "simulink_check_params" not in names, (
-        "simulink_check_params must not be in PUBLIC_TOOLS (placeholder implementation)"
-    )
-
-
 # ---------------------------------------------------------------------------
 # Layer 2 — contract smoke (requires live MATLAB, mark with matlab)
 # ---------------------------------------------------------------------------

@@ -44,14 +44,14 @@ class TestSimulinkScreenshot:
     def test_returns_artifact_path_on_success(self, tmp_path):
         from engine.mcp_simulink_tools import simulink_screenshot
 
-        def fake_vsg_screenshot(target, out_path, resolution):
+        def fake_slx_screenshot(target, out_path, resolution):
             # Simulate MATLAB writing a PNG
             _png_stub(Path(out_path).parent, Path(out_path).name)
             return {"ok": True, "width": 1, "height": 1, "error_msg": ""}
 
         session = _mock_session()
         session.call.side_effect = lambda func, *a, **kw: (
-            fake_vsg_screenshot(*a) if func == "vsg_screenshot"
+            fake_slx_screenshot(*a) if func == "slx_screenshot"
             else None
         )
 
@@ -71,13 +71,13 @@ class TestSimulinkScreenshot:
     def test_returns_base64_when_requested(self, tmp_path):
         from engine.mcp_simulink_tools import simulink_screenshot
 
-        def fake_vsg_screenshot(target, out_path, resolution):
+        def fake_slx_screenshot(target, out_path, resolution):
             _png_stub(Path(out_path).parent, Path(out_path).name)
             return {"ok": True, "width": 1, "height": 1, "error_msg": ""}
 
         session = _mock_session()
         session.call.side_effect = lambda func, *a, **kw: (
-            fake_vsg_screenshot(*a) if func == "vsg_screenshot"
+            fake_slx_screenshot(*a) if func == "slx_screenshot"
             else None
         )
 
@@ -103,7 +103,7 @@ class TestSimulinkScreenshot:
             MockMS.get.return_value = session
             simulink_screenshot("m", system_path="m/SubSys1")
 
-        # The first positional arg to vsg_screenshot should be the subsystem
+        # The first positional arg to slx_screenshot should be the subsystem
         call_args = session.call.call_args_list[-1]
         assert call_args[0][1] == "m/SubSys1"
 

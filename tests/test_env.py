@@ -10,9 +10,9 @@ def test_reset_succeeds(env):
 
 def test_step_no_crash(env, scenario):
     """50 zero-action steps without TDS failure."""
-    from plotting.evaluate import _get_zero_action
+    from plotting.evaluate import get_zero_action
     env.reset()
-    zero_act = _get_zero_action(env)
+    zero_act = get_zero_action(env)
     for step in range(50):
         actions = {i: zero_act.copy() for i in range(scenario.n_agents)}
         obs, rewards, done, info = env.step(actions)

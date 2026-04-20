@@ -1,0 +1,52 @@
+========================================================================
+Phase 3: Zero-Action Physical Validation (Python Bridge)
+========================================================================
+VSG_P0_SBASE (reference, system-base pu): [0.2000, 0.2000, 0.2000, 0.2000]
+Steps: 50, steady-state window: 41-50
+
+Resetting (warmup ~0.5 s)...
+POST-WARMUP _delta_prev_deg: [-90. -90. -90. -90.]
+POST-WARMUP _Pe_prev:        [0.2 0.2 0.2 0.2]
+Reset OK. Running zero-action episode...
+
+  step   1  t=3.2s  ω=[0.7406, 0.7506, 0.8323, 0.7398]  Pe=[3.5642, -2.6194, 2.3888, -4.1036]  sat=n
+  step   2  t=3.4s  ω=[0.7362, 0.7431, 0.8324, 0.7412]  Pe=[3.5801, -2.2946, 1.1224, -3.7150]  sat=n
+  step   3  t=3.6s  ω=[0.7303, 0.7385, 0.8320, 0.7430]  Pe=[4.3716, -1.2647, -1.2049, -2.3548]  sat=n
+  step  10  t=5.0s  ω=[0.7206, 0.8654, 0.8170, 0.7689]  Pe=[-3.5094, -3.7489, -0.8125, 5.1244]  sat=Y
+  step  20  t=7.0s  ω=[0.7374, 0.8420, 0.8822, 0.7684]  Pe=[-3.6390, -4.2111, -4.4733, 3.3616]  sat=n
+  step  30  t=9.0s  ω=[0.7839, 0.8775, 0.8732, 0.7689]  Pe=[0.9653, -1.8225, -1.0636, 2.0485]  sat=n
+  step  40  t=11.0s  ω=[0.7494, 0.8842, 0.8672, 0.7702]  Pe=[1.3464, 5.2352, -13.1555, 8.1089]  sat=n
+  step  50  t=13.0s  ω=[0.7568, 0.8252, 0.8568, 0.7781]  Pe=[0.9106, -5.1007, -11.4416, -3.5569]  sat=n
+
+Steady-state window: steps 41–50 (10 steps)
+------------------------------------------------------------------------
+
+[C1] Pe deviation < 5% (system-base pu):
+  ES1: max_rel=2197.08%  mean_Pe=2.7547  ref=0.2000  [FAIL]
+  ES2: max_rel=3781.82%  mean_Pe=-2.2333  ref=0.2000  [FAIL]
+  ES3: max_rel=11474.29%  mean_Pe=-6.4332  ref=0.2000  [FAIL]
+  ES4: max_rel=5208.62%  mean_Pe=1.7884  ref=0.2000  [FAIL]
+  → C1: FAIL
+
+[C2] IntW (omega) never saturated [0.7, 1.3] pu (full run):
+  Saturation triggered: True
+  (omega IS IntW output — dedicated IntW_ES ToWorkspace not needed)
+  → C2: WARN (soft, non-blocking per Section 5.4)
+
+[C3] omega deviation < 0.002 pu (= ±0.10 Hz):
+  ES1: max|omega-1|=0.25955 pu  [FAIL]
+  ES2: max|omega-1|=0.17482 pu  [FAIL]
+  ES3: max|omega-1|=0.18457 pu  [FAIL]
+  ES4: max|omega-1|=0.24305 pu  [FAIL]
+  → C3: FAIL
+
+[C4] delta drift < 1 deg/step:
+  ES1: max_drift=0.000 deg/step  [PASS]
+  ES2: max_drift=0.000 deg/step  [PASS]
+  ES3: max_drift=0.000 deg/step  [PASS]
+  ES4: max_drift=0.000 deg/step  [PASS]
+  → C4: PASS
+
+========================================================================
+VERDICT: FAIL (C1, C3)  →  trigger Phase 5 (IC calibration)
+========================================================================

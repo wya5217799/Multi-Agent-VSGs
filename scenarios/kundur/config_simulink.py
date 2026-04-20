@@ -23,6 +23,12 @@ from scenarios.config_simulink_base import (
     PHI_H, PHI_D, TDS_FAIL_PENALTY,
 )
 
+# ========== Kundur-specific warmup override ==========
+# ConvGen and VSG P_ref ramps start at 0 (X0=0 in build_powerlib_kundur.m),
+# so T_WARMUP must cover the full T_ramp=2s plus settling time (~1s).
+# Base value 0.5s is too short — delta crashes before the ramp completes.
+T_WARMUP = 3.0  # overrides config_simulink_base.T_WARMUP = 0.5
+
 # ========== System (from contract) ==========
 N_AGENTS = _CONTRACT.n_agents
 SBASE = 100.0        # MVA

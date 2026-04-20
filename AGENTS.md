@@ -107,7 +107,7 @@ Monitor tools: see `engine/mcp_*.py` docstrings
 ### Training Control Surface
 1. `get_training_launch_status` → 2. launch script
 → 3. `training_status` (routine) → 4. `training_diagnose` (on anomaly)
-→ 5. `optimization_log.append_outcome` (post-run)
+→ 5. update `scenarios/<topo>/NOTES.md` (post-run, manual)
 
 ## Guardrails
 

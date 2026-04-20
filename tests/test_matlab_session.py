@@ -9,10 +9,10 @@ from unittest.mock import ANY, MagicMock, patch
 class TestMatlabCallError:
     def test_stores_function_name_and_args(self):
         from engine.exceptions import MatlabCallError
-        err = MatlabCallError("vsg_step_and_read", (1, 2), "Division by zero")
-        assert err.func_name == "vsg_step_and_read"
+        err = MatlabCallError("slx_step_and_read", (1, 2), "Division by zero")
+        assert err.func_name == "slx_step_and_read"
         assert err.args_passed == (1, 2)
-        assert "vsg_step_and_read" in str(err)
+        assert "slx_step_and_read" in str(err)
         assert "Division by zero" in str(err)
 
     def test_is_exception(self):
@@ -149,7 +149,7 @@ class TestMatlabSessionCall:
 
 
 class TestMatlabSessionAddpath:
-    """Test auto-addpath for vsg_helpers/."""
+    """Test auto-addpath for slx_helpers/."""
 
     def setup_method(self):
         from engine.matlab_session import MatlabSession
@@ -165,8 +165,8 @@ class TestMatlabSessionAddpath:
         session._connect()
 
         calls = [str(c) for c in mock_eng.addpath.call_args_list]
-        assert any("vsg_helpers" in c for c in calls), \
-            f"addpath not called with vsg_helpers path. Calls: {calls}"
+        assert any("slx_helpers" in c for c in calls), \
+            f"addpath not called with slx_helpers path. Calls: {calls}"
 
 
 class TestMatlabSessionEval:

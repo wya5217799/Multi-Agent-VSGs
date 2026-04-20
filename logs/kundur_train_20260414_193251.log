@@ -1,0 +1,529 @@
+[train] run_id=kundur_simulink_20260414_193252, output=C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_kundur\runs\kundur_simulink_20260414_193252
+
+============================================================
+Training MARL-VSG on Modified Kundur Two-Area System
+Mode: simulink | Episodes: 500 | Agents: 4 | Seed: 42
+============================================================
+
+[Kundur-Simulink] Load reduction: TripLoad1_P=73.09MW total (Bus14 remaining load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=1.60MW total (Bus14 remaining load)
+[Kundur-Simulink] Load increase: TripLoad2_P=131.20MW total (Bus15 applied load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=136.38MW total (Bus14 remaining load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=27.78MW total (Bus14 remaining load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=143.88MW total (Bus14 remaining load)
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+[Kundur-Simulink] Load increase: TripLoad2_P=136.36MW total (Bus15 applied load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=87.15MW total (Bus14 remaining load)
+[Kundur-Simulink] Load increase: TripLoad2_P=186.39MW total (Bus15 applied load)
+[Monitor] Ep 9 | Reward: -67866.4 (r_f: 99.7%, r_h: 0.3%, r_d: 0.0%)
+          Actions mu: [0.03, 0.03, -0.09, -0.08]  std: [0.58, 0.55, 0.52, 0.59]
+          TDS fails: 0/10 (0.0%) | Freq peak: 5.00 Hz
+          Per-agent rewards: [a0: -59165.8, a1: -58889.2, a2: -85459.9, a3: -67950.6]
+[Ep   10/500] R=-67866.39 | Avg10=-51588.86 | Alpha=1.0000 | Buf=1000 | Time=104s
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+[Kundur-Simulink] Load increase: TripLoad2_P=158.43MW total (Bus15 applied load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=56.79MW total (Bus14 remaining load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=108.07MW total (Bus14 remaining load)
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=134.99MW total (Bus14 remaining load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=0.00MW total (Bus14 remaining load)
+[Kundur-Simulink] Load increase: TripLoad2_P=160.92MW total (Bus15 applied load)
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+[Monitor] Calibration complete (20 episodes).
+          Reward baseline: mu=-50909.5, std=7653.0 -> magnitude range: [-73869, -27950]
+          Action std baseline: 0.55 -> collapse threshold: 0.055
+          TDS failure baseline: 0.0% -> alert threshold: 30.0%
+[Monitor] Ep 19 | Reward: -56040.7 (r_f: 99.6%, r_h: 0.3%, r_d: 0.1%)
+          Actions mu: [0.10, -0.02, -0.07, 0.03]  std: [0.52, 0.53, 0.52, 0.53]
+          TDS fails: 0/10 (0.0%) | Freq peak: 5.00 Hz
+          Per-agent rewards: [a0: -36425.3, a1: -67280.2, a2: -47717.3, a3: -72740.0]
+          SAC: mean critic_loss: 10.875, mean alpha: 1.000
+
+[!] [Monitor] WARNING: freq_out_of_range @ Ep 19
+  Frequency exceeded +/-2.0 Hz in 10/10 recent episodes (threshold: 3 episodes).
+  VSG parameters may be causing system instability.
+[Ep   20/500] R=-56040.68 | Avg10=-50230.09 | Alpha=0.9997 | Buf=2000 | Time=179s
+[Kundur-Simulink] Load increase: TripLoad2_P=124.41MW total (Bus15 applied load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=141.12MW total (Bus14 remaining load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=96.24MW total (Bus14 remaining load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=85.66MW total (Bus14 remaining load)
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=0.00MW total (Bus14 remaining load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=0.00MW total (Bus14 remaining load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=28.42MW total (Bus14 remaining load)
+[Kundur-Simulink] Load increase: TripLoad2_P=117.70MW total (Bus15 applied load)
+[Kundur-Simulink] Load increase: TripLoad2_P=109.05MW total (Bus15 applied load)
+[Monitor] Ep 29 | Reward: -57392.8 (r_f: 99.7%, r_h: 0.2%, r_d: 0.1%)
+          Actions mu: [-0.09, 0.05, 0.00, 0.19]  std: [0.59, 0.56, 0.56, 0.51]
+          TDS fails: 0/10 (0.0%) | Freq peak: 5.00 Hz
+          Per-agent rewards: [a0: -59418.8, a1: -62038.7, a2: -44591.3, a3: -63522.2]
+          SAC: mean critic_loss: 8.961, mean alpha: 0.931
+[Ep   30/500] R=-57392.76 | Avg10=-54039.29 | Alpha=0.9275 | Buf=3000 | Time=261s
+[Kundur-Simulink] Load increase: TripLoad2_P=177.74MW total (Bus15 applied load)
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=91.81MW total (Bus14 remaining load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=119.82MW total (Bus14 remaining load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=133.09MW total (Bus14 remaining load)
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=146.90MW total (Bus14 remaining load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=6.63MW total (Bus14 remaining load)
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+[Kundur-Simulink] Load increase: TripLoad2_P=171.69MW total (Bus15 applied load)
+[Monitor] Ep 39 | Reward: -47970.7 (r_f: 99.5%, r_h: 0.4%, r_d: 0.1%)
+          Actions mu: [0.08, 0.07, -0.06, 0.02]  std: [0.58, 0.59, 0.60, 0.53]
+          TDS fails: 0/10 (0.0%) | Freq peak: 5.00 Hz
+          Per-agent rewards: [a0: -43185.9, a1: -54422.8, a2: -35052.1, a3: -59222.1]
+          SAC: mean critic_loss: 9.406, mean alpha: 0.863
+[Ep   40/500] R=-47970.71 | Avg10=-49620.26 | Alpha=0.8602 | Buf=4000 | Time=344s
+[Kundur-Simulink] Load reduction: TripLoad1_P=0.00MW total (Bus14 remaining load)
+[Kundur-Simulink] Load increase: TripLoad2_P=166.18MW total (Bus15 applied load)
+[Kundur-Simulink] Load increase: TripLoad2_P=162.20MW total (Bus15 applied load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=2.08MW total (Bus14 remaining load)
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=124.08MW total (Bus14 remaining load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=0.00MW total (Bus14 remaining load)
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+[Kundur-Simulink] Load increase: TripLoad2_P=105.08MW total (Bus15 applied load)
+[Monitor] Ep 49 | Reward: -54263.0 (r_f: 99.6%, r_h: 0.4%, r_d: 0.1%)
+          Actions mu: [0.09, 0.05, 0.14, 0.10]  std: [0.61, 0.49, 0.55, 0.57]
+          TDS fails: 0/10 (0.0%) | Freq peak: 5.00 Hz
+          Per-agent rewards: [a0: -59445.8, a1: -23849.6, a2: -60823.9, a3: -72932.7]
+          SAC: mean critic_loss: 10.158, mean alpha: 0.746
+[Ep   50/500] R=-54263.00 | Avg10=-53429.72 | Alpha=0.7404 | Buf=5000 | Time=434s
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+  >>> Eval reward: -45653.64
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_kundur\runs\kundur_simulink_20260414_193252\checkpoints\best.pt
+  >>> New best! Saved to C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_kundur\runs\kundur_simulink_20260414_193252\checkpoints/best.pt
+[Kundur-Simulink] Load reduction: TripLoad1_P=141.71MW total (Bus14 remaining load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=85.13MW total (Bus14 remaining load)
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=65.92MW total (Bus14 remaining load)
+[Kundur-Simulink] Load increase: TripLoad2_P=145.76MW total (Bus15 applied load)
+[Kundur-Simulink] Load increase: TripLoad2_P=157.95MW total (Bus15 applied load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=0.00MW total (Bus14 remaining load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=21.32MW total (Bus14 remaining load)
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=0.00MW total (Bus14 remaining load)
+[Monitor] Ep 59 | Reward: -46818.0 (r_f: 99.4%, r_h: 0.5%, r_d: 0.1%)
+          Actions mu: [0.17, 0.03, -0.06, 0.11]  std: [0.53, 0.59, 0.55, 0.65]
+          TDS fails: 0/10 (0.0%) | Freq peak: 5.00 Hz
+          Per-agent rewards: [a0: -61982.5, a1: -62524.7, a2: -62494.9, a3: -270.1]
+          SAC: mean critic_loss: 12.435, mean alpha: 0.642
+[Ep   60/500] R=-46818.04 | Avg10=-53077.66 | Alpha=0.6371 | Buf=6000 | Time=550s
+[Kundur-Simulink] Load reduction: TripLoad1_P=0.00MW total (Bus14 remaining load)
+[Kundur-Simulink] Load increase: TripLoad2_P=163.60MW total (Bus15 applied load)
+[Kundur-Simulink] Load increase: TripLoad2_P=145.59MW total (Bus15 applied load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=0.00MW total (Bus14 remaining load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=146.61MW total (Bus14 remaining load)
+[Kundur-Simulink] Load increase: TripLoad2_P=183.48MW total (Bus15 applied load)
+[Kundur-Simulink] Load increase: TripLoad2_P=123.97MW total (Bus15 applied load)
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=44.24MW total (Bus14 remaining load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=75.27MW total (Bus14 remaining load)
+[Monitor] Ep 69 | Reward: -47466.0 (r_f: 99.4%, r_h: 0.5%, r_d: 0.1%)
+          Actions mu: [0.08, 0.01, 0.11, 0.18]  std: [0.58, 0.59, 0.59, 0.59]
+          TDS fails: 0/10 (0.0%) | Freq peak: 5.00 Hz
+          Per-agent rewards: [a0: -31271.4, a1: -50327.9, a2: -59505.4, a3: -48759.2]
+          SAC: mean critic_loss: 17.360, mean alpha: 0.514
+
+[!] [Monitor] WARNING: freq_out_of_range @ Ep 69
+  Frequency exceeded +/-2.0 Hz in 10/10 recent episodes (threshold: 3 episodes).
+  VSG parameters may be causing system instability.
+[Ep   70/500] R=-47465.95 | Avg10=-50977.52 | Alpha=0.5087 | Buf=7000 | Time=651s
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+[Kundur-Simulink] Load increase: TripLoad2_P=156.97MW total (Bus15 applied load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=26.09MW total (Bus14 remaining load)
+[Kundur-Simulink] Load increase: TripLoad2_P=110.30MW total (Bus15 applied load)
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+[Kundur-Simulink] Load increase: TripLoad2_P=128.98MW total (Bus15 applied load)
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=13.57MW total (Bus14 remaining load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=100.47MW total (Bus14 remaining load)
+[Monitor] Ep 79 | Reward: -50090.6 (r_f: 99.2%, r_h: 0.7%, r_d: 0.1%)
+          Actions mu: [0.00, 0.27, 0.14, 0.22]  std: [0.57, 0.60, 0.57, 0.56]
+          TDS fails: 0/10 (0.0%) | Freq peak: 5.00 Hz
+          Per-agent rewards: [a0: -48583.8, a1: -66258.3, a2: -25146.8, a3: -60373.4]
+          SAC: mean critic_loss: 25.781, mean alpha: 0.411
+[Ep   80/500] R=-50090.58 | Avg10=-54428.83 | Alpha=0.4061 | Buf=8000 | Time=752s
+[Kundur-Simulink] Load reduction: TripLoad1_P=74.44MW total (Bus14 remaining load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=21.29MW total (Bus14 remaining load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=129.94MW total (Bus14 remaining load)
+[Kundur-Simulink] Load increase: TripLoad2_P=164.16MW total (Bus15 applied load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=139.84MW total (Bus14 remaining load)
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+[Monitor] Ep 89 | Reward: -51938.9 (r_f: 99.4%, r_h: 0.5%, r_d: 0.1%)
+          Actions mu: [-0.02, 0.19, 0.10, 0.14]  std: [0.64, 0.61, 0.58, 0.54]
+          TDS fails: 0/10 (0.0%) | Freq peak: 5.00 Hz
+          Per-agent rewards: [a0: -53223.9, a1: -49666.3, a2: -62321.8, a3: -42543.5]
+          SAC: mean critic_loss: 37.431, mean alpha: 0.305
+[Ep   90/500] R=-51938.89 | Avg10=-47227.07 | Alpha=0.3008 | Buf=9000 | Time=845s
+[Kundur-Simulink] Load increase: TripLoad2_P=168.21MW total (Bus15 applied load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=0.00MW total (Bus14 remaining load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=96.41MW total (Bus14 remaining load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=0.00MW total (Bus14 remaining load)
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=129.38MW total (Bus14 remaining load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=0.00MW total (Bus14 remaining load)
+[Kundur-Simulink] Load increase: TripLoad2_P=167.81MW total (Bus15 applied load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=2.81MW total (Bus14 remaining load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=0.00MW total (Bus14 remaining load)
+[Monitor] Ep 99 | Reward: -55312.4 (r_f: 99.0%, r_h: 0.9%, r_d: 0.1%)
+          Actions mu: [0.08, -0.04, 0.27, 0.10]  std: [0.62, 0.57, 0.59, 0.64]
+          TDS fails: 0/10 (0.0%) | Freq peak: 5.00 Hz
+          Per-agent rewards: [a0: -62971.7, a1: -56203.6, a2: -49191.9, a3: -52882.4]
+          SAC: mean critic_loss: 52.862, mean alpha: 0.226
+[Ep  100/500] R=-55312.42 | Avg10=-48509.73 | Alpha=0.2228 | Buf=10000 | Time=933s
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+  >>> Eval reward: -45786.67
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_kundur\runs\kundur_simulink_20260414_193252\checkpoints\ep100.pt
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=115.67MW total (Bus14 remaining load)
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=127.71MW total (Bus14 remaining load)
+[Kundur-Simulink] Load increase: TripLoad2_P=101.01MW total (Bus15 applied load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=38.25MW total (Bus14 remaining load)
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=82.92MW total (Bus14 remaining load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=18.07MW total (Bus14 remaining load)
+[Monitor] Ep 109 | Reward: -44173.7 (r_f: 98.8%, r_h: 1.1%, r_d: 0.1%)
+          Actions mu: [0.12, 0.06, 0.09, 0.09]  std: [0.66, 0.68, 0.67, 0.59]
+          TDS fails: 0/10 (0.0%) | Freq peak: 5.00 Hz
+          Per-agent rewards: [a0: -42189.0, a1: -41120.4, a2: -39394.6, a3: -53990.6]
+          SAC: mean critic_loss: 67.537, mean alpha: 0.156
+[Ep  110/500] R=-44173.67 | Avg10=-38419.95 | Alpha=0.1531 | Buf=11000 | Time=1047s
+[Kundur-Simulink] Load reduction: TripLoad1_P=16.48MW total (Bus14 remaining load)
+[Kundur-Simulink] Load increase: TripLoad2_P=118.73MW total (Bus15 applied load)
+[Kundur-Simulink] Load increase: TripLoad2_P=153.04MW total (Bus15 applied load)
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=0.00MW total (Bus14 remaining load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=0.00MW total (Bus14 remaining load)
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=108.95MW total (Bus14 remaining load)
+[Kundur-Simulink] Load increase: TripLoad2_P=156.15MW total (Bus15 applied load)
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+[Monitor] Ep 119 | Reward: -43791.2 (r_f: 98.8%, r_h: 1.1%, r_d: 0.1%)
+          Actions mu: [-0.07, 0.11, 0.23, 0.12]  std: [0.65, 0.67, 0.64, 0.65]
+          TDS fails: 0/10 (0.0%) | Freq peak: 5.00 Hz
+          Per-agent rewards: [a0: -17315.9, a1: -50828.0, a2: -55498.9, a3: -51522.0]
+          SAC: mean critic_loss: 80.022, mean alpha: 0.107
+
+[!] [Monitor] WARNING: freq_out_of_range @ Ep 119
+  Frequency exceeded +/-2.0 Hz in 10/10 recent episodes (threshold: 3 episodes).
+  VSG parameters may be causing system instability.
+[Ep  120/500] R=-43791.19 | Avg10=-39715.39 | Alpha=0.1052 | Buf=12000 | Time=1146s
+[Kundur-Simulink] Load reduction: TripLoad1_P=0.00MW total (Bus14 remaining load)
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=144.91MW total (Bus14 remaining load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=62.36MW total (Bus14 remaining load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=0.00MW total (Bus14 remaining load)
+[Kundur-Simulink] Load increase: TripLoad2_P=158.89MW total (Bus15 applied load)
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=114.10MW total (Bus14 remaining load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=0.00MW total (Bus14 remaining load)
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+[Monitor] Ep 129 | Reward: -40572.1 (r_f: 97.9%, r_h: 1.9%, r_d: 0.2%)
+          Actions mu: [0.19, 0.13, 0.64, 0.17]  std: [0.76, 0.69, 0.48, 0.77]
+          TDS fails: 0/10 (0.0%) | Freq peak: 5.00 Hz
+          Per-agent rewards: [a0: -49261.8, a1: -41273.5, a2: -28056.6, a3: -43696.5]
+          SAC: mean critic_loss: 87.018, mean alpha: 0.071
+[Ep  130/500] R=-40572.09 | Avg10=-43640.05 | Alpha=0.0700 | Buf=13000 | Time=1249s
+[Kundur-Simulink] Load reduction: TripLoad1_P=25.00MW total (Bus14 remaining load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=119.98MW total (Bus14 remaining load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=0.00MW total (Bus14 remaining load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=8.60MW total (Bus14 remaining load)
+[Kundur-Simulink] Load increase: TripLoad2_P=171.90MW total (Bus15 applied load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=0.00MW total (Bus14 remaining load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=0.00MW total (Bus14 remaining load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=45.73MW total (Bus14 remaining load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=0.00MW total (Bus14 remaining load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=7.61MW total (Bus14 remaining load)
+[Monitor] Ep 139 | Reward: -49035.0 (r_f: 98.9%, r_h: 1.0%, r_d: 0.1%)
+          Actions mu: [0.30, 0.04, 0.07, 0.10]  std: [0.64, 0.81, 0.75, 0.76]
+          TDS fails: 0/10 (0.0%) | Freq peak: 5.00 Hz
+          Per-agent rewards: [a0: -49114.2, a1: -54001.5, a2: -35580.9, a3: -57443.5]
+          SAC: mean critic_loss: 94.410, mean alpha: 0.056
+[Ep  140/500] R=-49035.03 | Avg10=-41248.34 | Alpha=0.0560 | Buf=14000 | Time=1358s
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+[Kundur-Simulink] Load increase: TripLoad2_P=175.12MW total (Bus15 applied load)
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=54.88MW total (Bus14 remaining load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=90.69MW total (Bus14 remaining load)
+[Kundur-Simulink] Load increase: TripLoad2_P=106.10MW total (Bus15 applied load)
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=122.59MW total (Bus14 remaining load)
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+[Monitor] Ep 149 | Reward: -33700.6 (r_f: 97.6%, r_h: 2.2%, r_d: 0.2%)
+          Actions mu: [0.12, 0.12, 0.26, 0.26]  std: [0.77, 0.74, 0.62, 0.63]
+          TDS fails: 0/10 (0.0%) | Freq peak: 5.00 Hz
+          Per-agent rewards: [a0: -33091.2, a1: -43899.3, a2: -19864.6, a3: -37947.3]
+          SAC: mean critic_loss: 96.250, mean alpha: 0.053
+[Ep  150/500] R=-33700.62 | Avg10=-41881.49 | Alpha=0.0534 | Buf=15000 | Time=1474s
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+  >>> Eval reward: -39327.35
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_kundur\runs\kundur_simulink_20260414_193252\checkpoints\best.pt
+  >>> New best! Saved to C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_kundur\runs\kundur_simulink_20260414_193252\checkpoints/best.pt
+[Kundur-Simulink] Load reduction: TripLoad1_P=137.66MW total (Bus14 remaining load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=39.87MW total (Bus14 remaining load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=2.78MW total (Bus14 remaining load)
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+[Kundur-Simulink] Load increase: TripLoad2_P=187.79MW total (Bus15 applied load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=142.93MW total (Bus14 remaining load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=0.00MW total (Bus14 remaining load)
+[Kundur-Simulink] Load increase: TripLoad2_P=181.79MW total (Bus15 applied load)
+[Kundur-Simulink] Load increase: TripLoad2_P=131.29MW total (Bus15 applied load)
+[Monitor] Ep 159 | Reward: -46471.4 (r_f: 98.0%, r_h: 1.7%, r_d: 0.2%)
+          Actions mu: [0.27, 0.30, 0.34, 0.27]  std: [0.75, 0.70, 0.70, 0.74]
+          TDS fails: 0/10 (0.0%) | Freq peak: 5.00 Hz
+          Per-agent rewards: [a0: -39663.9, a1: -40193.3, a2: -54798.9, a3: -51229.5]
+          SAC: mean critic_loss: 97.603, mean alpha: 0.059
+[Ep  160/500] R=-46471.39 | Avg10=-39900.98 | Alpha=0.0595 | Buf=16000 | Time=1618s
+[Kundur-Simulink] Load reduction: TripLoad1_P=38.15MW total (Bus14 remaining load)
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=0.00MW total (Bus14 remaining load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=37.13MW total (Bus14 remaining load)
+[Kundur-Simulink] Load increase: TripLoad2_P=183.92MW total (Bus15 applied load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=76.81MW total (Bus14 remaining load)
+[Kundur-Simulink] Load increase: TripLoad2_P=102.88MW total (Bus15 applied load)
+[Kundur-Simulink] Load increase: TripLoad2_P=109.20MW total (Bus15 applied load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=0.00MW total (Bus14 remaining load)
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+[Monitor] Ep 169 | Reward: -44302.9 (r_f: 98.0%, r_h: 1.7%, r_d: 0.3%)
+          Actions mu: [0.44, 0.41, 0.38, 0.06]  std: [0.58, 0.64, 0.68, 0.75]
+          TDS fails: 0/10 (0.0%) | Freq peak: 5.00 Hz
+          Per-agent rewards: [a0: -39627.2, a1: -28970.5, a2: -57057.5, a3: -51556.4]
+          SAC: mean critic_loss: 97.370, mean alpha: 0.062
+
+[!] [Monitor] WARNING: freq_out_of_range @ Ep 169
+  Frequency exceeded +/-2.0 Hz in 10/10 recent episodes (threshold: 3 episodes).
+  VSG parameters may be causing system instability.
+[Ep  170/500] R=-44302.91 | Avg10=-41365.38 | Alpha=0.0616 | Buf=17000 | Time=1733s
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+[Kundur-Simulink] Load increase: TripLoad2_P=134.64MW total (Bus15 applied load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=68.30MW total (Bus14 remaining load)
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=73.08MW total (Bus14 remaining load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=47.37MW total (Bus14 remaining load)
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=133.89MW total (Bus14 remaining load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=142.70MW total (Bus14 remaining load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=0.00MW total (Bus14 remaining load)
+[Monitor] Ep 179 | Reward: -48181.0 (r_f: 98.6%, r_h: 1.2%, r_d: 0.2%)
+          Actions mu: [0.32, 0.15, 0.22, 0.10]  std: [0.68, 0.80, 0.68, 0.72]
+          TDS fails: 0/10 (0.0%) | Freq peak: 5.00 Hz
+          Per-agent rewards: [a0: -46276.4, a1: -41954.3, a2: -58625.1, a3: -45868.2]
+          SAC: mean critic_loss: 95.273, mean alpha: 0.065
+[Ep  180/500] R=-48181.00 | Avg10=-41203.09 | Alpha=0.0645 | Buf=18000 | Time=1849s
+[Kundur-Simulink] Load reduction: TripLoad1_P=70.37MW total (Bus14 remaining load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=56.35MW total (Bus14 remaining load)
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=0.00MW total (Bus14 remaining load)
+[Kundur-Simulink] Load increase: TripLoad2_P=139.16MW total (Bus15 applied load)
+[Kundur-Simulink] Load increase: TripLoad2_P=120.16MW total (Bus15 applied load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=129.11MW total (Bus14 remaining load)
+[Kundur-Simulink] Load increase: TripLoad2_P=114.24MW total (Bus15 applied load)
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+[Monitor] Ep 189 | Reward: -42130.0 (r_f: 97.6%, r_h: 2.1%, r_d: 0.3%)
+          Actions mu: [0.20, 0.32, 0.45, 0.37]  std: [0.71, 0.69, 0.67, 0.69]
+          TDS fails: 0/10 (0.0%) | Freq peak: 5.00 Hz
+          Per-agent rewards: [a0: -39419.7, a1: -48040.5, a2: -45172.1, a3: -35887.6]
+          SAC: mean critic_loss: 94.982, mean alpha: 0.064
+[Ep  190/500] R=-42129.98 | Avg10=-39516.93 | Alpha=0.0637 | Buf=19000 | Time=1965s
+[Kundur-Simulink] Load reduction: TripLoad1_P=124.37MW total (Bus14 remaining load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=22.21MW total (Bus14 remaining load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=0.99MW total (Bus14 remaining load)
+[Kundur-Simulink] Load increase: TripLoad2_P=156.41MW total (Bus15 applied load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=0.00MW total (Bus14 remaining load)
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=73.60MW total (Bus14 remaining load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=79.84MW total (Bus14 remaining load)
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=0.00MW total (Bus14 remaining load)
+[Monitor] Ep 199 | Reward: -39442.9 (r_f: 98.1%, r_h: 1.6%, r_d: 0.3%)
+          Actions mu: [0.25, 0.32, 0.24, 0.13]  std: [0.70, 0.72, 0.73, 0.73]
+          TDS fails: 0/10 (0.0%) | Freq peak: 5.00 Hz
+          Per-agent rewards: [a0: -31092.1, a1: -36466.9, a2: -42597.3, a3: -47615.2]
+          SAC: mean critic_loss: 94.922, mean alpha: 0.068
+[Ep  200/500] R=-39442.87 | Avg10=-39581.62 | Alpha=0.0686 | Buf=20000 | Time=2066s
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+  >>> Eval reward: -40377.79
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_kundur\runs\kundur_simulink_20260414_193252\checkpoints\ep200.pt
+[Kundur-Simulink] Load reduction: TripLoad1_P=127.38MW total (Bus14 remaining load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=46.95MW total (Bus14 remaining load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=83.99MW total (Bus14 remaining load)
+[Kundur-Simulink] Load increase: TripLoad2_P=177.84MW total (Bus15 applied load)
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=84.14MW total (Bus14 remaining load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=0.00MW total (Bus14 remaining load)
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+[Kundur-Simulink] Load increase: TripLoad2_P=158.64MW total (Bus15 applied load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=13.50MW total (Bus14 remaining load)
+[Monitor] Ep 209 | Reward: -37416.3 (r_f: 98.2%, r_h: 1.6%, r_d: 0.2%)
+          Actions mu: [0.32, 0.26, 0.25, 0.16]  std: [0.60, 0.67, 0.64, 0.65]
+          TDS fails: 0/10 (0.0%) | Freq peak: 5.00 Hz
+          Per-agent rewards: [a0: -22231.6, a1: -52236.4, a2: -37248.8, a3: -37948.3]
+          SAC: mean critic_loss: 94.760, mean alpha: 0.070
+[Ep  210/500] R=-37416.29 | Avg10=-45983.49 | Alpha=0.0695 | Buf=21000 | Time=2195s
+[Kundur-Simulink] Load reduction: TripLoad1_P=0.00MW total (Bus14 remaining load)
+[Kundur-Simulink] Load increase: TripLoad2_P=118.24MW total (Bus15 applied load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=136.49MW total (Bus14 remaining load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=59.69MW total (Bus14 remaining load)
+[Kundur-Simulink] Load increase: TripLoad2_P=170.18MW total (Bus15 applied load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=119.40MW total (Bus14 remaining load)
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=131.18MW total (Bus14 remaining load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=133.45MW total (Bus14 remaining load)
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+[Monitor] Ep 219 | Reward: -54084.6 (r_f: 98.7%, r_h: 1.1%, r_d: 0.2%)
+          Actions mu: [0.27, 0.12, 0.31, 0.31]  std: [0.69, 0.71, 0.70, 0.69]
+          TDS fails: 0/10 (0.0%) | Freq peak: 5.00 Hz
+          Per-agent rewards: [a0: -16633.0, a1: -68750.5, a2: -72832.3, a3: -58122.6]
+          SAC: mean critic_loss: 93.832, mean alpha: 0.071
+
+[!] [Monitor] WARNING: freq_out_of_range @ Ep 219
+  Frequency exceeded +/-2.0 Hz in 10/10 recent episodes (threshold: 3 episodes).
+  VSG parameters may be causing system instability.
+[Ep  220/500] R=-54084.59 | Avg10=-46201.65 | Alpha=0.0707 | Buf=22000 | Time=2307s
+[Kundur-Simulink] Load reduction: TripLoad1_P=131.03MW total (Bus14 remaining load)
+[Kundur-Simulink] Load increase: TripLoad2_P=174.85MW total (Bus15 applied load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=0.00MW total (Bus14 remaining load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=0.00MW total (Bus14 remaining load)
+[Kundur-Simulink] Load increase: TripLoad2_P=175.25MW total (Bus15 applied load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=0.00MW total (Bus14 remaining load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=63.16MW total (Bus14 remaining load)
+[Kundur-Simulink] Load increase: TripLoad2_P=122.24MW total (Bus15 applied load)
+[Kundur-Simulink] Load increase: TripLoad2_P=102.27MW total (Bus15 applied load)
+[Kundur-Simulink] Load increase: TripLoad2_P=111.26MW total (Bus15 applied load)
+[Monitor] Ep 229 | Reward: -41664.2 (r_f: 99.0%, r_h: 0.9%, r_d: 0.2%)
+          Actions mu: [0.14, 0.06, 0.34, 0.13]  std: [0.56, 0.70, 0.65, 0.68]
+          TDS fails: 0/10 (0.0%) | Freq peak: 5.00 Hz
+          Per-agent rewards: [a0: -9045.6, a1: -44558.0, a2: -55183.5, a3: -57869.8]
+          SAC: mean critic_loss: 93.842, mean alpha: 0.070
+[Ep  230/500] R=-41664.23 | Avg10=-45716.72 | Alpha=0.0708 | Buf=23000 | Time=2408s
+[Kundur-Simulink] Load reduction: TripLoad1_P=124.49MW total (Bus14 remaining load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=0.00MW total (Bus14 remaining load)
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=90.86MW total (Bus14 remaining load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=103.28MW total (Bus14 remaining load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=145.57MW total (Bus14 remaining load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=139.37MW total (Bus14 remaining load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=42.46MW total (Bus14 remaining load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=133.24MW total (Bus14 remaining load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=0.00MW total (Bus14 remaining load)
+[Monitor] Ep 239 | Reward: -35815.7 (r_f: 97.7%, r_h: 2.1%, r_d: 0.3%)
+          Actions mu: [0.37, 0.23, 0.38, 0.32]  std: [0.66, 0.69, 0.61, 0.62]
+          TDS fails: 0/10 (0.0%) | Freq peak: 5.00 Hz
+          Per-agent rewards: [a0: -19209.2, a1: -41124.3, a2: -33981.5, a3: -48947.8]
+          SAC: mean critic_loss: 92.483, mean alpha: 0.071
+[Ep  240/500] R=-35815.70 | Avg10=-42369.83 | Alpha=0.0713 | Buf=24000 | Time=2509s
+[Kundur-Simulink] Load reduction: TripLoad1_P=22.12MW total (Bus14 remaining load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=57.09MW total (Bus14 remaining load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=31.14MW total (Bus14 remaining load)
+[Kundur-Simulink] Load increase: TripLoad2_P=109.09MW total (Bus15 applied load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=0.00MW total (Bus14 remaining load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=56.87MW total (Bus14 remaining load)
+[Kundur-Simulink] Load increase: TripLoad2_P=155.48MW total (Bus15 applied load)
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=0.00MW total (Bus14 remaining load)
+[Monitor] Ep 249 | Reward: -56856.3 (r_f: 99.1%, r_h: 0.9%, r_d: 0.1%)
+          Actions mu: [0.04, 0.06, 0.24, 0.24]  std: [0.65, 0.69, 0.58, 0.68]
+          TDS fails: 0/10 (0.0%) | Freq peak: 5.00 Hz
+          Per-agent rewards: [a0: -55722.7, a1: -58858.5, a2: -55789.6, a3: -57054.5]
+          SAC: mean critic_loss: 94.446, mean alpha: 0.073
+[Ep  250/500] R=-56856.34 | Avg10=-44034.39 | Alpha=0.0715 | Buf=25000 | Time=2611s
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+  >>> Eval reward: -46894.55
+[Kundur-Simulink] Load reduction: TripLoad1_P=8.37MW total (Bus14 remaining load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=86.09MW total (Bus14 remaining load)
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=0.00MW total (Bus14 remaining load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=0.00MW total (Bus14 remaining load)
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=0.00MW total (Bus14 remaining load)
+[Kundur-Simulink] Load increase: TripLoad2_P=109.04MW total (Bus15 applied load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=72.71MW total (Bus14 remaining load)
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+[Monitor] Ep 259 | Reward: -28905.9 (r_f: 97.5%, r_h: 2.2%, r_d: 0.3%)
+          Actions mu: [0.27, 0.24, 0.25, 0.29]  std: [0.66, 0.66, 0.55, 0.65]
+          TDS fails: 0/10 (0.0%) | Freq peak: 5.00 Hz
+          Per-agent rewards: [a0: -28382.3, a1: -46761.4, a2: -720.7, a3: -39759.2]
+          SAC: mean critic_loss: 95.425, mean alpha: 0.070
+[Ep  260/500] R=-28905.90 | Avg10=-39973.38 | Alpha=0.0704 | Buf=26000 | Time=2744s
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=0.00MW total (Bus14 remaining load)
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+[Kundur-Simulink] Load increase: TripLoad2_P=182.96MW total (Bus15 applied load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=136.72MW total (Bus14 remaining load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=0.00MW total (Bus14 remaining load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=0.00MW total (Bus14 remaining load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=0.00MW total (Bus14 remaining load)
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+[Monitor] Ep 269 | Reward: -57968.7 (r_f: 98.9%, r_h: 0.9%, r_d: 0.2%)
+          Actions mu: [0.21, 0.41, 0.27, 0.18]  std: [0.68, 0.53, 0.64, 0.75]
+          TDS fails: 0/10 (0.0%) | Freq peak: 5.00 Hz
+          Per-agent rewards: [a0: -52407.3, a1: -50855.5, a2: -57111.5, a3: -71500.5]
+          SAC: mean critic_loss: 95.174, mean alpha: 0.071
+
+[!] [Monitor] WARNING: freq_out_of_range @ Ep 269
+  Frequency exceeded +/-2.0 Hz in 10/10 recent episodes (threshold: 3 episodes).
+  VSG parameters may be causing system instability.
+[Ep  270/500] R=-57968.71 | Avg10=-40279.14 | Alpha=0.0715 | Buf=27000 | Time=2866s
+[Kundur-Simulink] Load reduction: TripLoad1_P=0.00MW total (Bus14 remaining load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=102.27MW total (Bus14 remaining load)
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=125.29MW total (Bus14 remaining load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=43.94MW total (Bus14 remaining load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=43.97MW total (Bus14 remaining load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=37.62MW total (Bus14 remaining load)
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+[Kundur-Simulink] Load increase: TripLoad2_P=126.80MW total (Bus15 applied load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=0.00MW total (Bus14 remaining load)
+[Monitor] Ep 279 | Reward: -39625.2 (r_f: 98.7%, r_h: 1.2%, r_d: 0.1%)
+          Actions mu: [0.15, 0.19, 0.17, 0.21]  std: [0.61, 0.69, 0.63, 0.68]
+          TDS fails: 0/10 (0.0%) | Freq peak: 5.00 Hz
+          Per-agent rewards: [a0: -19676.8, a1: -49354.6, a2: -42982.5, a3: -46486.7]
+          SAC: mean critic_loss: 97.082, mean alpha: 0.070
+[Ep  280/500] R=-39625.16 | Avg10=-42966.24 | Alpha=0.0709 | Buf=28000 | Time=2987s
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+[Kundur-Simulink] Load increase: TripLoad2_P=127.27MW total (Bus15 applied load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=77.88MW total (Bus14 remaining load)
+[Kundur-Simulink] Load increase: TripLoad2_P=178.45MW total (Bus15 applied load)
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=45.20MW total (Bus14 remaining load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=68.69MW total (Bus14 remaining load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=0.00MW total (Bus14 remaining load)
+[Kundur-Simulink] Load reduction: TripLoad1_P=118.59MW total (Bus14 remaining load)
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+[Monitor] Ep 289 | Reward: -46053.0 (r_f: 98.8%, r_h: 1.0%, r_d: 0.2%)
+          Actions mu: [0.30, 0.21, 0.16, 0.14]  std: [0.64, 0.65, 0.63, 0.66]
+          TDS fails: 0/10 (0.0%) | Freq peak: 5.00 Hz
+          Per-agent rewards: [a0: -40638.2, a1: -46155.6, a2: -41491.6, a3: -55926.7]
+          SAC: mean critic_loss: 97.279, mean alpha: 0.070
+[Ep  290/500] R=-46052.99 | Avg10=-42357.11 | Alpha=0.0708 | Buf=29000 | Time=3113s
+[Kundur-Simulink] Load reduction: TripLoad1_P=56.17MW total (Bus14 remaining load)
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+[Kundur-Simulink] Load increase: TripLoad2_P=188.00MW total (Bus15 applied load)
+[Kundur-Simulink] Load increase: TripLoad2_P=115.17MW total (Bus15 applied load)
+[Kundur-Simulink] Load increase: TripLoad2_P=125.61MW total (Bus15 applied load)

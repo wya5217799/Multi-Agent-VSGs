@@ -3,7 +3,7 @@ DEPRECATED: This module is superseded by engine/simulink_bridge.py
 and the refactored KundurSimulinkEnv / NE39BusSimulinkEnv classes.
 
 The segmented simulation TODO on line 267 is now implemented in
-vsg_helpers/vsg_step_and_read.m via SimulinkBridge.
+slx_helpers/slx_step_and_read.m via SimulinkBridge.
 
 This file is kept for reference only. Do not use in new code.
 

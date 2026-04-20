@@ -24,6 +24,7 @@ _DEFAULT_JSON_PATH = Path(__file__).parent / "kundur_ic.json"
 _VALID_CALIBRATION_STATUSES = frozenset({
     "placeholder_pre_impedance_fix",
     "calibrated",
+    "powerflow_parametric",
 })
 _SOURCE_HASH_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
 

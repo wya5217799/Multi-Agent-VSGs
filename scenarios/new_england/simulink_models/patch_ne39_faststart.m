@@ -61,4 +61,4 @@ end
 save_system(mdl);
 fprintf('\nDone. %s saved.\n', mdl);
 fprintf('Initial workspace variable values written to base workspace.\n');
-fprintf('Run vsg_warmup(''%s'', ...) to start a training episode.\n', mdl);
+fprintf('Run slx_warmup(''%s'', ...) to start a training episode.\n', mdl);

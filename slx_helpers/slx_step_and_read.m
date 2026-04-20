@@ -83,7 +83,7 @@ function [state, status] = slx_step_and_read( ...
     end
 
     % --- Phase 3: Extract state ---
-    [state, meas_failures] = step_extract_state(simOut, agent_ids, cfg, sbase_va);
+    [state, meas_failures] = slx_extract_state(simOut, agent_ids, cfg, sbase_va);
     state.phAng_cmd_deg = phAng_cmd_deg;
 
     % Structured measurement failure reporting (consumed by Python bridge)
@@ -95,111 +95,6 @@ end
 % -----------------------------------------------------------------------
 % Private helpers (must NOT start with underscore in MATLAB)
 % -----------------------------------------------------------------------
-
-function [state, meas_failures] = step_extract_state(simOut, agent_ids, cfg, sbase_va)
-    N = length(agent_ids);
-    state.omega     = zeros(1, N);
-    state.Pe        = zeros(1, N);
-    state.rocof     = zeros(1, N);
-    state.delta     = zeros(1, N);
-    state.delta_deg = zeros(1, N);
-
-    % Structured failure tracking: cell array of strings, one per failure.
-    % Python receives this as a list and can decide severity.
-    meas_failures = {};
-
-    for i = 1:N
-        idx = agent_ids(i);
-
-        omega_name = strrep(cfg.omega_signal, '{idx}', num2str(idx));
-        vabc_name  = strrep(cfg.vabc_signal,  '{idx}', num2str(idx));
-        iabc_name  = strrep(cfg.iabc_signal,  '{idx}', num2str(idx));
-
-        try
-            omega_ts = simOut.get(omega_name);
-            state.omega(i) = omega_ts.Data(end);
-            if length(omega_ts.Data) >= 2
-                dt = omega_ts.Time(end) - omega_ts.Time(end-1);
-                if dt > 0
-                    state.rocof(i) = (omega_ts.Data(end) - omega_ts.Data(end-1)) / dt;
-                end
-            end
-        catch ME
-            meas_failures{end+1} = sprintf('omega:agent%d:%s', idx, ME.message); %#ok<AGROW>
-        end
-
-        % Pe: dispatch on cfg.pe_measurement contract.
-        %   'vi'             — V×I only (NE39)
-        %   'pout'           — p_out_signal only (Kundur)
-        %   'vi_then_pout'   — try V×I, fall back to p_out (legacy)
-        pe_read = false;
-        pe_error = '';
-        pe_mode = cfg.pe_measurement;
-
-        % --- V×I path ---
-        if ~pe_read && (strcmp(pe_mode, 'vi') || strcmp(pe_mode, 'vi_then_pout'))
-            try
-                Vabc = simOut.get(vabc_name);
-                Iabc = simOut.get(iabc_name);
-                state.Pe(i) = real(sum(Vabc.Data(end,:) .* conj(Iabc.Data(end,:)))) / sbase_va;
-                pe_read = true;
-            catch ME
-                pe_error = ME.message;
-            end
-        end
-
-        % --- P_out path ---
-        if ~pe_read && (strcmp(pe_mode, 'pout') || strcmp(pe_mode, 'vi_then_pout'))
-            if isfield(cfg, 'p_out_signal') && ~isempty(cfg.p_out_signal)
-                try
-                    p_out_name = strrep(cfg.p_out_signal, '{idx}', num2str(idx));
-                    p_out_ts = simOut.get(p_out_name);
-                    % P_out is p.u. on VSG base; convert to sbase p.u.
-                    state.Pe(i) = p_out_ts.Data(end) * (cfg.vsg_sn / sbase_va);
-                    pe_read = true;
-                catch ME
-                    if isempty(pe_error)
-                        pe_error = ME.message;
-                    else
-                        pe_error = sprintf('%s | fallback: %s', pe_error, ME.message);
-                    end
-                end
-            end
-        end
-
-        % --- feedback path (PeGain_ES{idx} ToWorkspace — true electrical Pe) ---
-        if ~pe_read && strcmp(pe_mode, 'feedback')
-            if isfield(cfg, 'pe_feedback_signal') && ~isempty(cfg.pe_feedback_signal)
-                try
-                    pefb_name = strrep(cfg.pe_feedback_signal, '{idx}', num2str(idx));
-                    pefb_ts = simOut.get(pefb_name);
-                    % PeFb is VSG-base pu; single conversion point → system-base pu
-                    state.Pe(i) = pefb_ts.Data(end) * (cfg.vsg_sn / sbase_va);
-                    pe_read = true;
-                catch ME
-                    pe_error = ME.message;
-                end
-            end
-        end
-
-        if ~pe_read
-            meas_failures{end+1} = sprintf('Pe:agent%d:%s:%s', idx, pe_mode, pe_error); %#ok<AGROW>
-            warning('slx_step_and_read:PeReadFailed', ...
-                'Failed to read Pe for agent %d (mode=%s). state.Pe remains %.6g. %s', ...
-                idx, pe_mode, state.Pe(i), pe_error);
-        end
-
-        try
-            delta_name     = strrep(cfg.delta_signal, '{idx}', num2str(idx));
-            delta_ts       = simOut.get(delta_name);
-            state.delta(i)     = delta_ts.Data(end);
-            state.delta_deg(i) = delta_ts.Data(end) * (180 / pi);
-        catch ME
-            meas_failures{end+1} = sprintf('delta:agent%d:%s', idx, ME.message); %#ok<AGROW>
-        end
-    end
-end
-
 
 function state = step_empty_state(N)
     state.omega     = zeros(1, N);

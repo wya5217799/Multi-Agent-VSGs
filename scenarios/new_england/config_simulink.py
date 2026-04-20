@@ -127,4 +127,8 @@ NE39_BRIDGE_CONFIG = BridgeConfig(
     iabc_signal='Iabc_ES{idx}',
     pe_measurement='vi',    # NE39: Pe from V×I (Vabc/Iabc ToWorkspace)
     pe0_default_vsg=VSG_P0,
+    # Phase-angle feedback (NE39-specific — must match patch_ne39_faststart.m init_phAng)
+    phase_command_mode='absolute_with_loadflow',
+    init_phang=(-3.646, 0.0, 2.466, 4.423, 3.398, 5.698, 8.494, 2.181),
+    phase_feedback_gain=0.3,  # limit ΔPe to ~30 MW/step; gain=1.0 causes oscillations
 )

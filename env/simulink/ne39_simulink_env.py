@@ -2,6 +2,10 @@
 Modified New England 39-Bus System -- Gymnasium Environment
 ===========================================================
 
+⚠️ 修改前先读 scenarios/new_england/NOTES.md（已知事实 / 试过没用的 / 当前在修）
+
+
+
 Implements the Multi-Agent VSG (Virtual Synchronous Generator) control
 framework for the IEEE 39-bus (New England) test system with 8 wind-farm
 buses replaced by PMSG wind turbines and 8 co-located ESS units operating
@@ -909,19 +913,17 @@ class NE39BusSimulinkEnv(_NE39BaseEnv):
     # Backend hooks
     # ------------------------------------------------------------------
 
-    # Initial phase angles (degrees) from NE39bus_v2 load-flow.
-    # Must match patch_ne39_faststart.m init_phAng vector.
-    _INIT_PHANG = [-3.646, 0.0, 2.466, 4.423, 3.398, 5.698, 8.494, 2.181]
-
     def _reset_backend(self) -> None:
         try:
             self.bridge.load_model()
             self.bridge.reset()  # clears t_current, Pe_prev, delta_prev_deg
             self._sim_time = 0.0
 
-            # Build vsg_warmup init_params struct in MATLAB base workspace.
+            # Build slx_warmup init_params struct in MATLAB base workspace.
             # MATLAB variable names cannot start with underscore.
-            phang_str = ", ".join(f"{v:.4f}" for v in self._INIT_PHANG)
+            # Derive phAng from BridgeConfig.init_phang — single source of truth
+            # with patch_ne39_faststart.m and config_simulink.NE39_BRIDGE_CONFIG.
+            phang_str = ", ".join(f"{v:.4f}" for v in self.bridge.cfg.init_phang)
             self.bridge.session.eval(
                 f"ne39_ip.M0 = {VSG_M0}; "
                 f"ne39_ip.D0 = {VSG_D0}; "
@@ -931,14 +933,14 @@ class NE39BusSimulinkEnv(_NE39BaseEnv):
                 nargout=0,
             )
 
-            # Call vsg_warmup with full NE39 5-arg signature + do_recompile flag.
+            # Call slx_warmup with full NE39 5-arg signature + do_recompile flag.
             # do_recompile=False on episode 2+ skips the ~12s FastRestart off→on
             # recompile cycle.  bridge._fr_compiled is False until first success.
             mdbl = self.bridge._matlab_double
             agent_ids = mdbl(list(range(1, N_ESS + 1)))
             do_recompile = not self.bridge._fr_compiled
             warmup_state, warmup_status = self.bridge.session.call(
-                "vsg_warmup",
+                "slx_warmup",
                 self.bridge.cfg.model_name,
                 agent_ids,
                 float(self.bridge.cfg.sbase_va),
@@ -951,10 +953,10 @@ class NE39BusSimulinkEnv(_NE39BaseEnv):
             if warmup_status is None:
                 # None return is unexpected — warn but allow training to continue.
                 # _fr_compiled stays False so the next reset forces a full recompile.
-                raise RuntimeError("vsg_warmup returned None status (unexpected)")
+                raise RuntimeError("slx_warmup returned None status (unexpected)")
             elif not warmup_status.get("success", True):
                 raise RuntimeError(
-                    f"vsg_warmup failed: {warmup_status.get('error', 'unknown')}"
+                    f"slx_warmup failed: {warmup_status.get('error', 'unknown')}"
                 )
 
             self.bridge._fr_compiled = True  # mark compiled; future resets skip recompile
@@ -1005,8 +1007,7 @@ class NE39BusSimulinkEnv(_NE39BaseEnv):
         on sbase; clipped to VSG base before writing.
         """
         try:
-            vsg_sn = 200e6
-            pe_scale = self.bridge.cfg.sbase_va / vsg_sn  # 0.5 (sbase 100MVA / VSG 200MVA)
+            pe_scale = self.bridge.cfg.sbase_va / self.bridge.cfg.vsg_sn_va  # e.g. 0.5 (100MVA / 200MVA)
             # Pick random VSG agent (0-indexed)
             agent_idx = int(self.np_random.integers(0, N_ESS)) + 1
             # _Pe_prev is in sbase p.u.  Convert to VSG base p.u. for workspace.

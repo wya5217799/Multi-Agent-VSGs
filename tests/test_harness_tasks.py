@@ -108,12 +108,6 @@ def test_model_inspect_queries_underlying_tools(tmp_path, monkeypatch):
         "simulink_solver_audit",
         lambda model_name: {"ok": True, "solver_type": "Fixed-step"},
     )
-    monkeypatch.setattr(
-        modeling_tasks,
-        "simulink_check_params",
-        lambda model_name, depth=5: {"passed": True, "suspects": []},
-    )
-
     result = modeling_tasks.harness_model_inspect(
         scenario_id="kundur",
         run_id="run-001",
@@ -157,11 +151,6 @@ def test_model_inspect_downgrades_to_warning_on_reference_mismatch(tmp_path, mon
         modeling_tasks,
         "simulink_solver_audit",
         lambda model_name: {"ok": True, "solver_type": "Fixed-step"},
-    )
-    monkeypatch.setattr(
-        modeling_tasks,
-        "simulink_check_params",
-        lambda model_name, depth=5: {"passed": True, "suspects": []},
     )
     monkeypatch.setattr(
         modeling_tasks,

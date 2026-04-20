@@ -10,11 +10,11 @@ SAC (Soft Actor-Critic) 智能体
 
 import copy
 import math
+import os
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-from torch.optim.lr_scheduler import CosineAnnealingLR
 
 from agents.networks import GaussianActor, DoubleQCritic
 from agents.replay_buffer import ReplayBuffer
@@ -34,7 +34,6 @@ class SACAgent:
         buffer_size=10000,
         batch_size=256,
         device='cpu',
-        total_updates=100000,
         alpha_min=0.005,
         alpha_max=5.0,
     ):
@@ -67,12 +66,6 @@ class SACAgent:
 
         # ── 经验回放 ──
         self.buffer = ReplayBuffer(obs_dim, action_dim, capacity=buffer_size)
-
-        # ── LR 衰减 (cosine annealing: lr → lr*0.1) ──
-        self.actor_scheduler = CosineAnnealingLR(
-            self.actor_optimizer, T_max=total_updates, eta_min=lr * 0.1)
-        self.critic_scheduler = CosineAnnealingLR(
-            self.critic_optimizer, T_max=total_updates, eta_min=lr * 0.1)
 
         # ── 梯度裁剪 ──
         self.max_grad_norm = 1.0
@@ -156,10 +149,6 @@ class SACAgent:
         # ═══ 软目标更新 ═══
         self._soft_update()
 
-        # ═══ LR 衰减 ═══
-        self.actor_scheduler.step()
-        self.critic_scheduler.step()
-
         return {
             'critic_loss': critic_loss.item(),
             'actor_loss': actor_loss.item(),
@@ -172,7 +161,7 @@ class SACAgent:
         for p, p_tgt in zip(self.critic.parameters(), self.critic_target.parameters()):
             p_tgt.data.mul_(1 - self.tau).add_(self.tau * p.data)
 
-    def save(self, path, metadata: dict | None = None):
+    def save(self, path, metadata: dict | None = None, save_buffer: bool = False):
         torch.save({
             'actor': self.actor.state_dict(),
             'critic': self.critic.state_dict(),
@@ -183,9 +172,14 @@ class SACAgent:
             'alpha_opt': self.alpha_optimizer.state_dict(),
             'metadata': metadata or {},
         }, path)
+        if save_buffer:
+            buf_path = str(path).replace('.pt', '_buffer.npz')
+            self.buffer.save(buf_path)
 
     def load(self, path) -> dict:
-        """加载 checkpoint，返回 metadata dict（无 metadata 时返回 {}）。"""
+        """加载 checkpoint，返回 metadata dict（无 metadata 时返回 {}）。
+        若同路径存在 _buffer.npz，自动恢复 replay buffer。
+        """
         ckpt = torch.load(path, map_location=self.device, weights_only=False)
         self.actor.load_state_dict(ckpt['actor'])
         self.critic.load_state_dict(ckpt['critic'])
@@ -194,4 +188,7 @@ class SACAgent:
         self.actor_optimizer.load_state_dict(ckpt['actor_opt'])
         self.critic_optimizer.load_state_dict(ckpt['critic_opt'])
         self.alpha_optimizer.load_state_dict(ckpt['alpha_opt'])
+        buf_path = str(path).replace('.pt', '_buffer.npz')
+        if os.path.exists(buf_path):
+            self.buffer.load(buf_path)
         return ckpt.get('metadata', {})

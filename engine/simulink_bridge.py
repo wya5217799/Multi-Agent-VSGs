@@ -488,9 +488,14 @@ class SimulinkBridge:
                 raw_delta = np.array(
                     warmup_state.get("delta_deg", list(delta0))
                 ).flatten()
+                raw_omega = np.array(warmup_state.get("omega", [])).flatten()
+                logger.debug(
+                    "DIAG warmup_state raw delta_deg=%s omega=%s", raw_delta, raw_omega
+                )
                 self._delta_prev_deg = np.clip(raw_delta, -90.0, 90.0)
             else:
-                self._delta_prev_deg = np.clip(delta0, -90.0, 90.0)
+                raw_delta = np.asarray(delta0, dtype=np.float64)
+                self._delta_prev_deg = np.clip(raw_delta, -90.0, 90.0)
         else:
             # 3-arg path (original): Python pre-initialises all workspace vars.
             for i in range(1, self.cfg.n_agents + 1):

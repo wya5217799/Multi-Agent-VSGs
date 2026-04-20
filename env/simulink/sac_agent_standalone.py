@@ -330,13 +330,14 @@ class SACAgent:
             "buffer_size": len(self.buffer),
         }
 
-    def save(self, path: str, metadata: dict | None = None):
+    def save(self, path: str, metadata: dict | None = None, save_buffer: bool = False):
         """Save model checkpoint.
 
         Args:
             path: File path for the checkpoint.
             metadata: Optional dict of extra values (e.g. {"start_episode": N})
                       stored under the key "_metadata" and returned by load().
+            save_buffer: Ignored (replay buffer is not persisted in standalone agent).
         """
         os.makedirs(os.path.dirname(path) if os.path.dirname(path) else ".", exist_ok=True)
         torch.save({

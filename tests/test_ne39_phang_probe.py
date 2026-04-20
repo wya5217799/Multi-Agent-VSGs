@@ -2,7 +2,7 @@ from pathlib import Path
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-PROBE = PROJECT_ROOT / "vsg_helpers" / "vsg_probe_ne39_phang_sensitivity.m"
+PROBE = PROJECT_ROOT / "probes" / "ne39" / "probe_phang_sensitivity.m"
 
 
 def test_ne39_phang_probe_script_has_stable_result_fields():
@@ -28,7 +28,7 @@ def test_ne39_phang_probe_script_has_stable_result_fields():
 def test_known_mojibake_markers_are_absent_from_touched_sources():
     paths = [
         PROJECT_ROOT / "engine" / "mcp_server.py",
-        PROJECT_ROOT / "vsg_helpers" / "vsg_warmup.m",
+        PROJECT_ROOT / "slx_helpers" / "slx_warmup.m",
         PROBE,
     ]
     mojibake_markers = [

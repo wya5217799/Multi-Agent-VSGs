@@ -1,5 +1,9 @@
 """env/simulink/_base.py — Shared VSG observation / reward base class.
 
+⚠️ 修改前先读 env/simulink/COMMON_NOTES.md + scenarios/{kundur,new_england}/NOTES.md
+   （改这里同时影响两个场景）
+
+
 Extracted from ``_KundurBaseEnv`` and ``_NE39BaseEnv`` (which were 100% identical
 for ``_build_obs``, ``_update_comm_buffers``, ``_get_comm_data``, and
 ``_compute_reward`` modulo the agent-count constant and action-decoding formula).

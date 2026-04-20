@@ -1,11 +1,1 @@
-{
-  "schema_version": 1,
-  "calibration_status": "placeholder_pre_impedance_fix",
-  "vsg_p0_vsg_base_pu": [1.8725, 1.8419, 1.7888, 1.9154],
-  "vsg_delta0_deg": [18.0, 10.0, 7.0, 12.0],
-  "units": {
-    "vsg_p0_vsg_base_pu": "pu_on_vsg_base",
-    "vsg_delta0_deg": "degrees"
-  },
-  "source_hash": "sha256:7c45813b85e737ed8396815e963fcc2f7646447d6e228ffd996d05686eaa5d58"
-}
+{"schema_version":1,"calibration_status":"powerflow_parametric","vsg_p0_vsg_base_pu":[0.1,0.1,0.1,0.1],"vsg_delta0_deg":[12.620902455474292,4.684639481298249,6.22704292802855,3.3232701266669054],"units":{"vsg_p0_vsg_base_pu":"pu_on_vsg_base","vsg_delta0_deg":"degrees"},"powerflow_meta":{"converged":true,"max_mismatch":1.375595209698442E-12,"iterations":5},"source_hash":"sha256:d79717b1eac72e143d506ce26f28ebe517ee259e808b198475fb86d6c586d250"}

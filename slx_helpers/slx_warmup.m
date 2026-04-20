@@ -134,7 +134,7 @@ function [state, status] = slx_warmup(model_name, agent_ids_or_duration, sbase_v
     end
 
     % Step 5: Extract initial state
-    state = warmup_extract_state(simOut, agent_ids, cfg, sbase_va);
+    [state, ~] = slx_extract_state(simOut, agent_ids, cfg, sbase_va);
 
     % Step 6: Feed warmup delta/Pe back into workspace vars so the first
     %         RL step starts from the correct phase angle and Pe.
@@ -219,63 +219,6 @@ function warmup_fastrestart_reset(model_name, duration, do_recompile)
     sim(model_name);
     fprintf('RESULT: slx_warmup (Kundur) done, t_warmup=%.3f s, recompile=%d\n', ...
             duration, do_recompile);
-end
-
-
-function state = warmup_extract_state(simOut, agent_ids, cfg, sbase_va)
-    N = length(agent_ids);
-    state.omega     = zeros(1, N);
-    state.Pe        = zeros(1, N);
-    state.rocof     = zeros(1, N);
-    state.delta     = zeros(1, N);
-    state.delta_deg = zeros(1, N);
-
-    for i = 1:N
-        idx = agent_ids(i);
-        omega_name = strrep(cfg.omega_signal, '{idx}', num2str(idx));
-        vabc_name  = strrep(cfg.vabc_signal,  '{idx}', num2str(idx));
-        iabc_name  = strrep(cfg.iabc_signal,  '{idx}', num2str(idx));
-
-        try
-            omega_ts = simOut.get(omega_name);
-            state.omega(i) = omega_ts.Data(end);
-            if length(omega_ts.Data) >= 2
-                dt = omega_ts.Time(end) - omega_ts.Time(end-1);
-                if dt > 0
-                    state.rocof(i) = (omega_ts.Data(end) - omega_ts.Data(end-1)) / dt;
-                end
-            end
-        catch
-        end
-
-        % Pe: prefer V×I (NE39 has Vabc/Iabc ToWorkspace), fall back to
-        % p_out_signal (Kundur logs P_out directly from swing equation).
-        pe_read = false;
-        try
-            Vabc = simOut.get(vabc_name);
-            Iabc = simOut.get(iabc_name);
-            state.Pe(i) = real(sum(Vabc.Data(end,:) .* conj(Iabc.Data(end,:)))) / sbase_va;
-            pe_read = true;
-        catch
-        end
-        if ~pe_read && isfield(cfg, 'p_out_signal') && ~isempty(cfg.p_out_signal)
-            try
-                p_out_name = strrep(cfg.p_out_signal, '{idx}', num2str(idx));
-                p_out_ts = simOut.get(p_out_name);
-                % P_out is p.u. on VSG base; convert to sbase p.u.
-                state.Pe(i) = p_out_ts.Data(end) * (cfg.vsg_sn / sbase_va);
-            catch
-            end
-        end
-
-        try
-            delta_name     = strrep(cfg.delta_signal, '{idx}', num2str(idx));
-            delta_ts       = simOut.get(delta_name);
-            state.delta(i)     = delta_ts.Data(end);
-            state.delta_deg(i) = delta_ts.Data(end) * (180 / pi);
-        catch
-        end
-    end
 end
 
 

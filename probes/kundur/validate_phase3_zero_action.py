@@ -61,6 +61,8 @@ def run_validation() -> bool:
     try:
         print("Resetting (warmup ~0.5 s)...")
         _obs, _info = env.reset()
+        print(f"POST-WARMUP _delta_prev_deg: {env.bridge._delta_prev_deg}")
+        print(f"POST-WARMUP _Pe_prev:        {env.bridge._Pe_prev}")
         print("Reset OK. Running zero-action episode...\n")
 
         action = np.zeros(env.action_space.shape, dtype=np.float32)

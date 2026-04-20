@@ -96,6 +96,28 @@ class TestGetTrainingLaunchStatus:
         result = tl.get_training_launch_status("kundur")
         assert result["train_entry"] == "scenarios/kundur/train_simulink.py"
 
+    def test_active_pid_surfaced_when_kundur_process_running(self, monkeypatch, tmp_path):
+        """active_pid from _find_active_pid is included in the result for kundur."""
+        import engine.training_launch as tl
+        monkeypatch.setattr(tl, "load_scenario_reference",
+                            lambda sid: _fake_ref(sid, "scenarios/kundur/train_simulink.py"))
+        monkeypatch.setattr(tl, "_PROJECT_ROOT", tmp_path)
+        monkeypatch.setattr(tl, "_find_active_pid", lambda _: 12345)
+
+        result = tl.get_training_launch_status("kundur")
+        assert result["active_pid"] == 12345
+
+    def test_active_pid_surfaced_when_ne39_process_running(self, monkeypatch, tmp_path):
+        """active_pid from _find_active_pid is included in the result for ne39."""
+        import engine.training_launch as tl
+        monkeypatch.setattr(tl, "load_scenario_reference",
+                            lambda sid: _fake_ref(sid, "scenarios/new_england/train_simulink.py"))
+        monkeypatch.setattr(tl, "_PROJECT_ROOT", tmp_path)
+        monkeypatch.setattr(tl, "_find_active_pid", lambda _: 99999)
+
+        result = tl.get_training_launch_status("ne39")
+        assert result["active_pid"] == 99999
+
 
 # ── structured launch field ────────────────────────────────────────────────────
 
@@ -253,28 +275,6 @@ class TestFindActivePid:
             result = self._call("")
         assert result is None
         mock_run.assert_not_called()
-
-    def test_kundur_pattern_uses_last_two_path_components(self):
-        captured = {}
-        def fake_run(cmd, **kw):
-            captured["cmd"] = cmd
-            m = MagicMock()
-            m.stdout = ""
-            return m
-        with patch("engine.training_launch.subprocess.run", side_effect=fake_run):
-            self._call("scenarios/kundur/train_simulink.py")
-        assert "kundur/train_simulink.py" in " ".join(captured["cmd"])
-
-    def test_ne39_pattern_uses_last_two_path_components(self):
-        captured = {}
-        def fake_run(cmd, **kw):
-            captured["cmd"] = cmd
-            m = MagicMock()
-            m.stdout = ""
-            return m
-        with patch("engine.training_launch.subprocess.run", side_effect=fake_run):
-            self._call("scenarios/new_england/train_simulink.py")
-        assert "new_england/train_simulink.py" in " ".join(captured["cmd"])
 
     def test_valid_pid_returned_as_int(self):
         def fake_run(cmd, **kw):

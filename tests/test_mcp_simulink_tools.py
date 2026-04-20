@@ -17,13 +17,12 @@ class TestSimulinkHelperInventory:
             "slx_describe_block_ports.m",
             "slx_compile_diagnostics.m",
             "slx_solver_audit.m",
-            "slx_check_params.m",
             "slx_add_block.m",
             "slx_connect_blocks.m",
             "slx_run_quiet.m",
             "slx_step_diagnostics.m",
             "slx_patch_and_verify.m",
-            "slx_bulk_get_params.m",
+            "slx_batch_query.m",
         ]
 
         missing = [name for name in required if not (helper_dir / name).exists()]
@@ -139,18 +138,17 @@ class TestSimulinkMergedFacades:
 
         mock_eng = MagicMock()
         mock_me.start_matlab.return_value = mock_eng
-        mock_eng.slx_bulk_get_params = MagicMock(return_value={
-            "items": [{
-                "block_path": "mdl/G1",
-                "params": {"Gain": "2"},
-                "missing_params": ["SampleTime"],
-                "error": "",
-            }]
-        })
+        # slx_batch_query now handles selective params; returns 'block' (not 'block_path')
+        mock_eng.slx_batch_query = MagicMock(return_value=[{
+            "block": "mdl/G1",
+            "params": {"Gain": "2"},
+            "missing_params": ["SampleTime"],
+            "error": "",
+        }])
 
         result = simulink_query_params("mdl", ["mdl/G1"], ["Gain", "SampleTime"])
 
-        mock_eng.slx_bulk_get_params.assert_called_once_with(
+        mock_eng.slx_batch_query.assert_called_once_with(
             "mdl",
             ["mdl/G1"],
             ["Gain", "SampleTime"],
@@ -166,18 +164,16 @@ class TestSimulinkMergedFacades:
 
         mock_eng = MagicMock()
         mock_me.start_matlab.return_value = mock_eng
-        mock_eng.slx_bulk_get_params = MagicMock(return_value={
-            "items": [{
-                "block_path": "mdl/G1",
-                "params": {"Gain": "2"},
-                "missing_params": [],
-                "error": "",
-            }]
-        })
+        mock_eng.slx_batch_query = MagicMock(return_value=[{
+            "block": "mdl/G1",
+            "params": {"Gain": "2"},
+            "missing_params": [],
+            "error": "",
+        }])
 
         result = simulink_query_params("mdl", ["mdl/G1"], "Gain")
 
-        mock_eng.slx_bulk_get_params.assert_called_once_with(
+        mock_eng.slx_batch_query.assert_called_once_with(
             "mdl",
             ["mdl/G1"],
             ["Gain"],
@@ -193,18 +189,16 @@ class TestSimulinkMergedFacades:
 
         mock_eng = MagicMock()
         mock_me.start_matlab.return_value = mock_eng
-        mock_eng.slx_bulk_get_params = MagicMock(return_value={
-            "items": [{
-                "block_path": "mdl/G1",
-                "params": {"Gain": "2", "SampleTime": "0"},
-                "missing_params": [],
-                "error": "",
-            }]
-        })
+        mock_eng.slx_batch_query = MagicMock(return_value=[{
+            "block": "mdl/G1",
+            "params": {"Gain": "2", "SampleTime": "0"},
+            "missing_params": [],
+            "error": "",
+        }])
 
         result = simulink_query_params("mdl", ["mdl/G1"], "Gain, SampleTime")
 
-        mock_eng.slx_bulk_get_params.assert_called_once_with(
+        mock_eng.slx_batch_query.assert_called_once_with(
             "mdl",
             ["mdl/G1"],
             ["Gain", "SampleTime"],
@@ -308,14 +302,12 @@ class TestSimulinkStructuredOps:
 
         mock_eng = MagicMock()
         mock_me.start_matlab.return_value = mock_eng
-        mock_eng.slx_bulk_get_params = MagicMock(return_value={
-            "items": [{
-                "block_path": "NE39bus_v2/VSrc_ES1",
-                "params": {"ReferenceBlock": "spsThreePhaseSourceLib/Three-Phase Source"},
-                "missing_params": [],
-                "error": "",
-            }]
-        })
+        mock_eng.slx_batch_query = MagicMock(return_value=[{
+            "block": "NE39bus_v2/VSrc_ES1",
+            "params": {"ReferenceBlock": "spsThreePhaseSourceLib/Three-Phase Source"},
+            "missing_params": [],
+            "error": "",
+        }])
 
         result = simulink_query_params(
             "NE39bus_v2",
@@ -334,7 +326,7 @@ class TestSimulinkStructuredOps:
         assert expected_model_dir in addpath_paths
         assert expected_scenario_dir in addpath_paths
         assert expected_script_dir in addpath_paths
-        assert mock_eng.slx_bulk_get_params.called
+        assert mock_eng.slx_batch_query.called
         assert result["items"][0]["params"]["ReferenceBlock"] == "spsThreePhaseSourceLib/Three-Phase Source"
 
     @patch("engine.matlab_session.matlab_engine", create=True)
@@ -517,87 +509,6 @@ class TestSimulinkStructuredOps:
         assert result["ok"] is True
 
     @patch("engine.matlab_session.matlab_engine", create=True)
-    def test_update_diagram_returns_summary(self, mock_me):
-        from engine.mcp_simulink_tools import simulink_update_diagram
-
-        mock_eng = MagicMock()
-        mock_me.start_matlab.return_value = mock_eng
-        mock_eng.slx_update_diagram = MagicMock(return_value={
-            "ok": True,
-            "important_lines": ["Updated diagram mdl"],
-            "error_message": "",
-        })
-
-        result = simulink_update_diagram("mdl")
-
-        assert result["ok"] is True
-
-    @patch("engine.matlab_session.matlab_engine", create=True)
-    def test_delete_line_returns_summary(self, mock_me):
-        from engine.mcp_simulink_tools import simulink_delete_line
-
-        mock_eng = MagicMock()
-        mock_me.start_matlab.return_value = mock_eng
-        mock_eng.slx_delete_line = MagicMock(return_value={
-            "ok": True,
-            "important_lines": ["Deleted line A/1 -> B/1"],
-            "error_message": "",
-        })
-
-        result = simulink_delete_line("mdl", "A/1", "B/1")
-
-        assert result["ok"] is True
-
-    @patch("engine.matlab_session.matlab_engine", create=True)
-    def test_delete_line_accepts_system_path(self, mock_me):
-        from engine.mcp_simulink_tools import simulink_delete_line
-
-        mock_eng = MagicMock()
-        mock_me.start_matlab.return_value = mock_eng
-        mock_eng.slx_delete_line = MagicMock(return_value={
-            "ok": True,
-            "important_lines": ["Deleted line In1/1 -> Gain1/1"],
-            "error_message": "",
-        })
-
-        result = simulink_delete_line("mdl", "In1/1", "Gain1/1", system_path="mdl/Sub1")
-
-        assert result["ok"] is True
-
-    @patch("engine.matlab_session.matlab_engine", create=True)
-    def test_add_annotation_returns_summary(self, mock_me):
-        from engine.mcp_simulink_tools import simulink_add_annotation
-
-        mock_eng = MagicMock()
-        mock_me.start_matlab.return_value = mock_eng
-        mock_eng.slx_add_annotation = MagicMock(return_value={
-            "ok": True,
-            "important_lines": ["Added annotation to mdl"],
-            "error_message": "",
-        })
-
-        result = simulink_add_annotation("mdl", "hello", [10, 10, 80, 30])
-
-        assert result["ok"] is True
-
-    @patch("engine.matlab_session.matlab_engine", create=True)
-    def test_set_block_position_returns_summary(self, mock_me):
-        from engine.mcp_simulink_tools import simulink_set_block_position
-
-        mock_eng = MagicMock()
-        mock_me.start_matlab.return_value = mock_eng
-        mock_eng.slx_set_block_position = MagicMock(return_value={
-            "ok": True,
-            "block_path": "mdl/Gain",
-            "important_lines": ["Moved block mdl/Gain"],
-            "error_message": "",
-        })
-
-        result = simulink_set_block_position("mdl", "mdl/Gain", [100, 100, 130, 130])
-
-        assert result["ok"] is True
-
-    @patch("engine.matlab_session.matlab_engine", create=True)
     def test_add_subsystem_returns_summary(self, mock_me):
         from engine.mcp_simulink_tools import simulink_add_subsystem
 
@@ -614,156 +525,6 @@ class TestSimulinkStructuredOps:
 
         assert result["ok"] is True
         assert result["block_path"] == "mdl/Sub1"
-
-    @patch("engine.matlab_session.matlab_engine", create=True)
-    def test_open_system_returns_summary(self, mock_me):
-        from engine.mcp_simulink_tools import simulink_open_system
-
-        mock_eng = MagicMock()
-        mock_me.start_matlab.return_value = mock_eng
-        mock_eng.slx_open_system = MagicMock(return_value={
-            "ok": True,
-            "system_path": "mdl/Sub1",
-            "important_lines": ["Opened system mdl/Sub1"],
-            "error_message": "",
-        })
-
-        result = simulink_open_system("mdl/Sub1")
-
-        assert result["ok"] is True
-
-    @patch("engine.matlab_session.matlab_engine", create=True)
-    def test_list_ports_returns_lists(self, mock_me):
-        from engine.mcp_simulink_tools import simulink_list_ports
-
-        mock_eng = MagicMock()
-        mock_me.start_matlab.return_value = mock_eng
-        mock_eng.slx_list_ports = MagicMock(return_value={
-            "system_path": "mdl/Sub1",
-            "inports": ["mdl/Sub1/In1"],
-            "outports": ["mdl/Sub1/Out1"],
-        })
-
-        result = simulink_list_ports("mdl/Sub1")
-
-        assert result["inports"] == ["mdl/Sub1/In1"]
-        assert result["outports"] == ["mdl/Sub1/Out1"]
-
-    @patch("engine.matlab_session.matlab_engine", create=True)
-    def test_autolayout_returns_summary(self, mock_me):
-        from engine.mcp_simulink_tools import simulink_autolayout_subsystem
-
-        mock_eng = MagicMock()
-        mock_me.start_matlab.return_value = mock_eng
-        mock_eng.slx_autolayout_subsystem = MagicMock(return_value={
-            "ok": True,
-            "system_path": "mdl/Sub1",
-            "important_lines": ["Auto-arranged system mdl/Sub1"],
-            "error_message": "",
-        })
-
-        result = simulink_autolayout_subsystem("mdl/Sub1")
-
-        assert result["ok"] is True
-
-    @patch("engine.matlab_session.matlab_engine", create=True)
-    def test_build_chain_returns_summary(self, mock_me):
-        from engine.mcp_simulink_tools import simulink_build_chain
-
-        mock_eng = MagicMock()
-        mock_me.start_matlab.return_value = mock_eng
-        mock_eng.slx_build_chain = MagicMock(return_value={
-            "ok": True,
-            "system_path": "mdl/Sub1",
-            "blocks_added": ["mdl/Sub1/G1", "mdl/Sub1/G2"],
-            "important_lines": ["Built chain with 2 block(s) in mdl/Sub1"],
-            "error_message": "",
-        })
-
-        result = simulink_build_chain(
-            "mdl",
-            "mdl/Sub1",
-            [
-                {"source_block": "simulink/Math Operations/Gain", "name": "G1", "params": {"Gain": "2"}},
-                {"source_block": "simulink/Math Operations/Gain", "name": "G2", "params": {"Gain": "3"}},
-            ],
-            start_port="In1/1",
-            end_port="Out1/1",
-        )
-
-        assert result["ok"] is True
-        assert result["blocks_added"] == ["mdl/Sub1/G1", "mdl/Sub1/G2"]
-
-    @patch("engine.matlab_session.matlab_engine", create=True)
-    def test_build_chain_allows_explicit_ports(self, mock_me):
-        from engine.mcp_simulink_tools import simulink_build_chain
-
-        mock_eng = MagicMock()
-        mock_me.start_matlab.return_value = mock_eng
-        mock_eng.slx_build_chain = MagicMock(return_value={
-            "ok": True,
-            "system_path": "mdl/Sub1",
-            "blocks_added": ["mdl/Sub1/Sum1", "mdl/Sub1/Gain1"],
-            "important_lines": ["Built chain with 2 block(s) in mdl/Sub1"],
-            "error_message": "",
-        })
-
-        result = simulink_build_chain(
-            "mdl",
-            "mdl/Sub1",
-            [
-                {"source_block": "simulink/Math Operations/Add", "name": "Sum1", "params": {"Inputs": "++"}, "input_port": "1", "output_port": "1"},
-                {"source_block": "simulink/Math Operations/Gain", "name": "Gain1", "input_port": "1", "output_port": "1"},
-            ],
-            start_port="In1/1",
-            end_port="Out1/1",
-        )
-
-        assert result["ok"] is True
-
-    @patch("engine.matlab_session.matlab_engine", create=True)
-    def test_build_signal_chain_returns_summary(self, mock_me):
-        from engine.mcp_simulink_tools import simulink_build_signal_chain
-
-        mock_eng = MagicMock()
-        mock_me.start_matlab.return_value = mock_eng
-        mock_eng.slx_build_chain = MagicMock(return_value={
-            "ok": True,
-            "system_path": "mdl/Sub1",
-            "blocks_added": ["mdl/Sub1/Sum1", "mdl/Sub1/Gain1"],
-            "important_lines": ["Built chain with 2 block(s) in mdl/Sub1"],
-            "error_message": "",
-        })
-
-        result = simulink_build_signal_chain(
-            "mdl",
-            "mdl/Sub1",
-            names=["Sum1", "Gain1"],
-            source_blocks=["simulink/Math Operations/Add", "simulink/Math Operations/Gain"],
-            params_list=[{"Inputs": "++"}, {"Gain": "2"}],
-            start_port="In1/1",
-            end_port="Out1/1",
-        )
-
-        assert result["ok"] is True
-
-    @patch("engine.matlab_session.matlab_engine", create=True)
-    def test_clone_subsystem_n_times_returns_clones(self, mock_me):
-        from engine.mcp_simulink_tools import simulink_clone_subsystem_n_times
-
-        mock_eng = MagicMock()
-        mock_me.start_matlab.return_value = mock_eng
-        mock_eng.slx_clone_subsystem_n_times = MagicMock(return_value={
-            "ok": True,
-            "clones": ["mdl/Sub2", "mdl/Sub3"],
-            "important_lines": ["Cloned 2 subsystem(s) from mdl/Sub1"],
-            "error_message": "",
-        })
-
-        result = simulink_clone_subsystem_n_times("mdl", "mdl/Sub1", "mdl/Sub", 2, start_index=2)
-
-        assert result["ok"] is True
-        assert result["clones"] == ["mdl/Sub2", "mdl/Sub3"]
 
     @patch("engine.matlab_session.matlab_engine", create=True)
     def test_build_vsg_stub_returns_subsystems(self, mock_me):
@@ -783,13 +544,6 @@ class TestSimulinkStructuredOps:
 
         assert result["ok"] is True
         assert result["subsystems"] == ["mdl/VSG_ES1", "mdl/VSG_ES2"]
-
-
-class TestSimulinkListModels:
-    def test_returns_list(self):
-        from engine.mcp_simulink_tools import simulink_list_models
-        result = simulink_list_models()
-        assert isinstance(result, list)
 
 
 class TestSimulinkDiagnosticsWave1:
@@ -965,62 +719,6 @@ class TestSimulinkDiagnosticsWave2:
         MatlabSession._instances.clear()
 
     @patch("engine.matlab_session.matlab_engine", create=True)
-    def test_prepare_model_workspace_returns_loaded_vars_and_callbacks(self, mock_me):
-        from engine.mcp_simulink_tools import simulink_prepare_model_workspace
-
-        mock_eng = MagicMock()
-        mock_me.start_matlab.return_value = mock_eng
-        mock_eng.slx_prepare_model_workspace = MagicMock(return_value={
-            "ok": True,
-            "ran_scripts": ["prep_script_wave2"],
-            "vars_loaded": ["base_gain_wave2", "script_value_wave2", "callback_value_wave2"],
-            "callback_errors": [],
-            "warnings": [],
-        })
-
-        result = simulink_prepare_model_workspace(
-            "mdl",
-            "C:/tmp/modeldir",
-            run_preload=True,
-            scripts=["prep_script_wave2"],
-            base_vars={"base_gain_wave2": 3.0},
-        )
-
-        assert result["ok"] is True
-        assert "script_value_wave2" in result["vars_loaded"]
-        assert result["callback_errors"] == []
-
-    @patch("engine.matlab_session.matlab_engine", create=True)
-    def test_event_source_audit_marks_back_inherited_sample_time(self, mock_me):
-        from engine.mcp_simulink_tools import simulink_event_source_audit
-
-        mock_eng = MagicMock()
-        mock_me.start_matlab.return_value = mock_eng
-        mock_eng.slx_event_source_audit = MagicMock(return_value={
-            "ok": True,
-            "items": [{
-                "block_path": "mdl/BrkCtrl_1",
-                "block_type": "Step",
-                "sample_time": "-1",
-                "time": "0.49",
-                "before": "0",
-                "after": "1",
-                "suspicious": True,
-                "reason": "SampleTime=-1; event occurs near warmup boundary",
-            }],
-            "summary": [
-                "1 event blocks use back-inherited sample time",
-                "1 breaker event occurs inside warmup window boundary",
-            ],
-        })
-
-        result = simulink_event_source_audit("mdl", warmup_end=0.5, boundary_eps=0.02)
-
-        assert result["ok"] is True
-        assert result["items"][0]["suspicious"] is True
-        assert result["items"][0]["sample_time"] == "-1"
-
-    @patch("engine.matlab_session.matlab_engine", create=True)
     def test_patch_and_verify_returns_readback_and_smoke_summary(self, mock_me):
         from engine.mcp_simulink_tools import simulink_patch_and_verify
 
@@ -1065,79 +763,6 @@ class TestSimulinkDiagnosticsWave3:
         from engine.matlab_session import MatlabSession
         MatlabSession._instances.clear()
 
-    @patch("engine.matlab_session.matlab_engine", create=True)
-    def test_describe_library_block_returns_port_schema(self, mock_me):
-        from engine.mcp_simulink_tools import simulink_describe_library_block
-
-        mock_eng = MagicMock()
-        mock_me.start_matlab.return_value = mock_eng
-        mock_eng.slx_describe_library_block = MagicMock(return_value={
-            "exists": True,
-            "dialog_params": ["Value", "SampleTime"],
-            "default_values": {"Value": "1", "SampleTime": "inf"},
-            "port_schema": [{
-                "name": "Outport",
-                "label": "",
-                "domain": "",
-                "port_type": "simulink",
-            }],
-            "mask_type": "",
-            "reference_block": "simulink/Sources/Constant",
-            "error": "",
-        })
-
-        result = simulink_describe_library_block("simulink/Sources/Constant")
-
-        assert result["exists"] is True
-        assert result["default_values"]["Value"] == "1"
-        assert result["reference_block"] == "simulink/Sources/Constant"
-
-    @patch("engine.matlab_session.matlab_engine", create=True)
-    def test_find_blocks_by_mask_or_ref_filters_matches(self, mock_me):
-        from engine.mcp_simulink_tools import simulink_find_blocks_by_mask_or_ref
-
-        mock_eng = MagicMock()
-        mock_me.start_matlab.return_value = mock_eng
-        mock_eng.slx_find_blocks_by_mask_or_ref = MagicMock(return_value={
-            "matches": [
-                "mdl/Const1",
-                "mdl/Const2",
-            ],
-        })
-
-        result = simulink_find_blocks_by_mask_or_ref(
-            "mdl",
-            reference_block="simulink/Sources/Constant",
-            name_regex="Const",
-        )
-
-        assert result["matches"] == ["mdl/Const1", "mdl/Const2"]
-
-    @patch("engine.matlab_session.matlab_engine", create=True)
-    def test_clone_model_returns_new_model_name(self, mock_me):
-        from engine.mcp_simulink_tools import simulink_clone_model
-
-        mock_eng = MagicMock()
-        mock_me.start_matlab.return_value = mock_eng
-        mock_eng.slx_clone_model = MagicMock(return_value={
-            "ok": True,
-            "dst_file": "C:/tmp/copied_model.slx",
-            "loaded_model_name": "copied_model",
-            "error_message": "",
-        })
-
-        result = simulink_clone_model(
-            "src_model",
-            "copied_model",
-            "C:/tmp/src",
-            "C:/tmp/dst",
-            overwrite=True,
-        )
-
-        assert result["ok"] is True
-        assert result["loaded_model_name"] == "copied_model"
-
-
 class TestSimulinkDiagnosticsWave4:
     def setup_method(self):
         from engine.matlab_session import MatlabSession
@@ -1160,174 +785,6 @@ class TestSimulinkDiagnosticsWave4:
 
         assert result["ok"] is True
         assert result["deleted_lines"] == [101, 102]
-
-    @patch("engine.matlab_session.matlab_engine", create=True)
-    def test_summarize_signal_fanout_returns_connected_blocks(self, mock_me):
-        from engine.mcp_simulink_tools import simulink_summarize_signal_fanout
-
-        mock_eng = MagicMock()
-        mock_me.start_matlab.return_value = mock_eng
-        mock_eng.slx_summarize_signal_fanout = MagicMock(return_value={
-            "block_path": "mdl/Gain",
-            "outport_index": 1.0,
-            "destinations": [
-                {"block_path": "mdl/Out1", "port_kind": "Inport", "port_index": 1.0},
-                {"block_path": "mdl/Terminator", "port_kind": "Inport", "port_index": 1.0},
-            ],
-            "fanout_count": 2.0,
-            "line_handle": 501.0,
-            "error_message": "",
-        })
-
-        result = simulink_summarize_signal_fanout("mdl", "mdl/Gain", 1)
-
-        assert result["fanout_count"] == 2
-        assert result["destinations"][1]["block_path"] == "mdl/Terminator"
-
-    @patch("engine.matlab_session.matlab_engine", create=True)
-    def test_bulk_get_params_returns_matrix_like_items(self, mock_me):
-        from engine.mcp_simulink_tools import simulink_bulk_get_params
-
-        mock_eng = MagicMock()
-        mock_me.start_matlab.return_value = mock_eng
-        mock_eng.slx_bulk_get_params = MagicMock(return_value={
-            "items": [
-                {
-                    "block_path": "mdl/Const1",
-                    "params": {"Value": "1", "SampleTime": "inf"},
-                    "missing_params": [],
-                    "error": "",
-                },
-                {
-                    "block_path": "mdl/Const2",
-                    "params": {"Value": "2"},
-                    "missing_params": ["SampleTime"],
-                    "error": "",
-                },
-            ]
-        })
-
-        result = simulink_bulk_get_params("mdl", ["mdl/Const1", "mdl/Const2"], ["Value", "SampleTime"])
-
-        assert result["items"][0]["params"]["SampleTime"] == "inf"
-        assert result["items"][1]["missing_params"] == ["SampleTime"]
-
-
-class TestSimulinkDiagnosticsWave5:
-    def setup_method(self):
-        from engine.matlab_session import MatlabSession
-        MatlabSession._instances.clear()
-
-    @patch("engine.matlab_session.matlab_engine", create=True)
-    def test_model_diff_returns_block_param_and_line_changes(self, mock_me):
-        from engine.mcp_simulink_tools import simulink_model_diff
-
-        mock_eng = MagicMock()
-        mock_me.start_matlab.return_value = mock_eng
-        mock_eng.slx_model_diff = MagicMock(return_value={
-            "added_blocks": ["NewGain"],
-            "removed_blocks": ["OldGain"],
-            "param_changes": [{
-                "block_path": "Const1",
-                "param_name": "Value",
-                "before": "1",
-                "after": "2",
-            }],
-            "added_lines": ["Const1:Outport:1->NewGain:Inport:1"],
-            "removed_lines": ["OldGain:Outport:1->Out1:Inport:1"],
-        })
-
-        result = simulink_model_diff("before_model", "after_model")
-
-        assert result["added_blocks"] == ["NewGain"]
-        assert result["param_changes"][0]["param_name"] == "Value"
-        assert result["removed_lines"] == ["OldGain:Outport:1->Out1:Inport:1"]
-
-
-class TestSimulinkDiagnosticsWave6:
-    def setup_method(self):
-        from engine.matlab_session import MatlabSession
-        MatlabSession._instances.clear()
-
-    @patch("engine.matlab_session.matlab_engine", create=True)
-    def test_solver_warning_summary_collapses_duplicate_warnings(self, mock_me):
-        from engine.mcp_simulink_tools import simulink_solver_warning_summary
-
-        mock_eng = MagicMock()
-        mock_me.start_matlab.return_value = mock_eng
-        mock_eng.slx_solver_warning_summary = MagicMock(return_value={
-            "ok": True,
-            "first_occurrence_time": 4.9008,
-            "last_occurrence_time": 4.9008,
-            "unique_warning_types": 1.0,
-            "collapsed_warnings": [{
-                "signature": "warning: minimum step size violation at t=<num>; min step = <num>",
-                "count": 3.0,
-                "first_time": 4.9008,
-                "last_time": 4.9008,
-                "example": "Warning: Minimum step size violation at t=4.9008; min step = 1.74e-14",
-            }],
-            "stiffness_detected": True,
-            "likely_stuck_time": 4.9008,
-            "suggested_next_checks": [
-                "Audit discontinuous event sources near the stuck time.",
-                "Reduce MaxStep or tighten solver diagnostics.",
-            ],
-            "raw_summary": "Repeated minimum step warnings detected.",
-            "error_message": "",
-        })
-
-        result = simulink_solver_warning_summary(
-            "mdl",
-            "disp('Warning: Minimum step size violation at t=4.9008; min step = 1.74e-14')",
-            timeout_sec=10,
-        )
-
-        assert result["ok"] is True
-        assert result["unique_warning_types"] == 1
-        assert result["collapsed_warnings"][0]["count"] == 3
-        assert result["stiffness_detected"] is True
-        assert result["likely_stuck_time"] == pytest.approx(4.9008)
-
-    @patch("engine.matlab_session.matlab_engine", create=True)
-    def test_signal_snapshot_allows_partial_reads(self, mock_me):
-        from engine.mcp_simulink_tools import simulink_signal_snapshot
-
-        mock_eng = MagicMock()
-        mock_me.start_matlab.return_value = mock_eng
-        mock_eng.slx_signal_snapshot = MagicMock(return_value={
-            "time_s": 0.5,
-            "values": {
-                "logsout:sine_logged": 1.25,
-                "toworkspace:sine_ws": 1.25,
-                "block:mdl/Gain:1": 2.5,
-            },
-            "missing_signals": ["logsout:missing_signal"],
-            "units": {
-                "logsout:sine_logged": "",
-                "toworkspace:sine_ws": "",
-                "block:mdl/Gain:1": "",
-            },
-            "read_ok": True,
-            "warnings": ["1 signals could not be resolved."],
-        })
-
-        result = simulink_signal_snapshot(
-            "mdl",
-            0.5,
-            [
-                "logsout:sine_logged",
-                "toworkspace:sine_ws",
-                {"block_path": "mdl/Gain", "port_index": 1},
-                "logsout:missing_signal",
-            ],
-            allow_partial=True,
-        )
-
-        assert result["read_ok"] is True
-        assert result["values"]["block:mdl/Gain:1"] == pytest.approx(2.5)
-        assert result["missing_signals"] == ["logsout:missing_signal"]
-
 
 @pytest.mark.slow
 def test_step_diagnostics_counts_localized_warnings_from_real_matlab():
@@ -1722,3 +1179,44 @@ class TestSolverAuditFastRestartWarning:
         assert len(fastrestart_warnings) >= 1
         combined = " ".join(fastrestart_warnings).lower()
         assert "topology" in combined or "step" in combined or "discrete" in combined
+
+
+class TestEnvelopeContracts:
+    """Verify that public wrapper functions return the {ok, data, error} envelope."""
+
+    def setup_method(self):
+        from engine.matlab_session import MatlabSession
+        MatlabSession._instances.clear()
+
+    @patch("engine.matlab_session.matlab_engine", create=True)
+    def test_simulink_loaded_models_returns_envelope(self, mock_me):
+        from engine.mcp_simulink_tools import simulink_loaded_models
+
+        mock_eng = MagicMock()
+        mock_me.start_matlab.return_value = mock_eng
+        mock_eng.eval = MagicMock(return_value=["kundur_vsg", "ne39"])
+
+        result = simulink_loaded_models()
+
+        assert result["ok"] is True
+        assert isinstance(result["data"], list)
+        assert result["error"] is None
+
+    @patch("engine.matlab_session.matlab_engine", create=True)
+    def test_simulink_trace_signal_returns_envelope(self, mock_me):
+        from engine.mcp_simulink_tools import simulink_trace_signal
+
+        mock_eng = MagicMock()
+        mock_me.start_matlab.return_value = mock_eng
+        mock_eng.eval = MagicMock(return_value=[])
+        mock_eng.slx_trace_signal = MagicMock(return_value={
+            "source": "mdl/VSG/omega_out",
+            "sinks": ["mdl/Scope", "mdl/ToWorkspace"],
+        })
+
+        result = simulink_trace_signal("mdl", "omega_out")
+
+        assert result["ok"] is True
+        assert "source" in result["data"]
+        assert "sinks" in result["data"]
+        assert result["error"] is None

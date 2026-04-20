@@ -19,6 +19,8 @@ import sys
 import time
 import json
 from pathlib import Path
+from tqdm import tqdm
+from torch.utils.tensorboard import SummaryWriter
 
 # Add project root to path before importing repo-local utilities.
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
@@ -38,6 +40,7 @@ from utils.run_protocol import (
     write_training_status,
 )
 from utils.training_log import load_or_create_log
+from utils.notifier import notify
 import scenarios.kundur.config_simulink as _cfg_module
 from scenarios.kundur.config_simulink import (
     N_AGENTS, OBS_DIM, ACT_DIM, HIDDEN_SIZES,
@@ -242,6 +245,7 @@ def train(args):
         warmup_steps=WARMUP_STEPS,
         reward_scale=1e-3,
         alpha_max=5.0,
+        alpha_min=0.05,   # 防止 alpha 过低导致 ep350 后策略退化
     )
 
     start_episode = 0
@@ -310,6 +314,9 @@ def train(args):
     })
     os.makedirs(args.checkpoint_dir, exist_ok=True)
     os.makedirs(os.path.dirname(args.log_file), exist_ok=True)
+    _live_log = str(Path(args.log_file).parent / "live.log")
+    tb_writer = None
+    tb_writer = SummaryWriter(log_dir=str(run_dir / "tb"))
 
     _log_dir = os.path.dirname(args.log_file)
     fresh_run = start_episode == 0
@@ -341,7 +348,13 @@ def train(args):
     monitor_stopped = False
 
     end_episode = start_episode + args.episodes
-    for ep in range(start_episode, end_episode):
+    _pbar = tqdm(
+        range(start_episode, end_episode),
+        desc="Kundur", unit="ep",
+        total=args.episodes, initial=0,
+        dynamic_ncols=True,
+    )
+    for ep in _pbar:
         # Phase B already reset episode start_episode; subsequent episodes reset here.
         if ep > start_episode:
             dist_mag = np.random.uniform(env.DIST_MIN, env.DIST_MAX)
@@ -418,6 +431,37 @@ def train(args):
         mean_reward = ep_reward.mean()
         log["episode_rewards"].append(float(mean_reward))
 
+        # --- real-time progress bar + live log --------------------------------
+        _avg10 = float(np.mean(log["episode_rewards"][-10:]))
+        _pbar.set_postfix(
+            R=f"{mean_reward:+.1f}",
+            avg10=f"{_avg10:+.1f}",
+            a=f"{agent.alpha:.3f}",
+            df=f"{ep_max_freq_dev:.2f}Hz",
+        )
+        _ts = datetime.datetime.now(datetime.timezone.utc).strftime("%H:%M:%S")
+        _elapsed = time.time() - t_start
+        try:
+            with open(_live_log, "a", encoding="utf-8") as _lf:
+                _lf.write(
+                    f"{_ts} [EP {ep+1:4d}/{end_episode}] "
+                    f"R={mean_reward:+8.2f} avg10={_avg10:+8.2f} "
+                    f"a={agent.alpha:.4f} df={ep_max_freq_dev:.3f}Hz "
+                    f"buf={len(agent.buffer)} t={_elapsed:.0f}s\n"
+                )
+        except OSError:
+            pass  # observability loss is acceptable; training must not abort
+        # --- TensorBoard -------------------------------------------------------
+        tb_writer.add_scalar("train/reward", mean_reward, ep)
+        tb_writer.add_scalar("train/avg10_reward", _avg10, ep)
+        tb_writer.add_scalar("train/alpha", agent.alpha, ep)
+        tb_writer.add_scalar("train/freq_dev_hz", ep_max_freq_dev, ep)
+        tb_writer.add_scalar("train/buffer_size", len(agent.buffer), ep)
+        if ep_losses["critic"]:
+            tb_writer.add_scalar("train/critic_loss", float(np.mean(ep_losses["critic"])), ep)
+            tb_writer.add_scalar("train/policy_loss", float(np.mean(ep_losses["policy"])), ep)
+        # -----------------------------------------------------------------------
+
         write_training_status(run_dir, {
             "status": "running",
             "run_id": run_id,
@@ -485,7 +529,7 @@ def train(args):
         if stop_triggered:
             _stop_reason = _new_triggers[-1] if _new_triggers else None
             writer.log_event(ep, "monitor_stop", {"triggered_by": "monitor"})
-            print(f"[Monitor] Hard stop at episode {ep}. Saving checkpoint.")
+            _pbar.write(f"[Monitor] Hard stop at episode {ep}. Saving checkpoint.")
             agent.save(
                 os.path.join(args.checkpoint_dir, f"monitor_stop_ep{ep}.pt"),
                 metadata={"start_episode": ep + 1},
@@ -493,16 +537,6 @@ def train(args):
             monitor_stopped = True
             break
 
-        if (ep + 1) % 10 == 0:
-            elapsed = time.time() - t_start
-            avg_r = np.mean(log["episode_rewards"][-10:])
-            print(
-                f"[Ep {ep+1:4d}/{end_episode}] "
-                f"R={mean_reward:+8.2f} | Avg10={avg_r:+8.2f} | "
-                f"Alpha={agent.alpha:.4f} | "
-                f"Buf={len(agent.buffer)} | "
-                f"Time={elapsed:.0f}s"
-            )
 
         if (ep + 1) % args.eval_interval == 0:
             _last_eval_reward = None
@@ -514,7 +548,8 @@ def train(args):
             log["eval_rewards"].append(
                 {"episode": ep + 1, "reward": eval_reward}
             )
-            print(f"  >>> Eval reward: {eval_reward:+.2f}")
+            _pbar.write(f"  >>> Eval reward: {eval_reward:+.2f}")
+            tb_writer.add_scalar("eval/reward", eval_reward, ep)
 
             if eval_reward > best_eval_reward:
                 best_eval_reward = eval_reward
@@ -522,7 +557,7 @@ def train(args):
                     os.path.join(args.checkpoint_dir, "best.pt"),
                     metadata={"start_episode": ep + 1},
                 )
-                print(
+                _pbar.write(
                     f"  >>> New best! Saved to "
                     f"{args.checkpoint_dir}/best.pt"
                 )
@@ -610,6 +645,12 @@ def train(args):
         if final_status == "monitor_stopped":
             _final_status_dict["stop_reason"] = _stop_reason
         write_training_status(run_dir, _final_status_dict)
+        _eps_done = len(log["episode_rewards"])
+        _last_r = log["episode_rewards"][-1] if log["episode_rewards"] else 0.0
+        notify(
+            f"Kundur [{final_status.replace('_', ' ')}]",
+            f"{_eps_done} eps | last reward: {_last_r:+.0f} | best eval: {best_eval_reward:+.0f}",
+        )
     except Exception as _train_exc:
         try:
             write_training_status(run_dir, {
@@ -627,8 +668,12 @@ def train(args):
             })
         except Exception:
             pass
+        notify("Kundur Training FAILED", str(_train_exc)[:120])
         raise
     finally:
+        _pbar.close()
+        if tb_writer is not None:
+            tb_writer.close()
         try:
             update_run_meta(meta_dir, {
                 "finished_at": datetime.datetime.now().isoformat(),

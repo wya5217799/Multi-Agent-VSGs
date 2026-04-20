@@ -7,8 +7,6 @@ They encode Kundur/NE39 model conventions and belong here, not in mcp_simulink_t
 
 from __future__ import annotations
 
-from typing import Annotated, Any
-
 from pydantic import BeforeValidator
 
 from engine.matlab_session import MatlabSession

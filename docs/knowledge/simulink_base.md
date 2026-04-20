@@ -329,3 +329,160 @@ set_param([mdl '/SolverConfig'], 'FilteringTimeConstant', '0.02');
 | 固定步长 T=0.02s | **~2.8 s** |
 
 **注意**：LocalSolverSampleTime=0.02s（50Hz 基频周期）会通过 Backward Euler 重度衰减 50Hz 电气振荡，但机械频率动态（时间常数 >500ms）完整保留。VSG 训练场景下可接受。
+
+---
+
+## 15. 假设 API 四步验证（用前必查，不假设参数/路径存在）
+
+任何不确定的 block 路径、端口名、参数名，**先用这 4 条命令查，再写建模脚本**：
+
+```matlab
+% 1. 确认 block 存在且类型正确
+get_param([mdl '/BlockName'], 'BlockType')
+
+% 2. 查 block 的信号端口（Simulink 信号域）
+get_param([mdl '/BlockName'], 'PortConnectivity')
+
+% 3. 查物理域端口名 + ConnectionType（Simscape 连线前必查）
+simscape.connectionPortProperties([mdl '/BlockName'])
+
+% 4. 查所有参数名（set_param 之前必查，R2025b 名称常与文档不符）
+get_param([mdl '/BlockName'], 'DialogParameters')
+```
+
+**R2025b 已知路径变更对照（直接用，无需再探索）**：
+
+| Block | 旧路径 / 旧参数名 | R2025b 正确值 |
+|-------|------------------|--------------|
+| Breaker | `TransitionTimes` | `SwitchTimes` |
+| Breaker | `InitialState = '[1 1 1]'` | `'open'` 或 `'closed'` |
+| Breaker | `SnubberResistance = 'inf'` | `'1e6'` |
+| Breaker | `SnubberCapacitance = '0'` | `'inf'` |
+| Phase Splitter | `add_block('ee_lib/...', ...)` 字符串路径 | **必须用 handle**（block 名含 '&'）→ 见 §13 |
+| Dynamic Load (single-phase) | 库路径 | `ee_lib/Passive/Dynamic Load` |
+| Dynamic Load (three-phase) | 库路径 | `ee_lib/Passive/Dynamic Load (Three-Phase)` |
+
+**Dynamic Load（单相 AC 模式）端口名最终答案**（已验证，无需再探索）：
+
+| 端口 | 类型 | 含义 |
+|------|------|------|
+| `LConn1` | 电气 + | 相线（来自 Phase Splitter RConn1/2/3） |
+| `LConn2` | PS 输入 | 有功功率 P（W/phase） |
+| `LConn3` | PS 输入 | 无功功率 Q（var/phase） |
+| `RConn1` | 电气 - | 中性线（接 GND） |
+
+---
+
+## 16. 重命名不完整防护（grep 先查 + replace_all）
+
+修改 block 名、变量名、信号名之前：
+
+```bash
+# Step 1: grep 找出所有引用点（.m 脚本 + Python 配置 + bridge）
+grep -rn "旧名称" scenarios/ engine/ slx_helpers/
+
+# Step 2: Edit 工具用 replace_all=true 一次性替换
+# Edit(file, old_string="旧名称", new_string="新名称", replace_all=True)
+```
+
+**规则**：
+- 不能只改 build 脚本忘记改 bridge/config（静默失败：build 成功但训练读不到信号）
+- `vsg_step_and_read.m` 里的 `sprintf('M0_val_ES%d', idx)` 和 build 脚本里的 `sprintf('M0_val_ES%d', i)` 必须字符串模板一致
+- 改完后用 `harness_model_diagnose` 验证信号路径，不要人工核对
+
+---
+
+## 17. Kundur workspace 初始化清单（test sim 前必须 assignin）
+
+运行任何测试仿真前，必须确保 MATLAB base workspace 中存在以下变量：
+
+```matlab
+% Per-agent (i = 1..4)
+for i = 1:4
+    assignin('base', sprintf('M0_val_ES%d', i), 12.0);   % VSG_M0 (p.u.·s²)
+    assignin('base', sprintf('D0_val_ES%d', i), 3.0);    % VSG_D0 (p.u.)
+    assignin('base', sprintf('Pe_ES%d',    i), 1.87);    % 初始电功率 (p.u. on VSG base)
+    assignin('base', sprintf('phAng_ES%d', i), 0.0);     % 初始相角命令 (deg)
+    assignin('base', sprintf('wref_%d',    i), 1.0);     % 角频率参考 (p.u.)
+end
+
+% Global disturbance load
+assignin('base', 'TripLoad1_P', 248e6 / 3);   % Bus14 额定负荷 W/phase（episode 开始时接入）
+assignin('base', 'TripLoad2_P', 0.0);          % Bus15 初始断开（扰动时再接入）
+```
+
+**新增 workspace 变量时同步更新此清单**（否则他人/下次对话的 test sim 静默失败）。
+> build 脚本结尾的 `% === Workspace init ===` 节已包含上述 assignin，直接跑完整 build 即可。
+
+---
+
+## 15. Build Script 编写防错规则（2026-04-14 总结）
+
+### 错误分类
+
+本次 Kundur build script 迁移（breaker → Dynamic Load）共出现 4 次 build 失败，归为两类：
+
+| 类 | 错误示例 | 根因 |
+|---|----------|------|
+| **A：假设 API 未验证（3次）** | `built-in/Ramp` 不存在；`DynLoad_Trip1/P` 端口名错误 | 凭记忆/习惯写了 block 路径或端口名，未在 MATLAB 确认 |
+| **B：重命名不完整（1次）** | `dynload_lib` 未识别（已改名为 `dynload3ph_lib`，fprintf 漏改） | 编辑时只改了定义处，未 grep 全部使用处 |
+
+### A 类防范：写 API 调用前先验证
+
+**规则：build script 里每一个新 block 路径 / 端口名 / 参数名，必须先在 MATLAB 确认存在，再写入脚本。**
+
+```matlab
+% ① 验证 block 路径是否存在
+find_system('simulink', 'SearchDepth', 3, 'Name', 'Ramp')
+% → 如果为空，说明路径错，需用 find_system 重新查
+
+% ② 验证端口名（Simulink 信号域）
+get_param('modelName/blockName', 'PortConnectivity')
+% → 输出 struct array，每个 .Type 字段就是端口名（LConn1/LConn2/RConn1 等）
+
+% ③ 验证 Simscape 物理域端口名
+simscape.connectionPortProperties('modelName/blockName')
+% → 输出 Name/ConnectionType，用于 simscape.addConnection
+
+% ④ 验证参数名是否存在
+fieldnames(get_param('modelName/blockName', 'DialogParameters'))
+% → 输出该 block 所有可 set_param 的参数名
+```
+
+**已确认 R2025b 易错路径（不要凭记忆用，以 find_system 结果为准）：**
+
+| 错误路径 | 正确路径 |
+|----------|----------|
+| `built-in/Ramp` | `simulink/Sources/Ramp` |
+| `built-in/Step` | `simulink/Sources/Step` |
+| `built-in/Constant` | `built-in/Constant` ✓（这个没变） |
+
+**Dynamic Load (Three-Phase) R2025b 已验证端口名（无需再探索）：**
+- `LConn1` = 三相复合电气端口（接 bus）
+- `LConn2` = P 物理信号输入（W/phase）
+- `LConn3` = Q 物理信号输入（var/phase）
+- 无 "External control of PQ" 参数，P/Q 端口始终存在，无需 enable
+
+### B 类防范：重命名必须 grep 全文
+
+**规则：在 build script 里重命名任何变量前，先 grep 全部使用处，用 `replace_all=true` 或逐个确认。**
+
+```bash
+# 重命名前先确认所有出现位置
+grep -n "dynload_lib" build_powerlib_kundur.m
+```
+
+Edit 工具用 `replace_all=true` 可一次性替换全文所有出现，避免漏改。
+
+### 测试 sim 前的 workspace 初始化清单
+
+build script 末尾的 test sim（Step 12）调用 `sim()` 前，必须 `assignin` 所有 workspace-backed Constant 的变量：
+
+| 变量名 | 来源 block | 默认值 |
+|--------|-----------|--------|
+| `M0_val_ES1` … `M0_val_ES4` | `VSG_ESx/M0` Constant | `VSG_M0 = 12.0` |
+| `D0_val_ES1` … `D0_val_ES4` | `VSG_ESx/D0` Constant | `VSG_D0 = 3.0` |
+| `TripLoad1_P` | `C_P_Trip1` Constant | `248e6/3` W/phase |
+| `TripLoad2_P` | `C_P_Trip2` Constant | `0.0` |
+
+新增 workspace-backed Constant 时，同步更新此表。

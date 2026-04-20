@@ -4,7 +4,7 @@
 Provides a singleton-per-session_id wrapper around matlab.engine with:
 - Lazy initialization (engine starts on first call)
 - Passive reconnect (no health-check ping; reconnect only on failure)
-- Auto addpath for vsg_helpers/ on first connect
+- Auto addpath for slx_helpers/ on first connect
 - Structured error wrapping via MatlabCallError
 - DEBUG-level logging of every call() with elapsed time
 """
@@ -63,7 +63,7 @@ class MatlabSession:
         self._session_id: Optional[str] = None
         self._helpers_path: str = os.path.join(
             os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-            "vsg_helpers",
+            "slx_helpers",
         )
 
     @classmethod
@@ -91,12 +91,12 @@ class MatlabSession:
             )
         logger.info("Starting MATLAB engine (session=%s) ...", self._session_id)
         self._eng = me.start_matlab()
-        # Auto-addpath for vsg_helpers
+        # Auto-addpath for slx_helpers
         if os.path.isdir(self._helpers_path):
             self._eng.addpath(self._helpers_path, nargout=0)
             logger.debug("Added to MATLAB path: %s", self._helpers_path)
         else:
-            logger.warning("vsg_helpers dir not found: %s", self._helpers_path)
+            logger.warning("slx_helpers dir not found: %s", self._helpers_path)
         logger.info("MATLAB engine ready (session=%s).", self._session_id)
 
     def _get_engine(self) -> Any:

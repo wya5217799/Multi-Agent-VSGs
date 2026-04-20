@@ -626,13 +626,32 @@ def train(args):
             },
         })
 
-        # Periodic checkpoint
+        # Rolling latest checkpoint — overwritten every episode.
+        # Ensures max loss on unexpected restart = 1 episode (~7 min for NE39).
+        agent.save(
+            os.path.join(args.checkpoint_dir, "latest.pt"),
+            metadata={"start_episode": ep + 1},
+        )
+
+        # Periodic checkpoint (with replay buffer for full resume quality)
         if (ep + 1) % args.save_interval == 0:
             agent.save(
                 os.path.join(args.checkpoint_dir, f"ep{ep+1}.pt"),
                 metadata={"start_episode": ep + 1},
+                save_buffer=True,
             )
             writer.log_event(ep, "checkpoint", {"file": f"ep{ep+1}.pt"})
+
+        # Graceful-save: user drops a "save_now" file in run_dir to request
+        # an immediate full checkpoint (model + buffer) before restarting.
+        _flag = run_dir / "save_now"
+        if _flag.exists():
+            _snap = os.path.join(args.checkpoint_dir, f"safe_stop_ep{ep+1}.pt")
+            _pbar.write(f"[SaveNow] Flag detected — saving full checkpoint to {_snap}")
+            agent.save(_snap, metadata={"start_episode": ep + 1}, save_buffer=True)
+            _flag.unlink()
+            writer.log_event(ep, "checkpoint", {"file": f"safe_stop_ep{ep+1}.pt", "trigger": "save_now"})
+            _pbar.write("[SaveNow] Done. Safe to restart. Training continues.")
 
         # Update latest_state every 50 episodes
         if (ep + 1) % 50 == 0:

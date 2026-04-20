@@ -33,11 +33,8 @@ from engine.harness_repair import generate_repair_hints
 from engine.mcp_simulink_tools import (
     _simulink_get_block_tree_raw,
     _simulink_loaded_models_raw,
-    simulink_check_params,
     simulink_compile_diagnostics,
-    simulink_get_block_tree,
     simulink_load_model,
-    simulink_loaded_models,
     simulink_patch_and_verify,
     simulink_query_params,
     simulink_solver_audit,
@@ -272,11 +269,8 @@ def harness_model_inspect(
                 query_params or None,
             )
 
-        # --- Opt-in: full-model param audit ---
+        # param audit removed (slx_check_params.m deleted)
         param_suspects: list[Any] = []
-        if include_check_params:
-            param_audit = simulink_check_params(spec.model_name)
-            param_suspects = param_audit.get("suspects", [])
 
     except Exception as exc:
         exc_str = str(exc)

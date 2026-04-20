@@ -107,7 +107,7 @@ def train(args):
     print(f"  Network       = {cfg.HIDDEN_SIZES}")
     print(f"  Disturbance   = [{cfg.DISTURBANCE_MIN}, {cfg.DISTURBANCE_MAX}] p.u.")
     print(f"  Train scenes  = {len(train_scenarios)}")
-    print(f"  Buffer        = clear per episode (Algorithm 1 line 16)")
+    print(f"  Buffer        = {'clear per ep (Alg.1)' if cfg.CLEAR_BUFFER_PER_EPISODE else 'accumulate across eps (Table I)'}")
     print(f"  Warmup steps  = {cfg.WARMUP_STEPS}")
     print(f"  Seed          = {args.seed}")
     print("=" * 65)

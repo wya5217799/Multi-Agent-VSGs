@@ -15,7 +15,7 @@ HAS_ANDES = importlib.util.find_spec("andes") is not None
 @pytest.mark.slow
 def test_andes_kundur_reset_and_step_smoke():
     from env.andes.andes_vsg_env import AndesMultiVSGEnv
-    from plotting.evaluate import _get_zero_action
+    from plotting.evaluate import get_zero_action
 
     env = AndesMultiVSGEnv(random_disturbance=False, comm_fail_prob=0.0)
     try:
@@ -25,7 +25,7 @@ def test_andes_kundur_reset_and_step_smoke():
         assert len(obs) == env.N_AGENTS
         assert not env.ss.TDS.busted
 
-        zero_action = _get_zero_action(env)
+        zero_action = get_zero_action(env)
         for _ in range(3):
             actions = {i: zero_action.copy() for i in range(env.N_AGENTS)}
             obs, rewards, done, info = env.step(actions)

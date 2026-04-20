@@ -230,16 +230,20 @@ def simulink_get_multiple_block_params(model_name: str, block_paths: list[str]) 
 
 def simulink_load_model(model_name: str) -> dict:
     """Load a Simulink model into the shared MATLAB engine."""
-    session = MatlabSession.get()
-    load_target, loaded_model_name, bootstrap_paths = _resolve_model_load_target(model_name)
-    _ensure_model_bootstrapped(session, model_name)
-    return {
-        "ok": True,
-        "model_name": loaded_model_name,
-        "load_target": load_target,
-        "bootstrap_paths": bootstrap_paths,
-        "loaded_models": _simulink_loaded_models_raw(),
-    }
+    try:
+        session = MatlabSession.get()
+        load_target, loaded_model_name, bootstrap_paths = _resolve_model_load_target(model_name)
+        _ensure_model_bootstrapped(session, model_name)
+        return {
+            "ok": True,
+            "model_name": loaded_model_name,
+            "load_target": load_target,
+            "bootstrap_paths": bootstrap_paths,
+            "loaded_models": _simulink_loaded_models_raw(),
+            "error_message": "",
+        }
+    except Exception as exc:
+        return {"ok": False, "error_message": str(exc), "model_name": model_name}
 
 
 def simulink_create_model(model_name: str, open_model: _BoolArg = True) -> dict:
@@ -257,15 +261,18 @@ def simulink_create_model(model_name: str, open_model: _BoolArg = True) -> dict:
 
 def simulink_close_model(model_name: str, save: _BoolArg = False) -> dict:
     """Close a Simulink model in the shared MATLAB engine."""
-    session = MatlabSession.get()
-    if bool(save):
-        session.call("save_system", model_name, nargout=0)
-    session.call("slx_close_model", model_name, nargout=0)
-    return {
-        "ok": True,
-        "model_name": model_name,
-        "loaded_models": _simulink_loaded_models_raw(),
-    }
+    try:
+        session = MatlabSession.get()
+        if bool(save):
+            session.call("save_system", model_name, nargout=0)
+        session.call("slx_close_model", model_name, nargout=0)
+        return {
+            "ok": True,
+            "model_name": model_name,
+            "loaded_models": _simulink_loaded_models_raw(),
+        }
+    except Exception as exc:
+        return {"ok": False, "error_message": str(exc)}
 
 
 def simulink_set_block_params(model_name: str, block_path: str, params: dict[str, str]) -> dict:
@@ -387,104 +394,6 @@ def simulink_connect_blocks(
     }
 
 
-def simulink_update_diagram(model_name: str) -> dict:
-    """Trigger a model update/compile refresh."""
-    session = MatlabSession.get()
-    loaded_model_name = _ensure_model_bootstrapped(session, model_name)
-    summary = session.call("slx_update_diagram", loaded_model_name, nargout=1)
-    return {
-        "ok": bool(summary.get("ok", False)),
-        "important_lines": _to_list(summary.get("important_lines", [])),
-        "error_message": str(summary.get("error_message", "")),
-    }
-
-
-def simulink_delete_line(
-    model_name: str,
-    source_port: str,
-    destination_port: str,
-    system_path: str | None = None,
-) -> dict:
-    """Delete a signal line between two ports."""
-    session = MatlabSession.get()
-    loaded_model_name = _ensure_model_bootstrapped(session, model_name)
-    target_system = system_path or loaded_model_name
-    summary = session.call(
-        "slx_delete_line",
-        target_system,
-        source_port,
-        destination_port,
-        nargout=1,
-    )
-    return {
-        "ok": bool(summary.get("ok", False)),
-        "important_lines": _to_list(summary.get("important_lines", [])),
-        "error_message": str(summary.get("error_message", "")),
-    }
-
-
-def simulink_add_line_branch(
-    model_name: str,
-    source_port: str,
-    destination_port: str,
-    autorouting: _BoolArg = True,
-    system_path: str | None = None,
-) -> dict:
-    """Add a branch line from an existing source port to another destination."""
-    session = MatlabSession.get()
-    loaded_model_name = _ensure_model_bootstrapped(session, model_name)
-    target_system = system_path or loaded_model_name
-    summary = session.call(
-        "slx_add_line_branch",
-        target_system,
-        source_port,
-        destination_port,
-        bool(autorouting),
-        nargout=1,
-    )
-    return {
-        "ok": bool(summary.get("ok", False)),
-        "important_lines": _to_list(summary.get("important_lines", [])),
-        "error_message": str(summary.get("error_message", "")),
-    }
-
-
-def simulink_add_annotation(model_name: str, text: str, position: list[int] | None = None) -> dict:
-    """Add a model annotation with optional position."""
-    session = MatlabSession.get()
-    loaded_model_name = _ensure_model_bootstrapped(session, model_name)
-    summary = session.call(
-        "slx_add_annotation",
-        loaded_model_name,
-        text,
-        position or [],
-        nargout=1,
-    )
-    return {
-        "ok": bool(summary.get("ok", False)),
-        "important_lines": _to_list(summary.get("important_lines", [])),
-        "error_message": str(summary.get("error_message", "")),
-    }
-
-
-def simulink_set_block_position(model_name: str, block_path: str, position: list[int]) -> dict:
-    """Set a block position [left, top, right, bottom]."""
-    session = MatlabSession.get()
-    _ensure_model_bootstrapped(session, model_name)
-    summary = session.call(
-        "slx_set_block_position",
-        block_path,
-        position,
-        nargout=1,
-    )
-    return {
-        "ok": bool(summary.get("ok", False)),
-        "block_path": str(summary.get("block_path", block_path)),
-        "important_lines": _to_list(summary.get("important_lines", [])),
-        "error_message": str(summary.get("error_message", "")),
-    }
-
-
 def simulink_add_subsystem(
     model_name: str,
     subsystem_path: str,
@@ -504,143 +413,6 @@ def simulink_add_subsystem(
     return {
         "ok": bool(summary.get("ok", False)),
         "block_path": str(summary.get("block_path", subsystem_path)),
-        "important_lines": _to_list(summary.get("important_lines", [])),
-        "error_message": str(summary.get("error_message", "")),
-    }
-
-
-def simulink_open_system(system_path: str) -> dict:
-    """Open a model or subsystem in the shared MATLAB session."""
-    session = MatlabSession.get()
-    _ensure_model_bootstrapped(session, str(system_path).split("/")[0])
-    summary = session.call("slx_open_system", system_path, nargout=1)
-    return {
-        "ok": bool(summary.get("ok", False)),
-        "system_path": str(summary.get("system_path", system_path)),
-        "important_lines": _to_list(summary.get("important_lines", [])),
-        "error_message": str(summary.get("error_message", "")),
-    }
-
-
-def simulink_list_ports(system_path: str) -> dict:
-    """List child inports/outports of a subsystem or top-level model."""
-    session = MatlabSession.get()
-    _ensure_model_bootstrapped(session, str(system_path).split("/")[0])
-    result = session.call("slx_list_ports", system_path, nargout=1)
-    return {
-        "system_path": str(result.get("system_path", system_path)),
-        "inports": _to_list(result.get("inports", [])),
-        "outports": _to_list(result.get("outports", [])),
-    }
-
-
-def simulink_autolayout_subsystem(system_path: str) -> dict:
-    """Run Simulink autolayout on a model or subsystem."""
-    session = MatlabSession.get()
-    _ensure_model_bootstrapped(session, str(system_path).split("/")[0])
-    summary = session.call("slx_autolayout_subsystem", system_path, nargout=1)
-    return {
-        "ok": bool(summary.get("ok", False)),
-        "system_path": str(summary.get("system_path", system_path)),
-        "important_lines": _to_list(summary.get("important_lines", [])),
-        "error_message": str(summary.get("error_message", "")),
-    }
-
-
-def simulink_build_chain(
-    model_name: str,
-    system_path: str,
-    blocks: list[dict[str, Any]],
-    start_port: str | None = None,
-    end_port: str | None = None,
-    autorouting: _BoolArg = True,
-    autolayout: _BoolArg = True,
-) -> dict:
-    """Build a linear chain of blocks inside a model/subsystem.
-
-    Each block item supports:
-      - source_block: library path
-      - name: destination block name inside system_path
-      - params: optional dict[str, str]
-      - position: optional [l, t, r, b]
-      - input_port: optional port name/number, default '1'
-      - output_port: optional port name/number, default '1'
-    """
-    session = MatlabSession.get()
-    _ensure_model_bootstrapped(session, model_name)
-    summary = session.call(
-        "slx_build_chain",
-        system_path,
-        blocks,
-        start_port or "",
-        end_port or "",
-        bool(autorouting),
-        bool(autolayout),
-        nargout=1,
-    )
-    return {
-        "ok": bool(summary.get("ok", False)),
-        "system_path": str(summary.get("system_path", system_path)),
-        "blocks_added": _to_list(summary.get("blocks_added", [])),
-        "important_lines": _to_list(summary.get("important_lines", [])),
-        "error_message": str(summary.get("error_message", "")),
-    }
-
-
-def simulink_build_signal_chain(
-    model_name: str,
-    system_path: str,
-    names: list[str],
-    source_blocks: list[str],
-    params_list: list[dict[str, Any]] | None = None,
-    start_port: str | None = None,
-    end_port: str | None = None,
-    autolayout: _BoolArg = True,
-) -> dict:
-    """Convenience wrapper for building a signal-domain linear chain."""
-    blocks = []
-    params_list = params_list or []
-    for i, (name, source_block) in enumerate(zip(names, source_blocks)):
-        params = params_list[i] if i < len(params_list) else {}
-        blocks.append({
-            "name": name,
-            "source_block": source_block,
-            "params": params,
-        })
-    return simulink_build_chain(
-        model_name=model_name,
-        system_path=system_path,
-        blocks=blocks,
-        start_port=start_port,
-        end_port=end_port,
-        autorouting=True,
-        autolayout=autolayout,
-    )
-
-
-def simulink_clone_subsystem_n_times(
-    model_name: str,
-    source_subsystem_path: str,
-    destination_prefix: str,
-    count: _IntArg,
-    start_index: _IntArg = 1,
-    position_offset: list[int] | None = None,
-) -> dict:
-    """Clone a subsystem multiple times with numbered names."""
-    session = MatlabSession.get()
-    loaded_model_name = _ensure_model_bootstrapped(session, model_name)
-    summary = session.call(
-        "slx_clone_subsystem_n_times",
-        source_subsystem_path,
-        destination_prefix,
-        int(count),
-        int(start_index),
-        position_offset or [],
-        nargout=1,
-    )
-    return {
-        "ok": bool(summary.get("ok", False)),
-        "clones": _to_list(summary.get("clones", [])),
         "important_lines": _to_list(summary.get("important_lines", [])),
         "error_message": str(summary.get("error_message", "")),
     }
@@ -872,52 +644,6 @@ def simulink_poll_script(job_id: str) -> dict:
     }
 
 
-def simulink_check_params(model_name: str, depth: _IntArg = 5) -> dict:
-    """Placeholder. Returns n_skipped count only; does not perform real parameter audit.
-
-    NOT exposed in PUBLIC_TOOLS — internal use only.
-    Use simulink_query_params(missing_params=[...]) for parameter name validity.
-
-    Exit condition for upgrade to real implementation (Plan option A):
-        When a parameter-unit error causes a smoke test failure AND grep confirms
-        check_params is the intended call site, upgrade to full audit and re-expose.
-    """
-    session = MatlabSession.get()
-    loaded_model_name = _ensure_model_bootstrapped(session, model_name)
-    report = session.call("slx_check_params", loaded_model_name, "depth", float(depth))
-    suspects = []
-    for s in _to_list(report.get("suspects", [])):
-        if not isinstance(s, dict):
-            continue
-        val = s.get("value", 0)
-        if hasattr(val, "__iter__") and not isinstance(val, str):
-            val = list(val)
-        else:
-            try:
-                val = float(val)
-            except (TypeError, ValueError):
-                val = str(val)
-        suspects.append({
-            "block":          str(s.get("block", "")),
-            "param":          str(s.get("param", "")),
-            "value":          val,
-            "actual_unit":    str(s.get("actual_unit", "")),
-            "expected_unit":  str(s.get("expected_unit", "")),
-            "expected_range": _to_list(s.get("expected_range", [])),
-            "reason":         str(s.get("reason", "")),
-            "hint":           str(s.get("hint", "")),
-        })
-    n_suspect = int(report.get("n_suspect", 0))
-    return {
-        "ok":        True,
-        "passed":    n_suspect == 0,
-        "n_checked": int(report.get("n_checked", 0)),
-        "n_suspect": n_suspect,
-        "n_skipped": int(report.get("n_skipped", 0)),
-        "suspects":  suspects,
-    }
-
-
 def simulink_query_params(
     model_name: str,
     block_paths: list[str],
@@ -939,36 +665,20 @@ def simulink_query_params(
     loaded_model_name = _ensure_model_bootstrapped(session, model_name)
     param_names = _normalize_param_names(param_names)
 
+    # Both selective and all-params modes now use slx_batch_query (slx_bulk_get_params removed).
+    # With param_names supplied, MATLAB filters to just those params and populates missing_params.
+    # Without param_names, MATLAB reads all DialogParameters; missing_params is always [].
+    # MATLAB returns a scalar struct (dict) for a single block path and a cell array (list)
+    # for multiple paths — normalise both so the converter below always sees a list.
     if param_names is not None and len(param_names) > 0:
-        # Selective params → use slx_bulk_get_params
-        raw = session.call("slx_bulk_get_params", loaded_model_name, block_paths, param_names, nargout=1)
-        return {"items": _convert_bulk_param_items(raw.get("items", []))}
+        raw = session.call("slx_batch_query", loaded_model_name, block_paths, param_names, nargout=1)
     else:
-        # All params → use slx_batch_query.
-        # MATLAB returns a scalar struct (dict) for a single block path and a
-        # cell array (list) for multiple paths.  Normalise both to a list so the
-        # loop below works in either case.
         raw = session.call("slx_batch_query", loaded_model_name, block_paths, nargout=1)
-        if isinstance(raw, dict):
-            raw = [raw]  # scalar struct → 1-element list
-        elif not isinstance(raw, list):
-            raw = []     # unexpected type → emit no items rather than crash
-        items = []
-        for row in raw:
-            if not isinstance(row, dict):
-                continue
-            params_raw = row.get("params", {})
-            params = (
-                {str(k): str(v) for k, v in params_raw.items()}
-                if isinstance(params_raw, dict) else {}
-            )
-            items.append({
-                "block_path": str(row.get("block", "")),
-                "params": params,
-                "error": str(row.get("error", "")),
-                "missing_params": [],
-            })
-        return {"items": items}
+    if isinstance(raw, dict):
+        raw = [raw]  # scalar struct → 1-element list
+    elif not isinstance(raw, list):
+        raw = []     # unexpected type → emit no items rather than crash
+    return {"items": _convert_batch_query_items(raw)}
 
 
 def simulink_connect_ports(
@@ -1028,25 +738,6 @@ def simulink_connect_ports(
         "important_lines": _to_list(raw.get("important_lines", [])),
         "error_message": str(raw.get("error_message", "")),
     }
-
-
-def simulink_list_models() -> list[str]:
-    """List available .slx files in the project scenarios/ directories.
-
-    Returns:
-        List of model file paths found on disk
-    """
-    import glob
-    import os
-
-    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    patterns = [
-        os.path.join(project_root, "scenarios", "**", "*.slx"),
-    ]
-    models = []
-    for pat in patterns:
-        models.extend(glob.glob(pat, recursive=True))
-    return models
 
 
 def _simulink_loaded_models_raw() -> list[str]:
@@ -1243,11 +934,21 @@ def simulink_add_line_by_handles(
     """Connect ports using raw port handles for robust physical-port wiring.
 
     .. deprecated::
-        Use :func:`simulink_connect_ports` with ``addressing='handle'`` instead.
+        This function is deprecated and has **no** equivalent handle-based
+        replacement.  ``simulink_connect_ports(addressing='handle')`` is
+        **not** a valid alternative — it raises :exc:`ValueError` immediately.
+        Use name-based port addressing via :func:`simulink_connect_ports`
+        with ``src_port='Block/PortIndex'`` / ``dst_port='Block/PortIndex'``
+        instead.  If handle-based addressing is required, it is currently
+        unsupported; please open an issue.
     """
     import warnings
     warnings.warn(
-        "simulink_add_line_by_handles is deprecated; use simulink_connect_ports(addressing='handle') instead.",
+        "simulink_add_line_by_handles is deprecated and has no handle-based replacement. "
+        "simulink_connect_ports(addressing='handle') raises ValueError and must not be used. "
+        "Switch to name-based addressing: simulink_connect_ports(src_port='Block/PortIndex', "
+        "dst_port='Block/PortIndex'). If handle addressing is required, it is currently "
+        "unsupported — please open an issue.",
         DeprecationWarning,
         stacklevel=2,
     )
@@ -1373,62 +1074,6 @@ def simulink_solver_audit(
     }
 
 
-def simulink_prepare_model_workspace(
-    model_name: str,
-    model_dir: str,
-    run_preload: _BoolArg = True,
-    scripts: list[str] | None = None,
-    base_vars: dict[str, Any] | None = None,
-) -> dict:
-    """Prepare base workspace variables and preload callbacks for a model."""
-    session = MatlabSession.get()
-    loaded_model_name = _ensure_model_bootstrapped(session, model_name)
-    raw = session.call(
-        "slx_prepare_model_workspace",
-        loaded_model_name,
-        model_dir,
-        bool(run_preload),
-        scripts or [],
-        base_vars or {},
-        nargout=1,
-    )
-    return {
-        "ok": bool(raw.get("ok", False)),
-        "ran_scripts": _to_list(raw.get("ran_scripts", [])),
-        "vars_loaded": _to_list(raw.get("vars_loaded", [])),
-        "callback_errors": _to_list(raw.get("callback_errors", [])),
-        "warnings": _to_list(raw.get("warnings", [])),
-    }
-
-
-def simulink_event_source_audit(
-    model_name: str,
-    path_prefix: str | None = None,
-    block_types: list[str] | None = None,
-    warmup_start: float | None = None,
-    warmup_end: float | None = None,
-    boundary_eps: float = 0.02,
-) -> dict:
-    """Scan discrete event source blocks and flag suspicious configurations."""
-    session = MatlabSession.get()
-    loaded_model_name = _ensure_model_bootstrapped(session, model_name)
-    raw = session.call(
-        "slx_event_source_audit",
-        loaded_model_name,
-        path_prefix or "",
-        block_types or [],
-        [] if warmup_start is None else float(warmup_start),
-        [] if warmup_end is None else float(warmup_end),
-        float(boundary_eps),
-        nargout=1,
-    )
-    return {
-        "ok": bool(raw.get("ok", False)),
-        "items": _convert_event_items(raw.get("items", [])),
-        "summary": _to_list(raw.get("summary", [])),
-    }
-
-
 def simulink_patch_and_verify(
     model_name: str,
     edits: list[dict[str, Any]],
@@ -1461,69 +1106,6 @@ def simulink_patch_and_verify(
     }
 
 
-def simulink_describe_library_block(library_path: str) -> dict:
-    """Describe a library block by exact library path."""
-    session = MatlabSession.get()
-    raw = session.call("slx_describe_library_block", library_path, nargout=1)
-    return {
-        "exists": bool(raw.get("exists", False)),
-        "dialog_params": _to_list(raw.get("dialog_params", [])),
-        "default_values": _convert_string_dict(raw.get("default_values", {})),
-        "port_schema": _convert_library_port_schema(raw.get("port_schema", [])),
-        "mask_type": str(raw.get("mask_type", "")),
-        "reference_block": str(raw.get("reference_block", "")),
-        "error": str(raw.get("error", "")),
-    }
-
-
-def simulink_find_blocks_by_mask_or_ref(
-    model_name: str,
-    mask_type: str = "",
-    reference_block: str = "",
-    name_regex: str = "",
-) -> dict:
-    """Find blocks by mask type, reference block, and optional name regex."""
-    session = MatlabSession.get()
-    loaded_model_name = _ensure_model_bootstrapped(session, model_name)
-    raw = session.call(
-        "slx_find_blocks_by_mask_or_ref",
-        loaded_model_name,
-        mask_type,
-        reference_block,
-        name_regex,
-        nargout=1,
-    )
-    return {
-        "matches": _to_list(raw.get("matches", [])),
-    }
-
-
-def simulink_clone_model(
-    src_model: str,
-    dst_model: str,
-    src_dir: str,
-    dst_dir: str,
-    overwrite: _BoolArg = False,
-) -> dict:
-    """Clone an .slx model to a new file and load the destination model."""
-    session = MatlabSession.get()
-    raw = session.call(
-        "slx_clone_model",
-        src_model,
-        dst_model,
-        src_dir,
-        dst_dir,
-        bool(overwrite),
-        nargout=1,
-    )
-    return {
-        "ok": bool(raw.get("ok", False)),
-        "dst_file": str(raw.get("dst_file", "")),
-        "loaded_model_name": str(raw.get("loaded_model_name", "")),
-        "error_message": str(raw.get("error_message", "")),
-    }
-
-
 def simulink_delete_block_with_connections(
     model_name: str,
     block_path: str,
@@ -1543,149 +1125,6 @@ def simulink_delete_block_with_connections(
         "ok": bool(raw.get("ok", False)),
         "block_path": str(raw.get("block_path", block_path)),
         "deleted_lines": [_to_int(x) for x in _to_list(raw.get("deleted_lines", [])) if _to_int(x) > 0],
-        "error_message": str(raw.get("error_message", "")),
-    }
-
-
-def simulink_summarize_signal_fanout(
-    model_name: str,
-    block_path: str,
-    outport_index: _IntArg,
-) -> dict:
-    """Summarize the fanout of one output port."""
-    session = MatlabSession.get()
-    loaded_model_name = _ensure_model_bootstrapped(session, model_name)
-    raw = session.call(
-        "slx_summarize_signal_fanout",
-        loaded_model_name,
-        block_path,
-        int(outport_index),
-        nargout=1,
-    )
-    return {
-        "block_path": str(raw.get("block_path", block_path)),
-        "outport_index": _to_int(raw.get("outport_index", outport_index)),
-        "destinations": _convert_port_endpoints(raw.get("destinations", [])),
-        "fanout_count": _to_int(raw.get("fanout_count", 0)),
-        "line_handle": _to_int(raw.get("line_handle", 0)),
-        "error_message": str(raw.get("error_message", "")),
-    }
-
-
-def simulink_bulk_get_params(
-    model_name: str,
-    block_paths: list[str],
-    param_names: list[str],
-) -> dict:
-    """Read selected parameters from many blocks in one call."""
-    session = MatlabSession.get()
-    loaded_model_name = _ensure_model_bootstrapped(session, model_name)
-    raw = session.call(
-        "slx_bulk_get_params",
-        loaded_model_name,
-        block_paths,
-        param_names,
-        nargout=1,
-    )
-    return {
-        "items": _convert_bulk_param_items(raw.get("items", [])),
-    }
-
-
-def simulink_model_diff(before_model: str, after_model: str) -> dict:
-    """Compare two loaded models and summarize block/parameter/line changes."""
-    session = MatlabSession.get()
-    loaded_before_model = _ensure_model_bootstrapped(session, before_model)
-    loaded_after_model = _ensure_model_bootstrapped(session, after_model)
-    raw = session.call("slx_model_diff", loaded_before_model, loaded_after_model, nargout=1)
-    return {
-        "added_blocks": _to_list(raw.get("added_blocks", [])),
-        "removed_blocks": _to_list(raw.get("removed_blocks", [])),
-        "param_changes": _convert_param_changes(raw.get("param_changes", [])),
-        "added_lines": _to_list(raw.get("added_lines", [])),
-        "removed_lines": _to_list(raw.get("removed_lines", [])),
-    }
-
-
-def simulink_solver_warning_summary(
-    model_name: str,
-    run_code_or_file: str,
-    timeout_sec: _IntArg = 60,
-    warning_patterns: list[str] | None = None,
-    collapse_duplicates: _BoolArg = True,
-) -> dict:
-    """Collapse repeated solver warnings from captured MATLAB output."""
-    session = MatlabSession.get()
-    loaded_model_name = _ensure_model_bootstrapped(session, model_name)
-    try:
-        raw = session.call(
-            "slx_solver_warning_summary",
-            loaded_model_name,
-            run_code_or_file,
-            int(timeout_sec),
-            warning_patterns or [],
-            bool(collapse_duplicates),
-            nargout=1,
-            timeout=int(timeout_sec),
-        )
-    except MatlabCallError as exc:
-        if "timed out" in str(exc).lower():
-            return {
-                "ok": False,
-                "first_occurrence_time": None,
-                "last_occurrence_time": None,
-                "unique_warning_types": 0,
-                "collapsed_warnings": [],
-                "stiffness_detected": False,
-                "likely_stuck_time": None,
-                "suggested_next_checks": [
-                    "Shorten the diagnostic run or use simulink_step_diagnostics around the suspected stuck time.",
-                ],
-                "raw_summary": str(exc),
-                "error_message": str(exc),
-            }
-        raise
-    return {
-        "ok": bool(raw.get("ok", False)),
-        "first_occurrence_time": _to_optional_float(raw.get("first_occurrence_time")),
-        "last_occurrence_time": _to_optional_float(raw.get("last_occurrence_time")),
-        "unique_warning_types": _to_int(raw.get("unique_warning_types", 0)),
-        "collapsed_warnings": _convert_collapsed_warnings(raw.get("collapsed_warnings", [])),
-        "stiffness_detected": bool(raw.get("stiffness_detected", False)),
-        "likely_stuck_time": _to_optional_float(raw.get("likely_stuck_time")),
-        "suggested_next_checks": _to_list(raw.get("suggested_next_checks", [])),
-        "raw_summary": str(raw.get("raw_summary", "")),
-        "error_message": str(raw.get("error_message", "")),
-    }
-
-
-def simulink_signal_snapshot(
-    model_name: str,
-    time_s: float,
-    signals: list[Any],
-    allow_partial: _BoolArg = False,
-) -> dict:
-    """Read signal values near a target simulation time from logsout, ToWorkspace, or block outputs."""
-    session = MatlabSession.get()
-    loaded_model_name = _ensure_model_bootstrapped(session, model_name)
-    raw = session.call(
-        "slx_signal_snapshot",
-        loaded_model_name,
-        float(time_s),
-        signals,
-        bool(allow_partial),
-        nargout=1,
-    )
-    values, units = _convert_snapshot_items(raw.get("values", []))
-    units_from_raw = _convert_snapshot_units(raw.get("units", []))
-    units.update({k: v for k, v in units_from_raw.items() if k not in units})
-    return {
-        "time_s": _to_optional_float(raw.get("time_s")) or float(time_s),
-        "values": values,
-        "missing_signals": _to_list(raw.get("missing_signals", [])),
-        "units": units,
-        "read_ok": bool(raw.get("read_ok", False)),
-        "warnings": _to_list(raw.get("warnings", [])),
         "error_message": str(raw.get("error_message", "")),
     }
 
@@ -1795,7 +1234,7 @@ def simulink_capture_figure(
     )
 
     ok = bool(raw.get("ok", False))
-    error_msg = str(raw.get("error_msg", ""))
+    error_message = str(raw.get("error_msg", ""))
 
     figures: list[dict] = []
     if ok:
@@ -1826,7 +1265,7 @@ def simulink_capture_figure(
         "ok": ok,
         "count": len(figures),
         "figures": figures,
-        "error_message": error_msg,
+        "error_message": error_message,
     }
 
 
@@ -2362,13 +1801,39 @@ def _convert_library_port_schema(items: Any) -> list[dict]:
     return result
 
 
-def _convert_bulk_param_items(items: Any) -> list[dict]:
+def _convert_batch_query_items(items: Any) -> list[dict]:
+    """Parse the struct array returned by slx_batch_query.
+
+    slx_batch_query returns items with field names: block, params,
+    missing_params, error.  This normalises them to the canonical
+    Python shape used throughout simulink_query_params: block_path,
+    params, missing_params, error.
+    """
     result = []
     for item in _to_list(items):
         if not isinstance(item, dict):
             continue
         result.append({
-            "block_path": str(item.get("block_path", "")),
+            "block_path": str(item.get("block", item.get("block_path", ""))),
+            "params": _convert_string_dict(item.get("params", {})),
+            "missing_params": _to_list(item.get("missing_params", [])),
+            "error": str(item.get("error", "")),
+        })
+    return result
+
+
+def _convert_bulk_param_items(items: Any) -> list[dict]:
+    """Legacy converter — kept for any callers outside simulink_query_params.
+
+    Reads both 'block_path' (old slx_bulk_get_params) and 'block'
+    (new slx_batch_query) so it degrades gracefully in either case.
+    """
+    result = []
+    for item in _to_list(items):
+        if not isinstance(item, dict):
+            continue
+        result.append({
+            "block_path": str(item.get("block_path", item.get("block", ""))),
             "params": _convert_string_dict(item.get("params", {})),
             "missing_params": _to_list(item.get("missing_params", [])),
             "error": str(item.get("error", "")),

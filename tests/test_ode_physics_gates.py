@@ -1,7 +1,10 @@
 """Physics validation gates — verify ODE modal parameters match paper targets."""
+import os
+import sys
+
 import numpy as np
 import pytest
-import sys, os
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 
@@ -19,7 +22,6 @@ def _compute_df_peak(H, D, B_tie, disturbance_amplitude=2.4, fn=50.0):
     """Simulate 10 s and return peak |Δf| in Hz for [A,0,-A,0] disturbance."""
     from env.network_topology import build_laplacian
     from env.ode.power_system import PowerSystem
-    import config as cfg
 
     B = np.array([
         [0,      B_tie, 0,      0],
@@ -82,11 +84,11 @@ def test_df_peak_in_target_range():
 
 
 def test_warmup_h_floor_prevents_blowup():
-    """With a=-1 action (max negative ΔH), H_es must stay ≥ 8.0."""
+    """DH_MIN must allow H below 8.0 so the env floor clamp (Task 2) is non-vacuous."""
     import config as cfg
     H_floor = 8.0
     min_H = float(cfg.H_ES0[0]) + cfg.DH_MIN
-    # Floor clamp in multi_vsg_env.py guarantees H >= 8.0
-    assert min_H < H_floor, "DH_MIN allows H below floor — floor clamp needed"
-    clamped = max(min_H, H_floor)
-    assert clamped >= H_floor
+    assert min_H < H_floor, (
+        f"DH_MIN={cfg.DH_MIN} gives min_H={min_H:.1f} which is not < H_floor={H_floor}; "
+        f"the env floor clamp would be vacuous"
+    )

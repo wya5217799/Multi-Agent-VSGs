@@ -126,6 +126,11 @@ def _get_zero_action(env) -> np.ndarray:
     return np.zeros(2, dtype=np.float32)
 
 
+def get_zero_action(env) -> np.ndarray:
+    """Public alias for _get_zero_action. Prefer this in tests and external callers."""
+    return _get_zero_action(env)
+
+
 # ── Core evaluation ──
 
 def run_evaluation(scenario: ScenarioConfig,

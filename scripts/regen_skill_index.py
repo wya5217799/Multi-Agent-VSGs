@@ -12,6 +12,7 @@ Environment:
 from __future__ import annotations
 
 import argparse
+import difflib
 import json
 import os
 import sys
@@ -59,6 +60,8 @@ _SIMULINK_META: dict[str, dict[str, str]] = {
     "simulink_trace_port_connections": {"group": "wire",    "description": "Trace signal chain from a port upstream/downstream"},
 }
 
+# harness_* and training_* tools use a flat description string (no "group" field)
+# because they are project-specific harness tools, not general Simulink tools.
 _HARNESS_META: dict[str, str] = {
     "harness_model_diagnose":       "Diagnose harness model errors",
     "harness_model_inspect":        "Inspect harness model structure",
@@ -90,7 +93,11 @@ def _load_public_tool_names() -> list[str]:
     """Import PUBLIC_TOOLS from engine.mcp_server and return function names."""
     # FastMCP tries to bind to a port during import only if __main__ runs it.
     # The module-level import is safe; we just need the list attribute.
-    from engine.mcp_server import PUBLIC_TOOLS  # noqa: PLC0415
+    try:
+        from engine.mcp_server import PUBLIC_TOOLS  # noqa: PLC0415
+    except ImportError as exc:
+        print(f"ERROR: could not import engine.mcp_server: {exc}", file=sys.stderr)
+        raise SystemExit(2) from exc
     return [fn.__name__ for fn in PUBLIC_TOOLS]
 
 
@@ -118,6 +125,8 @@ def _build_index(tool_names: list[str]) -> dict:
                 "name": name,
                 "description": _TRAINING_META.get(name, ""),
             })
+        else:
+            print(f"WARNING: unclassified tool skipped: {name}", file=sys.stderr)
 
     return {
         "meta": {
@@ -158,7 +167,6 @@ def _run_check(index_path: Path, generated: str) -> int:
         return 0
 
     # Show a simple line-by-line diff
-    import difflib
     diff = list(difflib.unified_diff(
         on_disk.splitlines(keepends=True),
         generated.splitlines(keepends=True),

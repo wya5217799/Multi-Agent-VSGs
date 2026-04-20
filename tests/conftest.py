@@ -9,6 +9,7 @@ from plotting.evaluate import create_env, load_agents, get_zero_action
 def pytest_configure(config):
     config.addinivalue_line("markers", "slow: requires model loading or long simulation")
     config.addinivalue_line("markers", "matlab: requires live MATLAB engine (skip offline)")
+    config.addinivalue_line("markers", "offline: runs fully offline, no MATLAB or model files needed")
 
 
 @pytest.fixture(scope="module", params=list(SCENARIOS.keys()))

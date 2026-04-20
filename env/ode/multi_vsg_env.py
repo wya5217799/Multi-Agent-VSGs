@@ -145,7 +145,7 @@ class MultiVSGEnv:
             D_es[i] = cfg.D_ES0[i] + delta_D[i]
 
         # 确保 H > 0, D > 0 (物理约束)
-        H_es = np.maximum(H_es, 0.1)
+        H_es = np.maximum(H_es, 8.0)
         D_es = np.maximum(D_es, 0.1)
 
         # 2. 设置参数并积分一步
@@ -198,9 +198,9 @@ class MultiVSGEnv:
             o = np.zeros(cfg.OBS_DIM, dtype=np.float32)
 
             # 本地信息 (归一化到 ~[-1, 1])
-            o[0] = state['P_es'][i] / 15.0       # P_es 范围 ~[-15, 15]
+            o[0] = state['P_es'][i] / 5.0         # P_es 范围 ~[-5, 5] with B_tie=4
             o[1] = state['omega'][i] / 3.0        # omega 范围 ~[-3, 3]
-            o[2] = state['omega_dot'][i] / 10.0   # omega_dot 范围 ~[-10, 10]
+            o[2] = state['omega_dot'][i] / 25.0   # omega_dot 范围 ~[-25, 25] with H=24
 
             # 邻居信息 (通信获取, 支持延迟)
             neighbors = self.comm.get_neighbors(i)
@@ -211,12 +211,12 @@ class MultiVSGEnv:
                     if self.comm_delay_steps > 0 and (i, j) in self._delayed_omega:
                         # 读取延迟值, 并将当前真实值压入缓冲
                         o[3 + k] = self._delayed_omega[(i, j)][0] / 3.0
-                        o[3 + cfg.MAX_NEIGHBORS + k] = self._delayed_omega_dot[(i, j)][0] / 10.0
+                        o[3 + cfg.MAX_NEIGHBORS + k] = self._delayed_omega_dot[(i, j)][0] / 25.0
                         self._delayed_omega[(i, j)].append(state['omega'][j])
                         self._delayed_omega_dot[(i, j)].append(state['omega_dot'][j])
                     else:
                         o[3 + k] = state['omega'][j] / 3.0
-                        o[3 + cfg.MAX_NEIGHBORS + k] = state['omega_dot'][j] / 10.0
+                        o[3 + cfg.MAX_NEIGHBORS + k] = state['omega_dot'][j] / 25.0
                 # 链路故障 → 保持为 0
 
             obs[i] = o

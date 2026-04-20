@@ -74,11 +74,10 @@ class PowerSystem:
             raise ValueError("network_mode='nonlinear' requires B_matrix and V_bus")
 
         self.governor_enabled = bool(governor_enabled)
-        if self.governor_enabled:
-            if governor_R <= 0:
-                raise ValueError(f"governor_R must be > 0, got {governor_R}")
-            if governor_tau_g <= 0:
-                raise ValueError(f"governor_tau_g must be > 0, got {governor_tau_g}")
+        if governor_R <= 0:
+            raise ValueError(f"governor_R must be > 0, got {governor_R}")
+        if governor_tau_g <= 0:
+            raise ValueError(f"governor_tau_g must be > 0, got {governor_tau_g}")
         self.governor_R = float(governor_R)
         self.governor_tau_g = float(governor_tau_g)
 
@@ -209,6 +208,10 @@ class PowerSystem:
             max_step=self.dt / 10,
         )
 
+        if not sol.success:
+            raise RuntimeError(
+                f"solve_ivp failed at step {self._step_count}: {sol.message}"
+            )
         self.state = sol.y[:, -1]
         self.current_time = t_end
         self._step_count += 1

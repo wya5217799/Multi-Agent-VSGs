@@ -39,9 +39,9 @@ def test_governor_steady_state_droop():
     for _ in range(300):  # 60 s to converge
         r = ps.step()
     omega = r['omega']
-    P_gov = ps.state[2 * 4:3 * 4]
+    P_gov = ps.state[2 * ps.N:3 * ps.N]
     # Steady-state governor relation: P_gov ≈ -(ω/ωs) / R  (ω in rad/s, R in p.u.)
-    expected = -(omega / ps.omega_s) / 0.05
+    expected = -(omega / ps.omega_s) / ps.governor_R
     np.testing.assert_allclose(P_gov, expected, rtol=0.10)
 
 
@@ -78,3 +78,19 @@ def test_invalid_governor_params_rejected():
             _L, np.full(4, 24.0), np.full(4, 18.0), dt=0.2, fn=50.0,
             governor_enabled=True, governor_R=0.05, governor_tau_g=0.0,
         )
+
+
+def test_reset_clears_governor_state():
+    """After reset(), P_gov slice must be zero (governor starts from rest)."""
+    ps = PowerSystem(
+        _L, np.full(4, 24.0), np.full(4, 18.0), dt=0.2, fn=50.0,
+        governor_enabled=True, governor_R=0.05, governor_tau_g=0.5,
+    )
+    ps.reset(delta_u=np.array([-1.0, -1.0, -1.0, -1.0]))
+    for _ in range(50):
+        ps.step()
+    # After some steps P_gov is non-zero
+    assert not np.allclose(ps.state[2 * ps.N:], 0.0), "P_gov should be non-zero mid-episode"
+    # After reset P_gov must be zeroed
+    ps.reset()
+    np.testing.assert_array_equal(ps.state, np.zeros(3 * ps.N))

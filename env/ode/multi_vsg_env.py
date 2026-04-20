@@ -46,7 +46,8 @@ class MultiVSGEnv:
         self.ps = PowerSystem(
             self.L, cfg.H_ES0, cfg.D_ES0,
             dt=cfg.DT, fn=cfg.OMEGA_N / (2 * np.pi),
-            B_matrix=cfg.B_MATRIX, V_bus=cfg.V_BUS,
+            B_matrix=getattr(cfg, 'B_MATRIX', None),
+            V_bus=getattr(cfg, 'V_BUS', None),
             network_mode=getattr(cfg, 'ODE_NETWORK_MODE', 'linear'),
         )
 

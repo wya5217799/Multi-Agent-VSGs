@@ -17,9 +17,10 @@
 
 import numpy as np
 from scipy.integrate import solve_ivp
+from env.network_topology import build_laplacian
 from utils.ode_events import (
     DisturbanceEvent,
-    LineTripEvent,  # noqa: F401 — used in Task 5 (line-trip events)
+    LineTripEvent,
     EventSchedule,
 )
 
@@ -68,7 +69,13 @@ class PowerSystem:
         if network_mode not in ('linear', 'nonlinear'):
             raise ValueError(f"network_mode must be 'linear' or 'nonlinear', got {network_mode!r}")
         self.network_mode = network_mode
-        self.B_matrix = (B_matrix.astype(np.float64) if B_matrix is not None else None)
+        if B_matrix is not None:
+            self.B_matrix = B_matrix.astype(np.float64).copy()
+            self._B_matrix0 = B_matrix.astype(np.float64).copy()
+        else:
+            self.B_matrix = None
+            self._B_matrix0 = None
+        self._L0 = self.L.copy()
         self.V_bus = (V_bus.astype(np.float64) if V_bus is not None else None)
         if network_mode == 'nonlinear' and (B_matrix is None or V_bus is None):
             raise ValueError("network_mode='nonlinear' requires B_matrix and V_bus")
@@ -97,16 +104,27 @@ class PowerSystem:
         self.state = np.zeros(self.state.shape[0])
         self.H_es = self.H_es0.copy()
         self.D_es = self.D_es0.copy()
+        # Restore original topology so each episode starts from intact network
+        if self._B_matrix0 is not None:
+            self.B_matrix = self._B_matrix0.copy()
+        self.L = self._L0.copy()
         self.current_time = 0.0
         self._step_count = 0
-
         self._event_schedule = event_schedule
         if event_schedule is not None:
-            # Apply t=0 events immediately; later events fire during step()
             self.delta_u = np.zeros(self.N)
             for ev in event_schedule.events:
-                if ev.t == 0.0 and isinstance(ev, DisturbanceEvent):
-                    self.delta_u = ev.delta_u.copy()
+                if ev.t == 0.0:
+                    if isinstance(ev, DisturbanceEvent):
+                        self.delta_u = ev.delta_u.copy()
+                    elif isinstance(ev, LineTripEvent):
+                        if self.B_matrix is None or self.V_bus is None:
+                            raise RuntimeError(
+                                "LineTripEvent requires B_matrix and V_bus."
+                            )
+                        self.B_matrix[ev.bus_i, ev.bus_j] = 0.0
+                        self.B_matrix[ev.bus_j, ev.bus_i] = 0.0
+                        self.L = build_laplacian(self.B_matrix, self.V_bus)
         elif delta_u is not None:
             self.delta_u = np.asarray(delta_u, dtype=np.float64).copy()
         else:
@@ -132,7 +150,15 @@ class PowerSystem:
             if ev_step == current_step:
                 if isinstance(ev, DisturbanceEvent):
                     self.delta_u = ev.delta_u.copy()
-                # LineTripEvent handled in Task 5
+                elif isinstance(ev, LineTripEvent):
+                    if self.B_matrix is None or self.V_bus is None:
+                        raise RuntimeError(
+                            "LineTripEvent requires PowerSystem to be constructed with "
+                            "B_matrix and V_bus."
+                        )
+                    self.B_matrix[ev.bus_i, ev.bus_j] = 0.0
+                    self.B_matrix[ev.bus_j, ev.bus_i] = 0.0
+                    self.L = build_laplacian(self.B_matrix, self.V_bus)
 
     def set_params(self, H_es, D_es):
         """设置当前惯量和阻尼参数."""

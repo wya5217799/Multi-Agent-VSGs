@@ -43,7 +43,12 @@ class MultiVSGEnv:
         self.forced_link_failures = forced_link_failures
 
         # 电力系统
-        self.ps = PowerSystem(self.L, cfg.H_ES0, cfg.D_ES0, dt=cfg.DT)
+        self.ps = PowerSystem(
+            self.L, cfg.H_ES0, cfg.D_ES0,
+            dt=cfg.DT, fn=cfg.OMEGA_N / (2 * np.pi),
+            B_matrix=cfg.B_MATRIX, V_bus=cfg.V_BUS,
+            network_mode=getattr(cfg, 'ODE_NETWORK_MODE', 'linear'),
+        )
 
         # 随机数生成器
         self.rng = np.random.default_rng()

@@ -27,7 +27,8 @@ from utils.ode_events import (
 class PowerSystem:
     """4 母线两区域系统频率动态仿真."""
 
-    def __init__(self, L, H_es0, D_es0, dt=0.2, fn=50.0):
+    def __init__(self, L, H_es0, D_es0, dt=0.2, fn=50.0,
+                 B_matrix=None, V_bus=None, network_mode='linear'):
         """
         Parameters
         ----------
@@ -65,6 +66,14 @@ class PowerSystem:
 
         self._event_schedule = None
         self._step_count = 0  # integer step counter for event scheduling
+
+        if network_mode not in ('linear', 'nonlinear'):
+            raise ValueError(f"network_mode must be 'linear' or 'nonlinear', got {network_mode!r}")
+        self.network_mode = network_mode
+        self.B_matrix = (B_matrix.astype(np.float64) if B_matrix is not None else None)
+        self.V_bus = (V_bus.astype(np.float64) if V_bus is not None else None)
+        if network_mode == 'nonlinear' and (B_matrix is None or V_bus is None):
+            raise ValueError("network_mode='nonlinear' requires B_matrix and V_bus")
 
     def reset(self, delta_u=None, event_schedule=None):
         """重置系统到稳态.
@@ -121,6 +130,14 @@ class PowerSystem:
         self.H_es = H_es.copy()
         self.D_es = D_es.copy()
 
+    def _coupling(self, theta):
+        """Network power injection: L·θ (linear) or Σ V_i V_j B_ij sin(θ_i-θ_j) (nonlinear)."""
+        if self.network_mode == 'linear':
+            return self.L @ theta
+        diff = theta[:, None] - theta[None, :]           # θ_i - θ_j
+        coupling = self.V_bus[:, None] * self.V_bus[None, :] * self.B_matrix * np.sin(diff)
+        return coupling.sum(axis=1)
+
     def _dynamics(self, t, state):
         """
         ODE 右端项 (Eq. 4).
@@ -135,7 +152,8 @@ class PowerSystem:
         M_inv = 1.0 / (2.0 * self.H_es)  # 论文 Eq.4: 2H·dω/dt = ..., 所以 dω/dt = 1/(2H)·(...)
 
         dtheta_dt = omega
-        domega_dt = M_inv * (self.omega_s * (self.delta_u - self.L @ theta) - self.D_es * omega)
+        coupling = self._coupling(theta)
+        domega_dt = M_inv * (self.omega_s * (self.delta_u - coupling) - self.D_es * omega)
 
         return np.concatenate([dtheta_dt, domega_dt])
 
@@ -177,10 +195,11 @@ class PowerSystem:
 
         # 频率变化率 (从动力学方程直接计算)
         M_inv = 1.0 / (2.0 * self.H_es)  # Eq.4: 2H·dω/dt = ...
-        omega_dot = M_inv * (self.omega_s * (self.delta_u - self.L @ theta) - self.D_es * omega)
+        coupling = self._coupling(theta)
+        omega_dot = M_inv * (self.omega_s * (self.delta_u - coupling) - self.D_es * omega)
 
         # 储能输出功率 ΔP_es = (L · Δθ)_i (Eq. 3)
-        P_es = self.L @ theta
+        P_es = coupling
 
         # 频率 (Hz)
         freq_hz = self.fn + omega / (2 * np.pi)
@@ -199,8 +218,9 @@ class PowerSystem:
         theta = self.state[:self.N]
         omega = self.state[self.N:]
         M_inv = 1.0 / (2.0 * self.H_es)  # Eq.4: 2H·dω/dt = ...
-        omega_dot = M_inv * (self.omega_s * (self.delta_u - self.L @ theta) - self.D_es * omega)
-        P_es = self.L @ theta
+        coupling = self._coupling(theta)
+        omega_dot = M_inv * (self.omega_s * (self.delta_u - coupling) - self.D_es * omega)
+        P_es = coupling
         freq_hz = self.fn + omega / (2 * np.pi)
         return {
             'theta': theta.copy(),

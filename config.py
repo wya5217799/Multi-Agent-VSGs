@@ -124,3 +124,4 @@ ODE_HETEROGENEOUS = False          # True → per-node H/D differ
 ODE_H_SPREAD = 0.30                # +/-30 % around each H_ES0[i]
 ODE_D_SPREAD = 0.30
 ODE_HETEROGENEITY_SEED = 2023      # deterministic spread
+ODE_NETWORK_MODE = 'linear'        # 'linear' | 'nonlinear'

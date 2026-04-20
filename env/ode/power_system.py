@@ -17,6 +17,11 @@
 
 import numpy as np
 from scipy.integrate import solve_ivp
+from utils.ode_events import (
+    DisturbanceEvent,
+    LineTripEvent,
+    EventSchedule,
+)
 
 
 class PowerSystem:
@@ -43,6 +48,7 @@ class PowerSystem:
         self.D_es0 = D_es0.copy()
         self.dt = dt
         self.fn = fn
+        self.omega_s = 2.0 * np.pi * fn  # 314.16 rad/s (50Hz)
 
         # 当前参数 (可被 RL agent 修改)
         self.H_es = H_es0.copy()
@@ -57,24 +63,58 @@ class PowerSystem:
         # 时间
         self.current_time = 0.0
 
-    def reset(self, delta_u=None):
-        """
-        重置系统到稳态.
+        self._event_schedule = None
+        self._step_count = 0  # integer step counter for event scheduling
+
+    def reset(self, delta_u=None, event_schedule=None):
+        """重置系统到稳态.
 
         Parameters
         ----------
         delta_u : np.ndarray, shape (N,), optional
-            扰动功率向量 (p.u.). 若为 None 则全零.
+            静态扰动 — 兼容旧路径.
+        event_schedule : EventSchedule, optional
+            时变扰动/拓扑事件序列. 事件在 step 起始时刻生效.
         """
         self.state = np.zeros(2 * self.N)
         self.H_es = self.H_es0.copy()
         self.D_es = self.D_es0.copy()
         self.current_time = 0.0
+        self._step_count = 0
 
-        if delta_u is not None:
-            self.delta_u = delta_u.copy()
+        self._event_schedule = event_schedule
+        if event_schedule is not None:
+            # Apply t=0 events immediately; later events fire during step()
+            self.delta_u = np.zeros(self.N)
+            for ev in event_schedule.events:
+                if ev.t == 0.0 and isinstance(ev, DisturbanceEvent):
+                    self.delta_u = ev.delta_u.copy()
+        elif delta_u is not None:
+            self.delta_u = np.asarray(delta_u, dtype=np.float64).copy()
         else:
             self.delta_u = np.zeros(self.N)
+
+    def _apply_events(self) -> None:
+        """Apply scheduled events whose nominal time falls within the current step.
+
+        Event time t fires on the step that integrates the interval ending at t:
+            ev_step = round(t / dt) - 1  (for t > 0)
+        This avoids float accumulation errors and ensures the ODE integration
+        across t uses the updated parameters.
+
+        Events at t=0 are applied during reset() and skipped here.
+        """
+        if self._event_schedule is None:
+            return
+        current_step = self._step_count
+        for ev in self._event_schedule.events:
+            if ev.t == 0.0:
+                continue  # already applied in reset()
+            ev_step = max(0, int(round(ev.t / self.dt)) - 1)
+            if ev_step == current_step:
+                if isinstance(ev, DisturbanceEvent):
+                    self.delta_u = ev.delta_u.copy()
+                # LineTripEvent handled in Task 5
 
     def set_params(self, H_es, D_es):
         """设置当前惯量和阻尼参数."""
@@ -95,7 +135,7 @@ class PowerSystem:
         M_inv = 1.0 / (2.0 * self.H_es)  # 论文 Eq.4: 2H·dω/dt = ..., 所以 dω/dt = 1/(2H)·(...)
 
         dtheta_dt = omega
-        domega_dt = M_inv * (self.delta_u - self.L @ theta - self.D_es * omega)
+        domega_dt = M_inv * (self.omega_s * (self.delta_u - self.L @ theta) - self.D_es * omega)
 
         return np.concatenate([dtheta_dt, domega_dt])
 
@@ -115,6 +155,9 @@ class PowerSystem:
         t_start = self.current_time
         t_end = t_start + self.dt
 
+        # Apply events whose nominal time maps to current step index
+        self._apply_events()
+
         sol = solve_ivp(
             self._dynamics,
             [t_start, t_end],
@@ -127,13 +170,14 @@ class PowerSystem:
 
         self.state = sol.y[:, -1]
         self.current_time = t_end
+        self._step_count += 1
 
         theta = self.state[:self.N]
         omega = self.state[self.N:]
 
         # 频率变化率 (从动力学方程直接计算)
         M_inv = 1.0 / (2.0 * self.H_es)  # Eq.4: 2H·dω/dt = ...
-        omega_dot = M_inv * (self.delta_u - self.L @ theta - self.D_es * omega)
+        omega_dot = M_inv * (self.omega_s * (self.delta_u - self.L @ theta) - self.D_es * omega)
 
         # 储能输出功率 ΔP_es = (L · Δθ)_i (Eq. 3)
         P_es = self.L @ theta
@@ -155,7 +199,7 @@ class PowerSystem:
         theta = self.state[:self.N]
         omega = self.state[self.N:]
         M_inv = 1.0 / (2.0 * self.H_es)  # Eq.4: 2H·dω/dt = ...
-        omega_dot = M_inv * (self.delta_u - self.L @ theta - self.D_es * omega)
+        omega_dot = M_inv * (self.omega_s * (self.delta_u - self.L @ theta) - self.D_es * omega)
         P_es = self.L @ theta
         freq_hz = self.fn + omega / (2 * np.pi)
         return {

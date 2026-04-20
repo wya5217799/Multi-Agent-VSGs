@@ -59,58 +59,48 @@ class MultiVSGEnv:
     def seed(self, s):
         self.rng = np.random.default_rng(s)
 
-    def reset(self, delta_u=None):
-        """
-        重置环境.
+    def reset(self, delta_u=None, event_schedule=None):
+        """重置环境.
 
         Parameters
         ----------
         delta_u : np.ndarray or None
-            指定扰动 (测试用). None 则随机生成.
-
-        Returns
-        -------
-        obs : dict[int, np.ndarray]
-            每个 agent 的初始观测
+            静态扰动 (测试兼容).
+        event_schedule : EventSchedule or None
+            时变事件. 若给出则优先于 delta_u, 并禁用 random_disturbance.
         """
-        # 随机扰动
-        if delta_u is not None:
-            self.current_delta_u = delta_u.copy()
-        elif self.random_disturbance:
-            # 随机选择 1-2 个母线施加扰动
-            n_disturbed = self.rng.integers(1, 3)
-            buses = self.rng.choice(self.N, size=n_disturbed, replace=False)
+        if event_schedule is not None:
             self.current_delta_u = np.zeros(self.N)
-            for bus in buses:
-                magnitude = self.rng.uniform(cfg.DISTURBANCE_MIN, cfg.DISTURBANCE_MAX)
-                sign = self.rng.choice([-1, 1])
-                self.current_delta_u[bus] = sign * magnitude
+            self.ps.reset(event_schedule=event_schedule)
         else:
-            self.current_delta_u = np.zeros(self.N)
+            if delta_u is not None:
+                self.current_delta_u = np.asarray(delta_u, dtype=np.float64).copy()
+            elif self.random_disturbance:
+                n_disturbed = self.rng.integers(1, 3)
+                buses = self.rng.choice(self.N, size=n_disturbed, replace=False)
+                self.current_delta_u = np.zeros(self.N)
+                for bus in buses:
+                    magnitude = self.rng.uniform(cfg.DISTURBANCE_MIN, cfg.DISTURBANCE_MAX)
+                    sign = self.rng.choice([-1, 1])
+                    self.current_delta_u[bus] = sign * magnitude
+            else:
+                self.current_delta_u = np.zeros(self.N)
+            self.ps.reset(delta_u=self.current_delta_u)
 
-        # 重置电力系统
-        self.ps.reset(delta_u=self.current_delta_u)
         self.step_count = 0
-
-        # 重置通信链路故障
         self.comm.reset(rng=self.rng)
-        # 强制指定链路故障
         if self.forced_link_failures:
             for i, j in self.forced_link_failures:
                 self.comm.eta[(i, j)] = 0
-
-        # 重置通信延迟缓冲
         self._delayed_omega = {}
         self._delayed_omega_dot = {}
         if self.comm_delay_steps > 0:
             for i in range(self.N):
                 for j in self.comm.get_neighbors(i):
                     self._delayed_omega[(i, j)] = deque([0.0] * self.comm_delay_steps,
-                                                         maxlen=self.comm_delay_steps)
+                                                        maxlen=self.comm_delay_steps)
                     self._delayed_omega_dot[(i, j)] = deque([0.0] * self.comm_delay_steps,
-                                                             maxlen=self.comm_delay_steps)
-
-        # 返回初始观测 (全零状态)
+                                                            maxlen=self.comm_delay_steps)
         return self._build_observations(self.ps.get_state())
 
     def step(self, actions):

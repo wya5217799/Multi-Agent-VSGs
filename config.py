@@ -116,3 +116,11 @@ LOAD_STEP_2 = np.array([0.0, 0.0,  0.0,  1.88])  # 188MW/100MVA (Fig8)
 #  训练策略 (Algorithm 1 line 16)
 # ═══════════════════════════════════════════════════════
 CLEAR_BUFFER_PER_EPISODE = False   # 标准 off-policy SAC，跨 episode 积累经验
+
+# ═══════════════════════════════════════════════════════
+#  ODE Fidelity Toggles (default = paper baseline)
+# ═══════════════════════════════════════════════════════
+ODE_HETEROGENEOUS = False          # True → per-node H/D differ
+ODE_H_SPREAD = 0.30                # +/-30 % around H_ES0[0]
+ODE_D_SPREAD = 0.30
+ODE_HETEROGENEITY_SEED = 2023      # deterministic spread

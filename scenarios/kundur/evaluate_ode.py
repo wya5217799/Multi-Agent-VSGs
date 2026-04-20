@@ -57,7 +57,7 @@ def _adaptive_inertia_action(obs_dict, k_h=2.0):
     for i in range(cfg.N_AGENTS):
         o = obs_dict[i]
         omega = o[1] * 3.0
-        omega_dot = o[2] * 5.0
+        omega_dot = o[2] * 10.0   # match /10.0 normalization in multi_vsg_env.py
         delta_H = k_h * omega * omega_dot
         delta_H = np.clip(delta_H, cfg.DH_MIN, cfg.DH_MAX)
         # 零中心映射: a=delta_H/DH_MAX (正) or delta_H/(-DH_MIN) (负)

@@ -16,19 +16,19 @@
 |---|---|
 | Task 1: Parameter Heterogeneity | ✅ 实现 + spec review + quality review 通过 |
 | Task 2: Intra-Episode Disturbance Schedule | ✅ 实现 + spec review + quality review 通过 |
-| Task 3: Nonlinear Swing Network | ⚠️ 实现已提交，11 tests pass；spec/quality review 被中断，**下一步先补做** |
-| Task 4A: First-Order Governor / Droop (power_system.py only) | 未开始 |
-| Task 4B: Heterogeneity Env Integration (multi_vsg_env.py only) | 未开始 |
-| Task 5: Discrete Topology Events | 未开始 |
-| Task 6: Promotion Gates (Engineering Regression) | 未开始 |
-| Task 7: Docs + Integration Notes | 未开始 |
+| Task 3: Nonlinear Swing Network | ✅ 实现 + spec review + quality review 通过 |
+| Task 4A: First-Order Governor / Droop (power_system.py only) | ✅ 实现 + spec review + quality review 通过 |
+| Task 4B: Heterogeneity Env Integration (multi_vsg_env.py only) | ✅ 实现 + spec review + quality review 通过 |
+| Task 5: Discrete Topology Events | ✅ 实现 + spec review + quality review 通过 |
+| Task 6: Promotion Gates (Engineering Regression) | ✅ 实现完成，38 tests pass |
+| Task 7: Docs + Integration Notes | ✅ 完成 |
 
 ---
 
 ## File Structure
 
 ### Create
-- `utils/ode_events.py` — `DisturbanceEvent`, `LineTripEvent`, `EventSchedule` dataclasses + `events_in_window()` helper.
+- `utils/ode_events.py` — `DisturbanceEvent`, `LineTripEvent`, `EventSchedule` dataclasses (step-boundary semantics).
 - `utils/ode_heterogeneity.py` — `generate_heterogeneous_params(base, spread, seed)` helper.
 - `tests/test_ode_heterogeneity.py`
 - `tests/test_ode_disturbance_schedule.py`
@@ -332,9 +332,6 @@ class EventSchedule:
         if any(t < 0 for t in times):
             raise ValueError(f"Event times must be non-negative, got {times}")
 
-    def events_in_window(self, t0: float, t1: float) -> list[Event]:
-        """Return events with t0 <= e.t < t1 (utility query; not used by _apply_events)."""
-        return [e for e in self.events if t0 <= e.t < t1]
 ```
 
 - [x] **Step 2.4: Wire schedule into PowerSystem**
@@ -469,7 +466,16 @@ git add utils/ode_events.py tests/test_ode_disturbance_schedule.py env/ode/power
 git commit -m "feat(ode): intra-episode disturbance scheduling (Task 2)"
 ```
 
-> **当前实现注记**：`_apply_events` 使用离散 step 语义（`round(t/dt)-1` 步索引匹配），而非计划正文中 `events_in_window` 的浮点半开区间 `[t0, t1)` 语义。已知存在一步提前偏差，测试已通过。后续 Task 5–6 的 reviewer 应以"step-boundary 应用"为契约，不以 `events_in_window` 文档语义为准。
+> **当前实现注记（含已知缺陷 — 进入 Task 5 前必须决定）**：
+> `_apply_events` 目前匹配条件为 `round(ev.t / self.dt) - 1 == step_idx`，这会使"exact dt 倍数"的事件**提前整整一步**触发（例如 `t=1.0, dt=0.2` 的事件在 `t_start=0.8` 的那一步应用，而非从 `1.0` 开始）。Task 2 的 disturbance 测试对此不敏感（单个 t=0 事件），但 Task 5 的 line-trip at t=1.0 会把这个偏差暴露为可观测的物理误差。
+>
+> **Task 5 开始前必须执行的决定**：在写 `test_ode_line_trip.py` 之前先在 power_system.py 把匹配条件改为"包含事件时刻的步"语义，即：
+> ```python
+> # event e triggers on the step whose window [t_start, t_end) contains e.t
+> if int(np.floor(ev.t / self.dt + 1e-9)) == step_idx:
+>     ...
+> ```
+> 并顺手更新 Task 2 的 disturbance schedule 测试（如果有依赖一步提前偏移的断言）。这样 Task 5 的"line trip at t=1.0 后，该步末 L 矩阵已变"才是干净契约。**不要把一步提前偏差固化进 Task 5 测试。**
 
 ---
 
@@ -477,7 +483,7 @@ git commit -m "feat(ode): intra-episode disturbance scheduling (Task 2)"
 
 **Files:**
 - Modify: `env/ode/power_system.py` — `__init__` takes `B_matrix`, `V_bus`, `network_mode`; `_dynamics` branches.
-- Modify: `env/ode/multi_vsg_env.py` — pass `cfg.B_MATRIX`, `cfg.V_BUS`, `cfg.ODE_NETWORK_MODE`.
+- Modify: `env/ode/multi_vsg_env.py` — pass `B_matrix`/`V_bus` via `getattr(cfg, ...)` (None when absent), `cfg.ODE_NETWORK_MODE`.
 - Create: `tests/test_ode_nonlinear.py`
 
 - [x] **Step 3.1: Write failing tests**
@@ -635,7 +641,8 @@ Modify `env/ode/multi_vsg_env.py` — change the `PowerSystem(...)` construction
 self.ps = PowerSystem(
     self.L, cfg.H_ES0, cfg.D_ES0,
     dt=cfg.DT, fn=cfg.OMEGA_N / (2 * np.pi),
-    B_matrix=cfg.B_MATRIX, V_bus=cfg.V_BUS,
+    B_matrix=getattr(cfg, 'B_MATRIX', None),
+    V_bus=getattr(cfg, 'V_BUS', None),
     network_mode=getattr(cfg, 'ODE_NETWORK_MODE', 'linear'),
 )
 ```
@@ -659,8 +666,18 @@ git commit -m "feat(ode): optional nonlinear swing coupling (Task 3)"
 
 ## ⛔ 阻塞门：Task 3 review 完成前禁止进入 Task 4
 
-Task 3 的 spec review 和 quality review 被中断，**必须先补做完成**后再继续以下任务。
-验证命令：`python -m pytest tests/test_ode_nonlinear.py tests/test_ode_physics_gates.py tests/test_ode_disturbance_schedule.py -v`
+Task 3 的 spec review 和 quality review 被中断，**必须先补做完成并记录结果**后再继续以下任务。
+
+**进入 Task 4 的前置条件（两项均须满足）：**
+
+1. **Spec review 完成**：对照计划 Task 3 正文，逐条确认实现（`_coupling`、`_dynamics` 分支、`network_mode` 验证、`MultiVSGEnv` 构造传参）与规格一致；将结论记录到 `docs/devlog/2026-04-20-task3-ode-nonlinear-review.md`（不存在则新建），格式自定，但必须是显式文件产出，不能以"测试通过"代替。
+
+2. **Quality review 完成**：检查 Task 3 改动的代码质量（命名清晰度、边界条件、潜在数值问题）；结论追加到同一文件。
+
+辅助验证（不构成完成判据，仅供参考）：
+```bash
+python -m pytest tests/test_ode_nonlinear.py tests/test_ode_physics_gates.py tests/test_ode_disturbance_schedule.py -v
+```
 
 ---
 
@@ -671,16 +688,22 @@ Task 3 的 spec review 和 quality review 被中断，**必须先补做完成**�
 - Modify: `env/ode/multi_vsg_env.py` — read `cfg.ODE_GOVERNOR_ENABLED` etc.
 - Create: `tests/test_ode_governor.py`
 
-Governor equations:
+Governor equations (per-unit frequency feedback — R is a p.u. droop coefficient):
 
 ```
 2H · dω/dt = ω_s · (Δu + P_gov − coupling) − D · ω
-τ_G · dP_gov/dt = − (P_gov + ω/R)
+τ_G · dP_gov/dt = − (P_gov + (ω/ω_s)/R)
 ```
 
-`R` is p.u. droop (5 % = 0.05), `τ_G` is turbine lag (s).
+`R` is p.u. droop (5 % = 0.05), `τ_G` is turbine lag (s). Steady-state (`dP_gov/dt=0`)
+yields `P_gov ≈ -(ω/ω_s)/R`, which is the form asserted in the tests and the
+verification checklist. Do **not** use raw `ω/R`; that would be off by a factor
+of `ω_s ≈ 314 rad/s` and fail the tests.
 
-> **Supersede 说明**：Task 2 Step 2.4 的 `reset()` 写 `self.state = np.zeros(2 * self.N)`（硬编码 2N）。Task 4 Step 4.5 将其覆盖为 `self.state = np.zeros(self.state.shape[0])`（保留当前 shape）。Task 4 起以 Step 4.5 版本为准；不要机械沿用 Task 2 的 2N 硬编码。
+> **Supersede 说明（reset / _apply_events 多任务叠改）**：
+> - `reset()`：Task 2 Step 2.4 硬编码 `self.state = np.zeros(2 * self.N)`；Task 4A Step 4.5 改为 `self.state = np.zeros(self.state.shape[0])`（保留当前 shape 以兼容 3N 布局）；Task 5 Step 5.3 在同一 `reset()` 里再加拓扑恢复 (`self.B_matrix = self._B_matrix0.copy(); self.L = self._L0.copy()`) 和 t=0 `LineTripEvent` 处理。执行者应合并成一个最终版本，而不是按片段机械覆盖。
+> - `_apply_events()`：Task 2 Step 2.4 写成 `def _apply_events(self, step_idx: int)`（显式接收步索引）；Task 5 Step 5.3 改成 `def _apply_events(self)` 并在函数内部基于 `self._step_count`/`self.current_time` 判定，同时加 `LineTripEvent` 分支。Task 5 起以无参版本为准；Task 2 的 `self._apply_events(self._step_count)` 调用也要同步去掉 `self._step_count` 实参。
+> - `step()` 的事件调用：Task 2 写 `self._apply_events(self._step_count)`，Task 5 后应改为 `self._apply_events()`。
 
 - [ ] **Step 4.1: Write failing tests**
 
@@ -718,7 +741,7 @@ def test_governor_on_extends_state():
 
 
 def test_governor_steady_state_droop():
-    """Unbalanced step -> after long simulation P_gov ≈ -ω/R at each bus."""
+    """Unbalanced step -> after long simulation P_gov ≈ -(ω/ω_s)/R at each bus."""
     ps = PowerSystem(
         _L, np.full(4, 24.0), np.full(4, 18.0), dt=0.2, fn=50.0,
         governor_enabled=True, governor_R=0.05, governor_tau_g=0.5,
@@ -729,8 +752,8 @@ def test_governor_steady_state_droop():
         r = ps.step()
     omega = r['omega']
     P_gov = ps.state[2 * 4:3 * 4]
-    # Steady-state governor relation: P_gov ≈ -ω / R
-    expected = -omega / 0.05
+    # Steady-state governor relation: P_gov ≈ -(ω/ωs) / R  (ω in rad/s, R in p.u.)
+    expected = -(omega / ps.omega_s) / 0.05
     np.testing.assert_allclose(P_gov, expected, rtol=0.10)
 
 
@@ -817,7 +840,7 @@ def _dynamics(self, t, state):
         domega_dt = M_inv * (
             self.omega_s * (self.delta_u + P_gov - coupling) - self.D_es * omega
         )
-        dP_gov_dt = -(P_gov + omega / self.governor_R) / self.governor_tau_g
+        dP_gov_dt = -(P_gov + (omega / self.omega_s) / self.governor_R) / self.governor_tau_g
         return np.concatenate([dtheta_dt, domega_dt, dP_gov_dt])
 
     domega_dt = M_inv * (self.omega_s * (self.delta_u - coupling) - self.D_es * omega)
@@ -831,6 +854,7 @@ After `solve_ivp` returns, the post-integration recompute of `omega_dot` must al
 ```python
 self.state = sol.y[:, -1]
 self.current_time = t_end
+self._step_count += 1
 
 theta = self.state[:self.N]
 omega = self.state[self.N:2 * self.N]
@@ -849,7 +873,39 @@ P_es = coupling
 freq_hz = self.fn + omega / (2 * np.pi)
 ```
 
-Mirror the same change in `get_state()`.
+Mirror the same change in `get_state()`. Replace the whole method body with:
+
+```python
+def get_state(self):
+    """返回当前状态的快照."""
+    theta = self.state[:self.N]
+    omega = self.state[self.N:2 * self.N]
+    M_inv = 1.0 / (2.0 * self.H_es)  # Eq.4: 2H·dω/dt = ...
+    coupling = self._coupling(theta)
+    if self.governor_enabled:
+        P_gov = self.state[2 * self.N:3 * self.N]
+        omega_dot = M_inv * (
+            self.omega_s * (self.delta_u + P_gov - coupling) - self.D_es * omega
+        )
+    else:
+        omega_dot = M_inv * (
+            self.omega_s * (self.delta_u - coupling) - self.D_es * omega
+        )
+    P_es = coupling
+    freq_hz = self.fn + omega / (2 * np.pi)
+    return {
+        'theta': theta.copy(),
+        'omega': omega.copy(),
+        'omega_dot': omega_dot.copy(),
+        'P_es': P_es.copy(),
+        'freq_hz': freq_hz.copy(),
+        'time': self.current_time,
+    }
+```
+
+Note the two changes vs. current: (1) `omega = self.state[self.N:2 * self.N]`
+(explicit upper bound so the slice is correct in both 2N and 3N layouts), and
+(2) the `if self.governor_enabled` branch injecting `P_gov` into `omega_dot`.
 
 Also update `reset()` so it preserves `state_dim`:
 
@@ -863,6 +919,9 @@ def reset(self, delta_u=None, event_schedule=None):
     self._event_schedule = event_schedule
     if event_schedule is not None:
         self.delta_u = np.zeros(self.N)
+        for ev in event_schedule.events:
+            if ev.t == 0.0 and isinstance(ev, DisturbanceEvent):
+                self.delta_u = ev.delta_u.copy()
     elif delta_u is not None:
         self.delta_u = np.asarray(delta_u, dtype=np.float64).copy()
     else:
@@ -877,7 +936,8 @@ Modify `env/ode/multi_vsg_env.py`. Replace the `PowerSystem(...)` construction i
 self.ps = PowerSystem(
     self.L, cfg.H_ES0, cfg.D_ES0,
     dt=cfg.DT, fn=cfg.OMEGA_N / (2 * np.pi),
-    B_matrix=cfg.B_MATRIX, V_bus=cfg.V_BUS,
+    B_matrix=getattr(cfg, 'B_MATRIX', None),
+    V_bus=getattr(cfg, 'V_BUS', None),
     network_mode=getattr(cfg, 'ODE_NETWORK_MODE', 'linear'),
     governor_enabled=getattr(cfg, 'ODE_GOVERNOR_ENABLED', False),
     governor_R=getattr(cfg, 'ODE_GOVERNOR_R', 0.05),
@@ -885,10 +945,12 @@ self.ps = PowerSystem(
 )
 ```
 
-Add to `config.py` below the heterogeneity block:
+Append to `config.py` directly **below the existing `ODE_NETWORK_MODE` line**
+(Task 3 already added it — do NOT redeclare `ODE_NETWORK_MODE` or you will have
+duplicate definitions):
 
 ```python
-ODE_NETWORK_MODE = 'linear'        # 'linear' | 'nonlinear'
+# Governor knobs (Task 4A)
 ODE_GOVERNOR_ENABLED = False
 ODE_GOVERNOR_R = 0.05              # p.u. droop (5 %)
 ODE_GOVERNOR_TAU_G = 0.5           # turbine lag (s)
@@ -931,6 +993,35 @@ def test_multivsg_env_uses_heterogeneous_H_when_flag_on(monkeypatch):
     env = MultiVSGEnv()
     H = env.ps.H_es0
     assert len(set(H.tolist())) > 1, "Expected heterogeneous H, got uniform"
+
+
+def test_multivsg_env_uses_heterogeneous_D_when_flag_on(monkeypatch):
+    """With ODE_HETEROGENEOUS=True, PowerSystem should also receive non-uniform D."""
+    import config as cfg
+    monkeypatch.setattr(cfg, 'ODE_HETEROGENEOUS', True)
+    monkeypatch.setattr(cfg, 'ODE_D_SPREAD', 0.30)
+    from env.ode.multi_vsg_env import MultiVSGEnv
+    env = MultiVSGEnv()
+    D = env.ps.D_es0
+    assert len(set(D.tolist())) > 1, "Expected heterogeneous D, got uniform"
+
+
+def test_multivsg_env_action_decode_uses_heterogeneous_base(monkeypatch):
+    """After step(), H_es/D_es must be based on _H_base/_D_base, not cfg.H_ES0/D_ES0."""
+    import config as cfg
+    monkeypatch.setattr(cfg, 'ODE_HETEROGENEOUS', True)
+    monkeypatch.setattr(cfg, 'ODE_H_SPREAD', 0.30)
+    monkeypatch.setattr(cfg, 'ODE_D_SPREAD', 0.30)
+    from env.ode.multi_vsg_env import MultiVSGEnv
+    env = MultiVSGEnv()
+    env.reset(delta_u=np.zeros(env.N))
+    # Zero action = no H/D change from base; ps.H_es must equal _H_base (heterogeneous)
+    zero_actions = {i: np.zeros(2) for i in range(env.N)}
+    env.step(zero_actions)
+    assert len(set(env.ps.H_es.tolist())) > 1, \
+        "H_es after zero-action step should reflect _H_base, not uniform cfg.H_ES0"
+    assert len(set(env.ps.D_es.tolist())) > 1, \
+        "D_es after zero-action step should reflect _D_base, not uniform cfg.D_ES0"
 ```
 
 - [ ] **Step 4B.2: Wire heterogeneity into MultiVSGEnv**
@@ -1120,14 +1211,14 @@ Modify `env/ode/power_system.py`. In `__init__`, after `self.L = L.astype(...)`:
 Extend `_apply_events`:
 
 ```python
-def _apply_events(self, step_idx: int) -> None:
+def _apply_events(self) -> None:
     if self._event_schedule is None:
         return
     for ev in self._event_schedule.events:
         if ev.t == 0.0:
             continue  # applied in reset()
         ev_step = max(0, int(round(ev.t / self.dt)) - 1)
-        if ev_step == step_idx:
+        if ev_step == self._step_count:
             if isinstance(ev, DisturbanceEvent):
                 self.delta_u = ev.delta_u.copy()
             elif isinstance(ev, LineTripEvent):
@@ -1138,7 +1229,7 @@ def _apply_events(self, step_idx: int) -> None:
                     )
                 self.B_matrix[ev.bus_i, ev.bus_j] = 0.0
                 self.B_matrix[ev.bus_j, ev.bus_i] = 0.0
-                self.L = _build_L(self.B_matrix, self.V_bus)
+                self.L = build_laplacian(self.B_matrix, self.V_bus)
 ```
 
 Also update `reset()` — restore original topology on every call, and extend t=0 handling to cover `LineTripEvent`:
@@ -1169,30 +1260,24 @@ def reset(self, delta_u=None, event_schedule=None):
                         )
                     self.B_matrix[ev.bus_i, ev.bus_j] = 0.0
                     self.B_matrix[ev.bus_j, ev.bus_i] = 0.0
-                    self.L = _build_L(self.B_matrix, self.V_bus)
+                    self.L = build_laplacian(self.B_matrix, self.V_bus)
     elif delta_u is not None:
         self.delta_u = np.asarray(delta_u, dtype=np.float64).copy()
     else:
         self.delta_u = np.zeros(self.N)
 ```
 
-Add a module-level helper at the top of the file (below the imports):
+Ensure the Laplacian rebuild reuses the existing helper — **do not** duplicate the
+function. At the top of `env/ode/power_system.py`, next to the existing imports,
+add (if not already present):
 
 ```python
-def _build_L(B, V):
-    """Weighted Laplacian (duplicated from env.network_topology to avoid cyclic import)."""
-    N = len(V)
-    L = np.zeros((N, N))
-    for i in range(N):
-        row_sum = 0.0
-        for j in range(N):
-            if i != j:
-                w = V[i] * V[j] * B[i, j]
-                L[i, j] = -w
-                row_sum += w
-        L[i, i] = row_sum
-    return L
+from env.network_topology import build_laplacian
 ```
+
+Verified: `env/network_topology.py` does not import anything from `env/ode/*`,
+so there is no cyclic import risk. Removing this reuse would leave two diverging
+definitions of the same formula.
 
 - [ ] **Step 5.4: Run tests to verify they pass**
 
@@ -1302,14 +1387,62 @@ def test_nonlinear_large_signal_bounded():
 
 
 def test_governor_steady_state_error_below_threshold():
-    """Governor enabled with R=0.05 should keep steady-state |Δω| < 0.05 rad/s for 1 p.u. step."""
+    """Governor with R=0.05 reduces SS |Δω| vs no-governor for uniform -0.5 p.u. step.
+
+    Physics: ω_ss = ωs·Δu / (1/R + D) ≈ 314·(-0.5) / (20+18) ≈ -4.1 rad/s with governor,
+    vs ωs·Δu / D ≈ -8.7 rad/s without. Gate checks governor cuts SS error by >40%.
+    """
+    delta_u = np.array([-0.5, -0.5, -0.5, -0.5])
+    ps_off = PowerSystem(_L, np.full(4, 24.0), np.full(4, 18.0), dt=0.2, fn=50.0)
+    ps_off.reset(delta_u=delta_u)
+    for _ in range(500):
+        r_off = ps_off.step()
+    ss_off = float(np.mean(np.abs(r_off['omega'])))
+
     ps = PowerSystem(_L, np.full(4, 24.0), np.full(4, 18.0), dt=0.2, fn=50.0,
                      governor_enabled=True, governor_R=0.05, governor_tau_g=0.5)
-    ps.reset(delta_u=np.array([-0.5, -0.5, -0.5, -0.5]))
+    ps.reset(delta_u=delta_u)
     for _ in range(500):
         r = ps.step()
     ss = float(np.mean(np.abs(r['omega'])))
-    assert ss < 0.05, f"Governor SS error too high: |ω|={ss:.4f} rad/s"
+    assert ss < 0.6 * ss_off, f"Governor should cut SS |ω| by >40%: off={ss_off:.2f}, on={ss:.2f} rad/s"
+    assert ss < 6.0, f"Governor SS |ω| physically too large: {ss:.2f} rad/s (expected ~4 rad/s)"
+
+
+def test_multivsgenv_default_path_is_deterministic():
+    """With all ODE flags off, two identical MultiVSGEnv runs must produce identical obs/reward/ps.state.
+
+    This is the baseline-preserving gate for the MultiVSGEnv wrapper path.
+    Catches any accidental numeric drift introduced by Task 2-4 constructor changes.
+    """
+    import config as cfg
+    from env.ode.multi_vsg_env import MultiVSGEnv
+
+    assert not getattr(cfg, 'ODE_HETEROGENEOUS', False), "Test requires all ODE flags off"
+    assert not getattr(cfg, 'ODE_GOVERNOR_ENABLED', False), "Test requires all ODE flags off"
+    assert getattr(cfg, 'ODE_NETWORK_MODE', 'linear') == 'linear', "Test requires all ODE flags off"
+
+    du = np.array([2.0, 0.0, -2.0, 0.0])
+
+    def run_env():
+        # comm_fail_prob=0.0 removes CommunicationGraph RNG variance; without it
+        # cfg.COMM_FAIL_PROB=0.1 and the unseeded rng make rewards non-reproducible.
+        env = MultiVSGEnv(random_disturbance=False, comm_fail_prob=0.0)
+        env.reset(delta_u=du)
+        rewards = []
+        zero_actions = {i: np.zeros(2) for i in range(env.N)}
+        for _ in range(5):
+            obs, rew, _, _ = env.step(zero_actions)
+            rewards.append(float(sum(rew.values())))
+        obs_arr = np.concatenate([obs[i] for i in range(env.N)])
+        return obs_arr, rewards, env.ps.state.copy()
+
+    obs_a, rew_a, state_a = run_env()
+    obs_b, rew_b, state_b = run_env()
+
+    np.testing.assert_allclose(obs_a, obs_b, atol=1e-12, err_msg="obs not reproducible")
+    np.testing.assert_allclose(rew_a, rew_b, atol=1e-12, err_msg="rewards not reproducible")
+    np.testing.assert_allclose(state_a, state_b, atol=1e-12, err_msg="ps.state not reproducible")
 
 
 def test_line_trip_modal_frequency_decreases():
@@ -1339,7 +1472,7 @@ def test_line_trip_modal_frequency_decreases():
 - [ ] **Step 6.2: Run tests to verify they pass**
 
 Run: `pytest tests/test_ode_fidelity_extended.py -v`
-Expected: 4 passed.
+Expected: 5 passed.
 
 - [ ] **Step 6.3: Run the full ODE suite**
 
@@ -1391,7 +1524,7 @@ Create `env/ode/NOTES.md`:
 - `LineTripEvent(t, bus_i, bus_j)` — 将 B[i,j]=B[j,i]=0 并重建 L
 - `EventSchedule(events=(...))` — 冻结的事件序列；必须按 t 单调不减
 
-事件在 step 边界生效（step-boundary 语义）：实现用 `round(e.t / dt) - 1 == step_idx` 匹配，已知存在一步提前偏差。亚步精度不支持——若需要，把 dt 调小。
+事件在 step 边界生效（step-boundary 语义）：t=0 事件在 `reset()` 内立即应用；t>0 事件用 `max(0, round(t/dt) - 1) == step_idx` 匹配，已知存在一步提前偏差。亚步精度不支持——若需要，把 dt 调小。
 
 ## 已知限制
 
@@ -1421,8 +1554,14 @@ Modify `CLAUDE.md` — find the "⚠️ 修模型前必读 NOTES" table and add 
 
 - [ ] **Step 7.3: Final full-suite run**
 
-Run: `pytest tests/ -v --ignore=tests/test_visual_capture.py --ignore=tests/test_vsg_batch_query.m -k "ode or physics"`
-Expected: all ODE-related tests pass; nothing in the non-ODE suite regresses.
+Run (ODE/physics subset — primary gate for this plan):
+`pytest tests/ -v --ignore=tests/test_visual_capture.py --ignore=tests/test_vsg_batch_query.m -k "ode or physics"`
+Expected: all ODE/physics-selected tests pass.
+
+Then run the full non-ODE smoke to prove no regression outside the selection
+(the `-k` filter above would silently skip them otherwise):
+`pytest tests/ --ignore=tests/test_visual_capture.py --ignore=tests/test_vsg_batch_query.m -q`
+Expected: green, or only pre-existing failures unchanged from the pre-plan baseline.
 
 - [ ] **Step 7.4: Commit**
 
@@ -1441,9 +1580,9 @@ After all 7 tasks, these invariants must hold:
 - [ ] `pytest tests/test_ode_heterogeneity.py` — heterogeneity helper works.
 - [ ] `pytest tests/test_ode_disturbance_schedule.py` — event schedule equivalent to static Δu when single t=0 event.
 - [ ] `pytest tests/test_ode_nonlinear.py` — small-signal linear≈nonlinear, large-signal diverge.
-- [ ] `pytest tests/test_ode_governor.py` — steady-state `P_gov ≈ −ω/R`, governor reduces SS |ω|.
+- [ ] `pytest tests/test_ode_governor.py` — steady-state `P_gov ≈ -(ω/ω_s)/R`, governor reduces SS |ω|.
 - [ ] `pytest tests/test_ode_line_trip.py` — B[i,j] zeroed at event, state stays finite, modal shift measurable.
-- [ ] `pytest tests/test_ode_fidelity_extended.py` — 4 cross-feature gates.
+- [ ] `pytest tests/test_ode_fidelity_extended.py` — 5 cross-feature gates including MultiVSGEnv baseline determinism.
 - [ ] Existing training path (`python scenarios/kundur/train_ode.py --episodes 10 --cpu`) still starts and logs rewards — default flags preserve behavior.
 
 ---
@@ -1454,3 +1593,4 @@ After all 7 tasks, these invariants must hold:
 - AVR / voltage dynamics: requires adding E/V states, multiplying state count by 2+. Out of scope for fidelity ceiling.
 - Event-exact integration via `solve_ivp(events=...)`: step-boundary snapping gives ≤ 0.1 s resolution at dt=0.2 s, acceptable for paper fidelity.
 - RL agent awareness of governor: observations could expose `P_gov`; the paper does not use it, so current 7-dim obs stays.
+- `DisturbanceEvent.delta_u` deep-freeze hardening: `utils/ode_events.py` uses `np.asarray(..., dtype=np.float64)` in `__post_init__`, which does **not** guarantee a copy when the caller already passed float64. A caller that later mutates the original array would also mutate the event. Optional follow-up: switch to `arr = np.array(..., dtype=np.float64, copy=True); arr.setflags(write=False)`. Not required for the current 7-task plan; record here so it is not lost.

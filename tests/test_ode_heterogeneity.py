@@ -38,7 +38,15 @@ def test_rejects_negative_spread():
 
 
 def test_enforces_positive_floor():
-    # Large spread should still yield strictly positive values
     base = np.array([24.0, 24.0, 24.0, 24.0])
-    out = generate_heterogeneous_params(base, spread=0.95, seed=7)
-    assert (out > 0).all()
+    # seed=4 at spread=0.95 produces a pre-floor element < 0, triggering clamping
+    out = generate_heterogeneous_params(base, spread=0.95, seed=4)
+    assert (out >= 1e-3).all()
+    # Mean is NOT preserved when floor fires — this is expected and documented
+    assert abs(float(out.mean()) - 24.0) > 0.1
+
+
+def test_rejects_spread_ge_one():
+    base = np.array([24.0, 24.0, 24.0, 24.0])
+    with pytest.raises(ValueError):
+        generate_heterogeneous_params(base, spread=1.0, seed=0)

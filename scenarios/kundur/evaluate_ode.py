@@ -60,24 +60,16 @@ def _adaptive_inertia_action(obs_dict, k_h=2.0):
         omega_dot = o[2] * 5.0
         delta_H = k_h * omega * omega_dot
         delta_H = np.clip(delta_H, cfg.DH_MIN, cfg.DH_MAX)
-        a0 = (delta_H - cfg.DH_MIN) / (cfg.DH_MAX - cfg.DH_MIN) * 2 - 1
-        a1 = (0 - cfg.DD_MIN) / (cfg.DD_MAX - cfg.DD_MIN) * 2 - 1
-        actions[i] = np.array([a0, a1], dtype=np.float32)
+        # 零中心映射: a=delta_H/DH_MAX (正) or delta_H/(-DH_MIN) (负)
+        a0 = float(delta_H / cfg.DH_MAX if delta_H >= 0 else delta_H / (-cfg.DH_MIN))
+        actions[i] = np.array([a0, 0.0], dtype=np.float32)  # ΔD=0
     return actions
 
 
 def run_episode(env, manager=None, delta_u=None, deterministic=True,
-                control_mode='rl', dense_plot=False):
-    """运行一个 episode, 返回完整轨迹.
-
-    Parameters
-    ----------
-    dense_plot : bool
-        若为 True, 在每个控制步内记录 10 个子步状态,
-        使时域图具有足够的分辨率展示振荡特征.
-    """
+                control_mode='rl'):
+    """运行一个 episode, 返回完整轨迹."""
     obs = env.reset(delta_u=delta_u)
-    n_sub = 10 if dense_plot else 1
 
     t_log = [0.0]
     freq_log = [env.ps.get_state()['freq_hz']]
@@ -92,33 +84,17 @@ def run_episode(env, manager=None, delta_u=None, deterministic=True,
         elif control_mode == 'adaptive_inertia':
             actions = _adaptive_inertia_action(obs)
         else:
-            a0 = (0 - cfg.DH_MIN) / (cfg.DH_MAX - cfg.DH_MIN) * 2 - 1
-            a1 = (0 - cfg.DD_MIN) / (cfg.DD_MAX - cfg.DD_MIN) * 2 - 1
-            actions = {i: np.array([a0, a1], dtype=np.float32)
+            # fixed: a=0 → ΔH=0, ΔD=0 (零中心映射, 保持基准参数)
+            actions = {i: np.zeros(cfg.ACTION_DIM, dtype=np.float32)
                        for i in range(cfg.N_AGENTS)}
 
-        next_obs, rewards, done, info = env.step(actions, n_substeps=n_sub)
+        next_obs, rewards, done, info = env.step(actions)
 
-        if dense_plot and 'dense_t' in info:
-            # 收集中间子步时间点和状态
-            dense_t = info['dense_t']       # (n_sub,)
-            dense_freq = info['dense_freq']  # (N, n_sub)
-            dense_P = info['dense_P_es']    # (N, n_sub)
-            n_pts = len(dense_t)
-            for k in range(n_pts):
-                t_log.append(dense_t[k])
-                freq_log.append(dense_freq[:, k])
-                P_es_log.append(dense_P[:, k])
-            # H/D 在控制步内保持常数, 重复 n_pts 次
-            for _ in range(n_pts):
-                H_log.append(info['H_es'])
-                D_log.append(info['D_es'])
-        else:
-            t_log.append(info['time'])
-            freq_log.append(info['freq_hz'])
-            P_es_log.append(info['P_es'])
-            H_log.append(info['H_es'])
-            D_log.append(info['D_es'])
+        t_log.append(info['time'])
+        freq_log.append(info['freq_hz'])
+        P_es_log.append(info['P_es'])
+        H_log.append(info['H_es'])
+        D_log.append(info['D_es'])
         for i in range(cfg.N_AGENTS):
             per_agent_rewards[i] += rewards[i]
         obs = next_obs
@@ -140,24 +116,43 @@ def compute_freq_sync_reward(freq_array):
     return -np.sum((freq_array - f_bar) ** 2)
 
 
-def run_test_set(manager, n_episodes, comm_fail_prob=0.0, comm_delay_steps=0,
-                 forced_link_failures=None, seed_base=9999,
-                 include_adaptive=False):
-    """跑一组测试 episode, 返回频率同步奖励列表."""
-    env = MultiVSGEnv(random_disturbance=True, comm_fail_prob=comm_fail_prob,
+def generate_test_scenarios(n=50, seed=99):
+    """生成固定测试场景集 (Sec.IV-A: 50 randomly generated test scenarios)."""
+    rng = np.random.default_rng(seed)
+    scenarios = []
+    for _ in range(n):
+        n_disturbed = rng.integers(1, 3)
+        buses = rng.choice(cfg.N_AGENTS, size=n_disturbed, replace=False)
+        delta_u = np.zeros(cfg.N_AGENTS)
+        for bus in buses:
+            mag = rng.uniform(cfg.DISTURBANCE_MIN, cfg.DISTURBANCE_MAX)
+            sign = rng.choice([-1, 1])
+            delta_u[bus] = sign * mag
+        failed_links = []
+        for i, neighbors in cfg.COMM_ADJACENCY.items():
+            for j in neighbors:
+                if (j, i) not in failed_links and rng.random() < cfg.COMM_FAIL_PROB:
+                    failed_links.append((i, j))
+                    failed_links.append((j, i))
+        scenarios.append((delta_u, failed_links if failed_links else None))
+    return scenarios
+
+
+def run_test_set(manager, scenarios, comm_fail_prob=0.0, comm_delay_steps=0,
+                 forced_link_failures=None, include_adaptive=False):
+    """跑固定测试场景集, 返回频率同步奖励列表 (论文 Sec.IV-C)."""
+    env = MultiVSGEnv(random_disturbance=False, comm_fail_prob=comm_fail_prob,
                       comm_delay_steps=comm_delay_steps,
                       forced_link_failures=forced_link_failures)
     rewards_rl, rewards_fixed, rewards_adaptive = [], [], []
-    for ep in range(n_episodes):
-        env.seed(seed_base + ep)
-        traj_r = run_episode(env, manager=manager, control_mode='rl')
-        env.seed(seed_base + ep)
-        traj_f = run_episode(env, control_mode='fixed')
+    for delta_u, fail_links in scenarios:
+        env.forced_link_failures = fail_links
+        traj_r = run_episode(env, manager=manager, delta_u=delta_u, control_mode='rl')
+        traj_f = run_episode(env, delta_u=delta_u, control_mode='fixed')
         rewards_rl.append(compute_freq_sync_reward(traj_r['freq']))
         rewards_fixed.append(compute_freq_sync_reward(traj_f['freq']))
         if include_adaptive:
-            env.seed(seed_base + ep)
-            traj_a = run_episode(env, control_mode='adaptive_inertia')
+            traj_a = run_episode(env, delta_u=delta_u, control_mode='adaptive_inertia')
             rewards_adaptive.append(compute_freq_sync_reward(traj_a['freq']))
     result = (np.array(rewards_rl), np.array(rewards_fixed))
     if include_adaptive:
@@ -289,11 +284,12 @@ def plot_no_control(traj, title_suffix, save_path):
     fig, (ax_a, ax_b) = plt.subplots(2, 1, figsize=(6.0, 5.0), sharex=True)
     fig.subplots_adjust(hspace=0.08, left=0.15, right=0.95, top=0.97, bottom=0.10)
 
-    # (a) ΔP_es (MW) — 论文单位 MW, 我们是 p.u., 保持 p.u.
+    # (a) ΔP_es (MW)
+    P_mw = traj['P_es'] * cfg.S_BASE
     for i in range(N):
-        ax_a.plot(t, traj['P_es'][:, i], color=colors[i], lw=1.2,
+        ax_a.plot(t, P_mw[:, i], color=colors[i], lw=1.2,
                   label=P_LABELS[i])
-    ax_a.set_ylabel(r'(a) $\Delta\,P_{\mathrm{es}}$(p.u.)', fontsize=10)
+    ax_a.set_ylabel(r'(a) $\Delta\,P_{\mathrm{es}}$(MW)', fontsize=10)
     ax_a.set_xlim(0, t_max)
     paper_legend(ax_a, loc='upper right', ncol=2, fontsize=8,
                  handlelength=1.5, columnspacing=0.8)
@@ -330,11 +326,12 @@ def plot_rl_control(traj, title_suffix, save_path):
     fig, axes = plt.subplots(4, 1, figsize=(6.0, 9.0), sharex=True)
     fig.subplots_adjust(hspace=0.08, left=0.15, right=0.95, top=0.98, bottom=0.06)
 
-    # (a) ΔP_es
+    # (a) ΔP_es (MW)
     ax = axes[0]
+    P_mw = traj['P_es'] * cfg.S_BASE
     for i in range(N):
-        ax.plot(t, traj['P_es'][:, i], color=colors[i], lw=1.2, label=P_LABELS[i])
-    ax.set_ylabel(r'(a) $\Delta\,P_{\mathrm{es}}$(p.u.)', fontsize=10)
+        ax.plot(t, P_mw[:, i], color=colors[i], lw=1.2, label=P_LABELS[i])
+    ax.set_ylabel(r'(a) $\Delta\,P_{\mathrm{es}}$(MW)', fontsize=10)
     paper_legend(ax, loc='upper right', ncol=2, fontsize=7.5,
                  handlelength=1.5, columnspacing=0.8)
 
@@ -461,11 +458,12 @@ def plot_fig13(traj, save_path):
     fig, (ax_a, ax_b) = plt.subplots(2, 1, figsize=(6.0, 5.0), sharex=True)
     fig.subplots_adjust(hspace=0.08, left=0.15, right=0.95, top=0.97, bottom=0.10)
 
-    # (a) ΔP_es
+    # (a) ΔP_es (MW)
+    P_mw = traj['P_es'] * cfg.S_BASE
     for i in range(N):
-        ax_a.plot(t, traj['P_es'][:, i], color=colors[i], lw=1.2,
+        ax_a.plot(t, P_mw[:, i], color=colors[i], lw=1.2,
                   label=P_LABELS[i])
-    ax_a.set_ylabel(r'(a) $\Delta\,P_{\mathrm{es}}$(p.u.)', fontsize=10)
+    ax_a.set_ylabel(r'(a) $\Delta\,P_{\mathrm{es}}$(MW)', fontsize=10)
     ax_a.set_xlim(0, t_max)
     paper_legend(ax_a, loc='upper right', ncol=2, fontsize=8,
                  handlelength=1.5, columnspacing=0.8)
@@ -530,7 +528,8 @@ def main():
     #  Fig 5: 累积频率奖励 (50 test episodes)
     # ═════════════════════════════════════════════════
     print(f"\n=== Fig 5: Cumulative reward ({args.test_episodes} test episodes) ===")
-    test_result = run_test_set(manager, args.test_episodes, include_adaptive=True)
+    test_scenarios = generate_test_scenarios(args.test_episodes, seed=99)
+    test_result = run_test_set(manager, test_scenarios, include_adaptive=True)
     r_rl, r_fixed, r_adaptive = test_result
     plot_fig5(r_rl, r_fixed, os.path.join(fig_dir, 'fig5_cumulative_reward.png'),
               rewards_adaptive=r_adaptive)
@@ -540,8 +539,8 @@ def main():
     # ═════════════════════════════════════════════════
     print("\n=== Fig 6-7: Load Step 1 ===")
     env_ls1 = MultiVSGEnv(random_disturbance=False, comm_fail_prob=0.0)
-    traj_nc_1 = run_episode(env_ls1, manager=None, delta_u=LOAD_STEP_1, dense_plot=True)
-    traj_rl_1 = run_episode(env_ls1, manager=manager, delta_u=LOAD_STEP_1, dense_plot=True)
+    traj_nc_1 = run_episode(env_ls1, delta_u=LOAD_STEP_1, control_mode='fixed')
+    traj_rl_1 = run_episode(env_ls1, manager=manager, delta_u=LOAD_STEP_1)
     plot_no_control(traj_nc_1, 'load step 1',
                     os.path.join(fig_dir, 'fig6_load_step1_no_ctrl.png'))
     plot_rl_control(traj_rl_1, 'load step 1',
@@ -554,8 +553,8 @@ def main():
     # ═════════════════════════════════════════════════
     print("\n=== Fig 8-9: Load Step 2 ===")
     env_ls2 = MultiVSGEnv(random_disturbance=False, comm_fail_prob=0.0)
-    traj_nc_2 = run_episode(env_ls2, manager=None, delta_u=LOAD_STEP_2, dense_plot=True)
-    traj_rl_2 = run_episode(env_ls2, manager=manager, delta_u=LOAD_STEP_2, dense_plot=True)
+    traj_nc_2 = run_episode(env_ls2, delta_u=LOAD_STEP_2, control_mode='fixed')
+    traj_rl_2 = run_episode(env_ls2, manager=manager, delta_u=LOAD_STEP_2)
     plot_no_control(traj_nc_2, 'load step 2',
                     os.path.join(fig_dir, 'fig8_load_step2_no_ctrl.png'))
     plot_rl_control(traj_rl_2, 'load step 2',
@@ -567,7 +566,9 @@ def main():
     #  Fig 10-11: 通信故障
     # ═════════════════════════════════════════════════
     print(f"\n=== Fig 10-11: Communication failure ({args.test_episodes} episodes) ===")
-    r_rl_fail, _ = run_test_set(manager, args.test_episodes, comm_fail_prob=0.3)
+    # 剥离预烘焙的 fail_links，让 comm_fail_prob=0.3 独立控制链路故障
+    base_scenarios = [(du, None) for du, _ in test_scenarios]
+    r_rl_fail, _ = run_test_set(manager, base_scenarios, comm_fail_prob=0.3)
     plot_fig10(r_rl, r_rl_fail, r_fixed,
                os.path.join(fig_dir, 'fig10_comm_failure_reward.png'))
     print(f"    Normal avg = {np.mean(r_rl):.4f}")
@@ -576,14 +577,14 @@ def main():
     # Fig 11: 特定链路故障下时域
     env_fail = MultiVSGEnv(random_disturbance=False, comm_fail_prob=0.0,
                            forced_link_failures=[(0, 1), (1, 0)])
-    traj_rl_fail = run_episode(env_fail, manager=manager, delta_u=LOAD_STEP_1, dense_plot=True)
+    traj_rl_fail = run_episode(env_fail, manager=manager, delta_u=LOAD_STEP_1)
     plot_fig11(traj_rl_fail, os.path.join(fig_dir, 'fig11_comm_failure_td.png'))
 
     # ═════════════════════════════════════════════════
     #  Fig 12-13: 通信延迟
     # ═════════════════════════════════════════════════
     print(f"\n=== Fig 12-13: Communication delay ({args.test_episodes} episodes) ===")
-    r_rl_delay, _ = run_test_set(manager, args.test_episodes, comm_delay_steps=1)
+    r_rl_delay, _ = run_test_set(manager, base_scenarios, comm_delay_steps=1)
     plot_fig12(r_rl, r_rl_delay, r_fixed,
                os.path.join(fig_dir, 'fig12_comm_delay_reward.png'))
     print(f"    Normal avg = {np.mean(r_rl):.4f}")
@@ -591,7 +592,7 @@ def main():
 
     # Fig 13: 0.2s 通信延迟下时域
     env_delay = MultiVSGEnv(random_disturbance=False, comm_fail_prob=0.0, comm_delay_steps=1)
-    traj_rl_delay = run_episode(env_delay, manager=manager, delta_u=LOAD_STEP_1, dense_plot=True)
+    traj_rl_delay = run_episode(env_delay, manager=manager, delta_u=LOAD_STEP_1)
     plot_fig13(traj_rl_delay, os.path.join(fig_dir, 'fig13_comm_delay_td.png'))
 
     # ═════════════════════════════════════════════════

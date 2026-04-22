@@ -1,12 +1,20 @@
-"""scripts/regen_skill_index.py — Regenerate ~/.claude/skills/simulink-toolbox/index.json
+"""scripts/regen_skill_index.py — Regenerate generic simulink-toolbox index.json files
 from the single source of truth: engine.mcp_server.PUBLIC_TOOLS.
 
+Writes to both installed skill locations by default:
+  ~/.codex/skills/simulink-toolbox/index.json
+  ~/.claude/skills/simulink-toolbox/index.json
+
+Project-specific tools (harness_*, training_*, simulink_bridge_status) are intentionally
+excluded from the generated inventory even though they remain public in the MCP server.
+
 Usage:
-    python scripts/regen_skill_index.py          # overwrite index.json
+    python scripts/regen_skill_index.py          # overwrite index.json in both installs
     python scripts/regen_skill_index.py --check  # exit 0 if consistent, 1+diff if not
 
 Environment:
-    SKILL_DIR   Override skill directory (default: ~/.claude/skills/simulink-toolbox/)
+    SKILL_DIR    Override to a single target directory
+    SKILL_DIRS   Override to multiple target directories (os.pathsep-separated)
 """
 
 from __future__ import annotations
@@ -36,7 +44,6 @@ if str(_PROJECT_ROOT) not in sys.path:
 _SIMULINK_META: dict[str, dict[str, str]] = {
     "simulink_add_block":            {"group": "construct", "description": "Add a single block to a model"},
     "simulink_add_subsystem":        {"group": "construct", "description": "Add a subsystem container"},
-    "simulink_bridge_status":        {"group": "training_bridge", "description": "VSG/training bridge runtime state (step, Pe, delta, tripload) — NOT a connectivity check"},
     "simulink_capture_figure":       {"group": "capture",   "description": "Capture a MATLAB figure window"},
     "simulink_close_model":          {"group": "construct", "description": "Close an open model from MATLAB session"},
     "simulink_compile_diagnostics":  {"group": "verify",    "description": "Full compile with error/warning report"},
@@ -69,26 +76,6 @@ _SIMULINK_META: dict[str, dict[str, str]] = {
 
 _PROJECT_ONLY_TOOLS: set[str] = {
     "simulink_bridge_status",
-}
-
-# harness_* and training_* tools use a flat description string (no "group" field)
-# because they are project-specific harness tools, not general Simulink tools.
-_HARNESS_META: dict[str, str] = {
-    "harness_model_diagnose":       "Diagnose harness model errors",
-    "harness_model_inspect":        "Inspect harness model structure",
-    "harness_model_patch_verify":   "Patch and verify harness model",
-    "harness_model_report":         "Generate harness model report",
-    "harness_scenario_status":      "Check scenario run status",
-    "harness_train_smoke_minimal":  "Run minimal harness smoke training",
-    "harness_train_smoke_start":    "Start harness smoke training",
-    "harness_train_smoke_poll":     "Poll harness smoke training status",
-}
-
-_TRAINING_META: dict[str, str] = {
-    "training_compare_runs":  "Compare training runs",
-    "training_diagnose":      "Diagnose training errors",
-    "training_evaluate_run":  "Evaluate a training run",
-    "training_status":        "Get training status",
 }
 
 
@@ -164,7 +151,6 @@ def _build_index(tool_names: list[str]) -> dict:
         "simulink_tools": simulink_tools,
         "summary": {
             "simulink_count": len(simulink_tools),
-            "total": len(simulink_tools),
         },
     }
 
@@ -237,7 +223,7 @@ def main(argv: list[str] | None = None) -> int:
         index_path = skill_dir / "index.json"
         index_path.parent.mkdir(parents=True, exist_ok=True)
         index_path.write_text(generated, encoding="utf-8")
-        print(f"Written {index_path} ({index_data['summary']['total']} tools total).")
+        print(f"Written {index_path} ({index_data['summary']['simulink_count']} simulink tools).")
     return 0
 
 

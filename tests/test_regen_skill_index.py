@@ -50,6 +50,7 @@ def test_skill_index_consistent_with_public_tools(tmp_path: Path) -> None:
 
 @pytest.mark.offline
 def test_generated_skill_index_is_generic_only(tmp_path: Path) -> None:
+    """Generated index must exclude project-only tools even though they are public in the MCP server."""
     env = {**os.environ, "SKILL_DIR": str(tmp_path)}
 
     gen = subprocess.run(

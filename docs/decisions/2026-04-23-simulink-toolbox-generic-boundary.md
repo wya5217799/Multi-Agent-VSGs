@@ -44,6 +44,8 @@ skill:
 - `harness_*`
 - `training_*`
 - `simulink_bridge_status`
+- `SimulinkBridge`
+- `get_training_launch_status`
 - agent
 - episode
 - reward

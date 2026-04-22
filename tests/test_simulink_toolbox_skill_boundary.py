@@ -90,3 +90,9 @@ def test_installed_simulink_toolbox_index_is_generic_only() -> None:
             assert name.startswith(GENERIC_ALLOWED_TOOL_PREFIX)
             assert name not in PROJECT_ONLY_SIMULINK_TOOLS
             assert tool.get("group") != "training_bridge"
+            description = tool.get("description", "")
+            for pattern in PROJECT_ONLY_PATTERNS:
+                assert not re.search(pattern, description), (
+                    f"{skill_dir / 'index.json'} tool {name!r} description "
+                    f"contains project-only pattern {pattern!r}"
+                )

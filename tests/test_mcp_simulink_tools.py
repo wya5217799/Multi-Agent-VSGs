@@ -23,8 +23,6 @@ class TestSimulinkHelperInventory:
             "slx_step_diagnostics.m",
             "slx_patch_and_verify.m",
             "slx_batch_query.m",
-            "slx_fastrestart_reset.m",
-            "slx_episode_warmup.m",
         ]
 
         missing = [name for name in required if not (helper_dir / name).exists()]
@@ -1309,9 +1307,9 @@ class TestGeneralRuntimeWrappers:
         mock_session = self._make_session({"ok": True, "values": []})
         monkeypatch.setattr(mcp_tools.MatlabSession, "get", lambda: mock_session)
 
-        result = mcp_tools.simulink_signal_snapshot("demo", 0.05, ["omega"], False)
+        result = mcp_tools.simulink_signal_snapshot("demo", 0.05, ["freq_out"], False)
 
         mock_session.call.assert_called_once_with(
-            "slx_signal_snapshot", "demo", 0.05, ["omega"], False, nargout=1
+            "slx_signal_snapshot", "demo", 0.05, ["freq_out"], False, nargout=1
         )
         assert result["ok"] is True

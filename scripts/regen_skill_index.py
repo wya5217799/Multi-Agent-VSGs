@@ -59,6 +59,12 @@ _SIMULINK_META: dict[str, dict[str, str]] = {
     "simulink_solver_audit":         {"group": "verify",    "description": "Check solver configuration (step size, tolerance)"},
     "simulink_step_diagnostics":     {"group": "diagnose",  "description": "Single-step run with per-step diagnostics"},
     "simulink_trace_port_connections": {"group": "wire",    "description": "Trace signal chain from a port upstream/downstream"},
+    "simulink_model_status":         {"group": "discover",  "description": "Return loaded/dirty/runtime status for one model"},
+    "simulink_save_model":           {"group": "construct", "description": "Save a model, optionally to a target path"},
+    "simulink_workspace_set":        {"group": "workspace", "description": "Set MATLAB base-workspace variables in one call"},
+    "simulink_run_window":           {"group": "runtime",   "description": "Run a model over a controlled simulation window"},
+    "simulink_runtime_reset":        {"group": "runtime",   "description": "Reset FastRestart/runtime state without project semantics"},
+    "simulink_signal_snapshot":      {"group": "signals",   "description": "Read logged/ToWorkspace/block-output values at one time point"},
 }
 
 # harness_* and training_* tools use a flat description string (no "group" field)
@@ -82,12 +88,24 @@ _TRAINING_META: dict[str, str] = {
 }
 
 
-def _get_skill_dir() -> Path:
-    """Return the skill directory, respecting SKILL_DIR env var."""
-    env_val = os.environ.get("SKILL_DIR")
-    if env_val:
-        return Path(env_val).expanduser().resolve()
-    return Path("~/.claude/skills/simulink-toolbox").expanduser().resolve()
+def _get_skill_dirs() -> list[Path]:
+    """Return target skill directories for both Codex and Claude installs."""
+    env_multi = os.environ.get("SKILL_DIRS")
+    if env_multi:
+        return [
+            Path(item).expanduser().resolve()
+            for item in env_multi.split(os.pathsep)
+            if item.strip()
+        ]
+
+    env_single = os.environ.get("SKILL_DIR")
+    if env_single:
+        return [Path(env_single).expanduser().resolve()]
+
+    return [
+        Path("~/.codex/skills/simulink-toolbox").expanduser().resolve(),
+        Path("~/.claude/skills/simulink-toolbox").expanduser().resolve(),
+    ]
 
 
 def _load_public_tool_names() -> list[str]:
@@ -202,16 +220,23 @@ def main(argv: list[str] | None = None) -> int:
     index_data = _build_index(tool_names)
     generated = _serialize(index_data)
 
-    skill_dir = _get_skill_dir()
-    index_path = skill_dir / "index.json"
+    skill_dirs = _get_skill_dirs()
 
     if args.check:
-        return _run_check(index_path, generated)
+        exit_code = 0
+        for skill_dir in skill_dirs:
+            index_path = skill_dir / "index.json"
+            result = _run_check(index_path, generated)
+            if result != 0:
+                exit_code = result
+        return exit_code
 
-    # Default: overwrite
-    index_path.parent.mkdir(parents=True, exist_ok=True)
-    index_path.write_text(generated, encoding="utf-8")
-    print(f"Written {index_path} ({index_data['summary']['total']} tools total).")
+    # Default: overwrite all targets
+    for skill_dir in skill_dirs:
+        index_path = skill_dir / "index.json"
+        index_path.parent.mkdir(parents=True, exist_ok=True)
+        index_path.write_text(generated, encoding="utf-8")
+        print(f"Written {index_path} ({index_data['summary']['total']} tools total).")
     return 0
 
 

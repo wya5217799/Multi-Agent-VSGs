@@ -318,4 +318,6 @@ def test_training_compare_runs_passes_canonical_scenario_id(monkeypatch):
 
     assert calls == [("kundur", "run_a"), ("kundur", "run_b")]
     assert result["scenario_id"] == "kundur"
+    # Both runs return identical verdict (PASS) and episode_count (10).
+    # Python's max() is stable: first element wins on ties, so run_a is best.
     assert result["best_run"] == "run_a"

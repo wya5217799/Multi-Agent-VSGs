@@ -61,6 +61,9 @@ def test_core_helpers_remain_in_slx_helpers_root():
 
 
 def test_public_mcp_tools_do_not_call_vsg_bridge_helpers_directly():
+    # Scope: detects direct quoted-string call patterns only, e.g.
+    # session.call("slx_warmup", ...). Does not detect variable-indirection
+    # patterns such as helper = "slx_" + "warmup" or f-string interpolation.
     tool_text = (ROOT / "engine" / "mcp_simulink_tools.py").read_text(
         encoding="utf-8"
     )

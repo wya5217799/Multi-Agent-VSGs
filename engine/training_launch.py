@@ -54,6 +54,7 @@ def _resolve_python_exe() -> Path:
 
 _PYTHON_EXE = _resolve_python_exe()
 
+
 def _scenario_launch_facts(scenario_id: str) -> tuple[str, str, Path]:
     """Return contract-derived train entry, model name, and model file path."""
     contract = get_contract(scenario_id)
@@ -84,7 +85,7 @@ def get_training_launch_status(scenario_id: str) -> dict[str, Any]:
         return {
             "supported": False,
             "scenario_id": scenario_id,
-            "error": "unknown scenario_id",
+            "error": "scenario_id not in contract registry",
         }
 
     facts = {item["key"]: item["value"] for item in ref.get("reference_items", [])}
@@ -154,12 +155,15 @@ def get_training_launch_status(scenario_id: str) -> dict[str, Any]:
 
 
 # ── helpers ───────────────────────────────────────────────────────────────────
+# NOTE: _inspect_latest_run below is test-only infrastructure. Production code
+# calls find_latest_run() from utils.run_protocol directly. Do not promote to
+# a production call site.
 
 def _inspect_latest_run(runs_root: Path):
     """Find the most-recently-modified run dir and summarise its state.
 
-    NOTE: this helper is used only by tests; get_training_launch_status() calls
-    find_latest_run() directly for ghost-proof, status-aware selection.
+    Test-only helper; not called by get_training_launch_status().
+    find_latest_run() from utils.run_protocol is the production equivalent.
     """
     if not runs_root.is_dir():
         return None, None, 0, None

@@ -850,7 +850,7 @@ def simulink_explore_block(
     block_path: str,
     trace_connections: _BoolArg = True,
 ) -> dict:
-    """One-shot exploration of a block: ports + all connection targets.
+    """One-shot exploration of a block: ports + directional connection targets.
 
     Single MATLAB IPC call — uses connected_block_paths already returned by
     slx_describe_block_ports.  No separate trace-per-port round-trips needed.
@@ -869,7 +869,12 @@ def simulink_explore_block(
             - index (int): port index within that kind
             - handle (int): port handle
             - is_connected (bool): whether a line is attached
-            - connections (list of dicts): [{block: str}] — connected block paths
+            - direction (str): "incoming" | "outgoing" | "unknown"
+            - source_blocks (list[str]): upstream blocks for input-like ports
+            - sink_blocks (list[str]): downstream blocks for output-like ports
+            - connections (list of dicts): [{block: str, direction: str}]
+          source_blocks (list[str]): upstream blocks, excluding block_path itself
+          sink_blocks (list[str]): downstream blocks, excluding block_path itself
           error_message (str)
     """
     session = MatlabSession.get()
@@ -879,20 +884,41 @@ def simulink_explore_block(
     ports_desc = _convert_port_descriptions(raw_ports.get("ports", []))
     error_message = str(raw_ports.get("error_message", ""))
 
-    # connected_block_paths is already populated by slx_describe_block_ports —
-    # no second MATLAB call needed.
     result_ports = []
+    source_blocks_all: list[str] = []
+    sink_blocks_all: list[str] = []
     for port in ports_desc:
+        direction = _classify_port_direction(str(port.get("kind", "")))
+        connected_blocks = _unique_blocks_except(
+            port.get("connected_block_paths", []),
+            block_path,
+        )
+        if direction == "incoming":
+            source_blocks = connected_blocks
+            sink_blocks: list[str] = []
+            connection_direction = "source"
+            source_blocks_all.extend(source_blocks)
+        elif direction == "outgoing":
+            source_blocks = []
+            sink_blocks = connected_blocks
+            connection_direction = "sink"
+            sink_blocks_all.extend(sink_blocks)
+        else:
+            source_blocks = []
+            sink_blocks = []
+            connection_direction = "connected"
         connections = [
-            {"block": str(bp)}
-            for bp in port.get("connected_block_paths", [])
-            if bp
+            {"block": block, "direction": connection_direction}
+            for block in connected_blocks
         ]
         result_ports.append({
             "kind":         str(port.get("kind", "")),
             "index":        _to_int(port.get("index", 0)),
             "handle":       _to_int(port.get("handle", 0)),
             "is_connected": bool(port.get("is_connected", False)),
+            "direction":    direction,
+            "source_blocks": source_blocks,
+            "sink_blocks":   sink_blocks,
             "connections":  connections,
         })
 
@@ -900,6 +926,8 @@ def simulink_explore_block(
         "ok":            not bool(error_message),
         "block_path":    block_path,
         "ports":         result_ports,
+        "source_blocks": _unique_blocks_except(source_blocks_all, block_path),
+        "sink_blocks":   _unique_blocks_except(sink_blocks_all, block_path),
         "error_message": error_message,
     }
 
@@ -1225,6 +1253,88 @@ def simulink_capture_figure(
 
 
 # ------------------------------------------------------------------
+# General runtime tools (Task 3 — generalization)
+# ------------------------------------------------------------------
+
+def simulink_model_status(model_name: str) -> dict:
+    """Return loaded/dirty/runtime status for one Simulink model."""
+    session = MatlabSession.get()
+    raw = session.call("slx_model_status", model_name, nargout=1)
+    return _convert_element(raw)
+
+
+def simulink_save_model(model_name: str, target_path: str = "") -> dict:
+    """Save a Simulink model, optionally to a new target path."""
+    session = MatlabSession.get()
+    raw = session.call("slx_save_model", model_name, target_path, nargout=1)
+    return _convert_element(raw)
+
+
+def simulink_workspace_set(vars: dict[str, Any]) -> dict:
+    """Set MATLAB base-workspace variables from a dict in one call."""
+    session = MatlabSession.get()
+    raw = session.call("slx_workspace_set", vars, nargout=1)
+    return _convert_element(raw)
+
+
+def simulink_run_window(
+    model_name: str,
+    start_time: float = 0.0,
+    stop_time: float = 0.1,
+    capture_errors: _BoolArg = True,
+) -> dict:
+    """Run a model over a controlled simulation window."""
+    session = MatlabSession.get()
+    raw = session.call(
+        "slx_run_window",
+        model_name,
+        float(start_time),
+        float(stop_time),
+        bool(capture_errors),
+        nargout=1,
+    )
+    return _convert_element(raw)
+
+
+def simulink_runtime_reset(
+    model_name: str,
+    fast_restart: str = "",
+    clear_sdi: _BoolArg = False,
+    clear_workspace_pattern: str = "",
+) -> dict:
+    """Reset general Simulink runtime state without VSG semantics."""
+    session = MatlabSession.get()
+    raw = session.call(
+        "slx_runtime_reset",
+        model_name,
+        fast_restart,
+        bool(clear_sdi),
+        clear_workspace_pattern,
+        nargout=1,
+    )
+    return _convert_element(raw)
+
+
+def simulink_signal_snapshot(
+    model_name: str,
+    time_s: float,
+    signals: list[Any],
+    allow_partial: _BoolArg = False,
+) -> dict:
+    """Read logged, ToWorkspace, or temporary block-probe values at one time."""
+    session = MatlabSession.get()
+    raw = session.call(
+        "slx_signal_snapshot",
+        model_name,
+        float(time_s),
+        signals,
+        bool(allow_partial),
+        nargout=1,
+    )
+    return _convert_element(raw)
+
+
+# ------------------------------------------------------------------
 # Internal conversion helpers
 # ------------------------------------------------------------------
 
@@ -1465,6 +1575,37 @@ def _convert_port_descriptions(items: Any) -> list[dict]:
             "connected_block_paths": _to_list(item.get("connected_block_paths", [])),
         })
     return ports
+
+
+def _classify_port_direction(kind: str) -> str:
+    normalized = kind.strip().lower()
+    incoming = {
+        "inport",
+        "enable",
+        "trigger",
+        "ifaction",
+        "reset",
+        "state",
+    }
+    outgoing = {
+        "outport",
+    }
+    if normalized in incoming:
+        return "incoming"
+    if normalized in outgoing:
+        return "outgoing"
+    return "unknown"
+
+
+def _unique_blocks_except(blocks: Any, excluded_block: str) -> list[str]:
+    result: list[str] = []
+    excluded = str(excluded_block)
+    for block in _to_list(blocks):
+        text = str(block)
+        if not text or text == excluded or text in result:
+            continue
+        result.append(text)
+    return result
 
 
 def _convert_port_endpoint(item: Any) -> dict:

@@ -23,6 +23,8 @@ class TestSimulinkHelperInventory:
             "slx_step_diagnostics.m",
             "slx_patch_and_verify.m",
             "slx_batch_query.m",
+            "slx_fastrestart_reset.m",
+            "slx_episode_warmup.m",
         ]
 
         missing = [name for name in required if not (helper_dir / name).exists()]
@@ -85,23 +87,11 @@ class TestSimulinkGetBlockParams:
         assert result["R_closed"] == "0.001"
         assert result["threshold"] == "0.5"
 
-    @patch("engine.matlab_session.matlab_engine", create=True)
-    def test_multiple_blocks_returns_structured_items(self, mock_me):
+    def test_removed_multiple_block_params_points_to_query_params(self):
         from engine.mcp_simulink_tools import simulink_get_multiple_block_params
 
-        mock_eng = MagicMock()
-        mock_me.start_matlab.return_value = mock_eng
-
-        mock_eng.slx_batch_query_cell = MagicMock(return_value=[
-            {"block": "mdl/G1", "params": {"Gain": "2"}, "error": ""},
-            {"block": "mdl/G2", "params": {}, "error": "bad block"},
-        ])
-
-        result = simulink_get_multiple_block_params("test_model", ["mdl/G1", "mdl/G2"])
-
-        assert len(result["items"]) == 2
-        assert result["items"][0]["params"]["Gain"] == "2"
-        assert result["items"][1]["error"] == "bad block"
+        with pytest.raises(NotImplementedError, match="simulink_query_params"):
+            simulink_get_multiple_block_params("test_model", ["mdl/G1", "mdl/G2"])
 
 
 class TestSimulinkMergedFacades:
@@ -604,25 +594,56 @@ class TestSimulinkDiagnosticsWave1:
         assert result["branch_count"] == 1
         assert len(result["dsts"]) == 2
 
-    @patch("engine.matlab_session.matlab_engine", create=True)
-    def test_add_line_by_handles_returns_line_metadata(self, mock_me):
+    def test_removed_add_line_by_handles_points_to_connect_ports(self):
         from engine.mcp_simulink_tools import simulink_add_line_by_handles
+
+        with pytest.raises(NotImplementedError, match="simulink_connect_ports"):
+            simulink_add_line_by_handles("mdl", 11, 22)
+
+    @patch("engine.matlab_session.matlab_engine", create=True)
+    def test_explore_block_returns_directional_connections(self, mock_me):
+        from engine.mcp_simulink_tools import simulink_explore_block
 
         mock_eng = MagicMock()
         mock_me.start_matlab.return_value = mock_eng
-        mock_eng.slx_add_line_by_handles = MagicMock(return_value={
-            "ok": True,
-            "line_handle": 401.0,
-            "created_branch": False,
+        mock_eng.slx_describe_block_ports = MagicMock(return_value={
+            "block_path": "mdl/Gain",
             "error_message": "",
-            "important_lines": ["Connected handle 11 -> 22"],
+            "ports": [
+                {
+                    "kind": "Inport",
+                    "index": 1.0,
+                    "handle": 101.0,
+                    "is_connected": True,
+                    "line_handles": [201.0],
+                    "connected_block_paths": ["mdl/In1", "mdl/Gain"],
+                },
+                {
+                    "kind": "Outport",
+                    "index": 1.0,
+                    "handle": 102.0,
+                    "is_connected": True,
+                    "line_handles": [202.0],
+                    "connected_block_paths": ["mdl/Gain", "mdl/Out1", "mdl/Term"],
+                },
+            ],
         })
 
-        result = simulink_add_line_by_handles("mdl", 11, 22)
+        result = simulink_explore_block("mdl", "mdl/Gain")
 
         assert result["ok"] is True
-        assert result["line_handle"] == 401
-        assert result["created_branch"] is False
+        assert result["source_blocks"] == ["mdl/In1"]
+        assert result["sink_blocks"] == ["mdl/Out1", "mdl/Term"]
+        assert result["ports"][0]["direction"] == "incoming"
+        assert result["ports"][0]["source_blocks"] == ["mdl/In1"]
+        assert result["ports"][0]["sink_blocks"] == []
+        assert result["ports"][1]["direction"] == "outgoing"
+        assert result["ports"][1]["source_blocks"] == []
+        assert result["ports"][1]["sink_blocks"] == ["mdl/Out1", "mdl/Term"]
+        assert result["ports"][1]["connections"] == [
+            {"block": "mdl/Out1", "direction": "sink"},
+            {"block": "mdl/Term", "direction": "sink"},
+        ]
 
     @patch("engine.matlab_session.matlab_engine", create=True)
     def test_compile_diagnostics_returns_structured_errors(self, mock_me):
@@ -996,29 +1017,16 @@ class TestDeprecatedToolWarnings:
         with pytest.warns(DeprecationWarning, match="simulink_query_params"):
             simulink_get_block_params("mdl", "mdl/A")
 
-    @patch("engine.matlab_session.matlab_engine", create=True)
-    def test_get_multiple_block_params_emits_deprecation_warning(self, mock_me):
+    def test_removed_get_multiple_block_params_raises_not_implemented(self):
         from engine.mcp_simulink_tools import simulink_get_multiple_block_params
 
-        mock_eng = MagicMock()
-        mock_me.start_matlab.return_value = mock_eng
-        mock_eng.slx_batch_query_cell = MagicMock(return_value=[])
-
-        with pytest.warns(DeprecationWarning, match="simulink_query_params"):
+        with pytest.raises(NotImplementedError, match="simulink_query_params"):
             simulink_get_multiple_block_params("mdl", ["mdl/A"])
 
-    @patch("engine.matlab_session.matlab_engine", create=True)
-    def test_add_line_by_handles_emits_deprecation_warning(self, mock_me):
+    def test_removed_add_line_by_handles_raises_not_implemented(self):
         from engine.mcp_simulink_tools import simulink_add_line_by_handles
 
-        mock_eng = MagicMock()
-        mock_me.start_matlab.return_value = mock_eng
-        mock_eng.slx_add_line_by_handles = MagicMock(return_value={
-            "ok": True, "line_handle": 1.0,
-            "created_branch": False, "important_lines": [], "error_message": "",
-        })
-
-        with pytest.warns(DeprecationWarning, match="simulink_connect_ports"):
+        with pytest.raises(NotImplementedError, match="simulink_connect_ports"):
             simulink_add_line_by_handles("mdl", 11, 22)
 
 
@@ -1220,3 +1228,90 @@ class TestEnvelopeContracts:
         assert "source" in result["data"]
         assert "sinks" in result["data"]
         assert result["error"] is None
+
+
+# ---------------------------------------------------------------------------
+# General runtime wrappers (Task 3 — generalization)
+# ---------------------------------------------------------------------------
+
+class TestGeneralRuntimeWrappers:
+    """Mocked tests for the six new general-runtime MCP wrappers."""
+
+    def setup_method(self):
+        from engine.matlab_session import MatlabSession
+        MatlabSession._instances.clear()
+
+    def _make_session(self, return_value):
+        mock_session = MagicMock()
+        mock_session.call.return_value = return_value
+        return mock_session
+
+    def test_simulink_model_status_calls_helper(self, monkeypatch):
+        import engine.mcp_simulink_tools as mcp_tools
+        mock_session = self._make_session({"ok": True, "loaded": True})
+        monkeypatch.setattr(mcp_tools.MatlabSession, "get", lambda: mock_session)
+
+        result = mcp_tools.simulink_model_status("demo")
+
+        mock_session.call.assert_called_once_with("slx_model_status", "demo", nargout=1)
+        assert result["ok"] is True
+        assert result["loaded"] is True
+
+    def test_simulink_save_model_calls_helper(self, monkeypatch):
+        import engine.mcp_simulink_tools as mcp_tools
+        mock_session = self._make_session({"ok": True, "saved": True})
+        monkeypatch.setattr(mcp_tools.MatlabSession, "get", lambda: mock_session)
+
+        result = mcp_tools.simulink_save_model("demo", "/tmp/demo.slx")
+
+        mock_session.call.assert_called_once_with(
+            "slx_save_model", "demo", "/tmp/demo.slx", nargout=1
+        )
+        assert result["ok"] is True
+        assert result["saved"] is True
+
+    def test_simulink_workspace_set_calls_helper(self, monkeypatch):
+        import engine.mcp_simulink_tools as mcp_tools
+        mock_session = self._make_session({"ok": True, "vars_written": ["x"]})
+        monkeypatch.setattr(mcp_tools.MatlabSession, "get", lambda: mock_session)
+
+        result = mcp_tools.simulink_workspace_set({"x": 1.0})
+
+        mock_session.call.assert_called_once_with("slx_workspace_set", {"x": 1.0}, nargout=1)
+        assert result["ok"] is True
+
+    def test_simulink_run_window_calls_helper(self, monkeypatch):
+        import engine.mcp_simulink_tools as mcp_tools
+        mock_session = self._make_session({"ok": True, "sim_time_reached": 0.1})
+        monkeypatch.setattr(mcp_tools.MatlabSession, "get", lambda: mock_session)
+
+        result = mcp_tools.simulink_run_window("demo", 0.0, 0.1)
+
+        mock_session.call.assert_called_once_with(
+            "slx_run_window", "demo", 0.0, 0.1, True, nargout=1
+        )
+        assert result["ok"] is True
+
+    def test_simulink_runtime_reset_calls_helper(self, monkeypatch):
+        import engine.mcp_simulink_tools as mcp_tools
+        mock_session = self._make_session({"ok": True})
+        monkeypatch.setattr(mcp_tools.MatlabSession, "get", lambda: mock_session)
+
+        result = mcp_tools.simulink_runtime_reset("demo", "off", False, "")
+
+        mock_session.call.assert_called_once_with(
+            "slx_runtime_reset", "demo", "off", False, "", nargout=1
+        )
+        assert result["ok"] is True
+
+    def test_simulink_signal_snapshot_calls_helper(self, monkeypatch):
+        import engine.mcp_simulink_tools as mcp_tools
+        mock_session = self._make_session({"ok": True, "values": []})
+        monkeypatch.setattr(mcp_tools.MatlabSession, "get", lambda: mock_session)
+
+        result = mcp_tools.simulink_signal_snapshot("demo", 0.05, ["omega"], False)
+
+        mock_session.call.assert_called_once_with(
+            "slx_signal_snapshot", "demo", 0.05, ["omega"], False, nargout=1
+        )
+        assert result["ok"] is True

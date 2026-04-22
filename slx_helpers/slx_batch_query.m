@@ -21,14 +21,14 @@ function result = slx_batch_query(model, block_paths, param_names)
 %     result(i).error          - error string if block not found, else ''
 %
 %   Example — read all params:
-%     r = slx_batch_query('kundur_vsg', {
-%         'kundur_vsg/VSG_ES1/M0',
-%         'kundur_vsg/VSG_ES2/M0'
+%     r = slx_batch_query('demo_model', {
+%         'demo_model/Gain1',
+%         'demo_model/Gain2'
 %     });
-%     r(1).params.Value   % -> '6.0'
+%     r(1).params.Gain   % -> '2'
 %
 %   Example — read selected params only:
-%     r = slx_batch_query('kundur_vsg', {'kundur_vsg/VSG_ES1/M0'}, {'Value','Gain'});
+%     r = slx_batch_query('demo_model', {'demo_model/Gain1'}, {'Gain'});
 %     r(1).missing_params  % -> {} or {'Gain'} if Gain does not exist
 %
 %   Token impact vs N separate get_param calls:

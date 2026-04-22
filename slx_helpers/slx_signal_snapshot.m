@@ -152,8 +152,8 @@ function [spec, cleanup_info, warn_msg] = i_prepare_block_probe(spec)
     end
 
     parent_system = get_param(spec.block_path, 'Parent');
-    probe_block_name = sprintf('%s/vsg_snapshot_probe_%d', parent_system, spec.port_index);
-    probe_var_name = matlab.lang.makeValidName(sprintf('vsg_snapshot_probe_%d_%d', abs(round(double(line_handle))), spec.port_index));
+    probe_block_name = sprintf('%s/slx_snapshot_probe_%d', parent_system, spec.port_index);
+    probe_var_name = matlab.lang.makeValidName(sprintf('slx_snapshot_probe_%d_%d', abs(round(double(line_handle))), spec.port_index));
 
     probe_block_path = add_block('simulink/Sinks/To Workspace', probe_block_name, ...
         'MakeNameUnique', 'on', ...

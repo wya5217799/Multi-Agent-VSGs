@@ -5,3 +5,24 @@
 
 模型专用逻辑 → `engine/simulink_bridge.py` / `BridgeConfig`
 单模型诊断脚本 → `probes/kundur/` 或 `probes/ne39/`
+
+## Boundary
+
+General helpers may use Simulink concepts: model, block, line, port, parameter,
+workspace variable, SimulationInput, SimulationOutput, timeseries, solver,
+FastRestart, diagnostics, screenshot, and figure.
+
+General helpers must not introduce new APIs whose primary contract is expressed
+in VSG/RL terms: agent, episode, reward, M/D action, Pe, omega, rocof, delta,
+Kundur, or NE39.
+
+## Legacy Project Adapters
+
+The following helpers are retained for the active Yang 2023 reproduction path
+and are not general Simulink primitives:
+
+- `slx_warmup.m`
+- `slx_step_and_read.m`
+- `slx_extract_state.m`
+- `slx_build_bridge_config.m`
+- `slx_validate_model.m`

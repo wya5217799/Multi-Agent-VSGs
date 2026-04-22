@@ -3,8 +3,8 @@ function result = slx_screenshot(system_path, out_path, resolution)
 %
 %   result = slx_screenshot(system_path, out_path, resolution)
 %
-%   system_path  - Model name ('kundur_vsg') or subsystem path
-%                  ('kundur_vsg/VSG_ES1'). The model must be loaded.
+%   system_path  - Model name ('demo_model') or subsystem path
+%                  ('demo_model/Controller'). The model must be loaded.
 %   out_path     - Full path for the output PNG file.
 %   resolution   - DPI as a double (default 150).
 %

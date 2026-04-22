@@ -47,4 +47,4 @@ def test_runtime_helpers_on_new_minimal_model(tmp_path):
         assert "ok" in saved
         assert Path(target_path).exists()
     finally:
-        session.call("slx_close_model", model_name, False, nargout=0)
+        session.call("slx_close_model", model_name, nargout=0)

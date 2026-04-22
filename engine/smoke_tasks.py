@@ -148,8 +148,8 @@ def _collect_finished(
     """Shared result collection for poll (in-memory and recovered paths)."""
     stdout_path = run_dir / "train_smoke_stdout.log"
     stderr_path = run_dir / "train_smoke_stderr.log"
-    stdout_text = stdout_path.read_text(encoding="utf-8") if stdout_path.exists() else ""
-    stderr_text = stderr_path.read_text(encoding="utf-8") if stderr_path.exists() else ""
+    stdout_text = stdout_path.read_text(encoding="utf-8", errors="replace") if stdout_path.exists() else ""
+    stderr_text = stderr_path.read_text(encoding="utf-8", errors="replace") if stderr_path.exists() else ""
 
     checkpoint_dir, log_file = _train_smoke_paths(scenario_id, run_id)
     native_log_paths = [str(log_file)] if log_file.exists() else []

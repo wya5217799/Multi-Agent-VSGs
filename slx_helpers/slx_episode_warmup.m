@@ -103,7 +103,11 @@ function [state, status] = slx_episode_warmup(model_name, agent_ids, sbase_va, c
         end
     end
     if ~isempty(fieldnames(post_vars))
-        slx_workspace_set(post_vars);
+        post_result = slx_workspace_set(post_vars);
+        if ~post_result.ok
+            status.success = false;
+            status.error   = ['Post-warmup workspace write failed: ' post_result.error_message];
+        end
     end
 
     status.elapsed_ms = toc * 1000;

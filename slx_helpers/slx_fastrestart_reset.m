@@ -11,7 +11,10 @@ function slx_fastrestart_reset(model_name, duration, do_recompile)
 %     Keeps FastRestart on; clears SDI and workspace only.
 %     sim() restarts from t=0 automatically when StopTime < current sim time.
 %
-%   Uses slx_runtime_reset and slx_run_window general primitives.
+%   Uses slx_runtime_reset for FastRestart management.
+%   Uses direct set_param+sim() for the warmup sim — NOT slx_run_window.
+%   Simulink.SimulationInput (used inside slx_run_window) is incompatible
+%   with FastRestart warm-restart stepping in R2022b+.
 
     if nargin < 3, do_recompile = true; end
     model_name = char(model_name);
@@ -23,11 +26,8 @@ function slx_fastrestart_reset(model_name, duration, do_recompile)
         slx_runtime_reset(model_name, '', true, '^(omega|delta|Vabc|Iabc)_ES\d+$');
     end
 
-    run_result = slx_run_window(model_name, 0.0, double(duration), true);
-    if ~run_result.ok
-        error('slx_fastrestart_reset: warmup sim failed: %s', run_result.error_message);
-    end
-
+    set_param(model_name, 'StopTime', num2str(double(duration), '%.6f'));
+    sim(model_name);
     fprintf('RESULT: slx_fastrestart_reset done, t_warmup=%.3f s, recompile=%d\n', ...
             double(duration), logical(do_recompile));
 end

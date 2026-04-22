@@ -63,7 +63,14 @@ function [state, status] = slx_step_and_read( ...
             vars.(sprintf('Pe_ES%d', idx)) = Pe_prev(i) * pe_scale;
         end
     end
-    slx_workspace_set(vars);
+    ws_result = slx_workspace_set(vars);
+    if ~ws_result.ok
+        status.success    = false;
+        status.error      = ['Workspace write failed: ' ws_result.error_message];
+        state             = step_empty_state(N);
+        status.elapsed_ms = toc * 1000;
+        return;
+    end
 
     % --- Phase 2: Advance simulation ---
     try

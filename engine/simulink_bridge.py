@@ -66,12 +66,6 @@ def _normalize_per_agent_vector(
     return arr
 
 
-def _format_indexed_template(template: str, idx: int) -> str:
-    """Format a BridgeConfig workspace variable template for a 1-based agent id."""
-    if "{idx}" in template:
-        return template.replace("{idx}", str(idx))
-    return template
-
 
 @dataclass(frozen=True)
 class BridgeConfig:
@@ -109,9 +103,6 @@ class BridgeConfig:
     # Workspace variable names referenced by Constant blocks (assignin approach)
     m_var_template: str = 'M0_val_ES{idx}'   # must match Constant block Value field in .slx
     d_var_template: str = 'D0_val_ES{idx}'
-    phang_var_template: str = 'phAng_ES{idx}'
-    pe_var_template: str = 'Pe_ES{idx}'
-    wref_var_template: str = 'wref_{idx}'
     m0_default: float = 12.0                  # nominal M (used to init workspace before first compile)
     d0_default: float = 3.0                   # nominal D
     # Workspace variable names for disturbance loads (no topology change)

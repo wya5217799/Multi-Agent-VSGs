@@ -940,7 +940,7 @@ class NE39BusSimulinkEnv(_NE39BaseEnv):
             agent_ids = mdbl(list(range(1, N_ESS + 1)))
             do_recompile = not self.bridge._fr_compiled
             warmup_state, warmup_status = self.bridge.session.call(
-                "slx_warmup",
+                "slx_episode_warmup",
                 self.bridge.cfg.model_name,
                 agent_ids,
                 float(self.bridge.cfg.sbase_va),
@@ -951,12 +951,10 @@ class NE39BusSimulinkEnv(_NE39BaseEnv):
             )
 
             if warmup_status is None:
-                # None return is unexpected — warn but allow training to continue.
-                # _fr_compiled stays False so the next reset forces a full recompile.
-                raise RuntimeError("slx_warmup returned None status (unexpected)")
+                raise RuntimeError("slx_episode_warmup returned None status (unexpected)")
             elif not warmup_status.get("success", True):
                 raise RuntimeError(
-                    f"slx_warmup failed: {warmup_status.get('error', 'unknown')}"
+                    f"slx_episode_warmup failed: {warmup_status.get('error', 'unknown')}"
                 )
 
             self.bridge._fr_compiled = True  # mark compiled; future resets skip recompile

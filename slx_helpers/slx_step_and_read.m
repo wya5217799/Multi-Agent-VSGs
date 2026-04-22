@@ -50,25 +50,20 @@ function [state, status] = slx_step_and_read( ...
     phAng_cmd_deg = nan(1, N);
 
     % --- Phase 1: Update workspace variables ---
+    vars = struct();
     for i = 1:N
         idx = agent_ids(i);
-
-        % Inertia and damping
-        assignin('base', sprintf('M0_val_ES%d', idx), M_values(i));
-        assignin('base', sprintf('D0_val_ES%d', idx), D_values(i));
-
-        % Phase angle feedback (degrees)
+        vars.(sprintf('M0_val_ES%d', idx)) = M_values(i);
+        vars.(sprintf('D0_val_ES%d', idx)) = D_values(i);
         if ~isempty(delta_prev_deg)
             phAng_cmd_deg(i) = step_phase_command_deg(cfg, idx, delta_prev_deg(i));
-            assignin('base', sprintf('phAng_ES%d', idx), phAng_cmd_deg(i));
+            vars.(sprintf('phAng_ES%d', idx)) = phAng_cmd_deg(i);
         end
-
-        % Pe feedback (convert sbase p.u. to VSG base p.u.)
         if ~isempty(Pe_prev)
-            pe_vsg = Pe_prev(i) * pe_scale;
-            assignin('base', sprintf('Pe_ES%d', idx), pe_vsg);
+            vars.(sprintf('Pe_ES%d', idx)) = Pe_prev(i) * pe_scale;
         end
     end
+    slx_workspace_set(vars);
 
     % --- Phase 2: Advance simulation ---
     try
@@ -85,6 +80,15 @@ function [state, status] = slx_step_and_read( ...
     % --- Phase 3: Extract state ---
     [state, meas_failures] = slx_extract_state(simOut, agent_ids, cfg, sbase_va);
     state.phAng_cmd_deg = phAng_cmd_deg;
+
+    if ~isempty(meas_failures)
+        pe_fails = meas_failures(startsWith(meas_failures, 'Pe:'));
+        if ~isempty(pe_fails)
+            warning('slx_step_and_read:PeReadFailed', ...
+                'Pe measurement failed for %d agent(s): %s', ...
+                numel(pe_fails), strjoin(pe_fails, ', '));
+        end
+    end
 
     % Structured measurement failure reporting (consumed by Python bridge)
     status.measurement_failures = meas_failures;

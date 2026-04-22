@@ -66,6 +66,13 @@ def _normalize_per_agent_vector(
     return arr
 
 
+def _format_indexed_template(template: str, idx: int) -> str:
+    """Format a BridgeConfig workspace variable template for a 1-based agent id."""
+    if "{idx}" in template:
+        return template.replace("{idx}", str(idx))
+    return template
+
+
 @dataclass(frozen=True)
 class BridgeConfig:
     """Scenario-specific Simulink bridge configuration.
@@ -99,9 +106,12 @@ class BridgeConfig:
     # Empty tuple → 3-arg warmup (phAng=0); non-empty → 6-arg warmup seeded with delta0_deg
     delta0_deg: tuple[float, ...] = ()
     phase_feedback_gain: float = 1.0         # feedback gain; NE39 uses 0.3 to avoid step-induced oscillations
-    # Workspace variable names referenced by M0/D0 Constant blocks (setVariable approach)
+    # Workspace variable names referenced by Constant blocks (assignin approach)
     m_var_template: str = 'M0_val_ES{idx}'   # must match Constant block Value field in .slx
     d_var_template: str = 'D0_val_ES{idx}'
+    phang_var_template: str = 'phAng_ES{idx}'
+    pe_var_template: str = 'Pe_ES{idx}'
+    wref_var_template: str = 'wref_{idx}'
     m0_default: float = 12.0                  # nominal M (used to init workspace before first compile)
     d0_default: float = 3.0                   # nominal D
     # Workspace variable names for disturbance loads (no topology change)
@@ -465,7 +475,7 @@ class SimulinkBridge:
                 nargout=0,
             )
             warmup_state, warmup_status = self.session.call(
-                "slx_warmup",
+                "slx_episode_warmup",
                 self.cfg.model_name,
                 agent_ids,
                 float(self.cfg.sbase_va),
@@ -476,7 +486,7 @@ class SimulinkBridge:
             )
             if warmup_status is not None and not warmup_status.get("success", True):
                 raise RuntimeError(
-                    f"slx_warmup failed: {warmup_status.get('error', 'unknown')}"
+                    f"slx_episode_warmup failed: {warmup_status.get('error', 'unknown')}"
                 )
             self._fr_compiled = True
             self.t_current = duration
@@ -523,7 +533,7 @@ class SimulinkBridge:
             for var, val in self._tripload_state.items():
                 self.session.eval(f"assignin('base', '{var}', {val})", nargout=0)
             self._apply_breaker_events()
-            self.session.call("slx_warmup", self.cfg.model_name, duration, do_recompile, nargout=0)
+            self.session.call("slx_fastrestart_reset", self.cfg.model_name, duration, do_recompile, nargout=0)
             self._fr_compiled = True
             self.t_current = duration
             self._Pe_prev = pe_nominal_vsg_arr / pe_scale

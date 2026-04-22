@@ -2,7 +2,7 @@
 """Opt-B: Skip FastRestart off→on recompile after the first episode.
 
 Profiling showed warmup costs ~13 500 ms/episode (37% of episode time).
-The recompile is triggered by FastRestart off→on inside slx_warmup.m.
+The recompile is triggered by FastRestart off→on inside slx_fastrestart_reset.m.
 After the first episode the model is already compiled; only the Simscape
 initial state needs to be reset, which happens automatically when sim() is
 called with a StopTime lower than the current simulation time.
@@ -22,8 +22,8 @@ Contract:
   - reset() does NOT clear _fr_compiled (no recompile needed between episodes)
 
 TDD RED → GREEN:
-  RED : _fr_compiled attribute missing, slx_warmup called without do_recompile arg
-  GREEN: all pass after changes to SimulinkBridge + slx_warmup.m
+  RED : _fr_compiled attribute missing, reset helper called without do_recompile arg
+  GREEN: all pass after changes to SimulinkBridge + slx_fastrestart_reset.m
 """
 import pytest
 from unittest.mock import MagicMock, call, patch
@@ -52,8 +52,8 @@ def _make_bridge_with_mock_session():
     MatlabSession._instances.clear()
 
     mock_eng = MagicMock()
-    # slx_warmup returns nothing (nargout=0)
-    mock_eng.slx_warmup = MagicMock(return_value=None)
+    # slx_fastrestart_reset returns nothing (nargout=0)
+    mock_eng.slx_fastrestart_reset = MagicMock(return_value=None)
 
     with patch("engine.matlab_session.matlab_engine") as mock_me:
         mock_me.start_matlab.return_value = mock_eng
@@ -103,7 +103,7 @@ class TestFrCompiledFlag:
 
 
 # ---------------------------------------------------------------------------
-# slx_warmup call signature
+# slx_fastrestart_reset call signature
 # ---------------------------------------------------------------------------
 
 class TestWarmupPassesRecompileFlag:
@@ -125,14 +125,14 @@ class TestWarmupPassesRecompileFlag:
 
         bridge.warmup(0.5)
 
-        # slx_warmup should have been called with exactly 3 positional args:
+        # slx_fastrestart_reset should have been called with exactly 3 positional args:
         #   (model_name, duration, do_recompile)
         # The 3rd arg must be True on the first call.
-        calls = mock_eng.slx_warmup.call_args_list
-        assert len(calls) >= 1, "slx_warmup must be called at least once"
+        calls = mock_eng.slx_fastrestart_reset.call_args_list
+        assert len(calls) >= 1, "slx_fastrestart_reset must be called at least once"
         positional_args = calls[0][0]  # first call, positional args tuple
         assert len(positional_args) == 3, (
-            f"slx_warmup must receive 3 positional args (model, duration, do_recompile), "
+            f"slx_fastrestart_reset must receive 3 positional args (model, duration, do_recompile), "
             f"got {len(positional_args)}: {positional_args}"
         )
         assert positional_args[2] is True, (
@@ -167,11 +167,11 @@ class TestWarmupPassesRecompileFlag:
         bridge.reset()        # episode reset — must NOT clear _fr_compiled
         bridge.warmup(0.5)   # second call — should NOT recompile
 
-        calls = mock_eng.slx_warmup.call_args_list
-        assert len(calls) >= 2, "slx_warmup must be called at least twice"
+        calls = mock_eng.slx_fastrestart_reset.call_args_list
+        assert len(calls) >= 2, "slx_fastrestart_reset must be called at least twice"
         second_call_args = calls[1][0]
         assert len(second_call_args) == 3, (
-            f"Second slx_warmup call must still pass 3 args, got {len(second_call_args)}"
+            f"Second slx_fastrestart_reset call must still pass 3 args, got {len(second_call_args)}"
         )
         assert second_call_args[2] is False, (
             f"3rd arg (do_recompile) must be False on second+ warmup, "
@@ -191,7 +191,7 @@ class TestWarmupPassesRecompileFlag:
             bridge.reset()
             bridge.warmup(0.5)
 
-        calls = mock_eng.slx_warmup.call_args_list
+        calls = mock_eng.slx_fastrestart_reset.call_args_list
         assert len(calls) == 10
 
         recompile_flags = [c[0][2] for c in calls]  # 3rd positional arg of each call
@@ -268,7 +268,7 @@ class TestCloseResetsFlags:
         bridge.load_model()
         bridge.warmup(0.5)
 
-        calls = mock_eng.slx_warmup.call_args_list
+        calls = mock_eng.slx_fastrestart_reset.call_args_list
         # The second warmup() call (after close) must pass do_recompile=True
         second_call_args = calls[1][0]
         assert second_call_args[2] is True, (

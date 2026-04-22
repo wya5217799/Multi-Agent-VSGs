@@ -110,7 +110,7 @@ class TestNE39FrCompiled:
                 @staticmethod
                 def call(fn, *args, nargout=0):
                     recorded_calls.append((fn, args))
-                    if fn == "slx_warmup":
+                    if fn == "slx_episode_warmup":
                         return {}, {"success": True}
                     return None
 
@@ -123,14 +123,14 @@ class TestNE39FrCompiled:
 
             # First reset: do_recompile must be True (bridge._fr_compiled=False)
             env._reset_backend()
-            warmup_call = next(c for c in recorded_calls if c[0] == "slx_warmup")
+            warmup_call = next(c for c in recorded_calls if c[0] == "slx_episode_warmup")
             assert warmup_call[1][-1] is True, "first reset must recompile"
             assert env.bridge._fr_compiled is True
 
             # Second reset: do_recompile must be False
             recorded_calls.clear()
             env._reset_backend()
-            warmup_call2 = next(c for c in recorded_calls if c[0] == "slx_warmup")
+            warmup_call2 = next(c for c in recorded_calls if c[0] == "slx_episode_warmup")
             assert warmup_call2[1][-1] is False, "second reset must skip recompile"
 
 
@@ -884,7 +884,7 @@ class TestBridgeConfigValidation:
 
 
 class TestWarmupDeltaSeeding:
-    """Tests for SimulinkBridge.warmup() 3-arg vs 5/6-arg dispatch."""
+    """Tests for SimulinkBridge.warmup() explicit reset vs episode-warmup dispatch."""
 
     def setup_method(self):
         from engine.matlab_session import MatlabSession
@@ -916,29 +916,28 @@ class TestWarmupDeltaSeeding:
         return bridge, mock_eng
 
     @patch("engine.matlab_session.matlab_engine", create=True)
-    def test_warmup_3arg_unchanged(self, mock_me):
-        """delta0_deg=() → 3-arg slx_warmup, _delta_prev_deg=zeros."""
+    def test_warmup_without_delta_uses_fastrestart_reset(self, mock_me):
+        """delta0_deg=() uses slx_fastrestart_reset and seeds zero delta."""
         bridge, mock_eng = self._make_bridge(mock_me, delta0_deg=())
         bridge.warmup(0.5)
 
-        # 3-arg call: (model_name, duration, do_recompile)
-        call_args_list = mock_eng.slx_warmup.call_args_list
+        call_args_list = mock_eng.slx_fastrestart_reset.call_args_list
         assert len(call_args_list) == 1
         args = call_args_list[0][0]
         assert args[0] == "test_model"
         assert args[1] == pytest.approx(0.5)
         assert isinstance(args[2], bool)  # do_recompile flag
+        assert mock_eng.slx_warmup.call_count == 0
 
         assert np.all(bridge._delta_prev_deg == 0.0)
         assert bridge._delta_prev_deg.shape == (4,)
 
     @patch("engine.matlab_session.matlab_engine", create=True)
-    def test_warmup_5arg_delta_seeded(self, mock_me):
-        """delta0_deg non-empty → 6-arg slx_warmup, _delta_prev_deg set from warmup_state."""
+    def test_warmup_with_delta_uses_episode_warmup(self, mock_me):
+        """delta0_deg non-empty uses slx_episode_warmup and seeds delta from warmup_state."""
         bridge, mock_eng = self._make_bridge(mock_me, delta0_deg=(18.0, 10.0, 7.0, 12.0))
 
-        # slx_warmup (6-arg) returns (warmup_state, warmup_status)
-        mock_eng.slx_warmup.return_value = (
+        mock_eng.slx_episode_warmup.return_value = (
             {"delta_deg": [17.8, 9.9, 6.8, 11.9], "Pe": [1.0, 1.0, 1.0, 1.0]},
             {"success": True},
         )
@@ -947,12 +946,12 @@ class TestWarmupDeltaSeeding:
 
         bridge.warmup(0.5)
 
-        # 6-arg call: (model_name, agent_ids, sbase_va, cfg, kundur_ip, do_recompile)
-        call_args_list = mock_eng.slx_warmup.call_args_list
+        call_args_list = mock_eng.slx_episode_warmup.call_args_list
         assert len(call_args_list) == 1
         args = call_args_list[0][0]
         assert args[0] == "test_model"
         assert len(args) == 6
+        assert mock_eng.slx_warmup.call_count == 0
 
         # _delta_prev_deg comes from warmup_state (clipped ±90°)
         assert np.allclose(bridge._delta_prev_deg, [17.8, 9.9, 6.8, 11.9], atol=1e-6)
@@ -966,7 +965,7 @@ class TestWarmupDeltaSeeding:
 
             bridge, mock_eng = self._make_bridge(mock_me, delta0_deg=delta0)
             if delta0:
-                mock_eng.slx_warmup.return_value = (
+                mock_eng.slx_episode_warmup.return_value = (
                     {"delta_deg": list(delta0), "Pe": [1.0, 1.0, 1.0, 1.0]},
                     {"success": True},
                 )

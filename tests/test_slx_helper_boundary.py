@@ -6,6 +6,8 @@ SLX_HELPERS = REPO_ROOT / "slx_helpers"
 
 LEGACY_PROJECT_ADAPTERS = {
     "slx_warmup.m",
+    "slx_fastrestart_reset.m",
+    "slx_episode_warmup.m",
     "slx_step_and_read.m",
     "slx_extract_state.m",
     "slx_build_bridge_config.m",

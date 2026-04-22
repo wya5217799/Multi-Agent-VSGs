@@ -458,6 +458,7 @@ def test_slx_step_and_read_warns_when_pe_measurement_fails():
     helper = (
         Path(__file__).resolve().parents[1]
         / "slx_helpers"
+        / "vsg_bridge"
         / "slx_step_and_read.m"
     )
     text = helper.read_text(encoding="utf-8")

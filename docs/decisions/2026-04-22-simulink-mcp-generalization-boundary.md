@@ -3,7 +3,7 @@
 ## Status
 
 Adopted. General MCP primitives are implemented; VSG helpers remain as project
-adapter compatibility wrappers.
+adapter compatibility wrappers under `slx_helpers/vsg_bridge/`.
 
 ## Context
 
@@ -47,8 +47,9 @@ Project adapters
 `slx_helpers/` may contain reusable MATLAB primitives. It must not introduce new
 helpers whose primary API is expressed in VSG, RL, or paper-reproduction terms.
 
-Existing VSG/RL helpers may remain temporarily as compatibility wrappers, but
-new general MCP tools must expose general Simulink concepts first.
+Existing VSG/RL helpers may remain as compatibility wrappers under
+`slx_helpers/vsg_bridge/`, but new general MCP tools must expose general
+Simulink concepts first and must not call those adapter helpers directly.
 
 ## Layer Rules
 

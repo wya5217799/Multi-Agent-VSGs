@@ -26,7 +26,7 @@ function result = slx_run_window(model_name, start_time, stop_time, capture_erro
             'StartTime', num2str(double(start_time), '%.9g'), ...
             'StopTime', num2str(double(stop_time), '%.9g'), ...
             'CaptureErrors', capture_value);
-        sim_out = sim(sim_in); %#ok<NASGU>
+        sim(sim_in);
         result.sim_time_reached = double(stop_time);
     catch ME
         result.ok = false;

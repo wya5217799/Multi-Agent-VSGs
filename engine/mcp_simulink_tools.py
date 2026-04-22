@@ -1270,10 +1270,10 @@ def simulink_save_model(model_name: str, target_path: str = "") -> dict:
     return _convert_element(raw)
 
 
-def simulink_workspace_set(vars: dict[str, Any]) -> dict:
+def simulink_workspace_set(workspace_vars: dict[str, Any]) -> dict:
     """Set MATLAB base-workspace variables from a dict in one call."""
     session = MatlabSession.get()
-    raw = session.call("slx_workspace_set", vars, nargout=1)
+    raw = session.call("slx_workspace_set", workspace_vars, nargout=1)
     return _convert_element(raw)
 
 

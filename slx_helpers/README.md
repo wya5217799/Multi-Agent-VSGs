@@ -26,6 +26,8 @@ and are not general Simulink primitives:
 - `slx_extract_state.m`
 - `slx_build_bridge_config.m`
 - `slx_validate_model.m`
+- `slx_fastrestart_reset.m`
+- `slx_episode_warmup.m`
 
 Status: retained for VSG bridge compatibility. New generic MCP tools must not
 call these helpers directly.

@@ -41,10 +41,10 @@ def test_runtime_helpers_on_new_minimal_model(tmp_path):
         assert bool(reset["ok"])
 
         run = session.call("slx_run_window", model_name, 0.0, 0.01, True, nargout=1)
-        assert "ok" in run
+        assert bool(run["ok"])
 
         saved = session.call("slx_save_model", model_name, str(target_path), nargout=1)
-        assert "ok" in saved
+        assert bool(saved["ok"])
         assert Path(target_path).exists()
     finally:
         session.call("slx_close_model", model_name, nargout=0)

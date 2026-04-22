@@ -36,7 +36,7 @@ if str(_PROJECT_ROOT) not in sys.path:
 _SIMULINK_META: dict[str, dict[str, str]] = {
     "simulink_add_block":            {"group": "construct", "description": "Add a single block to a model"},
     "simulink_add_subsystem":        {"group": "construct", "description": "Add a subsystem container"},
-    "simulink_bridge_status":        {"group": "discover",  "description": "Check MCP bridge connectivity"},
+    "simulink_bridge_status":        {"group": "training_bridge", "description": "VSG/training bridge runtime state (step, Pe, delta, tripload) — NOT a connectivity check"},
     "simulink_capture_figure":       {"group": "capture",   "description": "Capture a MATLAB figure window"},
     "simulink_close_model":          {"group": "construct", "description": "Close an open model from MATLAB session"},
     "simulink_compile_diagnostics":  {"group": "verify",    "description": "Full compile with error/warning report"},
@@ -65,6 +65,10 @@ _SIMULINK_META: dict[str, dict[str, str]] = {
     "simulink_run_window":           {"group": "runtime",   "description": "Run a model over a controlled simulation window"},
     "simulink_runtime_reset":        {"group": "runtime",   "description": "Reset FastRestart/runtime state without project semantics"},
     "simulink_signal_snapshot":      {"group": "signals",   "description": "Read logged/ToWorkspace/block-output values at one time point"},
+}
+
+_PROJECT_ONLY_TOOLS: set[str] = {
+    "simulink_bridge_status",
 }
 
 # harness_* and training_* tools use a flat description string (no "group" field)
@@ -121,12 +125,22 @@ def _load_public_tool_names() -> list[str]:
 
 
 def _build_index(tool_names: list[str]) -> dict:
-    """Build the index.json dict from a list of tool function names."""
+    """Build the generic simulink-toolbox index from public tool names.
+
+    The installed skill is shared across projects, so the generated inventory
+    intentionally excludes this repository's harness, training, and VSG bridge
+    tools even though those tools remain public in this MCP server.
+    """
     simulink_tools = []
-    harness_tools = []
-    training_tools = []
+    skipped_project_tools = []
 
     for name in tool_names:
+        if name in _PROJECT_ONLY_TOOLS:
+            skipped_project_tools.append(name)
+            continue
+        if name.startswith(("harness_", "training_")):
+            skipped_project_tools.append(name)
+            continue
         if name.startswith("simulink_"):
             meta = _SIMULINK_META.get(name, {})
             entry: dict[str, str] = {"name": name}
@@ -134,36 +148,23 @@ def _build_index(tool_names: list[str]) -> dict:
                 entry["group"] = meta["group"]
             entry["description"] = meta.get("description", "")
             simulink_tools.append(entry)
-        elif name.startswith("harness_"):
-            harness_tools.append({
-                "name": name,
-                "description": _HARNESS_META.get(name, ""),
-            })
-        elif name.startswith("training_"):
-            training_tools.append({
-                "name": name,
-                "description": _TRAINING_META.get(name, ""),
-            })
         else:
             print(f"WARNING: unclassified tool skipped: {name}", file=sys.stderr)
 
     return {
         "meta": {
-            "source": "generated from mcp_server.PUBLIC_TOOLS, do not edit",
+            "source": "generated from mcp_server.PUBLIC_TOOLS filtered for generic simulink-toolbox use",
             "note": (
-                "This file is the L0 authority for tool inventory. "
-                "All other files reference this — do NOT hardcode counts elsewhere. "
+                "This file is the L0 authority for the generic installed skill inventory. "
+                "It intentionally excludes project-specific harness, training, and VSG bridge tools. "
                 "Regenerate with: python scripts/regen_skill_index.py"
             ),
+            "excluded_project_tools": skipped_project_tools,
         },
         "simulink_tools": simulink_tools,
-        "harness_tools": harness_tools,
-        "training_tools": training_tools,
         "summary": {
             "simulink_count": len(simulink_tools),
-            "harness_count": len(harness_tools),
-            "training_count": len(training_tools),
-            "total": len(simulink_tools) + len(harness_tools) + len(training_tools),
+            "total": len(simulink_tools),
         },
     }
 
@@ -207,7 +208,7 @@ def _run_check(index_path: Path, generated: str) -> int:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="Regenerate ~/.claude/skills/simulink-toolbox/index.json from PUBLIC_TOOLS."
+        description="Regenerate generic simulink-toolbox index.json files from PUBLIC_TOOLS."
     )
     parser.add_argument(
         "--check",

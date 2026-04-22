@@ -3,6 +3,7 @@
 Runs entirely offline (no MATLAB needed).
 """
 
+import json
 import os
 import subprocess
 import sys
@@ -12,6 +13,10 @@ import pytest
 
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 _SCRIPT = _PROJECT_ROOT / "scripts" / "regen_skill_index.py"
+
+
+def _load_generated_index(tmp_path: Path) -> dict:
+    return json.loads((tmp_path / "index.json").read_text(encoding="utf-8"))
 
 
 @pytest.mark.offline
@@ -41,3 +46,29 @@ def test_skill_index_consistent_with_public_tools(tmp_path: Path) -> None:
         f"--- stdout ---\n{check.stdout}\n"
         f"--- stderr ---\n{check.stderr}"
     )
+
+
+@pytest.mark.offline
+def test_generated_skill_index_is_generic_only(tmp_path: Path) -> None:
+    env = {**os.environ, "SKILL_DIR": str(tmp_path)}
+
+    gen = subprocess.run(
+        [sys.executable, str(_SCRIPT)],
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+    assert gen.returncode == 0, f"regen failed:\n{gen.stdout}\n{gen.stderr}"
+
+    payload = _load_generated_index(tmp_path)
+    assert "harness_tools" not in payload
+    assert "training_tools" not in payload
+
+    names = {tool["name"] for tool in payload["simulink_tools"]}
+    assert "simulink_bridge_status" not in names
+    assert all(name.startswith("simulink_") for name in names)
+
+    excluded = set(payload["meta"]["excluded_project_tools"])
+    assert "simulink_bridge_status" in excluded
+    assert any(name.startswith("harness_") for name in excluded)
+    assert any(name.startswith("training_") for name in excluded)

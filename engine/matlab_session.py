@@ -4,7 +4,7 @@
 Provides a singleton-per-session_id wrapper around matlab.engine with:
 - Lazy initialization (engine starts on first call)
 - Passive reconnect (no health-check ping; reconnect only on failure)
-- Auto addpath for slx_helpers/ on first connect
+- Auto addpath for slx_helpers/ and slx_helpers/vsg_bridge/ on first connect
 - Structured error wrapping via MatlabCallError
 - DEBUG-level logging of every call() with elapsed time
 """
@@ -61,10 +61,11 @@ class MatlabSession:
     def __init__(self) -> None:
         self._eng: Any = None
         self._session_id: Optional[str] = None
-        self._helpers_path: str = os.path.join(
-            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-            "slx_helpers",
-        )
+        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        self._helper_paths: list[str] = [
+            os.path.join(project_root, "slx_helpers"),
+            os.path.join(project_root, "slx_helpers", "vsg_bridge"),
+        ]
 
     @classmethod
     def get(cls, session_id: str = "default") -> MatlabSession:
@@ -91,12 +92,14 @@ class MatlabSession:
             )
         logger.info("Starting MATLAB engine (session=%s) ...", self._session_id)
         self._eng = me.start_matlab()
-        # Auto-addpath for slx_helpers
-        if os.path.isdir(self._helpers_path):
-            self._eng.addpath(self._helpers_path, nargout=0)
-            logger.debug("Added to MATLAB path: %s", self._helpers_path)
-        else:
-            logger.warning("slx_helpers dir not found: %s", self._helpers_path)
+        # Auto-addpath for MATLAB helper layers. Keep these explicit instead
+        # of using genpath so cache/build folders are not added accidentally.
+        for helper_path in self._helper_paths:
+            if os.path.isdir(helper_path):
+                self._eng.addpath(helper_path, nargout=0)
+                logger.debug("Added to MATLAB path: %s", helper_path)
+            else:
+                logger.warning("MATLAB helper dir not found: %s", helper_path)
         logger.info("MATLAB engine ready (session=%s).", self._session_id)
 
     def _get_engine(self) -> Any:

@@ -1313,3 +1313,25 @@ class TestGeneralRuntimeWrappers:
             "slx_signal_snapshot", "demo", 0.05, ["freq_out"], False, nargout=1
         )
         assert result["ok"] is True
+
+
+class TestMatlabSessionHelperPaths:
+    def setup_method(self):
+        from engine.matlab_session import MatlabSession
+        MatlabSession._instances.clear()
+
+    @patch("engine.matlab_session.matlab_engine", create=True)
+    def test_connect_adds_core_and_vsg_bridge_helper_paths(self, mock_me):
+        from engine.matlab_session import MatlabSession
+
+        mock_eng = MagicMock()
+        mock_eng.sqrt = MagicMock(return_value=2.0)
+        mock_me.start_matlab.return_value = mock_eng
+
+        session = MatlabSession.get()
+        assert session.call("sqrt", 4.0) == 2.0
+
+        repo_root = Path(__file__).resolve().parents[1]
+        addpath_paths = [call.args[0] for call in mock_eng.addpath.call_args_list]
+        assert str(repo_root / "slx_helpers") in addpath_paths
+        assert str(repo_root / "slx_helpers" / "vsg_bridge") in addpath_paths

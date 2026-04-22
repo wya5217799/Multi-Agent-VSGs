@@ -74,7 +74,7 @@ def training_compare_runs(scenario_id: str, run_ids: list[str]) -> dict[str, Any
     """Compare verdicts and key metrics across multiple runs of the same scenario.
 
     Args:
-        scenario_id: e.g. "sim_kundur"
+        scenario_id: "kundur" or "ne39"
         run_ids: list of run directory names to compare
 
     Returns dict with keys: scenario_id, comparisons (list of per-run summaries),

@@ -286,3 +286,36 @@ def test_diagnose_physics_no_metrics_file(tmp_path, monkeypatch):
     pd = result["physics_diagnosis"]
     assert pd["pattern"] is None
     assert "not found" in pd["evidence"]
+
+
+def test_training_compare_runs_doc_uses_contract_scenario_ids():
+    from engine.training_tasks import training_compare_runs
+
+    doc = training_compare_runs.__doc__ or ""
+    assert '"kundur" or "ne39"' in doc
+    assert 'e.g. "sim_kundur"' not in doc
+
+
+def test_training_compare_runs_passes_canonical_scenario_id(monkeypatch):
+    import engine.training_tasks as tt
+
+    calls = []
+
+    def fake_evaluate_run(scenario_id, run_id):
+        calls.append((scenario_id, run_id))
+        return {
+            "scenario_id": scenario_id,
+            "run_id": run_id,
+            "verdict": "PASS",
+            "episode_count": 10,
+            "metrics": {"reward_mean_recent": -10.0},
+            "reasons": [],
+        }
+
+    monkeypatch.setattr(tt, "training_evaluate_run", fake_evaluate_run)
+
+    result = tt.training_compare_runs("kundur", ["run_a", "run_b"])
+
+    assert calls == [("kundur", "run_a"), ("kundur", "run_b")]
+    assert result["scenario_id"] == "kundur"
+    assert result["best_run"] == "run_a"

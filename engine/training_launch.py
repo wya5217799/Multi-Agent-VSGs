@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any
 
 from engine.harness_reference import load_scenario_reference
+from scenarios.contract import get_contract
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
@@ -53,15 +54,13 @@ def _resolve_python_exe() -> Path:
 
 _PYTHON_EXE = _resolve_python_exe()
 
-_TRAIN_ENTRIES = {
-    "kundur": "scenarios/kundur/train_simulink.py",
-    "ne39":   "scenarios/new_england/train_simulink.py",
-}
-
-_MODEL_PATHS = {
-    "kundur": "scenarios/kundur/simulink_models/kundur_vsg.slx",
-    "ne39":   "scenarios/new_england/simulink_models/NE39bus_v2.slx",
-}
+def _scenario_launch_facts(scenario_id: str) -> tuple[str, str, Path]:
+    """Return contract-derived train entry, model name, and model file path."""
+    contract = get_contract(scenario_id)
+    train_entry = contract.train_entry.as_posix()
+    model_name = contract.model_name
+    model_file = contract.model_dir / f"{contract.model_name}.slx"
+    return train_entry, model_name, model_file
 
 
 def get_training_launch_status(scenario_id: str) -> dict[str, Any]:
@@ -77,16 +76,24 @@ def get_training_launch_status(scenario_id: str) -> dict[str, Any]:
         return {"supported": False, "scenario_id": scenario_id,
                 "error": "unknown scenario_id"}
 
+    try:
+        contract_train_entry, contract_model_name, contract_model_file = (
+            _scenario_launch_facts(scenario_id)
+        )
+    except ValueError:
+        return {
+            "supported": False,
+            "scenario_id": scenario_id,
+            "error": "unknown scenario_id",
+        }
+
     facts = {item["key"]: item["value"] for item in ref.get("reference_items", [])}
 
-    train_entry = facts.get("training_entry",
-                            _TRAIN_ENTRIES.get(scenario_id, ""))
-    model_name  = facts.get("model_name", "")
+    train_entry = facts.get("training_entry", contract_train_entry)
+    model_name = facts.get("model_name", contract_model_name)
 
-    # --- does the model file exist? ---
-    slx_rel      = _MODEL_PATHS.get(scenario_id, "")
-    slx_abs      = _PROJECT_ROOT / slx_rel
-    model_exists = slx_abs.exists() if slx_rel else None
+    slx_abs = _PROJECT_ROOT / contract_model_file
+    model_exists = slx_abs.exists()
 
     # --- inspect the latest run (status-aware, ghost-proof via find_latest_run) ---
     from utils.run_protocol import find_latest_run as _find_latest, \

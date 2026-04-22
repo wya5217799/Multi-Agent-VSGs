@@ -85,16 +85,23 @@ class TestGetTrainingLaunchStatus:
         result = tl.get_training_launch_status("kundur")
         assert result["model_name"] == "my_model"
 
-    def test_fallback_train_entry_from_builtin_map(self, monkeypatch, tmp_path):
-        """When harness ref has no training_entry key, fall back to _TRAIN_ENTRIES."""
+    def test_training_launch_uses_scenario_contract_instead_of_duplicate_maps(self):
         import engine.training_launch as tl
-        monkeypatch.setattr(tl, "load_scenario_reference",
-                            lambda sid: _fake_ref(sid))   # no training_entry in ref
+
+        assert not hasattr(tl, "_TRAIN_ENTRIES")
+        assert not hasattr(tl, "_MODEL_PATHS")
+
+    def test_fallback_train_entry_from_scenario_contract(self, monkeypatch, tmp_path):
+        """When harness ref has no training_entry key, use scenarios.contract."""
+        import engine.training_launch as tl
+        monkeypatch.setattr(tl, "load_scenario_reference", lambda sid: _fake_ref(sid))
         monkeypatch.setattr(tl, "_PROJECT_ROOT", tmp_path)
         monkeypatch.setattr(tl, "_find_active_pid", lambda _: None)
 
         result = tl.get_training_launch_status("kundur")
         assert result["train_entry"] == "scenarios/kundur/train_simulink.py"
+        assert result["model_name"] == "kundur_vsg"
+        assert result["launch"]["script"] == "scenarios/kundur/train_simulink.py"
 
     def test_active_pid_surfaced_when_kundur_process_running(self, monkeypatch, tmp_path):
         """active_pid from _find_active_pid is included in the result for kundur."""
@@ -151,18 +158,17 @@ class TestLaunchField:
         assert isinstance(result["launch"]["args"], list)
         assert len(result["launch"]["args"]) > 0
 
-    def test_launch_is_none_when_no_train_entry(self, monkeypatch, tmp_path):
-        """Unknown scenario_id in _TRAIN_ENTRIES and no ref entry → launch is None."""
+    def test_known_contract_scenario_has_launch_when_ref_lacks_train_entry(
+        self, monkeypatch, tmp_path
+    ):
         import engine.training_launch as tl
-        monkeypatch.setattr(tl, "load_scenario_reference",
-                            lambda sid: _fake_ref(sid))   # no training_entry
+        monkeypatch.setattr(tl, "load_scenario_reference", lambda sid: _fake_ref(sid))
         monkeypatch.setattr(tl, "_PROJECT_ROOT", tmp_path)
         monkeypatch.setattr(tl, "_find_active_pid", lambda _: None)
-        # Use a scenario not in _TRAIN_ENTRIES fallback map
-        monkeypatch.setitem(tl._TRAIN_ENTRIES, "kundur", "")
 
-        result = tl.get_training_launch_status("kundur")
-        assert result["launch"] is None
+        result = tl.get_training_launch_status("ne39")
+        assert result["launch"] is not None
+        assert result["launch"]["script"] == "scenarios/new_england/train_simulink.py"
 
     def test_recommended_command_contains_python_executable(self, monkeypatch, tmp_path):
         result = self._status(monkeypatch, tmp_path)

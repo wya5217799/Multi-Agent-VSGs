@@ -66,3 +66,10 @@ def test_write_task_record_writes_task_json_in_run_dir(tmp_path, monkeypatch):
         "status": "ok",
         "details": {"blocks": 3},
     }
+
+
+def test_model_report_surfaces_alignment_warnings():
+    payload = {
+        "semantic_alignment": ["pref_ramp present while profile forbids it"]
+    }
+    assert payload["semantic_alignment"][0].startswith("pref_ramp")

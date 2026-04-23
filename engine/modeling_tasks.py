@@ -315,6 +315,16 @@ def harness_model_inspect(
         record.summary.append(f"model_inspect FAILED ({failure_class}): {hint}")
         return finish(record, extra=extra)
 
+    # Semantic manifest — attach path; load and validate if already written by MATLAB
+    semantic_manifest_path = run_dir / "attachments" / "semantic_manifest.json"
+    semantic_alignment: list[str] = []
+    if scenario_id == "kundur" and semantic_manifest_path.exists():
+        import json as _json_sm
+        from scenarios.kundur.config_simulink import KUNDUR_MODEL_PROFILE as _kundur_profile
+        from scenarios.kundur.manifest_contract import validate_kundur_alignment as _val_align
+        _manifest_payload = _json_sm.loads(semantic_manifest_path.read_text(encoding="utf-8"))
+        semantic_alignment = _val_align(_kundur_profile, _manifest_payload)
+
     extra = {
         "model_loaded": bool(load_result.get("ok", False)),
         "loaded_models": load_result.get("loaded_models", []),
@@ -323,6 +333,8 @@ def harness_model_inspect(
         "solver_audit": solver_audit,
         "param_suspects": param_suspects,
         "reference_validation": reference_validation,
+        "semantic_manifest_artifact": str(semantic_manifest_path),
+        "semantic_alignment": semantic_alignment,
         "recommended_next_task": (recommended_next_tasks_for("model_inspect", record.status) or ["model_patch_verify"])[0],
         "_timings": _timings,
     }
@@ -330,6 +342,10 @@ def harness_model_inspect(
         record_failure(record, "tool_error", "Failed to load model", load_result)
     elif reference_validation["has_warnings"]:
         record.status = "warning"
+    if semantic_alignment:
+        record.summary.append(f"semantic_alignment={len(semantic_alignment)} issues")
+        if record.status not in ("failed",):
+            record.status = "warning"
     ref_status = "ok" if not reference_validation["has_warnings"] else f"{len(reference_validation['mismatch_keys'])} mismatch(es)"
     record.summary.append(
         f"model_inspect: loaded={bool(load_result.get('ok'))}, ref={ref_status}, elapsed={_timings.get('total', '?')}s"
@@ -547,6 +563,13 @@ def harness_model_report(
     warning_tasks = [item.get("task", "") for item in prior_records if item.get("status") == "warning"]
     run_status = "failed" if failed_tasks else "warning" if warning_tasks else "ok"
     key_findings = _collect_findings(prior_records)
+    # Surface semantic alignment drift from model_inspect record
+    for _pr in prior_records:
+        _alignment = _pr.get("semantic_alignment", [])
+        if _alignment:
+            key_findings.extend(_alignment)
+            if run_status == "ok":
+                run_status = "warning"
     # recommended_followups: optional suggestions for the caller — not facts,
     # not used as preconditions by any harness task (preconditions read run_status
     # and failed_tasks only).

@@ -47,3 +47,12 @@ def test_modeling_tasks_constant():
     assert "scenario_status" in _MODELING_TASKS
     assert "model_report" in _MODELING_TASKS
     assert len(_MODELING_TASKS) == 5
+
+
+def test_model_inspect_adds_semantic_manifest_artifact(tmp_path):
+    result = {
+        "semantic_manifest_artifact": str(tmp_path / "semantic_manifest.json"),
+        "semantic_alignment": [],
+    }
+    assert result["semantic_manifest_artifact"].endswith("semantic_manifest.json")
+    assert result["semantic_alignment"] == []

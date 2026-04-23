@@ -93,3 +93,9 @@
 - **C4 PASS 而 delta=-90° 的含义**：drift=0 deg/step 不是"稳定"，而是 IntD 积分器触下限（-π/2）后停止运动（hard clamp）。说明 warmup 期间发散已完成，T_WARMUP 延长未必有效（若冲击在最初 0.1s 内触发饱和）。
 
 - **下一步**：读 `probes/kundur/validate_phase3_zero_action.py` 追查 T_WARMUP import 路径；检查 `slx_helpers/slx_warmup.m` 内实际使用的 t_warmup 值来源；分析 ConvGen omega 在 t=0 的冲击大小与时间尺度。
+
+## Active migration rule
+
+- JSON profile controls only known semantic slots.
+- Semantic manifest is the exported fact layer.
+- Reintroducing `PrefRamp_*` or long physical warmup on the SPS path is a regression.

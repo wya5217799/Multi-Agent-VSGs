@@ -1,3 +1,10 @@
+% USAGE CONTRACT
+% This function is NOT called automatically by the Python harness.
+% To export: call via simulink_run_script after simulink_load_model succeeds.
+%   export_kundur_semantic_manifest(model_name, out_path)
+% where out_path = results/harness/<scenario>/<run_id>/attachments/semantic_manifest.json
+% The Python harness (harness_model_inspect) reads this file on demand if it exists.
+
 function payload = export_kundur_semantic_manifest(model_name, out_path)
 load_system(model_name);
 

@@ -344,6 +344,7 @@ def harness_model_inspect(
         record.status = "warning"
     if semantic_alignment:
         record.summary.append(f"semantic_alignment={len(semantic_alignment)} issues")
+        # Alignment drift is "warning" not "failed": model may work but intent diverges from profile.
         if record.status not in ("failed",):
             record.status = "warning"
     ref_status = "ok" if not reference_validation["has_warnings"] else f"{len(reference_validation['mismatch_keys'])} mismatch(es)"

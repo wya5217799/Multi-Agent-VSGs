@@ -23,17 +23,17 @@ from scenarios.config_simulink_base import (
     PHI_H, PHI_D, TDS_FAIL_PENALTY,
 )
 
-import os as _os_profile
-from pathlib import Path as _Path
+import os as _os
+from pathlib import Path
 from scenarios.kundur.model_profile import load_kundur_model_profile
 
 DEFAULT_KUNDUR_MODEL_PROFILE = (
-    _Path(__file__).resolve().parent / "model_profiles" / "kundur_ee_legacy.json"
+    Path(__file__).resolve().parent / "model_profiles" / "kundur_ee_legacy.json"
 )
 
 
 def load_runtime_kundur_profile():
-    path = _os_profile.getenv("KUNDUR_MODEL_PROFILE", str(DEFAULT_KUNDUR_MODEL_PROFILE))
+    path = _os.getenv("KUNDUR_MODEL_PROFILE", str(DEFAULT_KUNDUR_MODEL_PROFILE))
     return load_kundur_model_profile(path)
 
 

@@ -986,14 +986,11 @@ def test_kundur_default_profile_is_legacy():
     assert KUNDUR_MODEL_PROFILE.profile_id == "kundur_ee_legacy"
 
 
-def test_kundur_candidate_profile_can_be_selected(monkeypatch, tmp_path):
+def test_kundur_candidate_profile_can_be_selected(monkeypatch):
     monkeypatch.setenv(
         "KUNDUR_MODEL_PROFILE",
         str(Path(__file__).resolve().parent.parent / "scenarios/kundur/model_profiles/kundur_sps_candidate.json"),
     )
-    import importlib
-    import scenarios.kundur.config_simulink as csim
-    importlib.reload(csim)
     from scenarios.kundur.config_simulink import load_runtime_kundur_profile
     profile = load_runtime_kundur_profile()
     assert profile.profile_id == "kundur_sps_candidate"

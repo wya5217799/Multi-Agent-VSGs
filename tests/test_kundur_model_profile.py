@@ -7,10 +7,12 @@ from scenarios.kundur.model_profile import (
     parse_kundur_model_profile,
 )
 
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+
 
 def test_legacy_profile_declares_feedback_and_physics_warmup():
     profile = load_kundur_model_profile(
-        Path("scenarios/kundur/model_profiles/kundur_ee_legacy.json")
+        _REPO_ROOT / "scenarios/kundur/model_profiles/kundur_ee_legacy.json"
     )
     assert profile.solver_family == "simscape_ee"
     assert profile.pe_measurement == "feedback"
@@ -19,7 +21,7 @@ def test_legacy_profile_declares_feedback_and_physics_warmup():
 
 def test_candidate_profile_declares_vi_and_sps():
     profile = load_kundur_model_profile(
-        Path("scenarios/kundur/model_profiles/kundur_sps_candidate.json")
+        _REPO_ROOT / "scenarios/kundur/model_profiles/kundur_sps_candidate.json"
     )
     assert profile.solver_family == "sps_phasor"
     assert profile.pe_measurement == "vi"

@@ -3,8 +3,14 @@ from __future__ import annotations
 from scenarios.kundur.model_profile import KundurModelProfile
 
 
+_REQUIRED_KEYS = ("solver", "initialization", "measurement")
+
+
 def validate_kundur_alignment(profile: KundurModelProfile, manifest: dict) -> list[str]:
     issues: list[str] = []
+    missing = [k for k in _REQUIRED_KEYS if k not in manifest]
+    if missing:
+        return [f"missing required manifest key: {k}" for k in missing]
     if manifest["solver"]["family"] != profile.solver_family:
         issues.append("solver_family mismatch")
     if manifest["measurement"]["mode"] != profile.pe_measurement:

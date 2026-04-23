@@ -99,3 +99,5 @@
 - JSON profile controls only known semantic slots.
 - Semantic manifest is the exported fact layer.
 - Reintroducing `PrefRamp_*` or long physical warmup on the SPS path is a regression.
+- `validate_phase3_zero_action.py` now checks SPS invariants: early Pe convergence + no -90° false stability.
+- `probe_warmup_trajectory.m` verifies reset consistency across episodes (run via simulink_run_script).

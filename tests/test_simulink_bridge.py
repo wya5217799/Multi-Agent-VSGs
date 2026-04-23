@@ -994,3 +994,30 @@ def test_kundur_candidate_profile_can_be_selected(monkeypatch):
     from scenarios.kundur.config_simulink import load_runtime_kundur_profile
     profile = load_runtime_kundur_profile()
     assert profile.profile_id == "kundur_sps_candidate"
+
+
+def test_candidate_profile_implies_vi_measurement_and_loadflow_phase():
+    from scenarios.kundur.model_profile import load_kundur_model_profile
+    _REPO_ROOT = Path(__file__).resolve().parent.parent
+    profile = load_kundur_model_profile(
+        _REPO_ROOT / "scenarios/kundur/model_profiles/kundur_sps_candidate.json"
+    )
+    assert profile.pe_measurement == "vi"
+    assert profile.phase_command_mode == "absolute_with_loadflow"
+    assert not profile.feature_flags.allow_feedback_only_pe_chain
+
+
+def test_candidate_manifest_feedback_measurement_fails_alignment():
+    from scenarios.kundur.model_profile import load_kundur_model_profile
+    from scenarios.kundur.manifest_contract import validate_kundur_alignment
+    _REPO_ROOT = Path(__file__).resolve().parent.parent
+    profile = load_kundur_model_profile(
+        _REPO_ROOT / "scenarios/kundur/model_profiles/kundur_sps_candidate.json"
+    )
+    manifest = {
+        "solver": {"family": "sps_phasor", "has_solver_config": False},
+        "initialization": {"uses_pref_ramp": False, "warmup_mode": "technical_reset_only"},
+        "measurement": {"mode": "feedback"},
+    }
+    issues = validate_kundur_alignment(profile, manifest)
+    assert any("pe_measurement" in issue for issue in issues)

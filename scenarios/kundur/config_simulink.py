@@ -23,6 +23,22 @@ from scenarios.config_simulink_base import (
     PHI_H, PHI_D, TDS_FAIL_PENALTY,
 )
 
+import os as _os_profile
+from pathlib import Path as _Path
+from scenarios.kundur.model_profile import load_kundur_model_profile
+
+DEFAULT_KUNDUR_MODEL_PROFILE = (
+    _Path(__file__).resolve().parent / "model_profiles" / "kundur_ee_legacy.json"
+)
+
+
+def load_runtime_kundur_profile():
+    path = _os_profile.getenv("KUNDUR_MODEL_PROFILE", str(DEFAULT_KUNDUR_MODEL_PROFILE))
+    return load_kundur_model_profile(path)
+
+
+KUNDUR_MODEL_PROFILE = load_runtime_kundur_profile()
+
 # ========== Kundur-specific warmup override ==========
 # ConvGen and VSG P_ref ramps start at 0 (X0=0 in build_powerlib_kundur.m),
 # so T_WARMUP must cover the full T_ramp=2s plus settling time (~1s).
@@ -144,7 +160,7 @@ import os as _os
 from engine.simulink_bridge import BridgeConfig
 
 KUNDUR_BRIDGE_CONFIG = BridgeConfig(
-    model_name='kundur_vsg',
+    model_name=KUNDUR_MODEL_PROFILE.model_name,
     model_dir=SIMULINK_MODEL_DIR or _os.path.join(
         _os.path.dirname(_os.path.abspath(__file__)), 'simulink_models'
     ),
@@ -159,7 +175,7 @@ KUNDUR_BRIDGE_CONFIG = BridgeConfig(
     pe_path_template='{model}/Pe_{idx}',
     src_path_template='{model}/VSrc_ES{idx}',
     p_out_signal='P_out_ES{idx}',        # DEBUG ONLY — swing eq output, not for training
-    pe_measurement='feedback',            # true electrical Pe from PeGain_ES ToWorkspace
+    pe_measurement=KUNDUR_MODEL_PROFILE.pe_measurement,
     pe_feedback_signal='PeFb_ES{idx}',   # PeGain_ES{idx} output, VSG-base pu
     # Dynamic Load disturbance: per-phase W stored in base workspace.
     # Bus14: TripLoad1_P = 248/3 MW per phase (nominal load on).
@@ -172,8 +188,3 @@ KUNDUR_BRIDGE_CONFIG = BridgeConfig(
     breaker_step_block_template='',
     breaker_count=0,
 )
-
-if KUNDUR_BRIDGE_CONFIG.pe_measurement != 'feedback':
-    raise ValueError(
-        "Kundur main training path must use 'feedback' mode; 'pout' is debug only."
-    )

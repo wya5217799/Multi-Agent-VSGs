@@ -600,7 +600,16 @@ class KundurSimulinkEnv(_KundurBaseEnv):
         comm_delay_steps: int = 0,
         render_mode: Optional[str] = None,
         training: bool = True,
+        model_profile_path: Optional[str] = None,
     ):
+        from scenarios.kundur.config_simulink import DEFAULT_KUNDUR_MODEL_PROFILE
+        from scenarios.kundur.model_profile import load_kundur_model_profile
+        selected_path = model_profile_path or os.getenv(
+            "KUNDUR_MODEL_PROFILE",
+            str(DEFAULT_KUNDUR_MODEL_PROFILE),
+        )
+        self._runtime_profile = load_kundur_model_profile(selected_path)
+
         super().__init__(
             comm_delay_steps=comm_delay_steps,
             render_mode=render_mode,

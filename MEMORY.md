@@ -20,6 +20,12 @@ This file is an index only — do not maintain a parallel Start Here list here.
 - [MCP/Simulink 系统演进计划（跨会话进度追踪）](docs/decisions/evolution-plan.md) — B/C/D/E1-E2/F/H + ACL + Z1 全部完成；E3/G directional
 - [2026-04-17 Control Surface Convention](docs/decisions/2026-04-17-control-surface-convention.md) — harness=quality gate / smoke=bridge / training=control surface；control_manifest.toml 合并两旧 manifest
 
+- [2026-04-22 Simulink MCP generalization boundary](docs/decisions/2026-04-22-simulink-mcp-generalization-boundary.md) - general `simulink_*` tools use Simulink vocabulary; VSG/RL semantics stay in project adapters
+
+## Plans (Pending)
+
+- [2026-04-22 Simulink MCP generalization implementation plan](docs/superpowers/plans/2026-04-22-simulink-mcp-generalization-plan.md) - staged plan for general runtime/signal/workspace tools, skill routing, and VSG bridge compatibility
+
 ## Plans (Executed)
 
 - [2026-04-12 Agent Control Layer Restructure](docs/history/superpowers/plans/2026-04-12-agent-control-layer-restructure.md) — 双控制线(Model+Training)+单 TOML manifest+导航可测性；Task 1-4 + Z1 全部完成(95bbca7)

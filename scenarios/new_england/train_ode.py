@@ -37,12 +37,15 @@ def parse_args():
     return p.parse_args()
 
 
-def _adaptive_inertia_action_ne(obs_dict, N, k_h=0.1, k_d=2.0):
+def _adaptive_inertia_action_ne(obs_dict, N, k_h=0.1):
     """
-    Adaptive inertia-droop control baseline (论文 ref [25]).
+    Adaptive inertia control baseline (论文 ref [25]).
 
-    ΔH_i = k_h * Δω_i * dω_i/dt   (自适应惯量, 符号修正)
-    ΔD_i = k_d * |Δω_i|            (自适应阻尼)
+    ΔH_i = k_h * Δω_i * dω_i/dt   (自适应惯量)
+    ΔD_i = 0                        (论文[25]只有 ΔH 自适应，ΔD 取固定值/零)
+
+    动作使用 zero-centered 编码与 ScalableVSGEnv.step 一致:
+      a = δH / DH_MAX  (δH≥0) 或  δH / (-DH_MIN)  (δH<0)
     """
     actions = {}
     for i in range(N):
@@ -51,11 +54,8 @@ def _adaptive_inertia_action_ne(obs_dict, N, k_h=0.1, k_d=2.0):
         omega_dot = o[2] * 5.0
         delta_H = k_h * omega * omega_dot
         delta_H = np.clip(delta_H, cfg.DH_MIN, cfg.DH_MAX)
-        delta_D = k_d * abs(omega)
-        delta_D = np.clip(delta_D, cfg.DD_MIN, cfg.DD_MAX)
-        a0 = (delta_H - cfg.DH_MIN) / (cfg.DH_MAX - cfg.DH_MIN) * 2 - 1
-        a1 = (delta_D - cfg.DD_MIN) / (cfg.DD_MAX - cfg.DD_MIN) * 2 - 1
-        actions[i] = np.array([a0, a1], dtype=np.float32)
+        a0 = float(delta_H / cfg.DH_MAX if delta_H >= 0 else delta_H / (-cfg.DH_MIN))
+        actions[i] = np.array([a0, 0.0], dtype=np.float32)
     return actions
 
 
@@ -102,10 +102,8 @@ def main():
     fault_du = np.zeros(N)
     fault_du[7] = -15.0  # 风电场脱网
 
-    # 正确的 "无控制" 动作: ΔH=0, ΔD=0 → 保持基础参数不变
-    a0_fixed = (0 - cfg.DH_MIN) / (cfg.DH_MAX - cfg.DH_MIN) * 2 - 1
-    a1_fixed = (0 - cfg.DD_MIN) / (cfg.DD_MAX - cfg.DD_MIN) * 2 - 1
-    fixed_action = np.array([a0_fixed, a1_fixed], dtype=np.float32)
+    # 无控制动作: ΔH=0, ΔD=0 → zero-centered 编码下 action=(0,0)
+    fixed_action = np.array([0.0, 0.0], dtype=np.float32)
 
     def run_ne_episode(mgr, delta_u, use_rl=True, det=True, control_mode='rl'):
         env_test = ScalableVSGEnv(N, random_disturbance=False, comm_fail_prob=0.0, fn=60.0)

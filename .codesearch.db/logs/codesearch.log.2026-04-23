@@ -1,0 +1,228 @@
+2026-04-23T21:00:14.621421Z  INFO codesearch::logger: Logger initialized: level=info, log_dir="\\\\?\\C:\\Users\\27443\\Desktop\\Multi-Agent  VSGs\\.codesearch.db\\logs", max_files=5, retention_days=5
+2026-04-23T21:00:14.621495Z  INFO codesearch::mcp: 📂 Project: \\?\C:\Users\27443\Desktop\Multi-Agent  VSGs
+2026-04-23T21:00:14.621512Z  INFO codesearch::mcp: 💾 Database: \\?\C:\Users\27443\Desktop\Multi-Agent  VSGs\.codesearch.db
+2026-04-23T21:00:14.621644Z  INFO codesearch::mcp: 📦 Creating shared stores...
+2026-04-23T21:00:14.625647Z  INFO codesearch::index::manager: 📦 SharedStores created in read-write mode
+2026-04-23T21:00:14.626557Z  INFO codesearch::mcp: 🧠 Model: sentence-transformers/all-MiniLM-L6-v2 (quantized)
+2026-04-23T21:00:14.626566Z  INFO codesearch::mcp: 🚀 Starting MCP server...
+2026-04-23T21:00:14.629394Z  INFO rmcp::handler::server: client initialized
+2026-04-23T21:00:14.629485Z  INFO serve_inner: rmcp::service: Service initialized as server peer_info=Some(InitializeRequestParam { protocol_version: ProtocolVersion("2025-11-25"), capabilities: ClientCapabilities { experimental: None, roots: Some(RootsCapabilities { list_changed: None }), sampling: None, elicitation: Some(ElicitationCapability { schema_validation: None }) }, client_info: Implementation { name: "claude-code", title: None, version: "2.1.84", icons: None, website_url: None } })
+2026-04-23T21:00:14.629529Z  INFO codesearch::mcp: MCP server ready. Waiting for requests...
+2026-04-23T21:00:14.629534Z  INFO codesearch::mcp: 🔍 Initializing index manager...
+2026-04-23T21:00:14.629553Z  INFO codesearch::index::manager: 🔍 Initializing index manager (no refresh) for: \\?\C:\Users\27443\Desktop\Multi-Agent  VSGs
+2026-04-23T21:00:14.629745Z  INFO codesearch::index::manager: ✅ Index manager initialized successfully (refresh skipped)
+2026-04-23T21:00:14.629840Z  INFO codesearch::mcp: 🧹 Running initial log cleanup...
+2026-04-23T21:00:14.630418Z  INFO codesearch::logger: Log cleanup task started: interval=24h, retention_days=5, max_files=5
+2026-04-23T21:00:15.132359Z  INFO codesearch::index::manager: 👀 File watcher pre-started (collecting events)
+2026-04-23T21:00:15.132377Z  INFO codesearch::mcp: 🔄 Starting background incremental refresh...
+2026-04-23T21:00:15.132388Z  INFO codesearch::index::manager: 🔄 Performing incremental refresh with shared stores...
+2026-04-23T21:06:10.503573Z  INFO codesearch::logger: Logger initialized: level=info, log_dir="\\\\?\\C:\\Users\\27443\\Desktop\\Multi-Agent  VSGs\\.codesearch.db\\logs", max_files=5, retention_days=5
+2026-04-23T21:06:10.503654Z  INFO codesearch::mcp: 📂 Project: \\?\C:\Users\27443\Desktop\Multi-Agent  VSGs
+2026-04-23T21:06:10.503670Z  INFO codesearch::mcp: 💾 Database: \\?\C:\Users\27443\Desktop\Multi-Agent  VSGs\.codesearch.db
+2026-04-23T21:06:10.503862Z  INFO codesearch::mcp: 📦 Creating shared stores...
+2026-04-23T21:06:10.512316Z  INFO codesearch::index::manager: 📦 SharedStores created in read-write mode
+2026-04-23T21:06:10.513324Z  INFO codesearch::mcp: 🧠 Model: sentence-transformers/all-MiniLM-L6-v2 (quantized)
+2026-04-23T21:06:10.513342Z  INFO codesearch::mcp: 🚀 Starting MCP server...
+2026-04-23T21:06:10.765474Z  INFO rmcp::handler::server: client initialized
+2026-04-23T21:06:10.765601Z  INFO serve_inner: rmcp::service: Service initialized as server peer_info=Some(InitializeRequestParam { protocol_version: ProtocolVersion("2025-11-25"), capabilities: ClientCapabilities { experimental: None, roots: Some(RootsCapabilities { list_changed: None }), sampling: None, elicitation: Some(ElicitationCapability { schema_validation: None }) }, client_info: Implementation { name: "claude-code", title: Some("Claude Code"), version: "2.1.111", icons: None, website_url: Some("https://claude.com/claude-code") } })
+2026-04-23T21:06:10.765655Z  INFO codesearch::mcp: MCP server ready. Waiting for requests...
+2026-04-23T21:06:10.765665Z  INFO codesearch::mcp: 🔍 Initializing index manager...
+2026-04-23T21:06:10.765690Z  INFO codesearch::index::manager: 🔍 Initializing index manager (no refresh) for: \\?\C:\Users\27443\Desktop\Multi-Agent  VSGs
+2026-04-23T21:06:10.766320Z  INFO codesearch::index::manager: ✅ Index manager initialized successfully (refresh skipped)
+2026-04-23T21:06:10.769220Z  INFO codesearch::mcp: 🧹 Running initial log cleanup...
+2026-04-23T21:06:10.769696Z  INFO codesearch::logger: Log cleanup task started: interval=24h, retention_days=5, max_files=5
+2026-04-23T21:06:10.984629Z  INFO codesearch::index::manager: 👀 File watcher pre-started (collecting events)
+2026-04-23T21:06:10.984649Z  INFO codesearch::mcp: 🔄 Starting background incremental refresh...
+2026-04-23T21:06:10.984657Z  INFO codesearch::index::manager: 🔄 Performing incremental refresh with shared stores...
+2026-04-23T21:06:11.084927Z  INFO codesearch::file: File discovery complete:
+2026-04-23T21:06:11.084948Z  INFO codesearch::file:   Total files found: 644
+2026-04-23T21:06:11.084954Z  INFO codesearch::file:   Indexable files: 277
+2026-04-23T21:06:11.084959Z  INFO codesearch::file:   Binary/skipped: 140
+2026-04-23T21:06:11.085338Z  INFO codesearch::file:   Total size: 2.68 MB
+2026-04-23T21:06:11.085365Z  INFO codesearch::file:   Files by language:
+2026-04-23T21:06:11.085372Z  INFO codesearch::file:     Python: 187
+2026-04-23T21:06:11.085379Z  INFO codesearch::file:     Markdown: 82
+2026-04-23T21:06:11.085385Z  INFO codesearch::file:     JSON: 5
+2026-04-23T21:06:11.085390Z  INFO codesearch::file:     TOML: 2
+2026-04-23T21:06:11.085395Z  INFO codesearch::file:     Shell: 1
+2026-04-23T21:06:11.104321Z  INFO codesearch::index::manager:    Unchanged: 275, Changed: 2, Deleted: 0
+2026-04-23T21:06:11.122156Z  INFO codesearch::index::manager: 🔄 Processing 2 changed files...
+2026-04-23T21:06:11.122925Z  INFO codesearch::index::manager: 📦 Embedding 16 chunks...
+2026-04-23T21:06:12.183152Z  INFO codesearch::index::manager: ✅ Indexed 16 chunks
+2026-04-23T21:06:12.235922Z  INFO codesearch::index::manager: ✅ Incremental refresh completed in 1.25s
+2026-04-23T21:06:12.236108Z  INFO codesearch::mcp: ✅ Background incremental refresh completed
+2026-04-23T21:06:12.236271Z  INFO codesearch::mcp: 👀 Starting file watcher...
+2026-04-23T21:06:12.236283Z  INFO codesearch::index::manager: 🚀 Starting background file watcher...
+2026-04-23T21:06:12.236291Z  INFO codesearch::index::manager: ✅ File watcher background task spawned
+2026-04-23T21:06:12.236297Z  INFO codesearch::mcp: ✅ File watcher active - index will auto-update on file changes
+2026-04-23T21:06:12.236600Z  INFO codesearch::index::manager: 👀 File watcher task started for: \\?\C:\Users\27443\Desktop\Multi-Agent  VSGs
+2026-04-23T21:06:56.460872Z  INFO codesearch::index::manager: 📦 Flushing batch: 1 to index, 0 to remove
+2026-04-23T21:06:56.642036Z  INFO codesearch::index::manager: ✅ Indexed C:/Users/27443/Desktop/Multi-Agent  VSGs/.claude/hooks/codesearch_context.py (1 chunks)
+2026-04-23T21:06:56.650702Z  INFO codesearch::index::manager: ✅ Batch complete: 1 indexed, 0 removed in 0.19s
+2026-04-23T21:07:50.487594Z  INFO codesearch::index::manager: 📦 Flushing batch: 1 to index, 0 to remove
+2026-04-23T21:07:50.635131Z  INFO codesearch::index::manager: ✅ Indexed C:/Users/27443/Desktop/Multi-Agent  VSGs/.claude/settings.json (1 chunks)
+2026-04-23T21:07:50.642195Z  INFO codesearch::index::manager: ✅ Batch complete: 1 indexed, 0 removed in 0.15s
+2026-04-23T21:09:03.510422Z  INFO codesearch::index::manager: 📦 Flushing batch: 0 to index, 1 to remove
+2026-04-23T21:09:03.525315Z  INFO codesearch::index::manager: ✅ Removed 1 chunks for C:/Users/27443/Desktop/Multi-Agent  VSGs/.claude/hooks/codesearch_context.py
+2026-04-23T21:09:03.571182Z  INFO codesearch::index::manager: ✅ Batch complete: 0 indexed, 1 removed in 0.06s
+2026-04-23T21:09:13.453449Z  INFO codesearch::index::manager: 📦 Flushing batch: 0 to index, 1 to remove
+2026-04-23T21:09:13.522716Z  INFO codesearch::index::manager: ✅ Batch complete: 0 indexed, 1 removed in 0.07s
+2026-04-23T21:10:54.542773Z  INFO codesearch::index::manager: 📦 Flushing batch: 0 to index, 1 to remove
+2026-04-23T21:10:54.578341Z  INFO codesearch::index::manager: ✅ Batch complete: 0 indexed, 1 removed in 0.04s
+2026-04-23T21:11:10.033743Z  INFO codesearch::index::manager: 📦 Flushing batch: 0 to index, 1 to remove
+2026-04-23T21:11:10.065301Z  INFO codesearch::index::manager: ✅ Batch complete: 0 indexed, 1 removed in 0.03s
+2026-04-23T21:12:04.360580Z  INFO codesearch::logger: Logger initialized: level=info, log_dir="\\\\?\\C:\\Users\\27443\\Desktop\\Multi-Agent  VSGs\\.codesearch.db\\logs", max_files=5, retention_days=5
+2026-04-23T21:12:04.360668Z  INFO codesearch::mcp: 📂 Project: \\?\C:\Users\27443\Desktop\Multi-Agent  VSGs
+2026-04-23T21:12:04.360683Z  INFO codesearch::mcp: 💾 Database: \\?\C:\Users\27443\Desktop\Multi-Agent  VSGs\.codesearch.db
+2026-04-23T21:12:04.360899Z  INFO codesearch::mcp: 📦 Creating shared stores...
+2026-04-23T21:12:04.374866Z  INFO codesearch::index::manager: 📦 SharedStores created in read-write mode
+2026-04-23T21:12:04.375498Z  INFO codesearch::mcp: 🧠 Model: sentence-transformers/all-MiniLM-L6-v2 (quantized)
+2026-04-23T21:12:04.375512Z  INFO codesearch::mcp: 🚀 Starting MCP server...
+2026-04-23T21:12:04.514410Z  INFO rmcp::handler::server: client initialized
+2026-04-23T21:12:04.514541Z  INFO serve_inner: rmcp::service: Service initialized as server peer_info=Some(InitializeRequestParam { protocol_version: ProtocolVersion("2025-11-25"), capabilities: ClientCapabilities { experimental: None, roots: Some(RootsCapabilities { list_changed: None }), sampling: None, elicitation: Some(ElicitationCapability { schema_validation: None }) }, client_info: Implementation { name: "claude-code", title: Some("Claude Code"), version: "2.1.111", icons: None, website_url: Some("https://claude.com/claude-code") } })
+2026-04-23T21:12:04.514605Z  INFO codesearch::mcp: MCP server ready. Waiting for requests...
+2026-04-23T21:12:04.514617Z  INFO codesearch::mcp: 🔍 Initializing index manager...
+2026-04-23T21:12:04.514639Z  INFO codesearch::index::manager: 🔍 Initializing index manager (no refresh) for: \\?\C:\Users\27443\Desktop\Multi-Agent  VSGs
+2026-04-23T21:12:04.514938Z  INFO codesearch::index::manager: ✅ Index manager initialized successfully (refresh skipped)
+2026-04-23T21:12:04.515041Z  INFO codesearch::mcp: 🧹 Running initial log cleanup...
+2026-04-23T21:12:04.515731Z  INFO codesearch::logger: Log cleanup task started: interval=24h, retention_days=5, max_files=5
+2026-04-23T21:12:04.702840Z  INFO codesearch::index::manager: 👀 File watcher pre-started (collecting events)
+2026-04-23T21:12:04.702857Z  INFO codesearch::mcp: 🔄 Starting background incremental refresh...
+2026-04-23T21:12:04.702866Z  INFO codesearch::index::manager: 🔄 Performing incremental refresh with shared stores...
+2026-04-23T21:12:04.757381Z  INFO codesearch::file: File discovery complete:
+2026-04-23T21:12:04.757411Z  INFO codesearch::file:   Total files found: 644
+2026-04-23T21:12:04.757418Z  INFO codesearch::file:   Indexable files: 277
+2026-04-23T21:12:04.757423Z  INFO codesearch::file:   Binary/skipped: 140
+2026-04-23T21:12:04.757438Z  INFO codesearch::file:   Total size: 2.68 MB
+2026-04-23T21:12:04.757443Z  INFO codesearch::file:   Files by language:
+2026-04-23T21:12:04.757449Z  INFO codesearch::file:     Python: 187
+2026-04-23T21:12:04.757455Z  INFO codesearch::file:     Markdown: 82
+2026-04-23T21:12:04.757460Z  INFO codesearch::file:     JSON: 5
+2026-04-23T21:12:04.757465Z  INFO codesearch::file:     TOML: 2
+2026-04-23T21:12:04.757476Z  INFO codesearch::file:     Shell: 1
+2026-04-23T21:12:04.770359Z  INFO codesearch::index::manager:    Unchanged: 277, Changed: 0, Deleted: 0
+2026-04-23T21:12:04.770371Z  INFO codesearch::index::manager: ✅ Index is up to date!
+2026-04-23T21:12:04.770447Z  INFO codesearch::mcp: ✅ Background incremental refresh completed
+2026-04-23T21:12:04.770453Z  INFO codesearch::mcp: 👀 Starting file watcher...
+2026-04-23T21:12:04.770460Z  INFO codesearch::index::manager: 🚀 Starting background file watcher...
+2026-04-23T21:12:04.770469Z  INFO codesearch::index::manager: ✅ File watcher background task spawned
+2026-04-23T21:12:04.770512Z  INFO codesearch::mcp: ✅ File watcher active - index will auto-update on file changes
+2026-04-23T21:12:04.770534Z  INFO codesearch::index::manager: 👀 File watcher task started for: \\?\C:\Users\27443\Desktop\Multi-Agent  VSGs
+2026-04-23T21:13:35.255124Z  INFO codesearch::logger: Logger initialized: level=info, log_dir="\\\\?\\C:\\Users\\27443\\Desktop\\Multi-Agent  VSGs\\.codesearch.db\\logs", max_files=5, retention_days=5
+2026-04-23T21:13:35.255157Z  INFO codesearch::mcp: 📂 Project: \\?\C:\Users\27443\Desktop\Multi-Agent  VSGs
+2026-04-23T21:13:35.255171Z  INFO codesearch::mcp: 💾 Database: \\?\C:\Users\27443\Desktop\Multi-Agent  VSGs\.codesearch.db
+2026-04-23T21:13:35.255347Z  INFO codesearch::mcp: 📦 Creating shared stores...
+2026-04-23T21:13:35.255436Z  INFO codesearch::index::manager: 🔒 Database is locked by another process, opening in readonly mode...
+2026-04-23T21:13:35.259358Z  INFO codesearch::index::manager: 📦 SharedStores created in readonly mode
+2026-04-23T21:13:35.259382Z  WARN codesearch::mcp: 🔒 Running in READONLY mode (another instance has write access)
+2026-04-23T21:13:35.259388Z  WARN codesearch::mcp:    ↳ Searches work normally, but index won't auto-update
+2026-04-23T21:13:35.259392Z  WARN codesearch::mcp:    ↳ Close the other instance to enable write mode
+2026-04-23T21:13:35.259853Z  INFO codesearch::mcp: 🧠 Model: sentence-transformers/all-MiniLM-L6-v2 (quantized)
+2026-04-23T21:13:35.259863Z  INFO codesearch::mcp: 🚀 Starting MCP server (readonly)...
+2026-04-23T21:13:35.283100Z  INFO rmcp::handler::server: client initialized
+2026-04-23T21:13:35.283157Z  INFO serve_inner: rmcp::service: Service initialized as server peer_info=Some(InitializeRequestParam { protocol_version: ProtocolVersion("2025-11-25"), capabilities: ClientCapabilities { experimental: None, roots: Some(RootsCapabilities { list_changed: None }), sampling: None, elicitation: Some(ElicitationCapability { schema_validation: None }) }, client_info: Implementation { name: "claude-code", title: Some("Claude Code"), version: "2.1.111", icons: None, website_url: Some("https://claude.com/claude-code") } })
+2026-04-23T21:13:35.283186Z  INFO codesearch::mcp: MCP server ready. Waiting for requests...
+2026-04-23T21:13:35.283195Z  INFO codesearch::mcp: 📖 Readonly mode: skipping background refresh and file watcher
+2026-04-23T21:17:14.360138Z  INFO codesearch::logger: Logger initialized: level=info, log_dir="\\\\?\\C:\\Users\\27443\\Desktop\\Multi-Agent  VSGs\\.codesearch.db\\logs", max_files=5, retention_days=5
+2026-04-23T21:17:14.360175Z  INFO codesearch::mcp: 📂 Project: \\?\C:\Users\27443\Desktop\Multi-Agent  VSGs
+2026-04-23T21:17:14.360192Z  INFO codesearch::mcp: 💾 Database: \\?\C:\Users\27443\Desktop\Multi-Agent  VSGs\.codesearch.db
+2026-04-23T21:17:14.360365Z  INFO codesearch::mcp: 📦 Creating shared stores...
+2026-04-23T21:17:14.360472Z  INFO codesearch::index::manager: 🔒 Database is locked by another process, opening in readonly mode...
+2026-04-23T21:17:14.366398Z  INFO codesearch::index::manager: 📦 SharedStores created in readonly mode
+2026-04-23T21:17:14.366463Z  WARN codesearch::mcp: 🔒 Running in READONLY mode (another instance has write access)
+2026-04-23T21:17:14.366482Z  WARN codesearch::mcp:    ↳ Searches work normally, but index won't auto-update
+2026-04-23T21:17:14.366491Z  WARN codesearch::mcp:    ↳ Close the other instance to enable write mode
+2026-04-23T21:17:14.367351Z  INFO codesearch::mcp: 🧠 Model: sentence-transformers/all-MiniLM-L6-v2 (quantized)
+2026-04-23T21:17:14.367365Z  INFO codesearch::mcp: 🚀 Starting MCP server (readonly)...
+2026-04-23T21:17:14.409875Z  INFO rmcp::handler::server: client initialized
+2026-04-23T21:17:14.409928Z  INFO serve_inner: rmcp::service: Service initialized as server peer_info=Some(InitializeRequestParam { protocol_version: ProtocolVersion("2025-11-25"), capabilities: ClientCapabilities { experimental: None, roots: Some(RootsCapabilities { list_changed: None }), sampling: None, elicitation: Some(ElicitationCapability { schema_validation: None }) }, client_info: Implementation { name: "claude-code", title: Some("Claude Code"), version: "2.1.111", icons: None, website_url: Some("https://claude.com/claude-code") } })
+2026-04-23T21:17:14.410008Z  INFO codesearch::mcp: MCP server ready. Waiting for requests...
+2026-04-23T21:17:14.410016Z  INFO codesearch::mcp: 📖 Readonly mode: skipping background refresh and file watcher
+2026-04-23T21:18:38.424094Z  INFO codesearch::index::manager: 📦 Flushing batch: 1 to index, 0 to remove
+2026-04-23T21:18:38.655786Z  INFO codesearch::index::manager: ✅ Indexed C:/Users/27443/Desktop/Multi-Agent  VSGs/docs/decisions/2026-04-24-kundur-intent-manifest-boundary.md (1 chunks)
+2026-04-23T21:18:38.662762Z  INFO codesearch::index::manager: ✅ Batch complete: 1 indexed, 0 removed in 0.24s
+2026-04-23T21:18:47.373425Z  INFO codesearch::index::manager: 📦 Flushing batch: 0 to index, 1 to remove
+2026-04-23T21:18:47.405580Z  INFO codesearch::index::manager: ✅ Batch complete: 0 indexed, 1 removed in 0.03s
+2026-04-23T21:19:11.360930Z  INFO codesearch::index::manager: 📦 Flushing batch: 1 to index, 0 to remove
+2026-04-23T21:19:11.544020Z  INFO codesearch::index::manager: ✅ Indexed C:/Users/27443/Desktop/Multi-Agent  VSGs/tests/test_kundur_model_profile.py (4 chunks)
+2026-04-23T21:19:11.553143Z  INFO codesearch::index::manager: ✅ Batch complete: 1 indexed, 0 removed in 0.19s
+2026-04-23T21:20:34.587500Z  INFO codesearch::logger: Logger initialized: level=info, log_dir="\\\\?\\C:\\Users\\27443\\Desktop\\Multi-Agent  VSGs\\.codesearch.db\\logs", max_files=5, retention_days=5
+2026-04-23T21:20:34.587761Z  INFO codesearch::mcp: 📂 Project: \\?\C:\Users\27443\Desktop\Multi-Agent  VSGs
+2026-04-23T21:20:34.588171Z  INFO codesearch::mcp: 💾 Database: \\?\C:\Users\27443\Desktop\Multi-Agent  VSGs\.codesearch.db
+2026-04-23T21:20:34.588658Z  INFO codesearch::mcp: 📦 Creating shared stores...
+2026-04-23T21:20:34.589040Z  INFO codesearch::index::manager: 🔒 Database is locked by another process, opening in readonly mode...
+2026-04-23T21:20:34.599296Z  INFO codesearch::index::manager: 📦 SharedStores created in readonly mode
+2026-04-23T21:20:34.599513Z  WARN codesearch::mcp: 🔒 Running in READONLY mode (another instance has write access)
+2026-04-23T21:20:34.599697Z  WARN codesearch::mcp:    ↳ Searches work normally, but index won't auto-update
+2026-04-23T21:20:34.599929Z  WARN codesearch::mcp:    ↳ Close the other instance to enable write mode
+2026-04-23T21:20:34.600660Z  INFO codesearch::mcp: 🧠 Model: sentence-transformers/all-MiniLM-L6-v2 (quantized)
+2026-04-23T21:20:34.600750Z  INFO codesearch::mcp: 🚀 Starting MCP server (readonly)...
+2026-04-23T21:23:09.044682Z  INFO codesearch::index::manager: 📦 Flushing batch: 3 to index, 0 to remove
+2026-04-23T21:23:09.425658Z  INFO codesearch::index::manager: ✅ Indexed C:/Users/27443/Desktop/Multi-Agent  VSGs/scenarios/kundur/model_profiles/schema.json (1 chunks)
+2026-04-23T21:23:09.578429Z  INFO codesearch::index::manager: ✅ Indexed C:/Users/27443/Desktop/Multi-Agent  VSGs/scenarios/kundur/model_profiles/kundur_ee_legacy.json (1 chunks)
+2026-04-23T21:23:09.751314Z  INFO codesearch::index::manager: ✅ Indexed C:/Users/27443/Desktop/Multi-Agent  VSGs/scenarios/kundur/model_profiles/kundur_sps_candidate.json (1 chunks)
+2026-04-23T21:23:09.762257Z  INFO codesearch::index::manager: ✅ Batch complete: 3 indexed, 0 removed in 0.72s
+2026-04-23T21:23:13.032134Z  INFO codesearch::index::manager: 📦 Flushing batch: 1 to index, 0 to remove
+2026-04-23T21:23:13.227912Z  INFO codesearch::index::manager: ✅ Indexed C:/Users/27443/Desktop/Multi-Agent  VSGs/scenarios/kundur/model_profile.py (5 chunks)
+2026-04-23T21:23:13.237664Z  INFO codesearch::index::manager: ✅ Batch complete: 1 indexed, 0 removed in 0.21s
+2026-04-23T21:26:33.163684Z  INFO codesearch::index::manager: 📦 Flushing batch: 0 to index, 1 to remove
+2026-04-23T21:26:33.177861Z  INFO codesearch::index::manager: ✅ Removed 5 chunks for C:/Users/27443/Desktop/Multi-Agent  VSGs/scenarios/kundur/model_profile.py
+2026-04-23T21:26:33.231622Z  INFO codesearch::index::manager: ✅ Batch complete: 0 indexed, 1 removed in 0.07s
+2026-04-23T21:26:40.638572Z  INFO codesearch::index::manager: 📦 Flushing batch: 0 to index, 1 to remove
+2026-04-23T21:26:40.695305Z  INFO codesearch::index::manager: ✅ Removed 4 chunks for C:/Users/27443/Desktop/Multi-Agent  VSGs/tests/test_kundur_model_profile.py
+2026-04-23T21:26:40.751559Z  INFO codesearch::index::manager: ✅ Batch complete: 0 indexed, 1 removed in 0.11s
+2026-04-23T21:28:00.747849Z  INFO codesearch::index::manager: 📦 Flushing batch: 1 to index, 0 to remove
+2026-04-23T21:28:00.951222Z  INFO codesearch::index::manager: ✅ Indexed C:/Users/27443/Desktop/Multi-Agent  VSGs/tests/test_kundur_semantic_manifest.py (3 chunks)
+2026-04-23T21:28:00.962617Z  INFO codesearch::index::manager: ✅ Batch complete: 1 indexed, 0 removed in 0.21s
+2026-04-23T21:28:16.251952Z  INFO codesearch::index::manager: 📦 Flushing batch: 1 to index, 0 to remove
+2026-04-23T21:28:16.427911Z  INFO codesearch::index::manager: ✅ Indexed C:/Users/27443/Desktop/Multi-Agent  VSGs/engine/simulink_semantic_manifest.py (2 chunks)
+2026-04-23T21:28:16.436570Z  INFO codesearch::index::manager: ✅ Batch complete: 1 indexed, 0 removed in 0.18s
+2026-04-23T21:28:21.669113Z  INFO codesearch::index::manager: 📦 Flushing batch: 1 to index, 0 to remove
+2026-04-23T21:28:21.840017Z  INFO codesearch::index::manager: ✅ Indexed C:/Users/27443/Desktop/Multi-Agent  VSGs/scenarios/kundur/manifest_contract.py (2 chunks)
+2026-04-23T21:28:21.850754Z  INFO codesearch::index::manager: ✅ Batch complete: 1 indexed, 0 removed in 0.18s
+2026-04-23T21:32:05.899551Z  INFO codesearch::index::manager: 📦 Flushing batch: 0 to index, 1 to remove
+2026-04-23T21:32:05.911584Z  INFO codesearch::index::manager: ✅ Removed 2 chunks for C:/Users/27443/Desktop/Multi-Agent  VSGs/scenarios/kundur/manifest_contract.py
+2026-04-23T21:32:05.967150Z  INFO codesearch::index::manager: ✅ Batch complete: 0 indexed, 1 removed in 0.07s
+2026-04-23T21:34:23.978925Z  INFO codesearch::index::manager: 📦 Flushing batch: 0 to index, 1 to remove
+2026-04-23T21:34:24.020190Z  INFO codesearch::index::manager: ✅ Removed 82 chunks for C:/Users/27443/Desktop/Multi-Agent  VSGs/tests/test_simulink_bridge.py
+2026-04-23T21:34:24.081332Z  INFO codesearch::index::manager: ✅ Batch complete: 0 indexed, 1 removed in 0.10s
+2026-04-23T21:34:45.459442Z  INFO codesearch::index::manager: 📦 Flushing batch: 0 to index, 1 to remove
+2026-04-23T21:34:45.474649Z  INFO codesearch::index::manager: ✅ Removed 2 chunks for C:/Users/27443/Desktop/Multi-Agent  VSGs/scenarios/kundur/config_simulink.py
+2026-04-23T21:34:45.539149Z  INFO codesearch::index::manager: ✅ Batch complete: 0 indexed, 1 removed in 0.08s
+2026-04-23T21:35:05.919613Z  INFO codesearch::index::manager: 📦 Flushing batch: 0 to index, 1 to remove
+2026-04-23T21:35:05.982800Z  INFO codesearch::index::manager: ✅ Batch complete: 0 indexed, 1 removed in 0.06s
+2026-04-23T21:35:19.932809Z  INFO codesearch::index::manager: 📦 Flushing batch: 0 to index, 1 to remove
+2026-04-23T21:35:19.997187Z  INFO codesearch::index::manager: ✅ Removed 43 chunks for C:/Users/27443/Desktop/Multi-Agent  VSGs/env/simulink/kundur_simulink_env.py
+2026-04-23T21:35:20.051578Z  INFO codesearch::index::manager: ✅ Batch complete: 0 indexed, 1 removed in 0.12s
+2026-04-23T21:45:10.840352Z  INFO codesearch::index::manager: 📦 Flushing batch: 0 to index, 1 to remove
+2026-04-23T21:45:10.924077Z  INFO codesearch::index::manager: ✅ Batch complete: 0 indexed, 1 removed in 0.08s
+2026-04-23T21:45:15.286110Z  INFO codesearch::index::manager: 📦 Flushing batch: 0 to index, 1 to remove
+2026-04-23T21:45:15.339385Z  INFO codesearch::index::manager: ✅ Batch complete: 0 indexed, 1 removed in 0.05s
+2026-04-23T21:49:44.518920Z  INFO codesearch::index::manager: 📦 Flushing batch: 0 to index, 1 to remove
+2026-04-23T21:49:44.538374Z  INFO codesearch::index::manager: ✅ Removed 4 chunks for C:/Users/27443/Desktop/Multi-Agent  VSGs/tests/test_modeling_tasks.py
+2026-04-23T21:49:44.592184Z  INFO codesearch::index::manager: ✅ Batch complete: 0 indexed, 1 removed in 0.07s
+2026-04-23T21:49:49.927374Z  INFO codesearch::index::manager: 📦 Flushing batch: 0 to index, 1 to remove
+2026-04-23T21:49:49.947787Z  INFO codesearch::index::manager: ✅ Removed 4 chunks for C:/Users/27443/Desktop/Multi-Agent  VSGs/tests/test_harness_reports.py
+2026-04-23T21:49:50.000672Z  INFO codesearch::index::manager: ✅ Batch complete: 0 indexed, 1 removed in 0.07s
+2026-04-23T21:50:27.516854Z  INFO codesearch::index::manager: 📦 Flushing batch: 0 to index, 1 to remove
+2026-04-23T21:50:27.554695Z  INFO codesearch::index::manager: ✅ Removed 14 chunks for C:/Users/27443/Desktop/Multi-Agent  VSGs/engine/modeling_tasks.py
+2026-04-23T21:50:27.610624Z  INFO codesearch::index::manager: ✅ Batch complete: 0 indexed, 1 removed in 0.09s
+2026-04-23T21:50:34.040787Z  INFO codesearch::index::manager: 📦 Flushing batch: 0 to index, 1 to remove
+2026-04-23T21:50:34.075499Z  INFO codesearch::index::manager: ✅ Batch complete: 0 indexed, 1 removed in 0.03s
+2026-04-23T22:01:03.890300Z  INFO codesearch::index::manager: 📦 Flushing batch: 0 to index, 1 to remove
+2026-04-23T22:01:03.928081Z  INFO codesearch::index::manager: ✅ Batch complete: 0 indexed, 1 removed in 0.04s
+2026-04-23T22:01:07.846107Z  INFO codesearch::index::manager: 📦 Flushing batch: 0 to index, 1 to remove
+2026-04-23T22:01:07.919131Z  INFO codesearch::index::manager: ✅ Batch complete: 0 indexed, 1 removed in 0.07s
+2026-04-23T22:03:38.999490Z  INFO codesearch::index::manager: 📦 Flushing batch: 0 to index, 1 to remove
+2026-04-23T22:03:39.054592Z  INFO codesearch::index::manager: ✅ Removed 5 chunks for C:/Users/27443/Desktop/Multi-Agent  VSGs/probes/kundur/validate_phase3_zero_action.py
+2026-04-23T22:03:39.111396Z  INFO codesearch::index::manager: ✅ Batch complete: 0 indexed, 1 removed in 0.11s
+2026-04-23T22:03:49.022835Z  INFO codesearch::index::manager: 📦 Flushing batch: 0 to index, 1 to remove
+2026-04-23T22:03:49.057017Z  INFO codesearch::index::manager: ✅ Batch complete: 0 indexed, 1 removed in 0.03s
+2026-04-23T22:03:52.986520Z  INFO codesearch::index::manager: 📦 Flushing batch: 0 to index, 1 to remove
+2026-04-23T22:03:53.036892Z  INFO codesearch::index::manager: ✅ Batch complete: 0 indexed, 1 removed in 0.05s
+2026-04-23T22:04:30.447923Z  INFO codesearch::index::manager: 📦 Flushing batch: 0 to index, 1 to remove
+2026-04-23T22:04:30.521252Z  INFO codesearch::index::manager: ✅ Batch complete: 0 indexed, 1 removed in 0.07s
+2026-04-23T22:05:00.519822Z  INFO codesearch::index::manager: 📦 Flushing batch: 0 to index, 1 to remove
+2026-04-23T22:05:00.557051Z  INFO codesearch::index::manager: ✅ Batch complete: 0 indexed, 1 removed in 0.04s
+2026-04-23T22:05:50.057783Z  INFO codesearch::index::manager: 📦 Flushing batch: 0 to index, 1 to remove
+2026-04-23T22:05:50.094300Z  INFO codesearch::index::manager: ✅ Batch complete: 0 indexed, 1 removed in 0.04s

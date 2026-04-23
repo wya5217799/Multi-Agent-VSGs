@@ -14,7 +14,8 @@ does it standardize a repeated AI operation on the repo?** If neither, do not do
 
 The **Simulink backend is the active reproduction path**. ANDES and ODE backends
 exist historically but are not the current focus — do not spend effort on them
-unless the user explicitly asks.
+unless the user explicitly asks. **When ODE work is requested**: entry point is
+`env/ode/` (`power_system.py`, `multi_vsg_env.py`) + `env/ode/NOTES.md`.
 
 ## Scope
 

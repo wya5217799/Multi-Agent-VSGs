@@ -1,0 +1,66 @@
+# .understandignore — patterns for files/dirs to exclude from analysis
+# Syntax: same as .gitignore (globs, # comments, ! negation, trailing / for dirs)
+# Lines below are suggestions — uncomment to activate.
+# Use ! prefix to force-include something excluded by defaults.
+#
+# Built-in defaults (always excluded unless negated):
+#   node_modules/, .git/, dist/, build/, obj/, *.lock, *.min.js, etc.
+#
+# --- From .gitignore (uncomment to exclude) ---
+
+*.pyc
+*.pyo
+# .claude/
+_archive/
+# .worktrees/
+# *_out.lst
+# *_out.npz
+# *_out.txt
+# results/andes_output/
+# results/models/
+# results/andes_models*/
+# results/andes_kundur_models_v*/
+# results/andes_ne_models*/
+# results/andes_ne_regca1_models/
+# results/new_england/models/
+# results/sim_ne39/checkpoints/
+# results/sim_kundur/checkpoints/
+# results/scalability/
+# results/**/*.csv
+# results/**/*.json
+# results/**/*.jsonl
+# results/**/*.log
+# results/**/*.npz
+# results/**/*.pdf
+# results/**/*.png
+# results/**/*.pt
+# results/**/*.pth
+# results/**/summary.md
+# !results/harness/
+# !results/harness/.gitkeep
+# !results/harness/README.md
+# scenarios/**/results/
+# scenarios/**/*.autosave
+# scenarios/**/*.slxc
+# scenarios/**/*.fig
+slprj/
+# 论文/
+# 其他/
+# Figure.paper/
+# paper_draft.tex
+# journey-into-multi-agent-vsgs.md
+# .DS_Store
+# Thumbs.db
+# docs/architecture/
+
+# --- Detected directories (uncomment to exclude) ---
+
+# tests/
+# docs/
+# scripts/
+
+# --- Test file patterns (uncomment to exclude) ---
+
+# *.test.*
+# *.spec.*
+# *.snap

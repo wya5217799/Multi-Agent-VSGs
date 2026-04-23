@@ -1,6 +1,11 @@
 # Multi-Agent VSGs — 代码导航指南
 > 路径字典。决策顺序: `AGENTS.md` → `docs/paper/yang2023-fact-base.md` → `engine/harness_reference.py` → 本文件。与 AGENTS.md 冲突以 AGENTS.md 为准。
 
+## 代码搜索规则
+- **已知确切符号/字符串** → 用 Grep/Glob（快，精确）
+- **语义查询**（"奖励函数在哪"、"MATLAB 怎么调用"、"step 逻辑"）→ 优先用 `search_code` MCP 工具
+- 探索陌生模块或跨文件追踪逻辑时，先用 `search_code` 再用 Read 深入
+
 ## ⚠️ 修模型前必读 NOTES
 
 | 改什么 | 读哪份 NOTES |

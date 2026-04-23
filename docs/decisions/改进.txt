@@ -1,0 +1,65 @@
+从这次 Dynamic Load 迁移全过程，我看到几个值得改进的地方：
+
+---
+
+## 1. 探索代码混入生产 build script
+
+**问题：** 端口名（LConn1/2/3）是在 build script 里用 try/catch 候选列表发现的，这段探索代码在整个修复周期里都在 build script 里运行，每次 build 都打印 WARNING 噪声。
+
+**根因：** 没有区分"发现脚本"和"生产脚本"。`simulink_base.md` 的"新 block 预飞行发现"规则存在，但这次没有严格执行——直接在 build script 里做探索，发现结果也没有先写入知识库再开始建模。
+
+**优化：** 遇到未知 block 时，先写一个独立的一次性探索脚本（`discover_dynload_ports.m`），结果写入 `simulink_base.md`，然后 build script 里直接硬编码已知端口名。
+
+---
+
+## 2. 反馈回路需要人工中继，且无法自动化
+
+**问题：** 每次迭代路径是：Claude 改脚本 → 用户在 MATLAB 手跑 → 复制输出到文件 → 告诉 Claude → Claude 读文件。这次光 build 阶段就走了 4 轮（4 个错误），每轮都需要人工中继。
+
+**根因：** MCP 工具 2 分钟超时，build script 全程约 30 秒，但 `load_system('ee_lib')` 冷启动占 14 秒，加上仿真就超时了。Claude 无法自己执行并读取结果。
+
+**优化方向：**
+- Build script 分段化（`--step 9` 只跑 Step 9），每段 < 2 min，Claude 可自己轮询结果
+- 或者把 build output 实时写入 log 文件，Claude 用 `simulink_poll_script` 异步读
+
+---
+
+## 3. `harness_reference.json` 没有一致性守护
+
+**问题：** `scenario1_breaker`（旧断路器架构）和 `t_episode=10.0`（已改为 5s）在整个迁移过程中都是错的，没有任何机制发现，最后靠人工发现。
+
+**优化：** 加一个 pytest：
+```python
+def test_harness_reference_t_episode_matches_config():
+    ref = json.load(open("scenarios/kundur/harness_reference.json"))
+    t_ep = {item["key"]: item["value"] for item in ref["reference_items"]}
+    assert t_ep["t_episode"] == config_simulink.T_EPISODE
+```
+`warn_if_missing` 字段的 value 也应该能从 config 直接验证，不能只靠人肉对比。
+
+---
+
+## 4. Harness smoke 前置步骤是不必要的手动负担
+
+**问题：** `harness_train_smoke_start` 要求先手动跑 `scenario_status` + `model_report`，实际上这两个是纯查询，没有副作用。第一次调用 `kundur_simulink` 还触发了一次无意义的失败。
+
+**优化：** `harness_train_smoke_start` 内部自动做前置检查，失败时直接把原因返回，不需要用户或 Claude 手动串联三个工具。
+
+---
+
+## 5. Scenario ID 命名不统一
+
+**问题：** Python env 文件名是 `kundur_simulink_env.py`，训练脚本是 `train_simulink.py`，但 harness 的 `scenario_id` 是 `kundur`。第一次调用 smoke 时用了 `kundur_simulink`，失败。
+
+**优化：** harness 的错误信息已经给出了支持的 ID 列表，但更好的做法是在 `scenario_status` 里支持别名解析（`kundur_simulink` → `kundur`），或在 `CLAUDE.md` 里明确注明 harness scenario_id 的正确值。
+
+---
+
+**总结优先级：**
+
+| 优化项 | 影响 | 难度 |
+|--------|------|------|
+| 探索代码与生产脚本分离（执行规则） | 高（每次建模都省一轮） | 低（习惯层面） |
+| harness_reference 一致性 pytest | 高（防止静默漂移） | 低（30 行测试） |
+| harness smoke 自动前置检查 | 中（省 2 次工具调用） | 中（harness 内部改造） |
+| build script 分段化 | 高（让 Claude 能自动执行） | 高（需要重构脚本） |

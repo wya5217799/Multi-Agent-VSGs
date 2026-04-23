@@ -1020,4 +1020,5 @@ def test_candidate_manifest_feedback_measurement_fails_alignment():
         "measurement": {"mode": "feedback"},
     }
     issues = validate_kundur_alignment(profile, manifest)
+    assert len(issues) > 0, "Expected alignment issues but got none"
     assert any("pe_measurement" in issue for issue in issues)

@@ -1,0 +1,25 @@
+{
+  "version": "1.0.0",
+  "baseBranch": "HEAD~1 (fea0839)",
+  "generatedAt": "2026-04-16T00:00:00.000Z",
+  "commitHash": "372d747",
+  "commitMessage": "fix(ne39): align training disturbance with eval; add dual settled metrics",
+  "changedFiles": [
+    "scenarios/new_england/train_simulink.py",
+    "utils/training_viz.py"
+  ],
+  "changedNodeIds": [
+    "file:scenarios/new_england/train_simulink.py",
+    "function:scenarios/new_england/train_simulink.py:train",
+    "function:scenarios/new_england/train_simulink.py:evaluate",
+    "file:utils/training_viz.py",
+    "function:utils/training_viz.py:plot_training_summary"
+  ],
+  "affectedNodeIds": [
+    "file:scenarios/new_england/run_all_simulink.py",
+    "file:scripts/launch_training.ps1",
+    "file:utils/training_log.py",
+    "file:utils/evaluate_run.py",
+    "file:engine/mcp_simulink_tools.py"
+  ]
+}

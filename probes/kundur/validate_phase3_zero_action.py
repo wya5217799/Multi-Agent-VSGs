@@ -217,9 +217,10 @@ def run_validation() -> bool:
     # If ALL steps in the full run have delta in (-95, -85) deg for any
     # agent, IntD is clamped at -90 deg — false stability, not real.
     # ------------------------------------------------------------------
-    c5_pass = True
+    c5_pass = False  # default to failure (no-data = failure, not pass)
     false_stable_agents = []
     if n_steps_done > 0:
+        c5_pass = True  # reset to True only if we have data
         for i in range(4):
             agent_delta = arr_delta[:, i]
             stuck = bool(

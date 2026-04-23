@@ -4,7 +4,7 @@
 Provides a singleton-per-session_id wrapper around matlab.engine with:
 - Lazy initialization (engine starts on first call)
 - Passive reconnect (no health-check ping; reconnect only on failure)
-- Auto addpath for slx_helpers/ and slx_helpers/vsg_bridge/ on first connect
+- Auto addpath for slx_helpers/ on first connect; vsg_bridge/ added lazily via add_vsg_bridge_path()
 - Structured error wrapping via MatlabCallError
 - DEBUG-level logging of every call() with elapsed time
 """
@@ -64,8 +64,9 @@ class MatlabSession:
         project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         self._helper_paths: list[str] = [
             os.path.join(project_root, "slx_helpers"),
-            os.path.join(project_root, "slx_helpers", "vsg_bridge"),
         ]
+        self._vsg_bridge_path: str = os.path.join(project_root, "slx_helpers", "vsg_bridge")
+        self._vsg_bridge_added: bool = False
 
     @classmethod
     def get(cls, session_id: str = "default") -> MatlabSession:
@@ -92,6 +93,7 @@ class MatlabSession:
             )
         logger.info("Starting MATLAB engine (session=%s) ...", self._session_id)
         self._eng = me.start_matlab()
+        self._vsg_bridge_added = False  # reset so add_vsg_bridge_path() re-fires on next call
         # Auto-addpath for MATLAB helper layers. Keep these explicit instead
         # of using genpath so cache/build folders are not added accidentally.
         for helper_path in self._helper_paths:
@@ -107,6 +109,23 @@ class MatlabSession:
         if self._eng is None:
             self._connect()
         return self._eng
+
+    def add_vsg_bridge_path(self) -> None:
+        """Add slx_helpers/vsg_bridge/ to MATLAB path (lazy, idempotent).
+
+        Called by SimulinkBridge on construction so that generic MCP tools
+        that only use slx_helpers/ cannot accidentally resolve vsg_bridge-
+        specific helpers (slx_step_and_read, slx_episode_warmup, etc.).
+        """
+        if self._vsg_bridge_added:
+            return
+        if not os.path.isdir(self._vsg_bridge_path):
+            logger.warning("vsg_bridge helper dir not found: %s", self._vsg_bridge_path)
+            return
+        eng = self._get_engine()
+        eng.addpath(self._vsg_bridge_path, nargout=0)
+        self._vsg_bridge_added = True
+        logger.debug("Added to MATLAB path: %s", self._vsg_bridge_path)
 
     @staticmethod
     def _is_communication_error(exc: Exception) -> bool:

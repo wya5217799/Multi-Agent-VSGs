@@ -5,9 +5,10 @@
 %   without a long physical warmup stage.
 %
 % INVARIANTS (SPS candidate path)
-%   1. Episode-1 and episode-2 reset state match within tolerance.
+%   1. Post-reset omega is within OMEGA_TOL of nominal (1.0 pu).
 %   2. Reset time is technical (< 20 ms simulation time), not physical (>= 100 ms).
-%   3. omega, Pe, and source phase are already aligned at t=0 of each episode.
+%   3. Multi-episode consistency (ep1 == ep2) requires external Python bridge
+%      coordination; this probe checks single-episode alignment only.
 %
 % USAGE CONTRACT
 %   This probe is NOT called automatically. Run it via simulink_run_script

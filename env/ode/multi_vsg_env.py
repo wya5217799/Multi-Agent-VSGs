@@ -275,14 +275,12 @@ class MultiVSGEnv:
                 if self.comm.is_link_active(i, j):
                     r_f -= (state['omega'][j] * _TO_HZ - omega_bar) ** 2
 
-            # === Eq. (17): r_h = -(ΔH_avg_norm)^2  (normalized to [-1,1] range) ===
-            # PHI_H=1 assumes normalized values; divide by max physical range
-            _dh_scale = max(abs(cfg.DH_MAX), abs(cfg.DH_MIN))  # = 72.0
-            r_h = -(ah_avg / _dh_scale) ** 2
+            # === Eq. (17): r_h = -(ΔH_avg)^2  物理量 (M3 统一口径, 2026-04-21) ===
+            # 论文 Eq.17 明示物理量；NE39/scalability/ANDES/Simulink 均物理量，统一至此
+            r_h = -(ah_avg) ** 2
 
-            # === Eq. (18): r_d = -(ΔD_avg_norm)^2  (normalized to [-1,1] range) ===
-            _dd_scale = max(abs(cfg.DD_MAX), abs(cfg.DD_MIN))  # = 54.0
-            r_d = -(ad_avg / _dd_scale) ** 2
+            # === Eq. (18): r_d = -(ΔD_avg)^2  物理量 ===
+            r_d = -(ad_avg) ** 2
 
             # === Eq. (14): 总奖励 ===
             rewards[i] = cfg.PHI_F * r_f + cfg.PHI_H * r_h + cfg.PHI_D * r_d

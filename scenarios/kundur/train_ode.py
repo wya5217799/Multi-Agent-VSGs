@@ -60,13 +60,18 @@ def generate_scenario_set(n_scenarios, seed=0):
 def train(args):
     device = 'cuda' if torch.cuda.is_available() and not args.cpu else 'cpu'
 
+    # ── P1: 完整 seed 协议，必须在 manager/网络构造前完成 ──
+    from utils.seed_utils import seed_everything
+    seed_info = seed_everything(args.seed)
+    warmup_rng = np.random.default_rng(args.seed)
+
     # ── 生成固定训练场景集 ──
     train_scenarios = generate_scenario_set(cfg.N_TRAIN_SCENARIOS, seed=args.seed)
 
     # ── 环境 (不使用内部随机扰动, 由外部指定) ──
     env = MultiVSGEnv(random_disturbance=False, comm_fail_prob=0.0)
 
-    # ── 多智能体 ──
+    # ── 多智能体 (seed 已在上方统一设置) ──
     manager = MultiAgentManager(
         n_agents=cfg.N_AGENTS,
         obs_dim=cfg.OBS_DIM,
@@ -79,10 +84,6 @@ def train(args):
         batch_size=cfg.BATCH_SIZE,
         device=device,
     )
-
-    # ── 随机种子 ──
-    torch.manual_seed(args.seed)
-    np.random.seed(args.seed)
 
     # ── 日志 ──
     save_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'results')
@@ -134,7 +135,8 @@ def train(args):
         for step in range(cfg.STEPS_PER_EPISODE):
             # 选择动作
             if total_steps < cfg.WARMUP_STEPS:
-                actions = {i: np.random.uniform(-1, 1, size=cfg.ACTION_DIM)
+                # P1: 本地 RNG 替代全局 np.random 保证可复现
+                actions = {i: warmup_rng.uniform(-1, 1, size=cfg.ACTION_DIM)
                            for i in range(cfg.N_AGENTS)}
             else:
                 actions = manager.select_actions(obs)
@@ -222,6 +224,25 @@ def train(args):
     for i in range(cfg.N_AGENTS):
         log_data[f'episode_rewards_agent_{i}'] = np.array(episode_rewards[i])
     np.savez(log_path, **log_data)
+
+    # P0 + P1: run metadata sidecar (完整 seed 协议 + 固定训练集标识)
+    import json as _json
+    meta = {
+        "scenario": "kundur_ode",
+        "train_seed": int(args.seed),
+        "seed_protocol": seed_info,
+        "n_episodes": int(args.episodes),
+        "train_set": {
+            "n_train": int(cfg.N_TRAIN_SCENARIOS),
+            "seed": int(args.seed),
+            "generator": "generate_scenario_set",
+        },
+        "note": "Kundur 训练侧固定集已绑 cfg.N_TRAIN_SCENARIOS (train_ode.py:64)",
+    }
+    meta_path = os.path.join(save_dir, 'run_meta.json')
+    with open(meta_path, 'w') as f:
+        _json.dump(meta, f, indent=2)
+    print(f"  [P0/P1 metadata] {meta_path}")
 
     elapsed = time.time() - t_start
     print(f"\n{'=' * 65}")

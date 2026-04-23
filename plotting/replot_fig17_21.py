@@ -31,7 +31,8 @@ ne_colors = ES_COLORS_8
 f_labels = [rf'$f_{{\mathrm{{es}}{i+1}}}$' for i in range(N)]
 
 # ── 辅助函数 ──
-def _adaptive_inertia_action_ne(obs_dict, N, k_h=0.1, k_d=2.0):
+def _adaptive_inertia_action_ne(obs_dict, N, k_h=0.1):
+    """Zero-centered 编码；ΔD=0（论文[25]只有ΔH自适应）."""
     actions = {}
     for i in range(N):
         o = obs_dict[i]
@@ -39,19 +40,15 @@ def _adaptive_inertia_action_ne(obs_dict, N, k_h=0.1, k_d=2.0):
         omega_dot = o[2] * 5.0
         delta_H = k_h * omega * omega_dot
         delta_H = np.clip(delta_H, cfg.DH_MIN, cfg.DH_MAX)
-        delta_D = k_d * abs(omega)
-        delta_D = np.clip(delta_D, cfg.DD_MIN, cfg.DD_MAX)
-        a0 = (delta_H - cfg.DH_MIN) / (cfg.DH_MAX - cfg.DH_MIN) * 2 - 1
-        a1 = (delta_D - cfg.DD_MIN) / (cfg.DD_MAX - cfg.DD_MIN) * 2 - 1
-        actions[i] = np.array([a0, a1], dtype=np.float32)
+        a0 = float(delta_H / cfg.DH_MAX if delta_H >= 0 else delta_H / (-cfg.DH_MIN))
+        actions[i] = np.array([a0, 0.0], dtype=np.float32)
     return actions
 
-a0_fixed = (0 - cfg.DH_MIN) / (cfg.DH_MAX - cfg.DH_MIN) * 2 - 1
-a1_fixed = (0 - cfg.DD_MIN) / (cfg.DD_MAX - cfg.DD_MIN) * 2 - 1
-fixed_action = np.array([a0_fixed, a1_fixed], dtype=np.float32)
+# 无控制: ΔH=0, ΔD=0 → zero-centered 编码下 action=(0,0)
+fixed_action = np.array([0.0, 0.0], dtype=np.float32)
 
 def run_ne_episode(mgr, delta_u, use_rl=True, control_mode='rl'):
-    env = ScalableVSGEnv(N, random_disturbance=False, comm_fail_prob=0.0)
+    env = ScalableVSGEnv(N, random_disturbance=False, comm_fail_prob=0.0, fn=60.0)
     obs = env.reset(delta_u=delta_u)
     t_list, f_list, M_list, D_list = [], [], [], []
     for step in range(cfg.STEPS_PER_EPISODE):
@@ -193,22 +190,37 @@ plt.savefig(os.path.join(FIG_DIR, 'fig19_ne_adaptive.png'), dpi=250, bbox_inches
 plt.close()
 print("  Saved fig19_ne_adaptive.png")
 
-# ═══ Fig 20: RL 控制 — 2×1 (通信延迟条 + 频率偏差) ═══
+# ═══ Fig 20: RL 控制 — 2×1 (通信延迟条 + 频率偏差, 共享采样序列) ═══
 print("Plotting Fig 20...")
-t_rl, f_rl, M_rl, D_rl = run_ne_episode(manager, fault_du, use_rl=True)
+# M7: Fig.20(a)(b) 须用同一条高斯时变延迟序列 → 同一个 env episode
+delay_cfg = {'mean_range': (0.05, 0.25), 'std': 0.05, 'rng_seed': 42}
+env_rl_d = ScalableVSGEnv(N, random_disturbance=False, comm_fail_prob=0.0, fn=60.0,
+                          comm_delay_gaussian=delay_cfg)
+obs_rl_d = env_rl_d.reset(delta_u=fault_du)
+t_log_rl, f_log_rl = [], []
+for step in range(cfg.STEPS_PER_EPISODE):
+    actions = manager.select_actions(obs_rl_d, deterministic=True)
+    obs_rl_d, _, done, info = env_rl_d.step(actions)
+    t_log_rl.append(info['time'])
+    f_log_rl.append(info['freq_hz'].copy())
+    if done:
+        break
+t_rl = np.array(t_log_rl)
+f_rl = np.array(f_log_rl)
+
 fig, (ax_a, ax_b) = plt.subplots(2, 1, figsize=(6.5, 5.5), sharex=True)
 fig.subplots_adjust(hspace=0.08, left=0.13, right=0.95, top=0.97, bottom=0.09)
 
-# (a) 通信延迟
-t_arr = np.array(t_rl)
-rng = np.random.RandomState(42)
-delays = rng.uniform(0.0, 0.3, size=len(t_arr))
-bar_width = t_arr[1] - t_arr[0] if len(t_arr) > 1 else 0.2
-ax_a.bar(t_arr, delays, width=bar_width, color=COLOR_TOTAL, alpha=0.8, linewidth=0)
+# (a) 通信延迟 — 真实采样, 每步所有链路均值
+# _delay_trace[0] = reset 时 obs 采样, [1:] = 每 step 后采样; 对齐 t_rl
+trace = env_rl_d._delay_trace[1:1 + len(t_rl)]
+delays = np.array([np.mean(list(d.values())) if d else 0.0 for d in trace])
+bar_width = t_rl[1] - t_rl[0] if len(t_rl) > 1 else 0.2
+ax_a.bar(t_rl, delays, width=bar_width, color=COLOR_TOTAL, alpha=0.8, linewidth=0)
 ax_a.set_ylabel('(a) Communication\ndelay (s)', fontsize=10)
 ax_a.set_ylim(0, 0.4)
 
-# (b) 频率偏差
+# (b) 频率偏差 — 同一 episode
 freq_dev_rl = f_rl - 50.0
 for i in range(N):
     ax_b.plot(t_rl, freq_dev_rl[:, i], color=ne_colors[i], lw=1.0, label=f_labels[i])

@@ -1,0 +1,146 @@
+{
+  "index_settings": {
+    "docstore_compression": "lz4",
+    "docstore_blocksize": 16384
+  },
+  "segments": [
+    {
+      "segment_id": "161f9822-bea6-48ea-97b3-70b6a77585c3",
+      "max_doc": 675,
+      "deletes": {
+        "num_deleted_docs": 23,
+        "opstamp": 2963
+      }
+    },
+    {
+      "segment_id": "6f9e9a79-f609-4974-812b-518c34ec5dfa",
+      "max_doc": 673,
+      "deletes": {
+        "num_deleted_docs": 26,
+        "opstamp": 2963
+      }
+    },
+    {
+      "segment_id": "622d71fa-a853-4531-8e95-4730b5f22934",
+      "max_doc": 652,
+      "deletes": {
+        "num_deleted_docs": 25,
+        "opstamp": 2963
+      }
+    },
+    {
+      "segment_id": "0d7a93af-3919-40e6-955b-6b6fb10036bf",
+      "max_doc": 237,
+      "deletes": {
+        "num_deleted_docs": 26,
+        "opstamp": 2879
+      }
+    },
+    {
+      "segment_id": "56b7c566-2603-430b-a7df-3209788ccb48",
+      "max_doc": 234,
+      "deletes": {
+        "num_deleted_docs": 29,
+        "opstamp": 2879
+      }
+    },
+    {
+      "segment_id": "7c146d07-9225-4763-9a50-a41a4497f421",
+      "max_doc": 225,
+      "deletes": {
+        "num_deleted_docs": 27,
+        "opstamp": 2879
+      }
+    },
+    {
+      "segment_id": "1e63ffbd-9fda-4719-9b11-11b1607347fd",
+      "max_doc": 14,
+      "deletes": null
+    },
+    {
+      "segment_id": "3e44a5c9-96e5-415c-a936-5b47e5ab2b64",
+      "max_doc": 1,
+      "deletes": null
+    },
+    {
+      "segment_id": "95fa34a9-bbd5-44eb-a010-e525b1bcd3f7",
+      "max_doc": 1,
+      "deletes": null
+    },
+    {
+      "segment_id": "de5ae4d1-5215-4a17-9c16-1d3ee5aad1f5",
+      "max_doc": 1,
+      "deletes": null
+    },
+    {
+      "segment_id": "713c8926-d452-4030-9534-213f5f2a8217",
+      "max_doc": 1,
+      "deletes": null
+    }
+  ],
+  "schema": [
+    {
+      "name": "chunk_id",
+      "type": "u64",
+      "options": {
+        "indexed": true,
+        "fieldnorms": false,
+        "fast": false,
+        "stored": true
+      }
+    },
+    {
+      "name": "content",
+      "type": "text",
+      "options": {
+        "indexing": {
+          "record": "position",
+          "fieldnorms": true,
+          "tokenizer": "default"
+        },
+        "stored": false,
+        "fast": false
+      }
+    },
+    {
+      "name": "path",
+      "type": "text",
+      "options": {
+        "indexing": {
+          "record": "basic",
+          "fieldnorms": true,
+          "tokenizer": "raw"
+        },
+        "stored": true,
+        "fast": false
+      }
+    },
+    {
+      "name": "signature",
+      "type": "text",
+      "options": {
+        "indexing": {
+          "record": "position",
+          "fieldnorms": true,
+          "tokenizer": "default"
+        },
+        "stored": false,
+        "fast": false
+      }
+    },
+    {
+      "name": "kind",
+      "type": "text",
+      "options": {
+        "indexing": {
+          "record": "basic",
+          "fieldnorms": true,
+          "tokenizer": "raw"
+        },
+        "stored": true,
+        "fast": false
+      }
+    }
+  ],
+  "opstamp": 2963
+}

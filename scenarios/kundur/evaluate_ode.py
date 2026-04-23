@@ -116,8 +116,15 @@ def compute_freq_sync_reward(freq_array):
     return -np.sum((freq_array - f_bar) ** 2)
 
 
-def generate_test_scenarios(n=50, seed=99):
-    """生成固定测试场景集 (Sec.IV-A: 50 randomly generated test scenarios)."""
+TEST_SEED = 99  # P0: 固定测试集 seed，写入 run metadata 以保证跨 run 可复验
+
+def generate_test_scenarios(n=None, seed=TEST_SEED):
+    """生成固定测试场景集 (Sec.IV-A: 50 randomly generated test scenarios).
+
+    n 默认读取 cfg.N_TEST_SCENARIOS（P0 要求：不得绕过 cfg 硬编码）。
+    """
+    if n is None:
+        n = cfg.N_TEST_SCENARIOS
     rng = np.random.default_rng(seed)
     scenarios = []
     for _ in range(n):
@@ -527,8 +534,11 @@ def main():
     # ═════════════════════════════════════════════════
     #  Fig 5: 累积频率奖励 (50 test episodes)
     # ═════════════════════════════════════════════════
-    print(f"\n=== Fig 5: Cumulative reward ({args.test_episodes} test episodes) ===")
-    test_scenarios = generate_test_scenarios(args.test_episodes, seed=99)
+    n_test = cfg.N_TEST_SCENARIOS
+    print(f"\n=== Fig 5: Cumulative reward ({n_test} test episodes) ===")
+    print(f"    [P0 metadata] test_set: n={n_test}, seed={TEST_SEED}, "
+          f"generator=generate_test_scenarios, config=cfg.N_TEST_SCENARIOS")
+    test_scenarios = generate_test_scenarios(n=n_test, seed=TEST_SEED)
     test_result = run_test_set(manager, test_scenarios, include_adaptive=True)
     r_rl, r_fixed, r_adaptive = test_result
     plot_fig5(r_rl, r_fixed, os.path.join(fig_dir, 'fig5_cumulative_reward.png'),

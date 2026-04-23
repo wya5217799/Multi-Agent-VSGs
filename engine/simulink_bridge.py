@@ -215,6 +215,7 @@ class SimulinkBridge:
     def __init__(self, config: BridgeConfig, session_id: str = "default"):
         self.cfg = config
         self.session = MatlabSession.get(session_id)
+        self.session.add_vsg_bridge_path()
         self.t_current: float = 0.0
         self._matlab_cfg: Any = None
         self.__mdbl = None

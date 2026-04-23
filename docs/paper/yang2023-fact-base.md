@@ -42,8 +42,10 @@
 
 $$H_{es,i}\Delta\dot{\omega}_i + D_{es,i}\Delta\omega_i = \Delta u_i - \Delta P_{es,i}$$
 
-- $H_{es,i}$：虚拟惯量常数（论文称"virtual inertia constant"，未指明单位）  
-  > **待核实 Q7：** 论文以 $H_{es,i}$ 直接作为 $\Delta\dot\omega$ 的系数（非传统 $2H/\omega_s$），且参数范围 $[-100, 300]$ 远超通常 H 秒级取值，单位与传统 H 的关系不明确，不排除是 $M=2H$ 量纲。项目实现使用 $M$（VSG_M0=12.0），通过除 2 折算到 H。
+- $H_{es,i}$：虚拟惯量常数（论文称"virtual inertia constant"）  
+  > **Q7 原文事实（2026-04-21 核查 `high_accuracy_transcription_cn.md`）：** 论文对 $H_{es}$ 的全部描述仅有"虚拟惯量常数"（Sec.II-A Eq.1 后注释、Eq.4 后注释），**未给出量纲**（秒？p.u.？无量纲？均无明示）。Eq.(1) 原文形式为 $H\Delta\dot\omega + D\Delta\omega = \Delta u - \Delta P$——**无 `2` 系数、无 `ω_s` 系数**，属控制派集总常数形式，不等同于电机学标准 $2H_{trad}/\omega_s$ 折算。Sec.IV-B 只给 $\Delta H$ 调节范围 $[-100,300]$，不给基准 $H_{es,0}$ 数值。
+  >
+  > **项目工作假设（推断，非论文事实）：** 代码 `env/ode/power_system.py:204` 实现 `2H_code·ωdot = ω_s·(Δu - coupling) - D·ω`（电机学标准形式，rad/s 基值），与论文 Eq.(1) 集总形式通过数值映射 $H_{paper} = 2·H_{code}$ 可做 RHS 等价。选用电机学形式是为与 Simulink 发电机模型 [49] 阻抗基值对齐，**该 2 倍映射为项目推断**，论文未明示、也未否定。引用该映射时必须标注"项目推断"；不得以"论文事实"名义引用。详见 `env/ode/NOTES.md` M1 段。
 - $D_{es,i}$：虚拟阻尼常数
 - $\Delta\omega_i$：频率偏差（p.u.，相对于额定角频率）
 - $\Delta u_i$：等效外部扰动（包括本地负荷和通过导纳矩阵折算的外部扰动）
@@ -315,7 +317,7 @@ $r^f = 0$ 的条件是各节点频率相同，**而不是**频率偏差为零。
 | Q4 | 弱网实验的系统参数来源 | 引用了 [22]，未在论文中列出 | Sec.IV-F |
 | Q5 | Kundur 系统中 4 台储能的具体连接位置（哪几个母线） | 原文"separately connected to different areas"，未给出母线编号，参见 Fig.3 | Sec.IV-A |
 | Q6 | 每 episode 执行多少次梯度更新（gradient steps）| Table I 和 Algorithm 1 均未指定该数值 | Table I / Algorithm 1 |
-| Q7 | $H_{es,i}$ 的量纲与传统同步机 H（秒）的关系 | 参数范围 [-100,300] 远超常规 H 秒级；论文未说明单位 | Sec.II-A Eq.1；Sec.IV-B |
+| Q7 | $H_{es,i}$ 的量纲与传统同步机 H（秒）的关系 | **原文未给量纲**（2026-04-21 核查 `high_accuracy_transcription_cn.md`）。Eq.(1) 无 `2`、无 `ω_s` 系数，属控制派集总形式。项目工作假设 $H_{paper}=2·H_{code}$ 为**推断**，非论文事实。详见 §2.1 Q7 段 | Sec.II-A Eq.1；Sec.IV-B |
 | Q8 | 测试集评价公式的归一化系数（是否含 1/M 或 1/N） | 原文该段 OCR 损坏，无法从转录稿核实 | Sec.IV-C |
 
 ---

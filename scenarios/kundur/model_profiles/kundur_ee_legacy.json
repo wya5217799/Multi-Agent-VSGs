@@ -1,0 +1,14 @@
+{
+  "scenario_id": "kundur",
+  "profile_id": "kundur_ee_legacy",
+  "model_name": "kundur_vsg",
+  "solver_family": "simscape_ee",
+  "pe_measurement": "feedback",
+  "phase_command_mode": "passthrough",
+  "warmup_mode": "physics_compensation",
+  "feature_flags": {
+    "allow_pref_ramp": true,
+    "allow_simscape_solver_config": true,
+    "allow_feedback_only_pe_chain": true
+  }
+}

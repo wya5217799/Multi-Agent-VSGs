@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "KundurModelProfile",
+  "type": "object",
+  "required": [
+    "scenario_id",
+    "profile_id",
+    "model_name",
+    "solver_family",
+    "pe_measurement",
+    "phase_command_mode",
+    "warmup_mode",
+    "feature_flags"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "scenario_id": { "const": "kundur" },
+    "profile_id": { "type": "string", "minLength": 1 },
+    "model_name": { "type": "string", "minLength": 1 },
+    "solver_family": { "enum": ["simscape_ee", "sps_phasor"] },
+    "pe_measurement": { "enum": ["feedback", "vi"] },
+    "phase_command_mode": { "enum": ["passthrough", "absolute_with_loadflow"] },
+    "warmup_mode": { "enum": ["physics_compensation", "technical_reset_only"] },
+    "feature_flags": {
+      "type": "object",
+      "required": [
+        "allow_pref_ramp",
+        "allow_simscape_solver_config",
+        "allow_feedback_only_pe_chain"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "allow_pref_ramp": { "type": "boolean" },
+        "allow_simscape_solver_config": { "type": "boolean" },
+        "allow_feedback_only_pe_chain": { "type": "boolean" }
+      }
+    }
+  }
+}

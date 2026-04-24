@@ -24,7 +24,8 @@ if payload.initialization.uses_pref_ramp
 else
     payload.initialization.warmup_mode = 'technical_reset_only';
 end
-has_vi = ~isempty(find_system(model_name, 'Regexp', 'on', 'Name', '.*VIMeas.*'));
+has_vi = ~isempty(find_system(model_name, 'Regexp', 'on', 'Name', '.*VIMeas.*')) || ...
+         ~isempty(find_system(model_name, 'Regexp', 'on', 'Name', 'Meas_ES\d+'));
 has_pefb = ~isempty(find_system(model_name, 'Regexp', 'on', 'Name', 'Log_PeFb_.*'));
 if has_vi
     payload.measurement.mode = 'vi';

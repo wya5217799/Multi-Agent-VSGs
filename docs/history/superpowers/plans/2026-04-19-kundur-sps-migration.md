@@ -11,7 +11,7 @@
 ## Supersedes
 
 - [`C:\Users\27443\.claude\plans\federated-cuddling-pumpkin.md`](C:/Users/27443/.claude/plans/federated-cuddling-pumpkin.md) —— T_ramp A/B 修复方向放弃
-- [`docs/superpowers/plans/2026-04-18-kundur-pe-contract-fix.md`](../2026-04-18-kundur-pe-contract-fix.md) Phase 5b B6 开始的分支
+- [`docs/superpowers/plans/2026-04-18-kundur-pe-contract-fix.md`](../../../superpowers/plans/2026-04-18-kundur-pe-contract-fix.md) Phase 5b B6 开始的分支
 
 ---
 
@@ -27,7 +27,7 @@
 | NE39 build 脚本模板成熟 | `scenarios/new_england/matlab_scripts/connect_vsg_to_grid.m:69-127` |
 | SPS Series RLC Branch 的 `InitialCurrents` 接受 AC 相量 | MathWorks 文档（Phasor/Discrete/Continuous 模式下支持） |
 
-> **澄清**：仓库中 `kundur_two_area.slx.original`（3/25）和 `kundur_two_area.slx`（3/26）也是 **ee_lib**（各 36/38 处 `ee_lib` 引用，0 处 `powerlib`），不是老 SPS 版本。Kundur 从未有过 SPS 实现——这是**首次迁移**，不是"迁回"。脚本名 `build_powerlib_kundur.m` 中的 "powerlib" 只是命名遗留（原 plan [`docs/history/superpowers/plans/2026-03-30-kundur-vsg-topology-upgrade.md:53-54`](../history/superpowers/plans/2026-03-30-kundur-vsg-topology-upgrade.md) 声明要用 powerlib，但实施时偏离到 ee_lib）。
+> **澄清**：仓库中 `kundur_two_area.slx.original`（3/25）和 `kundur_two_area.slx`（3/26）也是 **ee_lib**（各 36/38 处 `ee_lib` 引用，0 处 `powerlib`），不是老 SPS 版本。Kundur 从未有过 SPS 实现——这是**首次迁移**，不是"迁回"。脚本名 `build_powerlib_kundur.m` 中的 "powerlib" 只是命名遗留（原 plan [`docs/history/superpowers/plans/2026-03-30-kundur-vsg-topology-upgrade.md:53-54`](./2026-03-30-kundur-vsg-topology-upgrade.md) 声明要用 powerlib，但实施时偏离到 ee_lib）。
 
 ### ~~为什么选 Route A（EMT）~~ → 已作废：NE39 实际用 Phasor
 

@@ -187,11 +187,11 @@ reset 第 0 帧 `obs[:,0]` 用的是 VSG-base `0.5`，step 中是 system-base；
   - 结构校验 `__post_init__`：`feedback` 模式必带非空 `pe_feedback_signal`
 - **不要**在此文件写 Kundur 专属 `pout` 禁令
 
-#### [slx_helpers/slx_build_bridge_config.m](../../../slx_helpers/slx_build_bridge_config.m)
+#### [slx_helpers/vsg_bridge/slx_build_bridge_config.m](../../../slx_helpers/vsg_bridge/slx_build_bridge_config.m)
 - 新增入参 + struct 字段 `pe_feedback_signal`
 - `feedback` 模式支持
 
-#### [slx_helpers/slx_step_and_read.m](../../../slx_helpers/slx_step_and_read.m)
+#### [slx_helpers/vsg_bridge/slx_step_and_read.m](../../../slx_helpers/vsg_bridge/slx_step_and_read.m)
 - 新增 `feedback` 分支（与 `vi` / `pout` 平级）：
   ```matlab
   if strcmp(pe_mode, 'feedback')

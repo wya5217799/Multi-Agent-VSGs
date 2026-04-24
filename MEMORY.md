@@ -21,6 +21,7 @@ This file is an index only — do not maintain a parallel Start Here list here.
 - [2026-04-17 Control Surface Convention](docs/decisions/2026-04-17-control-surface-convention.md) — harness=quality gate / smoke=bridge / training=control surface；control_manifest.toml 合并两旧 manifest
 
 - [2026-04-22 Simulink MCP generalization boundary](docs/decisions/2026-04-22-simulink-mcp-generalization-boundary.md) - general `simulink_*` tools use Simulink vocabulary; VSG/RL semantics stay in project adapters
+- [2026-04-24 Simulink toolbox single-source layout](docs/decisions/2026-04-24-simulink-toolbox-single-source-layout.md) - one canonical shared skill at ~/.shared-skills, junctions from .codex/.claude; project-specific routing in docs/agent_layer/simulink-project-routing/
 
 ## Plans (Pending)
 

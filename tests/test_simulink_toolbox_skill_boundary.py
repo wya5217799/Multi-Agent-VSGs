@@ -41,8 +41,29 @@ GENERIC_ALLOWED_TOOL_PREFIX = "simulink_"
 PROJECT_ONLY_SIMULINK_TOOLS = {"simulink_bridge_status"}
 
 
+def _resolve_unique_skill_dirs() -> list[Path]:
+    """Return existing install dirs, deduplicated by canonical resolved path.
+
+    When both install paths are junctions to the same shared root, scanning
+    both would double-count every file. Deduplication prevents false positives.
+    """
+    existing = [path for path in SKILL_DIRS if path.exists()]
+    unique: list[Path] = []
+    seen: set[str] = set()
+    for path in existing:
+        try:
+            key = str(path.resolve()).lower()
+        except OSError:
+            key = str(path).lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(path)
+    return unique
+
+
 def _existing_skill_dirs() -> list[Path]:
-    return [path for path in SKILL_DIRS if path.exists()]
+    return _resolve_unique_skill_dirs()
 
 
 def _read_text(path: Path) -> str:
@@ -71,6 +92,17 @@ def test_installed_simulink_toolbox_docs_are_project_neutral() -> None:
                 assert not re.search(pattern, text), (
                     f"{skill_dir / filename} contains project-only pattern {pattern!r}"
                 )
+
+
+@pytest.mark.offline
+def test_installed_simulink_toolbox_no_training_smoke_debug_pattern() -> None:
+    if not _existing_skill_dirs():
+        pytest.skip("No installed simulink-toolbox skill directories found.")
+    for skill_dir in _existing_skill_dirs():
+        assert not (skill_dir / "patterns" / "training-smoke-debug.md").exists(), (
+            f"{skill_dir}/patterns/training-smoke-debug.md must not exist in the "
+            f"generic skill. Move it to docs/agent_layer/simulink-project-routing/."
+        )
 
 
 @pytest.mark.offline

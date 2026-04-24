@@ -80,23 +80,39 @@ _PROJECT_ONLY_TOOLS: set[str] = {
 
 
 def _get_skill_dirs() -> list[Path]:
-    """Return target skill directories for both Codex and Claude installs."""
+    """Return target skill directories for both Codex and Claude installs.
+
+    Deduplicates by canonical resolved path so that junction aliases are not
+    written twice when both install paths point to the same shared root.
+    """
     env_multi = os.environ.get("SKILL_DIRS")
     if env_multi:
-        return [
+        candidates = [
             Path(item).expanduser().resolve()
             for item in env_multi.split(os.pathsep)
             if item.strip()
         ]
+    elif env_single := os.environ.get("SKILL_DIR"):
+        candidates = [Path(env_single).expanduser().resolve()]
+    else:
+        candidates = [
+            Path("~/.codex/skills/simulink-toolbox").expanduser().resolve(),
+            Path("~/.claude/skills/simulink-toolbox").expanduser().resolve(),
+        ]
 
-    env_single = os.environ.get("SKILL_DIR")
-    if env_single:
-        return [Path(env_single).expanduser().resolve()]
-
-    return [
-        Path("~/.codex/skills/simulink-toolbox").expanduser().resolve(),
-        Path("~/.claude/skills/simulink-toolbox").expanduser().resolve(),
-    ]
+    unique_dirs: list[Path] = []
+    seen: set[str] = set()
+    for path in candidates:
+        # For junctions/symlinks, resolve to the real target for deduplication.
+        try:
+            key = str(path.resolve()).lower()
+        except OSError:
+            key = str(path).lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        unique_dirs.append(path)
+    return unique_dirs
 
 
 def _load_public_tool_names() -> list[str]:

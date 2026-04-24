@@ -68,6 +68,24 @@ def test_write_task_record_writes_task_json_in_run_dir(tmp_path, monkeypatch):
     }
 
 
+def test_ensure_run_dir_rejects_invalid_scenario(tmp_path, monkeypatch):
+    import pytest
+    from engine import harness_reports
+
+    monkeypatch.setattr(harness_reports, "HARNESS_ROOT", tmp_path / "results" / "harness")
+    with pytest.raises(ValueError, match="Invalid scenario_id"):
+        harness_reports.ensure_run_dir("unknown_scenario", "run-001")
+
+
+def test_ensure_run_dir_rejects_dotdot_run_id(tmp_path, monkeypatch):
+    import pytest
+    from engine import harness_reports
+
+    monkeypatch.setattr(harness_reports, "HARNESS_ROOT", tmp_path / "results" / "harness")
+    with pytest.raises(ValueError, match="Invalid run_id"):
+        harness_reports.ensure_run_dir("kundur", "../../../etc/passwd")
+
+
 def test_model_report_surfaces_alignment_warnings():
     payload = {
         "semantic_alignment": ["pref_ramp present while profile forbids it"]

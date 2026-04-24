@@ -2,7 +2,7 @@ function cfg = slx_build_bridge_config( ...
     m_path_template, d_path_template, omega_signal, vabc_signal, iabc_signal, ...
     pe_path_template, src_path_template, vsg_sn, delta_signal, p_out_signal, ...
     m_var_template, d_var_template, pe_measurement, ...
-    phase_command_mode, init_phang, phase_feedback_gain, pe_feedback_signal)
+    phase_command_mode, init_phang, phase_feedback_gain, pe_feedback_signal, pe_vi_scale)
 %SLX_BUILD_BRIDGE_CONFIG  Build bridge config struct from typed Python arguments.
 %
 %   Replaces the Python-side string-eval pattern:
@@ -64,5 +64,12 @@ function cfg = slx_build_bridge_config( ...
         cfg.pe_feedback_signal = char(pe_feedback_signal);
     else
         cfg.pe_feedback_signal = '';
+    end
+
+    % V×I Pe scaling: 1.0 for RMS phasors (ee_lib), 0.5 for SPS peak phasors
+    if nargin >= 18
+        cfg.pe_vi_scale = double(pe_vi_scale);
+    else
+        cfg.pe_vi_scale = 1.0;
     end
 end

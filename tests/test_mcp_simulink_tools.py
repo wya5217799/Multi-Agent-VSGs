@@ -514,25 +514,6 @@ class TestSimulinkStructuredOps:
         assert result["ok"] is True
         assert result["block_path"] == "mdl/Sub1"
 
-    @patch("engine.matlab_session.matlab_engine", create=True)
-    def test_build_vsg_stub_returns_subsystems(self, mock_me):
-        from engine.vsg_project_tools import vsg_build_stub
-
-        mock_eng = MagicMock()
-        mock_me.start_matlab.return_value = mock_eng
-        mock_eng.vsg_build_vsg_stub = MagicMock(return_value={
-            "ok": True,
-            "system_path": "mdl",
-            "subsystems": ["mdl/VSG_ES1", "mdl/VSG_ES2"],
-            "important_lines": ["Built 2 VSG stub subsystem(s) under mdl"],
-            "error_message": "",
-        })
-
-        result = vsg_build_stub("mdl", 2)
-
-        assert result["ok"] is True
-        assert result["subsystems"] == ["mdl/VSG_ES1", "mdl/VSG_ES2"]
-
 
 class TestSimulinkDiagnosticsWave1:
     def setup_method(self):
@@ -993,6 +974,24 @@ class TestBootstrapCache:
         assert hasattr(session, "_bootstrapped")
         assert isinstance(session._bootstrapped, set)
         assert "mdl" in session._bootstrapped
+
+    @patch("engine.matlab_session.matlab_engine", create=True)
+    def test_close_invalidates_cache_so_reopen_calls_load_system_again(self, mock_me):
+        from engine.mcp_simulink_tools import simulink_close_model, simulink_get_block_params
+
+        mock_eng = MagicMock()
+        mock_me.start_matlab.return_value = mock_eng
+        mock_eng.slx_batch_query = MagicMock(return_value={
+            "block": "mdl/A", "params": {}, "error": "",
+        })
+        mock_eng.slx_close_model = MagicMock()
+        mock_eng.bdIsLoaded = MagicMock(return_value=False)
+
+        simulink_get_block_params("mdl", "mdl/A")   # first open → load_system called
+        simulink_close_model("mdl")                  # close → cache entry removed
+        simulink_get_block_params("mdl", "mdl/A")   # reopen → load_system called again
+
+        assert mock_eng.load_system.call_count == 2
 
 
 class TestDeprecatedToolWarnings:

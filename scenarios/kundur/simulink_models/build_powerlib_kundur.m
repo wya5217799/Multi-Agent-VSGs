@@ -167,6 +167,19 @@ catch
     pf_json.source_hash = ['sha256:' repmat('0', 1, 64)];
 end
 
+% Terminal angles — SPS path uses these for PhaseAngle (not EMF angles)
+pf_json.G1_terminal_deg   = pf.G1_terminal_deg;
+pf_json.gen_terminal_deg  = pf.gen_delta_deg(1:2);   % [G2, G3] terminal [deg]
+pf_json.wind_terminal_deg = pf.gen_delta_deg(3:4);   % [W1, W2] terminal [deg]
+% EMF angles — kept as metadata (do not use for SPS PhaseAngle)
+pf_json.gen_emf_deg  = [pf.G1_emf_deg, pf.gen_emf_deg_ext(1), pf.gen_emf_deg_ext(2)];  % [G1,G2,G3]
+pf_json.wind_emf_deg = [pf.gen_emf_deg_ext(3), pf.gen_emf_deg_ext(4)];  % [W1,W2]
+pf_json.units.G1_terminal_deg   = 'degrees_absolute_sim_frame';
+pf_json.units.gen_terminal_deg  = 'degrees_absolute_sim_frame';
+pf_json.units.wind_terminal_deg = 'degrees_absolute_sim_frame';
+pf_json.units.gen_emf_deg       = 'degrees_absolute_sim_frame';
+pf_json.units.wind_emf_deg      = 'degrees_absolute_sim_frame';
+
 json_str = jsonencode(pf_json);
 % Pretty-print: insert newlines after commas at top level
 fid = fopen(ic_path, 'w');

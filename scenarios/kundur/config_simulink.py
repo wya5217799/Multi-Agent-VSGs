@@ -184,6 +184,16 @@ KUNDUR_BRIDGE_CONFIG = BridgeConfig(
     tripload2_p_default=0.0,             # Bus15 off at episode start
     pe0_default_vsg=tuple(VSG_P0_VSG_BASE.tolist()),  # per-agent VSG-base pu
     delta0_deg=tuple(_ic.vsg_delta0_deg),             # rotor angle ICs [deg]; seeds 6-arg warmup
+    # absolute_with_loadflow mode: init_phang offsets the post-warmup phAng update.
+    # For Kundur SPS the phAng is the rotor angle directly (no bus-angle offset),
+    # so init_phang = (0, ...) → formula reduces to ph = delta_clipped.
+    # passthrough mode does not use init_phang; keep it empty for that path.
+    init_phang=tuple(0.0 for _ in range(N_AGENTS))
+    if KUNDUR_MODEL_PROFILE.phase_command_mode == 'absolute_with_loadflow'
+    else (),
+    # SPS Phasor Three-Phase V-I Measurement outputs peak phasors (not RMS).
+    # real(V_peak × I_peak*) = 2 × average power → scale by 0.5 to recover watts.
+    pe_vi_scale=0.5 if KUNDUR_MODEL_PROFILE.pe_measurement == 'vi' else 1.0,
     # No breaker Step blocks in new model
     breaker_step_block_template='',
     breaker_count=0,

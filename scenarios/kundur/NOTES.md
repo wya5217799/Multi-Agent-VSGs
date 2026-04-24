@@ -5,12 +5,28 @@
 > 改完顺手更新这份笔记。
 
 ## 现在在修
-- omega 100% 饱和 from step 0。已修阻抗 base 转换 bug（commit **216d8b9**，`scenarios/kundur/simulink_models/build_powerlib_kundur.m`），**未回归验证**。
-  下一步：
-  1. **先重新校准 VSG_P0**（opt_kd_05 遗留 TODO）。阻抗改了之后 P0/P_max 比例也变了，不校准直接跑训练会在错误工作点上。
-  2. 再跑一次训练，确认 `omega_saturated < 50%`、`mean_freq_dev < 8Hz`。
+Pe 幅值根因 Batch 7 完成（verdict=RC-A）：解析证明电流异常（1456 A vs 预期 71 A）不可能由 ESS 阻抗+角度差解释。  
+电压测量正常（187.6 kV），电流测量异常大（ratio_I=14–21x）→ 测量块拓扑位置错误（RC-A首要候选）。  
+等待人工授权：检查 `kundur_vsg_sps.slx` 中 Meas_ES{i} 块位置，确认 RC-A，再决定修复方案。  
+约束规则：`docs/superpowers/plans/2026-04-24-kundur-sps-investigation-constraints.md`。  
+当前 verdict：见 `results/harness/kundur/20260424-kundur-sps-workpoint-alignment/summary.md`。
 
 ## 已知事实（改代码前看一眼）
+
+### SPS/Phasor 路径（kundur_vsg_sps）— 历史诊断上下文（Task 9 NO-GO 作废 Branch 7A；见"现在在修"）
+- **根因候选（未最终确认）：Three-Phase Source PhaseAngle = EMF 角而非 terminal 角**。
+  *(Branch 7A 将 Pe 改为正数，但 Pe=+4.032 pu 而预期为 +0.2 pu，静态工作点门未通过，根因仍待 NR 变体确认)*
+  `build_kundur_sps.m` 原来使用 `gen_emf_deg`（G1=32.39°）给 `GSrc_G1/G2/G3`、`WSrc_W1/W2` 设置 PhaseAngle。
+  SPS Phasor 模型中，Three-Phase Source 是 behind-R-L 理想源，其 PhaseAngle 参数含义是**端电压角**，不是内电势角。
+  用 EMF 角导致 SPS 网络基准整体抬高约 12°，Bus7 偏差 +4.27°（SPS 15.18° vs NR 10.91°），ESS1 Pe = -3.537 pu（负）。
+- **修复（Branch 7A）**：`build_kundur_sps.m` 改为从 `kundur_ic.json` 读 terminal 角字段（G1_terminal_deg=20.0, gen_terminal_deg, wind_terminal_deg）。
+  重建后：GSrc/WSrc PhaseAngle = terminal 角，ESS1 Pe = +4.032 pu，compile 0 错误，omega=1.0 pu。
+- **terminal 角字段来源**：由 `compute_kundur_powerflow.m`（输出 `pf.G1_terminal_deg` 和 `pf.gen_delta_deg`）→ `build_powerlib_kundur.m`（写入 JSON）→ `kundur_ic.json` 保存。
+- **EMF 角字段保留**：`gen_emf_deg` / `wind_emf_deg` 仍在 JSON 中，作为 VSG delta0 初始化（IntD IC）的元数据，不用于 SPS Fixed Source。
+- **SPS 路径 Pe 计算比例因子 `pe_vi_scale=0.5`**：SPS Phasor 输出峰值相量，VxI 功率要乘 0.5 才得到 RMS 功率（对应 system base pu）。不要改这个系数。
+- **ESS1 sweep 零穿点 = 17.29°**，NR Bus7 = 10.91°，terminal 角修复后 SPS Bus7 应与 NR Bus7 对齐。
+
+### powerlib 路径（kundur_vsg，旧主线）
 - **vlf_ess [18,10,7,12]° 过时根因**：阻抗修复前 X_vsg = 0.30 pu（错用机端 base），修复后 X_vsg_sys = 0.30×(100/200) = 0.15 pu。P_max 增大，旧角度处 Pe_elec >> Pe_mech，均衡角已偏移。
 - **正确方法**：在 `build_powerlib_kundur.m` 中用 ee_lib 潮流 API（`power_loadflow` 或等效）直接求 ESS 各母线平衡相角，delta_eq = theta_bus + arcsin(Pe_nom/P_max)，结果写入 `kundur_ic.json`，消除手动校准需求。
 - `KundurStandaloneEnv`（ODE 后端）的 `_P_mech = 0.5` 与 Simulink 主线 `VSG_P0_SBASE`（4 元向量，system-base pu）不一致；ODE 路径未列入本次 Pe 契约修复（2026-04-18）。若重启 ODE 路径需单独对齐。
@@ -20,6 +36,20 @@
 - Q7（论文 D 量纲）未解决前，**不要把 D 改到 100+ 量级**。参见 `docs/paper/yang2023-fact-base.md` §Q7。
 - Kundur 是 **50 Hz**（NE39 是 60 Hz，别混）。
 - 固定 50 步 episode + 无 Python 频率早停是论文对齐，正确；IntW 饱和命中要作为"模型失真事件"监控，不是终止条件。
+
+## SPS 工作点诊断过程摘要（2026-04-24）
+诊断链：
+1. `probe_sps_workpoint_alignment` nr_only → Bus7_NR=10.91°, G1_emf=32.39°, G1_terminal=20.0°
+2. vi_only → Pe_manual=-3.537 pu，slx_extract_state 吻合（diff=0），说明提取路径正确，问题在物理侧
+3. bus7_only → SPS Bus7=15.18°，NR Bus7=10.91°，偏差 +4.27°（>1° 硬标准）→ 工作点不对齐
+4. sweep_only → Pe 零穿点=17.29°（≠NR Bus7），确认 SPS 网络状态偏移
+5. `probe_sps_source_angle_hypotheses` 四组实验：
+   - Exp A（基线 EMF）: Pe=-3.537 pu → 负（故障态）
+   - Exp B（仅G1 terminal）: Pe=-0.998 pu → 仍负但改善
+   - Exp C（全 terminal）: Pe=+4.032 pu → 正（目标态）
+   - Exp D（恢复 EMF）: Pe=-3.537 pu → 复现故障
+   → `terminal_fix_promising=1`（已作废：仅检查符号，Pe 幅值 +4.032 pu ≫ 预期 +0.2 pu，Task 9 NO-GO）
+6. Task 7A 实施 → Task 8 重建 → Pe=+4.032 pu，compile 0 错误，omega=1.0
 
 ## 试过没用的（别再试）
 - `DIST_MAX` 3.0 → 1.5：单独无效（commit `d5732ec`）。稳态公式忽略了 inter-area 振荡放大。

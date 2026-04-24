@@ -1,14 +1,30 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Any, Mapping
 
 HARNESS_ROOT = Path(__file__).resolve().parents[1] / "results" / "harness"
 
+_VALID_SCENARIO = re.compile(r"^(kundur|ne39)$")
+_VALID_RUN_ID = re.compile(r"^[\w\-]{1,64}$")
+
+
+def _validate_path_inputs(scenario_id: str, run_id: str) -> None:
+    if not _VALID_SCENARIO.match(scenario_id):
+        raise ValueError(f"Invalid scenario_id: {scenario_id!r}")
+    if not _VALID_RUN_ID.match(run_id):
+        raise ValueError(f"Invalid run_id: {run_id!r}")
+
 
 def ensure_run_dir(scenario_id: str, run_id: str) -> Path:
-    run_dir = HARNESS_ROOT / scenario_id / run_id
+    _validate_path_inputs(scenario_id, run_id)
+    run_dir = (HARNESS_ROOT / scenario_id / run_id).resolve()
+    try:
+        run_dir.relative_to(HARNESS_ROOT.resolve())
+    except ValueError:
+        raise ValueError(f"Resolved path escapes HARNESS_ROOT: {run_dir}")
     run_dir.mkdir(parents=True, exist_ok=True)
     return run_dir
 

@@ -93,6 +93,7 @@ class BridgeConfig:
     pe_measurement: str = 'vi_then_pout'  # Pe strategy: "vi", "pout", "vi_then_pout", or "feedback"
     pe0_default_vsg: float | tuple = 0.5  # nominal Pe seed (VSG-base pu); scalar or per-agent sequence
     pe_feedback_signal: str = ''    # 'PeFb_ES{idx}' — PeGain_ES ToWorkspace (feedback mode only)
+    pe_vi_scale: float = 1.0        # V×I Pe scaling: 1.0 for RMS phasors, 0.5 for SPS peak phasors
     # Phase-angle feedback (NE39 only)
     phase_command_mode: str = 'passthrough'  # 'passthrough' (Kundur) or 'absolute_with_loadflow' (NE39)
     init_phang: tuple[float, ...] = ()       # load-flow initial phase angles (deg); NE39: 8-element vector
@@ -295,6 +296,7 @@ class SimulinkBridge:
             mdbl(list(self.cfg.init_phang)),
             float(self.cfg.phase_feedback_gain),
             self.cfg.pe_feedback_signal,
+            float(self.cfg.pe_vi_scale),
             nargout=1,
         )
 

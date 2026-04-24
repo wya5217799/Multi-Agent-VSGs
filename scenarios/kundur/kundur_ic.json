@@ -1,1 +1,43 @@
-{"schema_version":1,"calibration_status":"powerflow_parametric","vsg_p0_vsg_base_pu":[0.1,0.1,0.1,0.1],"vsg_delta0_deg":[12.620902455474292,4.684639481298249,6.22704292802855,3.3232701266669054],"units":{"vsg_p0_vsg_base_pu":"pu_on_vsg_base","vsg_delta0_deg":"degrees"},"powerflow_meta":{"converged":true,"max_mismatch":1.375595209698442E-12,"iterations":5},"source_hash":"sha256:d79717b1eac72e143d506ce26f28ebe517ee259e808b198475fb86d6c586d250"}
+{
+  "schema_version": 1,
+  "calibration_status": "powerflow_parametric",
+  "vsg_p0_vsg_base_pu": [
+    0.1,
+    0.1,
+    0.1,
+    0.1
+  ],
+  "vsg_delta0_deg": [
+    12.620902455474292,
+    4.684639481298249,
+    6.22704292802855,
+    3.3232701266669054
+  ],
+  "units": {
+    "vsg_p0_vsg_base_pu": "pu_on_vsg_base",
+    "vsg_delta0_deg": "degrees",
+    "G1_terminal_deg": "degrees_absolute_sim_frame",
+    "gen_terminal_deg": "degrees_absolute_sim_frame",
+    "wind_terminal_deg": "degrees_absolute_sim_frame",
+    "gen_emf_deg": "degrees_absolute_sim_frame",
+    "wind_emf_deg": "degrees_absolute_sim_frame"
+  },
+  "powerflow_meta": {
+    "converged": true,
+    "max_mismatch": 1.375595209698442e-12,
+    "iterations": 5
+  },
+  "source_hash": "sha256:d79717b1eac72e143d506ce26f28ebe517ee259e808b198475fb86d6c586d250",
+  "G1_terminal_deg": 20.0,
+  "gen_terminal_deg": [15.923822331924519, 6.2138364109602282],
+  "wind_terminal_deg": [3.3236052782135488, 2.9881298303058124],
+  "gen_emf_deg": [
+    32.3859,
+    29.0539,
+    19.3749
+  ],
+  "wind_emf_deg": [
+    17.0696,
+    4.8839
+  ]
+}

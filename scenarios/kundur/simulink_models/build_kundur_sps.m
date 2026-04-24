@@ -1,4 +1,4 @@
-function build_kundur_sps(varargin)
+function build_kundur_sps()
 % build_kundur_sps  Rebuild kundur_vsg_sps.slx — full SPS/Phasor electrical layer.
 %
 % Task 7 of kundur-sps-phasor-migration-v4:
@@ -51,7 +51,6 @@ function build_kundur_sps(varargin)
 
     % ESS bus assignments
     ess_bus  = [12, 16, 14, 15];   % ES1..ES4 dedicated buses
-    ess_main = [ 7,  8, 10,  9];   % ES1..ES4 main buses (for reference)
 
     % Load ICs from kundur_ic.json (powerflow delta0 + VSG P0)
     build_dir    = fileparts(mfilename('fullpath'));
@@ -63,24 +62,28 @@ function build_kundur_sps(varargin)
     ess_delta0_deg  = ic.vsg_delta0_deg(:)';         % 1×4 degrees
 
     % Source angles for conventional gens and wind farms.
-    % Using EMF angles from previous power flow run (stored in ic JSON if present,
-    % otherwise fall back to reasonable approximations).
-    % These are fixed-angle sources so accuracy determines initial Pe.
+    % SPS path uses NR terminal bus voltage angles (not EMF angles) for PhaseAngle.
+    % Terminal angles align the SPS network working point with the NR power flow reference.
     vlf_gen  = [1.03, 25.0;   % G1 Bus1
                 1.01, 22.0;   % G2 Bus2
                 1.01, -5.0];  % G3 Bus3
     vlf_wind = [1.00, 15.0;   % W1 Bus4
                 1.00, -20.0]; % W2 Bus11
 
-    % Try to use powerflow angles from ic.json if available
-    if isfield(ic, 'gen_emf_deg') && numel(ic.gen_emf_deg) >= 3
-        vlf_gen(1,2) = ic.gen_emf_deg(1);
-        vlf_gen(2,2) = ic.gen_emf_deg(2);
-        vlf_gen(3,2) = ic.gen_emf_deg(3);
-    end
-    if isfield(ic, 'wind_emf_deg') && numel(ic.wind_emf_deg) >= 2
-        vlf_wind(1,2) = ic.wind_emf_deg(1);
-        vlf_wind(2,2) = ic.wind_emf_deg(2);
+    % SPS path uses terminal bus voltage angles (not EMF angles) for PhaseAngle.
+    % In SPS Phasor, the Three-Phase Source PhaseAngle is the terminal voltage angle.
+    % Using EMF angles elevates the SPS network reference by ~12 deg, causing Pe < 0.
+    if isfield(ic, 'G1_terminal_deg') && isfield(ic, 'gen_terminal_deg') && numel(ic.gen_terminal_deg) >= 2 && ...
+            isfield(ic, 'wind_terminal_deg') && numel(ic.wind_terminal_deg) >= 2
+        vlf_gen(1,2)  = ic.G1_terminal_deg;       % G1 terminal = Bus1 slack ref (20 deg)
+        vlf_gen(2,2)  = ic.gen_terminal_deg(1);   % G2 terminal
+        vlf_gen(3,2)  = ic.gen_terminal_deg(2);   % G3 terminal
+        vlf_wind(1,2) = ic.wind_terminal_deg(1);  % W1 terminal
+        vlf_wind(2,2) = ic.wind_terminal_deg(2);  % W2 terminal
+    else
+        error('build_kundur_sps:noTerminalAngles', ...
+            ['gen_terminal_deg/wind_terminal_deg absent from kundur_ic.json. ' ...
+             'Run build_powerlib_kundur first to populate terminal angles.']);
     end
 
     %% ================================================================
@@ -176,6 +179,7 @@ function build_kundur_sps(varargin)
     if ~already_loaded
         load_system(legacy_path);
     end
+    try
 
     for i = 1:4
         bx = 150 + (i-1)*750;
@@ -239,6 +243,12 @@ function build_kundur_sps(varargin)
         end
     end
 
+    catch ME
+        if ~already_loaded && bdIsLoaded(legacy_mdl)
+            close_system(legacy_mdl, 0);
+        end
+        rethrow(ME);
+    end
     if ~already_loaded
         close_system(legacy_mdl, 0);
     end
@@ -395,13 +405,19 @@ function build_kundur_sps(varargin)
     %% ================================================================
     %  BATCH 6: Disturbance loads (workspace-variable ActivePower)
     %           TripLoad1 at Bus14 (ES3 bus), TripLoad2 at Bus15 (ES4 bus)
-    %           Python bridge sets TripLoad{i}_P per-phase watts via assignin.
-    %           Three-Phase Parallel RLC Load distributes equally across phases,
-    %           so ActivePower = total 3-phase watts = var * 3.
+    %
+    %  Unit contract:
+    %    config_simulink.py writes TripLoad{i}_P in per-phase watts
+    %    (tripload1_p_default = 248e6/3 ≈ 82.67 MW per phase).
+    %    Three-Phase Parallel RLC Load ActivePower is total 3-phase watts.
+    %    Therefore: ActivePower = 'TripLoad{i}_P * 3' converts per-phase → total.
+    %
+    %  CapacitivePower='1' (1 VAR) is a floor so the block mask is valid
+    %  even when TripLoad2_P=0 (TripLoad2 off at episode start).
     %% ================================================================
     trip_defs = {
-        'TripLoad1', 14, 'TripLoad1_P', 248e6;
-        'TripLoad2', 15, 'TripLoad2_P', 1.0;   % 1 W (not 0 — block mask rejects all-zero params)
+        'TripLoad1', 14, 'TripLoad1_P', 248e6/3;   % bridge default: per-phase W (on at start)
+        'TripLoad2', 15, 'TripLoad2_P', 0.0;        % bridge default: off at start
     };
     for ti = 1:size(trip_defs, 1)
         tname = trip_defs{ti, 1};
@@ -418,9 +434,9 @@ function build_kundur_sps(varargin)
             tpath, 'Position', [tx ty tx+80 ty+60]);
         set_param(tpath, 'NominalVoltage',   num2str(Vbase));
         set_param(tpath, 'NominalFrequency', num2str(fn));
-        set_param(tpath, 'ActivePower',      tvar);   % workspace variable reference
+        set_param(tpath, 'ActivePower',      [tvar ' * 3']);  % per-phase W → total 3-phase W
         set_param(tpath, 'InductivePower',   '0');
-        set_param(tpath, 'CapacitivePower',  '1');   % 1 VAR floor so block is valid when P=0
+        set_param(tpath, 'CapacitivePower',  '1');   % 1 VAR floor: keeps block valid when P=0
 
         bus_nodes = do_wire_sps(mdl, bus_nodes, tbus, tname, '%s/LConn%d');
     end
@@ -476,6 +492,14 @@ function build_kundur_sps(varargin)
         h = find_system(mdl, 'SearchDepth', 1, 'Name', sprintf('VSG_ES%d', i));
         if isempty(h)
             error('[build_kundur_sps] FAIL: VSG_ES%d missing', i);
+        end
+    end
+
+    % 5b. All 4 V-I Measurement blocks present (pe_measurement=vi contract)
+    for i = 1:4
+        h = find_system(mdl, 'SearchDepth', 1, 'Name', sprintf('Meas_ES%d', i));
+        if isempty(h)
+            error('[build_kundur_sps] FAIL: Meas_ES%d missing (vi measurement path broken)', i);
         end
     end
 

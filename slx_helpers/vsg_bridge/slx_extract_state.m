@@ -73,7 +73,11 @@ function [state, meas_failures] = slx_extract_state(simOut, agent_ids, cfg, sbas
             try
                 Vabc = simOut.get(vabc_name);
                 Iabc = simOut.get(iabc_name);
-                state.Pe(i) = real(sum(Vabc.Data(end,:) .* conj(Iabc.Data(end,:)))) / sbase_va;
+                vi_scale = 1.0;
+                if isfield(cfg, 'pe_vi_scale')
+                    vi_scale = cfg.pe_vi_scale;
+                end
+                state.Pe(i) = vi_scale * real(sum(Vabc.Data(end,:) .* conj(Iabc.Data(end,:)))) / sbase_va;
                 pe_read = true;
             catch ME
                 pe_error = ME.message;

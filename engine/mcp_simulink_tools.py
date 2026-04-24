@@ -246,6 +246,10 @@ def simulink_close_model(model_name: str, save: _BoolArg = False) -> dict:
         if bool(save):
             session.call("save_system", model_name, nargout=0)
         session.call("slx_close_model", model_name, nargout=0)
+        # Invalidate bootstrap cache so a later load_system is not skipped
+        stem = Path(model_name).stem
+        if hasattr(session, "_bootstrapped"):
+            session._bootstrapped.discard(stem)
         return {
             "ok": True,
             "model_name": model_name,

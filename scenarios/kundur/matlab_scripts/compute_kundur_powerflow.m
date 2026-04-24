@@ -368,6 +368,7 @@ pf.main_bus_ang_abs_deg = theta_main_abs;
 pf.ess_delta_deg      = ess_delta_deg;
 pf.sin_arg            = sin_arg;
 pf.gen_delta_deg      = gen_delta_deg;   % 1×4: [G2,G3,W1,W2] terminal angles [deg]
+pf.G1_terminal_deg = BUS1_ABS_DEG;              % G1 Bus1 terminal angle in abs frame [deg]
 pf.G1_emf_deg         = src_emf_abs_deg(1);     % G1 EMF angle, abs frame [deg]
 pf.gen_emf_deg_ext    = src_emf_abs_deg(2:5);   % [G2,G3,W1,W2] EMF angles [deg]
 pf.src_il_G1_A        = src_il_A(1, :);          % Zgen_G1 IL [ia,ib,ic] A_peak

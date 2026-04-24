@@ -32,14 +32,25 @@ load_system(model_name);
 
 % Episode-1 initial state snapshot (requires model has been reset at least once)
 ep1 = struct();
+ep1_missing = false;
 try
     ep1.omega = evalin('base', 'omega_ES1_init');
     ep1.pe    = evalin('base', 'Pe_init_ES1');
     ep1.delta = evalin('base', 'delta_init_ES1');
 catch
-    ep1.omega = NaN;
-    ep1.pe    = NaN;
-    ep1.delta = NaN;
+    ep1_missing = true;
+end
+
+% Guard: workspace variables not written yet means probe cannot execute.
+% Return SKIP rather than a spurious PASS (NaN comparisons evaluate false in MATLAB).
+if ep1_missing
+    results.ep1  = struct('omega', NaN, 'pe', NaN, 'delta', NaN);
+    results.pass = false;
+    fprintf('probe_warmup_trajectory: model=%s\n', model_name);
+    fprintf('  SKIP: base-workspace variables omega_ES1_init/Pe_init_ES1/delta_init_ES1 not found.\n');
+    fprintf('  Run Python bridge reset() before invoking this probe.\n');
+    fprintf('RESULT: probe_warmup_trajectory SKIP\n');
+    return;
 end
 
 % Tolerances

@@ -156,11 +156,11 @@ SIMULINK_MODEL_DIR = None  # Auto-detect from project root
 MINGW_PATH = r'D:\mingw64'
 
 # ========== SimulinkBridge Configuration ==========
-import os as _os
 from engine.simulink_bridge import BridgeConfig
 
 KUNDUR_BRIDGE_CONFIG = BridgeConfig(
     model_name=KUNDUR_MODEL_PROFILE.model_name,
+    phase_command_mode=KUNDUR_MODEL_PROFILE.phase_command_mode,
     model_dir=SIMULINK_MODEL_DIR or _os.path.join(
         _os.path.dirname(_os.path.abspath(__file__)), 'simulink_models'
     ),

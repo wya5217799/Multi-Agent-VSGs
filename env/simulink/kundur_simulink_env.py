@@ -595,7 +595,7 @@ class KundurSimulinkEnv(_KundurBaseEnv):
 
     def __init__(
         self,
-        model_name: str = "kundur_vsg",
+        model_name: Optional[str] = None,
         model_dir: Optional[str] = None,
         comm_delay_steps: int = 0,
         render_mode: Optional[str] = None,
@@ -617,13 +617,14 @@ class KundurSimulinkEnv(_KundurBaseEnv):
         )
         from engine.simulink_bridge import SimulinkBridge
 
+        resolved_model_name = model_name if model_name is not None else self._runtime_profile.model_name
         resolved_dir = model_dir or os.path.join(
             os.path.dirname(os.path.abspath(__file__)),
             '..', '..', 'scenarios', 'kundur', 'simulink_models'
         )
         cfg = replace(
             KUNDUR_BRIDGE_CONFIG,
-            model_name=model_name,
+            model_name=resolved_model_name,
             model_dir=resolved_dir,
         )
         self.bridge = SimulinkBridge(cfg)

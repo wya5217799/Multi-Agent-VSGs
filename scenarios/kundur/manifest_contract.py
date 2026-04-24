@@ -21,4 +21,14 @@ def validate_kundur_alignment(profile: KundurModelProfile, manifest: dict) -> li
         issues.append("pref_ramp present while profile forbids it")
     if not profile.feature_flags.allow_simscape_solver_config and manifest["solver"]["has_solver_config"]:
         issues.append("solver_config present while profile forbids it")
+    if profile.solver_family == "sps_phasor":
+        pgmode = manifest["solver"].get("powergui_mode", "")
+        if pgmode.lower() != "phasor":
+            issues.append(f"powergui_mode is '{pgmode}', expected 'Phasor' for sps_phasor")
+    if "phase_command_mode" in manifest:
+        if manifest["phase_command_mode"] != profile.phase_command_mode:
+            issues.append(
+                f"phase_command_mode is '{manifest['phase_command_mode']}', "
+                f"expected '{profile.phase_command_mode}'"
+            )
     return issues

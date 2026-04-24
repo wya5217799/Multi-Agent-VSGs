@@ -2,9 +2,9 @@
 训练结果分析脚本
 
 用法:
-    python results/analyze_training.py sim_kundur
-    python results/analyze_training.py sim_ne39
-    python results/analyze_training.py sim_kundur --log-file results/sim_kundur/logs/training_log.json
+    python scripts/analysis/analyze_training.py sim_kundur
+    python scripts/analysis/analyze_training.py sim_ne39
+    python scripts/analysis/analyze_training.py sim_kundur --log-file results/sim_kundur/logs/training_log.json
 
 输出: results/<scenario>/logs/analysis.png
 """

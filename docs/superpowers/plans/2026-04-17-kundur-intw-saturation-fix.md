@@ -117,7 +117,7 @@ path.write_text('\n'.join(updated) + '\n', encoding='utf-8')
 
 ## Task 5: Commit
 
-- [ ] `git add env/simulink/kundur_simulink_env.py scenarios/kundur/config_simulink.py scenarios/contracts/optimization_log_kundur.jsonl`
+- [ ] `git add env/simulink/kundur_simulink_env.py scenarios/kundur/config_simulink.py scenarios/evaluation_contracts/optimization_log_kundur.jsonl`
 - [ ] `git commit -m "fix(kundur): reduce DIST_MAX 1.5→0.5, add omega_saturated monitoring\n\nRoot cause (Kd.md, opt_kd_20260417_01/02): DIST_MAX=1.5 caused Kundur\ntwo-area oscillation peaks of ~14.4Hz, saturating IntW at ±15Hz on\n507/510 episodes and filling replay buffer with distorted physics.\n\nFix: DIST_MAX 1.5→0.5 (50MW max), physics derivation shows peak≤4.8Hz\nat D_LO=1.5 with 2.3x two-area oscillation factor. Added omega_saturated\nfield to info dict for monitoring saturation events going forward."`
 
 ---

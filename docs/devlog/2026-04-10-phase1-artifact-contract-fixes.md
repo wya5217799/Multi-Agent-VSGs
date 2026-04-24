@@ -65,7 +65,7 @@ Both completed with exit code 0. For each scenario, metrics.jsonl had exactly 3 
 Verdict smoke:
 
 ```text
-C:\Users\27443\miniconda3\envs\andes_env\python.exe utils/evaluate_run.py --log-dir results/sim_kundur/logs/standalone --contract scenarios/contracts/sim_kundur.json
+C:\Users\27443\miniconda3\envs\andes_env\python.exe utils/evaluate_run.py --log-dir results/sim_kundur/logs/standalone --contract scenarios/evaluation_contracts/sim_kundur.json
 ```
 
 Result:

@@ -7,7 +7,7 @@ key training events.
 Usage:
     python utils/sidecar.py \\
         --log-dir results/sim_kundur/logs/standalone \\
-        --contract scenarios/contracts/sim_kundur.json
+        --contract scenarios/evaluation_contracts/sim_kundur.json
 
     # without a contract (scenario-id derived from directory name):
     python utils/sidecar.py --log-dir results/sim_kundur/logs/standalone

@@ -2,7 +2,7 @@
 
 Usage (CLI):
     python utils/evaluate_run.py --log-dir results/sim_kundur/logs/simulink \
-                                 --contract scenarios/contracts/sim_kundur.json \
+                                 --contract scenarios/evaluation_contracts/sim_kundur.json \
                                  [--out results/sim_kundur/verdict.json]
 
 Verdict levels:

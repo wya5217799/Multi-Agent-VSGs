@@ -130,3 +130,5 @@ Monitor tools: see `engine/mcp_*.py` docstrings
   under `scenarios/<name>/experiments/` and not pollute the scenario's `scenarios/*/train_simulink.py`.
 
 For relational navigation and drift discovery, graph output may be consulted as a secondary aid. See `docs/agent_layer/graph-policy.md`.
+
+Repository-specific Simulink routing overlays live in `docs/agent_layer/simulink-project-routing/`; Kundur/NE39 model-specific notes live under `docs/agent_layer/simulink-project-routing/models/`.

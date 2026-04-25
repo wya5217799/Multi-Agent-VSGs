@@ -1,8 +1,21 @@
 """engine/training_launch.py — Lightweight training launch control plane.
 
-Provides get_training_launch_status(scenario_id) as the single query
-entry point before launching training.  Reads from existing harness
-JSON (no new fact sources).
+Role:    Launcher (agent 入口) — see docs/knowledge/training_management.md
+Layer:   process-external; lives next to its human counterpart
+         scripts/launch_training.ps1.
+Audience: LLM agents and programmatic callers.
+Humans:  do NOT call this from a shell. Use:
+             scripts/launch_training.ps1 [kundur|ne39|both]
+         which is the interactive entry point.
+
+Single query function: get_training_launch_status(scenario_id) returns all
+facts an agent needs to decide and execute a launch (interpreter path,
+training script, args, latest run state, active PID, resume candidate).
+Does NOT start any process; does NOT write any files.
+
+Status reads go through engine.run_schema.read_run_status (typed view of
+training_status.json). Status schema is documented in
+docs/knowledge/training_management.md §3.
 """
 from __future__ import annotations
 

@@ -1,5 +1,14 @@
 # launch_training.ps1 — 启动训练并验证进程已就绪
 #
+# Role:    Launcher (用户入口) — see docs/knowledge/training_management.md
+# Layer:   process-external; lives next to its agent counterpart
+#          engine/training_launch.py::get_training_launch_status().
+# Audience: humans on an interactive terminal.
+# Agents:  do NOT call this script. Use:
+#              from engine.training_launch import get_training_launch_status
+#          which returns structured launch facts (interpreter path, script,
+#          args, latest run state, active PID).
+#
 # 用法:
 #   .\scripts\launch_training.ps1 kundur          # 只启动 Kundur
 #   .\scripts\launch_training.ps1 ne39            # 只启动 NE39

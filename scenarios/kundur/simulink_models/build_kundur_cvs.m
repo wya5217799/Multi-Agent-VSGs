@@ -87,6 +87,12 @@ for i = 1:4
     assignin('base', sprintf('Pm_%d',     i), double(Pm0_pu(i)));
     assignin('base', sprintf('delta0_%d', i), double(delta0_rad(i)));
     assignin('base', sprintf('Vmag_%d',   i), double(v_mag_pu(i) * Vbase));
+    % D4 disturbance gating (FR-tunable Constant path; default = no step):
+    %   Pm_step_t_i:   step time (s)        — Constant block driving Relational Operator
+    %   Pm_step_amp_i: step amplitude (pu)  — Constant block multiplied by step indicator
+    % Default amp = 0 → indicator irrelevant, no perturbation; equivalent to D3.
+    assignin('base', sprintf('Pm_step_t_%d',   i), double(5.0));
+    assignin('base', sprintf('Pm_step_amp_%d', i), double(0.0));
 end
 assignin('base', 'wn_const',    double(wn));
 assignin('base', 'Vbase_const', double(Vbase));
@@ -145,6 +151,12 @@ add_block('powerlib/Elements/Ground', [mdl '/GND_LB'], ...
     'Position', [880 530 920 560]);
 add_line(mdl, 'Load_B/RConn1', 'GND_LB/LConn1', 'autorouting', 'smart');
 add_line(mdl, 'L_tie/RConn1',  'Load_B/LConn1', 'autorouting', 'smart');
+
+% ---- Global clock for D4 disturbance step indicator (FR-tunable path) ----
+% Plan §2 E5: disturbance via base-ws Constant + comparator, NOT TripLoad.
+% 4 VSGs share one Clock; each VSG owns its (Pm_step_t_i, Pm_step_amp_i) consts.
+add_block('simulink/Sources/Clock', [mdl '/Clock_global'], ...
+    'Position', [200 700 230 730], 'DisplayTime', 'off');
 
 % ---- 4 driven CVS clusters with full swing-equation closure ----
 % Layout per VSG:
@@ -231,9 +243,40 @@ for i = 1:4
         'Position', [bx+400 cy+140 bx+440 cy+170], 'Gain', 'Pe_scale');
     add_line(mdl, ['PSum_' num2str(i) '/1'], ['Pe_pu_' num2str(i) '/1']);
 
-    % --- Swing equation: dω/dt = (Pm - Pe - D*(ω-1)) / M ---
+    % --- Pm step gating (FR-tunable path; D4 Gate 2 disturbance) ---
+    % step_pulse_i(t) = (t >= Pm_step_t_i ? 1 : 0) * Pm_step_amp_i
+    % Pm_total_i      = Pm_i_c + step_pulse_i
+    add_block('simulink/Sources/Constant', [mdl '/Pm_step_t_c_' num2str(i)], ...
+        'Position', [bx-560 cy+130 bx-520 cy+150], ...
+        'Value', sprintf('Pm_step_t_%d', i));
+    add_block('simulink/Logic and Bit Operations/Relational Operator', ...
+        [mdl '/GE_' num2str(i)], ...
+        'Position', [bx-500 cy+115 bx-470 cy+145], 'Operator', '>=');
+    add_line(mdl, 'Clock_global/1',                    ['GE_' num2str(i) '/1']);
+    add_line(mdl, ['Pm_step_t_c_' num2str(i) '/1'],    ['GE_' num2str(i) '/2']);
+
+    add_block('simulink/Signal Attributes/Data Type Conversion', ...
+        [mdl '/Cast_' num2str(i)], ...
+        'Position', [bx-460 cy+115 bx-430 cy+140], 'OutDataTypeStr', 'double');
+    add_line(mdl, ['GE_' num2str(i) '/1'], ['Cast_' num2str(i) '/1']);
+
+    add_block('simulink/Sources/Constant', [mdl '/Pm_step_amp_c_' num2str(i)], ...
+        'Position', [bx-460 cy+155 bx-420 cy+175], ...
+        'Value', sprintf('Pm_step_amp_%d', i));
+
+    add_block('simulink/Math Operations/Product', [mdl '/PmStepMul_' num2str(i)], ...
+        'Position', [bx-410 cy+125 bx-385 cy+150], 'Inputs', '2');
+    add_line(mdl, ['Cast_' num2str(i) '/1'],            ['PmStepMul_' num2str(i) '/1']);
+    add_line(mdl, ['Pm_step_amp_c_' num2str(i) '/1'],   ['PmStepMul_' num2str(i) '/2']);
+
+    % --- Swing equation: dω/dt = (Pm_total - Pe - D*(ω-1)) / M ---
     add_block('simulink/Sources/Constant', [mdl '/Pm_' num2str(i) '_c'], ...
         'Position', [bx-450 cy+50 bx-410 cy+70], 'Value', sprintf('Pm_%d', i));
+    add_block('simulink/Math Operations/Sum', [mdl '/PmTotal_' num2str(i)], ...
+        'Position', [bx-380 cy+70 bx-350 cy+100], 'Inputs', '++');
+    add_line(mdl, ['Pm_' num2str(i) '_c/1'],     ['PmTotal_' num2str(i) '/1']);
+    add_line(mdl, ['PmStepMul_' num2str(i) '/1'], ['PmTotal_' num2str(i) '/2']);
+
     add_block('simulink/Continuous/Integrator', [mdl '/' intW], ...
         'Position', [bx-200 cy+40 bx-170 cy+70], 'InitialCondition', '1');
     add_block('simulink/Sources/Constant', [mdl '/One_' num2str(i)], ...
@@ -249,9 +292,9 @@ for i = 1:4
 
     add_block('simulink/Math Operations/Sum', [mdl '/SwingSum_' num2str(i)], ...
         'Position', [bx-260 cy+50 bx-230 cy+110], 'Inputs', '+--');
-    add_line(mdl, ['Pm_' num2str(i) '_c/1'],   ['SwingSum_' num2str(i) '/1']);
-    add_line(mdl, ['Pe_pu_' num2str(i) '/1'],  ['SwingSum_' num2str(i) '/2']);
-    add_line(mdl, ['Dgain_' num2str(i) '/1'],  ['SwingSum_' num2str(i) '/3']);
+    add_line(mdl, ['PmTotal_' num2str(i) '/1'], ['SwingSum_' num2str(i) '/1']);
+    add_line(mdl, ['Pe_pu_' num2str(i) '/1'],   ['SwingSum_' num2str(i) '/2']);
+    add_line(mdl, ['Dgain_' num2str(i) '/1'],   ['SwingSum_' num2str(i) '/3']);
 
     add_block('simulink/Math Operations/Gain', [mdl '/Mgain_' num2str(i)], ...
         'Position', [bx-225 cy+50 bx-200 cy+70], 'Gain', sprintf('1/M_%d', i));

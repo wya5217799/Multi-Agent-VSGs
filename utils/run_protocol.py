@@ -26,6 +26,7 @@ See docs/decisions/2026-04-09-harness-boundary-convention.md.
 from __future__ import annotations
 
 import json
+import logging
 import os
 import tempfile
 import threading
@@ -35,9 +36,48 @@ from typing import Any
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
+_logger = logging.getLogger(__name__)
+
 # Guard uniqueness across rapid successive calls within the same second.
 _run_id_lock = threading.Lock()
 _last_run_ts: datetime | None = None
+
+# Cache of unknown-key sets already warned about, so a misnamed field
+# (e.g. typo "episode_done") fires logging.warning once per process rather
+# than once per episode. Keyed by frozenset of unknown keys.
+_warned_unknown_key_sets: set[frozenset[str]] = set()
+
+
+def _check_unknown_status_keys(status: dict[str, Any]) -> None:
+    """Warn once-per-process when payload has keys outside RunStatus schema.
+
+    Detects writer typos (e.g. "episode_done" missing the trailing 's') and
+    schema drift before silent default-coercion masks the bug at read time.
+    Never raises; never modifies the payload — forward-compat for newly-added
+    fields not yet promoted to typed attributes is preserved.
+    """
+    # Lazy-import to avoid a circular utils <-> engine dependency on cold start.
+    try:
+        from engine.run_schema import RunStatus
+    except ImportError:
+        return  # cannot validate without schema — silently skip
+
+    known = {
+        name for name in RunStatus.__dataclass_fields__
+        if name != "raw"
+    }
+    unknown = frozenset(status.keys()) - known
+    if not unknown:
+        return
+    if unknown in _warned_unknown_key_sets:
+        return
+    _warned_unknown_key_sets.add(unknown)
+    _logger.warning(
+        "training_status payload contains unknown keys: %s — "
+        "likely typo or schema drift (RunStatus has no such field). "
+        "Payload still written verbatim; reader will ignore these keys.",
+        sorted(unknown),
+    )
 
 
 def generate_run_id(scenario: str) -> str:
@@ -97,7 +137,12 @@ def write_training_status(run_dir: Path, status: dict[str, Any]) -> None:
     """Atomically write training_status.json to run_dir.
 
     Uses tempfile + os.replace so readers never see a partial write.
+
+    Logs a once-per-process warning when ``status`` contains keys outside
+    the engine.run_schema.RunStatus contract — a guard against writer-side
+    typos that the read-side default-coercion would otherwise hide.
     """
+    _check_unknown_status_keys(status)
     target = run_dir / "training_status.json"
     fd, tmp_path = tempfile.mkstemp(dir=run_dir, suffix=".tmp")
     try:

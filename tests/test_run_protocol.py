@@ -64,6 +64,80 @@ def test_read_training_status_returns_none_if_missing(tmp_path):
     assert result is None
 
 
+def test_write_training_status_no_warning_on_known_keys(tmp_path, caplog):
+    """All-RunStatus-field payload must not trigger a warning."""
+    from utils import run_protocol
+    from utils.run_protocol import write_training_status
+
+    # Reset the per-process cache so this test is order-independent.
+    run_protocol._warned_unknown_key_sets.clear()
+
+    run_dir = tmp_path / "clean_run"
+    run_dir.mkdir()
+    payload = {
+        "run_id": "kundur_x",
+        "status": "running",
+        "episodes_done": 5,
+        "last_reward": -10.0,
+        "logs_dir": str(run_dir / "logs"),
+    }
+    with caplog.at_level("WARNING", logger="utils.run_protocol"):
+        write_training_status(run_dir, payload)
+
+    assert "unknown keys" not in caplog.text
+    assert (run_dir / "training_status.json").exists()
+
+
+def test_write_training_status_warns_on_unknown_keys_once(tmp_path, caplog):
+    """Typo / unknown field warns once per process and still writes verbatim."""
+    from utils import run_protocol
+    from utils.run_protocol import write_training_status, read_training_status
+
+    run_protocol._warned_unknown_key_sets.clear()
+
+    run_dir = tmp_path / "typo_run"
+    run_dir.mkdir()
+    # "episode_done" is a typo for "episodes_done"; "totally_made_up" is alien.
+    payload = {
+        "status": "running",
+        "episode_done": 7,
+        "totally_made_up": "x",
+    }
+
+    with caplog.at_level("WARNING", logger="utils.run_protocol"):
+        write_training_status(run_dir, payload)
+        write_training_status(run_dir, payload)  # 2nd call must NOT re-warn
+
+    warnings = [r for r in caplog.records if r.levelname == "WARNING"]
+    assert len(warnings) == 1, f"expected 1 warning, got {len(warnings)}"
+    assert "unknown keys" in warnings[0].getMessage()
+    assert "episode_done" in warnings[0].getMessage()
+    assert "totally_made_up" in warnings[0].getMessage()
+
+    # File still written verbatim — forward-compat preserved.
+    loaded = read_training_status(run_dir)
+    assert loaded["episode_done"] == 7
+    assert loaded["totally_made_up"] == "x"
+
+
+def test_write_training_status_warns_again_on_different_unknown_set(tmp_path, caplog):
+    """A different unknown-key set warns separately (not deduped globally)."""
+    from utils import run_protocol
+    from utils.run_protocol import write_training_status
+
+    run_protocol._warned_unknown_key_sets.clear()
+
+    run_dir = tmp_path / "two_typos"
+    run_dir.mkdir()
+
+    with caplog.at_level("WARNING", logger="utils.run_protocol"):
+        write_training_status(run_dir, {"typo_one": 1})
+        write_training_status(run_dir, {"typo_two": 2})
+
+    warnings = [r for r in caplog.records if r.levelname == "WARNING"]
+    assert len(warnings) == 2
+
+
 @pytest.mark.parametrize("monitor_stopped,expected_status", [
     (True, "monitor_stopped"),
     (False, "completed"),

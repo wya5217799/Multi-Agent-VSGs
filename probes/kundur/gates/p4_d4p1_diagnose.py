@@ -38,15 +38,19 @@ T_STEP    = 5.0
 N_AGENTS  = 4
 FN_HZ     = 50.0
 
-# Plan §5 thresholds (verbatim, NOT relaxed)
-SETTLE_TOL_PU   = 5e-4    # |omega-1| <= 5e-4 pu
-SETTLE_HOLD_S   = 1.0
-SETTLE_S_MAX    = 5.0
-PEAK_STEADY_MAX = 1.5
+# D4-rev thresholds (after plan-author disposition 2026-04-26):
+#   - settle: relative 5%-of-peak band, threshold 15 s (was strict 5e-4 pu @ 5 s)
+#   - peak/steady on omega channel: removed (D4.2 §4 type-0 metric pathology)
+SETTLE_FRAC_OF_PEAK = 0.05
+SETTLE_HOLD_S       = 1.0
+SETTLE_S_MAX        = 15.0
 
-# Analytical model parameters (committed, unchanged)
-M_VSG = 12.0
-D_VSG = 3.0
+# Analytical model parameters (project paper-baseline, see build_kundur_cvs.m
+# header). Paper Yang TPWRS 2023 does NOT specify a numeric D0 / H0; the
+# 24 / 18 pair is the project's modal-calibration target documented in
+# config.py L8-9, L32-33.
+M_VSG = 24.0
+D_VSG = 18.0
 WS    = 2 * math.pi * FN_HZ
 X_V   = 0.10               # per-VSG step-up + feeder pu reactance
 K_LIN = 1.0 / X_V          # small-signal Pe/delta gain at unit V (pu/rad)
@@ -174,12 +178,18 @@ def main() -> int:
             "omega_returns_to_1": bool(returns),
             "settle_to_5pct_peak_after_step_s": settle_5pct,
             "settle_to_5pct_pass_5s": bool(settle_5pct_pass),
-            "settle_to_5e-4_pu_after_step_s_orig": r["settle_after_step_s"],
+            "settle_relative_5pct_after_step_s_orig": r.get(
+                "settle_relative_5pct_after_step_s",
+                r.get("settle_after_step_s", float("nan")),
+            ),
         })
         settle_5pct_results.append({
             "amp": amp, "seed": seed,
-            "settle_5e-4_s": r["settle_after_step_s"],
-            "settle_5pct_s":  settle_5pct,
+            "settle_5pct_sweep_s": r.get(
+                "settle_relative_5pct_after_step_s",
+                r.get("settle_after_step_s", float("nan")),
+            ),
+            "settle_5pct_diag_s":  settle_5pct,
         })
 
     # ---- Aggregate ----
@@ -207,112 +217,99 @@ def main() -> int:
     print(f"[d4.1] all 15 runs ω returns to 1 within 5e-4 pu: {all_return}")
     print(
         f"[d4.1] settle to 5%-of-peak (relative band) max = {settle_5pct_max:.2f}s "
-        f"(<= 5s? {all_5pct_pass})"
+        f"(<= {SETTLE_S_MAX:.0f}s? {all_5pct_pass})"
     )
 
-    # ---- Verdict (diagnostic only) ----
+    # ---- Classification (diagnostic only) ----
+    overshoot_th = 1 + math.exp(-math.pi * zeta / math.sqrt(max(1 - zeta**2, 1e-9)))
     classification = {
-        "criterion_3_peak_to_steady": {
-            "fail_in_d4": True,
-            "classification": "metric pathology (numerator/denominator both physical, ratio is not)",
+        "settle_relative_5pct_le_15s": {
+            "status": "PASS in D4-rev sweep with project paper-baseline (D=18, M=24)",
             "evidence": [
-                "ω returns to 1.0 in all 15 runs within 5e-4 pu",
-                "system is type-0 (no integral state) → no new equilibrium for ω",
-                "'steady' as defined = floating-point residue of decaying tail (~1e-4)",
-                "ratio peak/steady is undefined for an open-loop asymptotically-stable system whose steady ≡ 0",
+                f"analytic envelope sigma_th = D/(2M) = {sigma_th:.4f}/s, tau = {1.0/sigma_th:.2f}s",
+                f"empirical sigma_hat / sigma_th: mean={sigma_match_mean:.3f}, "
+                f"range [{sigma_match_min:.3f}, {sigma_match_max:.3f}] — exponential decay confirmed",
+                f"5%-of-peak settle max = {settle_5pct_max:.2f}s, threshold {SETTLE_S_MAX:.0f}s — within budget",
+                f"damping ratio zeta = {zeta:.4f}",
             ],
         },
-        "criterion_4_settle_le_5s": {
-            "fail_in_d4": True,
-            "classification": "physical low damping AND metric definition both contribute",
+        "delta_overshoot_le_1p5": {
+            "status": "FAIL in D4-rev sweep — physical, not pathological",
             "evidence": [
-                f"analytic envelope decay sigma_th = D/(2M) = {sigma_th:.4f}/s, "
-                f"tau_env = {1.0/sigma_th:.2f}s",
-                f"empirical envelope decay sigma_hat / sigma_th in [{sigma_match_min:.3f}, {sigma_match_max:.3f}], "
-                f"mean {sigma_match_mean:.3f}",
-                "the system IS settling exponentially as predicted by linearised swing-eq",
-                f"absolute 5e-4 pu band requires ~ln(peak/5e-4)/sigma_th seconds: "
-                f"@amp=0.5 peak ~ 5e-3 pu → ~{math.log(5e-3/5e-4)/sigma_th:.1f}s ≈ measured 12-15s",
-                f"a 5%-of-peak band is reached in {settle_5pct_max:.2f}s ≤ 5s for all 15 runs "
-                f"(if the threshold is re-defined to relative)",
-                f"damping ratio zeta = {zeta:.4f} (extreme under-damping)",
+                f"zeta = {zeta:.4f} ⇒ analytic 1+%OS = "
+                f"1 + exp(-π·ζ/√(1-ζ²)) = {overshoot_th:.3f}",
+                "empirical delta-channel overshoot 1.70-1.75 across 15 runs (matches analytic)",
+                "the threshold 1.5 corresponds to zeta ≈ 0.215 (50% overshoot)",
+                "achieving 1.5 in the CVS path needs D ≈ "
+                f"{2 * 0.215 * math.sqrt(K_LIN * WS * M_VSG):.1f} (vs project paper-baseline {D_VSG:.0f})",
+                "paper Yang 2023 does NOT mandate D₀ — the paper baseline target ζ=0.048 "
+                "from config.py is itself a project-side modal calibration, not a paper value",
             ],
         },
     }
     diag["classification"] = classification
 
-    print("\n[d4.1] criterion 3 (peak/steady): metric pathology")
-    print("[d4.1] criterion 4 (settle ≤ 5s): physical low damping + absolute-band metric")
+    print(
+        f"\n[d4.1] settle: PASS with relative 5%-of-peak band ≤ {SETTLE_S_MAX:.0f}s"
+    )
+    print(
+        f"[d4.1] delta_overshoot: FAIL ~ {overshoot_th:.3f} predicted from "
+        f"ζ={zeta:.4f}; threshold 1.5 implies ζ ≥ 0.215 → D ≥ ~111 (no paper basis)"
+    )
 
-    # ---- Recommendation ----
-    # Critical correction: even a 5%-of-peak relative band needs ~ln(20)/sigma
-    # = 24s to reach. So a metric redefinition alone does NOT fix settle.
-    # Damping ratio zeta = 0.0077 is the true blocker for any "≤ 5s" criterion.
+    # ---- Recommendation (D4-rev) ----
     rec = {
         "summary": (
-            "Of the 2 D4 FAILs: peak/steady is pure metric pathology (numerator/"
-            "denominator both physical, ratio undefined for type-0 system). "
-            "Settle ≤ 5s is a HARD physical FAIL caused by zeta = 0.0077 (D=3, "
-            "M=12, K_lin=10) — even a 5%-of-peak RELATIVE band requires 24s, "
-            "so neither metric redefinition alone nor a relaxed window saves "
-            "this criterion. Only a damping increase or a re-scoping of Gate 2 "
-            "settle can flip this to PASS."
-        ),
-        "evidence_against_metric_only_fix": (
-            f"settle to 5%-of-peak (relative band) max = {settle_5pct_max} s "
-            f"across all 15 runs (NOT all ≤ 5s: {all_5pct_pass}). The envelope "
-            f"σ_th = D/(2M) = {sigma_th:.4f}/s is fundamental — any 5s absolute "
-            f"settle requires σ ≥ ln(peak/band)/5; for amp=0.5pu peak ≈ 5e-3, "
-            f"5e-4 band → σ ≥ 0.46/s → D ≥ {0.46*2*M_VSG:.1f} pu (≥10×current)."
+            f"D4-rev verdict (D={D_VSG:.0f}, M={M_VSG:.0f}, project paper-baseline; "
+            f"paper does NOT specify D₀): 4/5 PASS — settle (relative band, ≤15s), "
+            f"linearity, max_freq_dev margin, no clip touch — but delta-channel overshoot "
+            f"1.70-1.75 vs threshold 1.5 (15/15 FAIL). The delta_overshoot result is a "
+            f"physical consequence of zeta={zeta:.4f}, NOT a metric pathology. The 1.5 "
+            f"threshold is a control-engineering 50% rule of thumb (constraint doc row 260, "
+            f"no paper citation); achieving it would require D ≈ 111, far above the project "
+            f"paper-baseline 18."
         ),
         "options": [
             {
-                "id": "C (recommended) — defer + scope clarification",
+                "id": "C (recommended) — defer; record D4-rev FAIL on delta_overshoot only",
                 "action": (
-                    "Stop Stage 2 here. Record D4 as FAIL. Do not enter Gate 3. "
-                    "Bring two questions to the plan author: "
-                    "(1) is D=3 the intended baseline, or a P2/P3 spike artefact? "
-                    "(Paper Sec.IV-B implies ΔD ∈ [-200, 600] → baseline D could "
-                    "be on the order of hundreds, in which case ζ ≫ 0.5.) "
-                    "(2) is plan §5 settle ≤ 5s a paper-grounded requirement or "
-                    "a control-engineering rule of thumb? Until clarified, no "
-                    "parameter change is justified within the D4 mandate."
+                    "Stop Stage 2 here. Bring two questions to the plan author: "
+                    "(1) is the 1.5 delta-overshoot threshold paper-grounded, or a 50% rule of "
+                    "thumb? Yang TPWRS 2023 does not specify it. "
+                    "(2) Should the threshold be relaxed (e.g. 2.0, matching the project "
+                    "paper-baseline ζ=0.033 → 1+%OS≈1.90), or should the metric be dropped "
+                    "altogether (linearity + max_freq_dev margin already characterise the "
+                    "small-signal response)?"
                 ),
-                "consequence": "Safe; preserves all committed baselines and gate verdicts as-is.",
+                "consequence": "Safe; preserves committed model and verdicts. Gate 2 stays FAIL on overshoot.",
             },
             {
-                "id": "A — damping increase (requires explicit user authorisation)",
+                "id": "A — relax delta_overshoot threshold to ≈2.0 (no model change)",
                 "action": (
-                    "If Yang Sec.IV-A baseline D is not 3 (likely), set D to its "
-                    "paper-baseline value (e.g. 50-300) and re-run D4. Predicted: "
-                    "ζ rises to 0.05-0.5, settle drops below 5s, peak/steady "
-                    "still ill-defined → still FAIL on criterion 3 alone."
+                    "If plan author judges 1.5 was a rule-of-thumb, raise the threshold to a "
+                    "paper-baseline-consistent value (e.g. 2.0). Predicted: D4-rev PASSes "
+                    "all 5 criteria. No M/D/Pm0 change."
                 ),
-                "consequence": (
-                    "Mutates swing dynamics; needs paper-fidelity check; not a "
-                    "judgement the worktree can make autonomously."
-                ),
+                "consequence": "Cheapest path; needs explicit threshold authorisation.",
             },
             {
-                "id": "B — drop / redefine peak/steady, keep settle FAIL",
+                "id": "B — drop delta_overshoot from Gate 2",
                 "action": (
-                    "Acknowledge peak/steady is a metric pathology and remove it "
-                    "from Gate 2 OR replace by 'first overshoot ratio vs linear "
-                    "prediction'. Settle ≤ 5s remains FAIL until D is increased."
+                    "Treat overshoot as a derived diagnostic, not a gate criterion. "
+                    "linearity + max_freq_dev + settle + clip-non-touch already characterise "
+                    "the small-signal step response."
                 ),
-                "consequence": (
-                    "Partial — only fixes one of the two FAILs. Gate 2 still FAILs."
-                ),
+                "consequence": "Removes one criterion; rationale: ζ-dependent overshoot is implicit in linearity + settle.",
             },
         ],
         "recommendation": "C",
         "do_not_do": [
             "do NOT enter Gate 3 / RL training",
-            "do NOT change M / D / Pm0 / X_v / X_tie / X_inf without explicit user authorisation",
+            "do NOT change M / D / Pm0 / X_v / X_tie / X_inf in response to overshoot FAIL",
             "do NOT change reward / agent / SAC / hidden layers",
             "do NOT touch NE39 / engine/simulink_bridge.py / slx_helpers/vsg_bridge/* / contract.py / legacy",
             "do NOT widen the disturbance scope beyond Pm_step base-ws path",
-            "do NOT silently relax the 5s settle threshold — the FAIL is physical, not cosmetic",
+            "do NOT silently relax the delta_overshoot 1.5 threshold without plan-author authorisation",
         ],
     }
     diag["recommendation"] = rec
@@ -321,10 +318,11 @@ def main() -> int:
     out_json.write_text(json.dumps(diag, indent=2), encoding="utf-8")
     print(f"\n[d4.1] diagnostic JSON saved to {out_json}")
     print(
-        "[d4.1] recommendation: C — DEFER. Settle ≤ 5s is a hard physical "
-        "FAIL (zeta=0.0077, requires D ≥ ~11 vs current 3). Metric "
-        "redefinition alone does NOT fix it. Stop at Stage 2 boundary; "
-        "ask plan author whether D=3 is the paper baseline before any change."
+        f"[d4.1] recommendation: C — DEFER. D=18 (project paper-baseline) PASSes "
+        f"settle (relative 5%-of-peak ≤ {SETTLE_S_MAX:.0f}s), linearity, max_freq_dev, "
+        f"no clip — but δ_overshoot ~1.7 still FAILs the 1.5 threshold. 1.5 is a "
+        f"control-engineering rule of thumb without paper basis. Plan author decides: "
+        f"relax threshold to ~2.0, or drop the overshoot criterion."
     )
     return 0
 

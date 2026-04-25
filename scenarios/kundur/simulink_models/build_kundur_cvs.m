@@ -66,8 +66,20 @@ R_loadA = double(Vbase^2 / (P_loadA_pu * Sbase));   % Ohm
 R_loadB = double(Vbase^2 / (P_loadB_pu * Sbase));   % Ohm
 
 % ---- VSG defaults ----
-M0_default = 12.0;
-D0_default = 3.0;
+% Project paper-baseline (per D4.2 audit + plan-author decision 2026-04-26):
+%   H_ES0 = 24, D_ES0 = 18  (config.py L32-33; modal calibration target
+%   omega_n ~ 0.6 Hz, zeta ~ 0.048 in the ANDES reduced-network model).
+%   With M = 2*H/omega_s and omega_s = 1 pu, M_pu = 2*H_pu = 48; here we use
+%   M0_default = 24 (i.e. M ~ H in the project's pu convention, matching the
+%   ANDES/ODE/Simulink-fallback path env/simulink/simulink_vsg_env.py L54-55).
+% Note: paper Yang TPWRS 2023 does NOT specify a numeric D0 or H0 baseline.
+%   The 24 / 18 pair is a project-side modal calibration target, not a paper
+%   value. The pre-D4.2 spike artefact (M0=12, D0=3 from build_kundur_cvs_p2.m
+%   / cvs_design.md D-CVS-6) gave zeta ~ 0.0077 — extreme under-damping that
+%   blocked any Gate 2 settle target. See:
+%     quality_reports/gates/2026-04-26_kundur_cvs_p4_d4p2_readonly_audit.md
+M0_default = 24.0;
+D0_default = 18.0;
 
 % ---- Reset model ----
 if bdIsLoaded(mdl), close_system(mdl, 0); end

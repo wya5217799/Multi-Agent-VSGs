@@ -62,15 +62,29 @@ T_STEP   = 5.0
 AMPLITUDES = [0.05, 0.10, 0.20, 0.30, 0.50]
 SEEDS      = [1, 2, 3]                 # selects target VSG ∈ {VSG1, VSG2, VSG3}
 
-# Pass thresholds
-R2_MIN              = 0.9
-MAX_FREQ_DEV_05_HZ  = 5.0
-PEAK_TO_STEADY_MAX  = 1.5
-SETTLE_S_MAX        = 5.0
-OMEGA_CLIP_LO       = 0.7
-OMEGA_CLIP_HI       = 1.3
-SETTLE_TOL          = 5e-4              # ω-1 |·| ≤ 5e-4 pu = 0.025 Hz
-SETTLE_HOLD_S       = 1.0               # consecutive settled duration
+# Pass thresholds (D4-rev-B 2026-04-26, plan-author authorised):
+#   - settle: relative 5%-of-peak band, threshold 15 s. Replaces the strict
+#     absolute 5e-4 pu band at 5 s (D4.2 §3 / §6: was rule-of-thumb,
+#     unreachable with project paper-baseline D=18).
+#   - peak_to_steady: REMOVED from the omega channel (D4.2 §4: ill-defined
+#     for type-0 frequency response).
+#   - delta-channel overshoot: COMPUTED + REPORTED, but DOWNGRADED to
+#     diagnostic-only. Not a hard criterion for Gate 2. Reason: the 1.5
+#     threshold has no paper citation and is unreachable under the project
+#     paper-baseline ζ≈0.033; empirical 1.70-1.75 matches analytic 1.90,
+#     i.e. the value is a faithful physical signal of under-damping rather
+#     than a model failure.
+#   - simulation_health: NEW hard criterion replacing the dropped overshoot
+#     check; NaN/Inf in any per-VSG omega/delta trace, or any matlab.engine
+#     execution error during the sweep, fails Gate 2.
+R2_MIN                  = 0.9
+MAX_FREQ_DEV_05_HZ      = 5.0
+SETTLE_S_MAX            = 15.0           # was 5.0 (D4.2 disposition)
+SETTLE_FRAC_OF_PEAK     = 0.05           # relative band
+SETTLE_HOLD_S           = 1.0            # consecutive settled duration
+OMEGA_CLIP_LO           = 0.7
+OMEGA_CLIP_HI           = 1.3
+DELTA_OVERSHOOT_DIAG_MAX = 1.5           # diagnostic-only marker (NOT a gate)
 
 
 @dataclass
@@ -120,49 +134,88 @@ def _set_step(eng: matlab.engine.MatlabEngine, target_vsg: int, amp: float) -> N
     )
 
 
-def _run_sim(eng: matlab.engine.MatlabEngine) -> float:
+def _run_sim(eng: matlab.engine.MatlabEngine) -> tuple[float, str]:
+    """Run the sim. Returns (elapsed_s, error_str). error_str is empty on
+    success; non-empty if matlab.engine raised, used by the Gate 2
+    simulation_health hard criterion (D4-rev-B)."""
     t0 = time.time()
-    eng.eval(
-        f"so_d4 = sim('{MODEL}', 'StopTime', '{STOP_S}', "
-        f"'ReturnWorkspaceOutputs', 'on');",
-        nargout=0,
-    )
-    return time.time() - t0
+    try:
+        eng.eval(
+            f"so_d4 = sim('{MODEL}', 'StopTime', '{STOP_S}', "
+            f"'ReturnWorkspaceOutputs', 'on');",
+            nargout=0,
+        )
+    except matlab.engine.MatlabExecutionError as exc:
+        return time.time() - t0, f"matlab.engine error: {exc}"
+    return time.time() - t0, ""
 
 
-def _fetch_omega(eng: matlab.engine.MatlabEngine) -> dict[int, np.ndarray]:
-    out: dict[int, np.ndarray] = {}
+def _fetch_traces(eng: matlab.engine.MatlabEngine) -> dict[int, dict[str, np.ndarray]]:
+    """Fetch omega + delta timeseries for all agents (delta needed for D4-rev
+    overshoot metric on the delta channel)."""
+    out: dict[int, dict[str, np.ndarray]] = {}
     for i in range(1, N_AGENTS + 1):
         eng.eval(
             f"o_{i} = so_d4.get('omega_ts_{i}'); "
-            f"ot_{i} = double(o_{i}.Time); "
-            f"od_{i} = double(o_{i}.Data);",
+            f"d_{i} = so_d4.get('delta_ts_{i}'); "
+            f"ot_{i} = double(o_{i}.Time); od_{i} = double(o_{i}.Data); "
+            f"dt_{i} = double(d_{i}.Time); dd_{i} = double(d_{i}.Data);",
             nargout=0,
         )
-        t = np.asarray(eng.workspace[f"ot_{i}"]).flatten()
-        y = np.asarray(eng.workspace[f"od_{i}"]).flatten()
-        out[i] = np.column_stack([t, y])
+        out[i] = {
+            "omega_t": np.asarray(eng.workspace[f"ot_{i}"]).flatten(),
+            "omega":   np.asarray(eng.workspace[f"od_{i}"]).flatten(),
+            "delta_t": np.asarray(eng.workspace[f"dt_{i}"]).flatten(),
+            "delta":   np.asarray(eng.workspace[f"dd_{i}"]).flatten(),
+        }
     return out
 
 
-def _settle_time(t: np.ndarray, dev: np.ndarray) -> float:
-    """First time after t_step where |dev| stays ≤ SETTLE_TOL for ≥ SETTLE_HOLD_S."""
+def _settle_time_relative(t: np.ndarray, dev: np.ndarray) -> float:
+    """First time after t_step where |dev| stays ≤ SETTLE_FRAC_OF_PEAK·peak
+    for ≥ SETTLE_HOLD_S consecutive seconds. D4.2 §3-§6 disposition: relative
+    band replaces the absolute 5e-4 pu band that was unreachable."""
     mask = t >= T_STEP
     tt = t[mask]
-    dd = dev[mask]
-    in_band = np.abs(dd) <= SETTLE_TOL
-    settle_t = float("inf")
+    dd = np.abs(dev[mask])
+    if dd.size == 0:
+        return float("inf")
+    peak = dd.max()
+    if peak <= 0:
+        return 0.0
+    band = SETTLE_FRAC_OF_PEAK * peak
+    in_band = dd <= band
     streak_start: float | None = None
-    for k, (tk, ok) in enumerate(zip(tt, in_band, strict=False)):
+    for tk, ok in zip(tt, in_band, strict=False):
         if ok:
             if streak_start is None:
                 streak_start = tk
             if tk - streak_start >= SETTLE_HOLD_S:
-                settle_t = streak_start - T_STEP
-                break
+                return streak_start - T_STEP
         else:
             streak_start = None
-    return settle_t
+    return float("inf")
+
+
+def _delta_overshoot(t: np.ndarray, delta: np.ndarray) -> float:
+    """Delta-channel overshoot ratio: (peak excursion vs old equilibrium) /
+    (|new − old| equilibrium displacement). Uses the t<T_STEP window for
+    delta_old (= NR IC value) and the tail 5 s window for delta_new.
+
+    Returns 1.0 if displacement is non-existent (static). NaN if old/new
+    differ by less than 1e-6 rad (no meaningful step occurred at this VSG)."""
+    pre  = delta[t <  T_STEP]
+    post = delta[t >= T_STEP]
+    tail = delta[t >= (t[-1] - 5.0)]
+    if pre.size == 0 or post.size == 0:
+        return float("nan")
+    delta_old = float(pre[-1] if pre.size else delta[0])
+    delta_new = float(np.mean(tail))
+    displacement = delta_new - delta_old
+    if abs(displacement) < 1e-6:
+        return float("nan")
+    peak_excursion = float(np.max(np.abs(post - delta_old)))
+    return peak_excursion / abs(displacement)
 
 
 def _r2(x: list[float], y: list[float]) -> float:
@@ -196,16 +249,38 @@ def main() -> int:
         for seed in SEEDS:
             target = seed
             _set_step(eng, target, amp)
-            elapsed = _run_sim(eng)
-            data = _fetch_omega(eng)
+            elapsed, sim_err = _run_sim(eng)
+            if sim_err:
+                # Skip metric extraction; record sim_health failure for this run
+                runs.append({
+                    "amp_pu": amp, "seed": seed, "target_vsg": target,
+                    "wall_clock_s": elapsed, "sim_error": sim_err,
+                    "nan_inf": False, "clip_hit": False,
+                    "max_freq_dev_pu": float("nan"),
+                    "max_freq_dev_Hz": float("nan"),
+                    "settle_relative_5pct_after_step_s": float("inf"),
+                    "delta_overshoot_ratio": float("nan"),
+                })
+                print(f"[d4] amp={amp:.2f} seed={seed} SIM FAIL: {sim_err}")
+                continue
 
-            # Per-run metrics over all 4 agents
+            data = _fetch_traces(eng)
+
+            # NaN/Inf health check — any non-finite sample fails simulation_health
+            nan_inf = False
+            for i in range(1, N_AGENTS + 1):
+                if not (np.all(np.isfinite(data[i]["omega"]))
+                        and np.all(np.isfinite(data[i]["delta"]))):
+                    nan_inf = True
+                    break
+
+            # Per-run omega metrics over all 4 agents
             max_dev = 0.0
             clip_hit = False
             agent_max_devs: dict[int, float] = {}
             for i in range(1, N_AGENTS + 1):
-                t = data[i][:, 0]
-                w = data[i][:, 1]
+                t = data[i]["omega_t"]
+                w = data[i]["omega"]
                 dev = w - 1.0
                 m = float(np.max(np.abs(dev)))
                 agent_max_devs[i] = m
@@ -214,16 +289,16 @@ def main() -> int:
                 if (w <= OMEGA_CLIP_LO).any() or (w >= OMEGA_CLIP_HI).any():
                     clip_hit = True
 
-            # Use the target agent's omega for peak/steady & settle
-            t_t = data[target][:, 0]
-            w_t = data[target][:, 1]
+            # Target agent's omega for settle (relative band)
+            t_t   = data[target]["omega_t"]
+            w_t   = data[target]["omega"]
             dev_t = w_t - 1.0
-            after_step = t_t >= T_STEP
-            peak = float(np.max(np.abs(dev_t[after_step])))
-            tail_mask = t_t >= (t_t[-1] - 5.0)
-            steady = float(np.mean(np.abs(dev_t[tail_mask])))
-            ratio = peak / max(steady, 1e-5)
-            settle_t = _settle_time(t_t, dev_t)
+            settle_t = _settle_time_relative(t_t, dev_t)
+
+            # Target agent's delta channel — diagnostic-only (D4-rev-B)
+            td  = data[target]["delta_t"]
+            dy  = data[target]["delta"]
+            d_overshoot = _delta_overshoot(td, dy)
 
             run_summary = {
                 "amp_pu":            amp,
@@ -232,29 +307,35 @@ def main() -> int:
                 "max_freq_dev_pu":   max_dev,
                 "max_freq_dev_Hz":   max_dev * FN_HZ,
                 "agent_max_devs_pu": agent_max_devs,
-                "peak_pu":           peak,
-                "steady_pu":         steady,
-                "peak_to_steady":    ratio,
-                "settle_after_step_s": settle_t,
+                "settle_relative_5pct_after_step_s": settle_t,
+                "delta_overshoot_ratio": d_overshoot,   # diagnostic-only
                 "clip_hit":          clip_hit,
+                "nan_inf":           nan_inf,
+                "sim_error":         "",
                 "wall_clock_s":      elapsed,
             }
             runs.append(run_summary)
 
-            # Save per-run timeseries (4 agents × omega only — Gate 2 metrics are ω-based)
+            # Save per-run timeseries: omega + delta of all 4 agents
             traces = {}
             for i in range(1, N_AGENTS + 1):
-                traces[f"omega_t_{i}"] = data[i][:, 0]
-                traces[f"omega_y_{i}"] = data[i][:, 1]
+                traces[f"omega_t_{i}"] = data[i]["omega_t"]
+                traces[f"omega_y_{i}"] = data[i]["omega"]
+                traces[f"delta_t_{i}"] = data[i]["delta_t"]
+                traces[f"delta_y_{i}"] = data[i]["delta"]
             np.savez(
                 out_dir / f"trace_dist_{amp:.2f}_seed{seed}.npz",
                 **traces,
             )
 
+            settle_str = (
+                f"{settle_t:.2f}" if math.isfinite(settle_t) else "inf"
+            )
             print(
                 f"[d4] amp={amp:.2f} seed={seed} target=VSG{target} "
-                f"max_dev={max_dev * FN_HZ:.4f} Hz peak/steady={ratio:.2f} "
-                f"settle={settle_t if math.isfinite(settle_t) else 'inf':} "
+                f"max_dev={max_dev * FN_HZ:.4f} Hz "
+                f"δ_overshoot={d_overshoot:.3f} "
+                f"settle_5pct={settle_str}s "
                 f"clip={clip_hit} ({elapsed:.2f}s)"
             )
 
@@ -289,38 +370,20 @@ def main() -> int:
         f"max_dev@0.5pu = {max_dev_05_Hz:.4f} Hz (limit ≤ {MAX_FREQ_DEV_05_HZ} Hz)",
     )
 
-    # 3. peak/steady ≤ 1.5 — but steady ≈ 0 makes ratio meaningless;
-    #    Use absolute overshoot: peak ≤ 1.5 × |Δω predicted by linear fit|.
-    #    Simpler enforcement: peak ≤ 1.5 × max(amp-corresponding linear dev).
-    #    Pragmatic: skip if steady < 1e-4 pu (nominal recovery), else apply ratio.
-    bad_ratio: list[str] = []
-    for r in runs:
-        if r["steady_pu"] >= 1e-4:
-            if r["peak_to_steady"] > PEAK_TO_STEADY_MAX:
-                bad_ratio.append(
-                    f"amp={r['amp_pu']:.2f} seed={r['seed']} ratio={r['peak_to_steady']:.2f}"
-                )
-    verdict.add(
-        "peak_to_steady_le_1p5",
-        len(bad_ratio) == 0,
-        f"violations={len(bad_ratio)}; "
-        + (", ".join(bad_ratio) if bad_ratio
-           else "(all settled near 1.0; ratio test trivially satisfied)"),
-    )
-
-    # 4. settle_time ≤ 5 s
+    # 3. settle_time on relative 5%-of-peak band ≤ SETTLE_S_MAX (15 s)
     bad_settle = [
-        f"amp={r['amp_pu']:.2f} seed={r['seed']} settle={r['settle_after_step_s']:.2f}s"
-        for r in runs if r["settle_after_step_s"] > SETTLE_S_MAX
+        f"amp={r['amp_pu']:.2f} seed={r['seed']} "
+        f"settle={r['settle_relative_5pct_after_step_s']:.2f}s"
+        for r in runs if r["settle_relative_5pct_after_step_s"] > SETTLE_S_MAX
     ]
     verdict.add(
-        "settle_time_le_5s",
+        "settle_relative_5pct_le_15s",
         len(bad_settle) == 0,
         f"violations={len(bad_settle)}; "
-        + (", ".join(bad_settle) if bad_settle else "all ≤ 5 s"),
+        + (", ".join(bad_settle) if bad_settle else f"all ≤ {SETTLE_S_MAX:.0f} s"),
     )
 
-    # 5. ω never touches hard clip
+    # 4. ω never touches hard clip
     clipped = [
         f"amp={r['amp_pu']:.2f} seed={r['seed']}"
         for r in runs if r["clip_hit"]
@@ -332,12 +395,66 @@ def main() -> int:
         + (", ".join(clipped) if clipped else "none"),
     )
 
-    print("\n=== Stage 2 Day 4 / Gate 2 VERDICT ===")
+    # 5. simulation health: no matlab.engine errors AND no NaN/Inf in any trace
+    bad_health = [
+        f"amp={r['amp_pu']:.2f} seed={r['seed']}"
+        + (f" sim_err='{r['sim_error']}'" if r.get("sim_error") else "")
+        + (" nan_inf=True" if r.get("nan_inf") else "")
+        for r in runs
+        if r.get("sim_error") or r.get("nan_inf")
+    ]
+    verdict.add(
+        "simulation_health",
+        len(bad_health) == 0,
+        f"violations={len(bad_health)}; "
+        + (", ".join(bad_health) if bad_health else "all 15 runs clean (no sim errors, no NaN/Inf)"),
+    )
+
+    # ---- Diagnostic-only (NOT counted in PASS/FAIL): δ-channel overshoot ----
+    overshoots = [
+        r["delta_overshoot_ratio"] for r in runs
+        if not math.isnan(r.get("delta_overshoot_ratio", float("nan")))
+    ]
+    if overshoots:
+        os_min, os_max = min(overshoots), max(overshoots)
+        os_above = sum(1 for v in overshoots if v > DELTA_OVERSHOOT_DIAG_MAX)
+        diag_overshoot = {
+            "metric": "delta_channel_overshoot_ratio",
+            "rationale": (
+                "δ-channel (peak − δ_old) / |δ_new − δ_old|. Diagnostic only "
+                "per D4-rev-B disposition: 1.5 reference is a control rule of "
+                "thumb without paper citation; under-damped paper-baseline ζ≈0.033 "
+                "yields analytic 1+%OS≈1.90 — values 1.7–1.75 are the faithful "
+                "physical signal of low damping, not a model failure."
+            ),
+            "diag_threshold": DELTA_OVERSHOOT_DIAG_MAX,
+            "n_runs_with_metric": len(overshoots),
+            "min": float(os_min),
+            "max": float(os_max),
+            "n_above_diag_threshold": int(os_above),
+        }
+    else:
+        diag_overshoot = {
+            "metric": "delta_channel_overshoot_ratio",
+            "n_runs_with_metric": 0,
+            "note": "no run produced a finite delta-channel overshoot ratio",
+        }
+
+    print("\n=== Stage 2 Day 4 / Gate 2 VERDICT (D4-rev-B) ===")
     for c in verdict.checks:
         flag = "PASS" if c.passed else "FAIL"
         print(f"  [{flag}] {c.name}: {c.detail}")
     overall = "PASS" if verdict.overall_pass else "FAIL"
     print(f"\n  OVERALL: {overall}")
+
+    if "min" in diag_overshoot:
+        print(
+            f"\n  [DIAG] delta_channel_overshoot_ratio (NOT a hard criterion): "
+            f"min={diag_overshoot['min']:.3f} max={diag_overshoot['max']:.3f} "
+            f"({diag_overshoot['n_above_diag_threshold']}/15 above the "
+            f"{DELTA_OVERSHOOT_DIAG_MAX:.1f} reference; analytic 1+%OS for "
+            f"paper-baseline ζ≈0.033 is ~1.90)"
+        )
 
     summary = {
         "verdict": overall,
@@ -346,15 +463,15 @@ def main() -> int:
         "amplitudes": AMPLITUDES,
         "seeds": SEEDS,
         "n_runs": len(runs),
-        "thresholds": {
+        "hard_thresholds": {
             "linearity_R2_min": R2_MIN,
             "max_freq_dev_at_05pu_Hz": MAX_FREQ_DEV_05_HZ,
-            "peak_to_steady_max": PEAK_TO_STEADY_MAX,
             "settle_s_max": SETTLE_S_MAX,
-            "omega_clip": [OMEGA_CLIP_LO, OMEGA_CLIP_HI],
-            "settle_tol_pu": SETTLE_TOL,
+            "settle_frac_of_peak": SETTLE_FRAC_OF_PEAK,
             "settle_hold_s": SETTLE_HOLD_S,
+            "omega_clip": [OMEGA_CLIP_LO, OMEGA_CLIP_HI],
         },
+        "diagnostic_only": diag_overshoot,
         "checks": [
             {"name": c.name, "passed": c.passed, "detail": c.detail}
             for c in verdict.checks

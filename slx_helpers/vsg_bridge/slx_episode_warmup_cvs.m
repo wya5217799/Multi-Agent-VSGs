@@ -63,18 +63,40 @@ function [state, status] = slx_episode_warmup_cvs( ...
         init_params.Vmag_volts = repmat(init_params.Vmag_volts, 1, N);
     end
 
+    % --- Phase 0 (G3-prep-E A3): Load build-time runtime constants from sidecar ---
+    %
+    % build_kundur_cvs.m saves non-tunable scalars (wn_const, Vbase_const,
+    % Sbase_const, Pe_scale, L_v_H / L_tie_H / L_inf_H, R_loadA / R_loadB,
+    % Vmag_<i>) to kundur_cvs_runtime.mat alongside the .slx. These are
+    % referenced by the .slx Constant blocks and Inductance / Resistance
+    % parameters. A fresh MATLAB session that loads the .slx without first
+    % running build_kundur_cvs.m has none of these vars — sim() then fails
+    % with Simulink:Parameters:BlkParamUndefined. Load the sidecar here to
+    % make warmup robust across MATLAB sessions.
+    runtime_mat = fullfile(fileparts(which(model_name)), 'kundur_cvs_runtime.mat');
+    if exist(runtime_mat, 'file') == 2
+        consts = load(runtime_mat);
+        const_fns = fieldnames(consts);
+        for k = 1:numel(const_fns)
+            assignin('base', const_fns{k}, consts.(const_fns{k}));
+        end
+    else
+        status.success    = false;
+        status.error      = sprintf( ...
+            ['CVS runtime sidecar missing at %s. ' ...
+             'Run build_kundur_cvs.m to regenerate.'], runtime_mat);
+        state             = warmup_cvs_empty_state(N);
+        status.elapsed_ms = toc * 1000;
+        return;
+    end
+
     % --- Phase 1: Reset workspace state for the CVS .slx ---
     %
     % cfg.m_var_template / cfg.d_var_template come from the CVS profile
-    % (BridgeConfig fields already exist). The remaining CVS variable names
-    % are hard-coded here (Pm_<i>, delta0_<i>, Vmag_<i>, Pm_step_t_<i>,
-    % Pm_step_amp_<i>) because adding cfg fields was forbidden by the
-    % G3-prep-C scope decision.
-    % build_kundur_cvs.m wrote per-VSG Vmag_<i> (Volts), wn_const, Vbase_const,
-    % Sbase_const, Pe_scale, L_v_H / L_tie_H / L_inf_H, R_loadA / R_loadB to
-    % the base workspace at build time. We do NOT rewrite those here — the
-    % build-time values are authoritative and bridge.warmup() must not depend
-    % on them being re-pushed every episode.
+    % (BridgeConfig fields already exist). The remaining per-VSG CVS variable
+    % names are hard-coded here (Pm_<i>, delta0_<i>, Pm_step_t_<i>,
+    % Pm_step_amp_<i>, optional Vmag_<i> override). Build-time scalars are
+    % loaded by Phase 0 above; do not duplicate them here.
     vars = struct();
     for i = 1:N
         idx = agent_ids(i);

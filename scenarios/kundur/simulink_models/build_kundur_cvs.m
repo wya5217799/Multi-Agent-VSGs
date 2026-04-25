@@ -364,10 +364,33 @@ end
 % ---- Save ----
 save_system(mdl, out_slx);
 
+% A3 (G3-prep-E-fix): persist non-tunable runtime constants to sidecar .mat.
+% slx_episode_warmup_cvs.m loads this on every reset so a fresh MATLAB session
+% can sim without first running build_kundur_cvs.m. Only build-time scalars
+% are saved here; per-VSG tunables (M_i, D_i, Pm_i, delta0_i, Pm_step_*_i)
+% remain owned by _warmup_cvs and overwritten every episode.
+runtime_consts             = struct();
+runtime_consts.wn_const    = double(wn);
+runtime_consts.Vbase_const = double(Vbase);
+runtime_consts.Sbase_const = double(Sbase);
+runtime_consts.Pe_scale    = double(1.0 / Sbase);
+runtime_consts.L_v_H       = double(L_v_H);
+runtime_consts.L_tie_H     = double(L_tie_H);
+runtime_consts.L_inf_H     = double(L_inf_H);
+runtime_consts.R_loadA     = double(R_loadA);
+runtime_consts.R_loadB     = double(R_loadB);
+for i = 1:4
+    runtime_consts.(sprintf('Vmag_%d', i)) = double(v_mag_pu(i) * Vbase);
+end
+runtime_mat = fullfile(out_dir, 'kundur_cvs_runtime.mat');
+save(runtime_mat, '-struct', 'runtime_consts');
+
 fprintf('RESULT: kundur_cvs.slx saved at %s\n', out_slx);
 fprintf('RESULT: 7-bus topology + 4 swing-eq closures (D2)\n');
 fprintf('RESULT: NR IC delta0 (rad) = [%.4f %.4f %.4f %.4f]\n', delta0_rad);
 fprintf('RESULT: NR IC Pm0   (pu)  = [%.4f %.4f %.4f %.4f]\n', Pm0_pu);
 fprintf('RESULT: NR IC Vmag  (pu)  = [%.4f %.4f %.4f %.4f]\n', v_mag_pu);
+fprintf('RESULT: kundur_cvs_runtime.mat saved (%d constants) at %s\n', ...
+    numel(fieldnames(runtime_consts)), runtime_mat);
 
 end

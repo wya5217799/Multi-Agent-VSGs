@@ -169,7 +169,8 @@ KUNDUR_BRIDGE_CONFIG = BridgeConfig(
     sbase_va=SBASE * 1e6,  # 100 MVA -> 100e6 VA
     m_path_template='{model}/VSG_ES{idx}/M0',
     d_path_template='{model}/VSG_ES{idx}/D0',
-    omega_signal='omega_ES{idx}',
+    # G3-prep-E B1: CVS .slx logs Timeseries omega_ts_<i>; legacy/SPS uses ToWorkspace omega_ES<i>.
+    omega_signal='omega_ts_{idx}' if KUNDUR_MODEL_PROFILE.model_name == 'kundur_cvs' else 'omega_ES{idx}',
     vabc_signal='Vabc_ES{idx}',
     iabc_signal='Iabc_ES{idx}',
     pe_path_template='{model}/Pe_{idx}',
@@ -178,6 +179,12 @@ KUNDUR_BRIDGE_CONFIG = BridgeConfig(
     pe_measurement=KUNDUR_MODEL_PROFILE.pe_measurement,
     # G3-prep-D-config: route CVS profile to cvs_signal dispatch; legacy/SPS keep phang_feedback default.
     step_strategy='cvs_signal' if KUNDUR_MODEL_PROFILE.model_name == 'kundur_cvs' else 'phang_feedback',
+    # G3-prep-E B1: CVS Constant blocks reference workspace M_<i>/D_<i> with M0=24,D0=18 (paper baseline).
+    # Legacy/SPS path keeps BridgeConfig defaults (M0_val_ES{idx}/D0_val_ES{idx}, M0=12,D0=3).
+    m_var_template='M_{idx}' if KUNDUR_MODEL_PROFILE.model_name == 'kundur_cvs' else 'M0_val_ES{idx}',
+    d_var_template='D_{idx}' if KUNDUR_MODEL_PROFILE.model_name == 'kundur_cvs' else 'D0_val_ES{idx}',
+    m0_default=24.0 if KUNDUR_MODEL_PROFILE.model_name == 'kundur_cvs' else 12.0,
+    d0_default=18.0 if KUNDUR_MODEL_PROFILE.model_name == 'kundur_cvs' else 3.0,
     pe_feedback_signal='PeFb_ES{idx}',   # PeGain_ES{idx} output, VSG-base pu
     # Dynamic Load disturbance: per-phase W stored in base workspace.
     # Bus14: TripLoad1_P = 248/3 MW per phase (nominal load on).

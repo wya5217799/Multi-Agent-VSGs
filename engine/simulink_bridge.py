@@ -732,6 +732,23 @@ class SimulinkBridge:
             f"assignin('base', '{var_name}', {value_w:.6g})", nargout=0
         )
 
+    def apply_workspace_var(self, var_name: str, value: float) -> None:
+        """Push a single scalar workspace variable to MATLAB base ws.
+
+        Like apply_disturbance_load, but does NOT touch self._tripload_state
+        (which is reserved for the SPS TripLoad batch-write semantics in
+        warmup). Use for mid-episode disturbance vars referenced by .slx
+        Constant blocks (e.g. CVS Pm_step_amp_<i>, Pm_step_t_<i>) that
+        the warmup re-population loop must not own.
+
+        Args:
+            var_name: workspace variable name (no path qualifier)
+            value:    scalar value, written as a double precision literal
+        """
+        self.session.eval(
+            f"assignin('base', '{var_name}', {float(value):.6g})", nargout=0
+        )
+
     def reset_episode(self, duration: float = 0.01) -> None:
         """Reset Python counters and run FastRestart warmup in one atomic call.
 

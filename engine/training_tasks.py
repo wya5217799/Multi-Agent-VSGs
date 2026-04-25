@@ -148,12 +148,6 @@ def training_status(scenario_id: str, run_id: str | None = None) -> dict[str, An
         }
 
     status = read_run_status(run_dir) or RunStatus()
-    episodes_done = status.episodes_done
-    episodes_total = status.episodes_total
-    progress_pct = status.progress_pct
-
-    # Prefer logs_dir from status (written by training script); fall back to
-    # conventional run_dir/logs for runs started before this field was added.
     logs_dir_path = status.logs_path(run_dir)
 
     latest_snapshot = None
@@ -168,30 +162,13 @@ def training_status(scenario_id: str, run_id: str | None = None) -> dict[str, An
                 "alpha": state.get("alpha"),
                 "settled_rate_50": state.get("settled_rate_50"),
                 "buffer_size": state.get("buffer_size"),
-                "snapshot_age_episodes": episodes_done - snapshot_episode,
+                "snapshot_age_episodes": status.episodes_done - snapshot_episode,
                 "snapshot_freshness": "~50-episode intervals",
             }
         except (json.JSONDecodeError, OSError, KeyError, ValueError):
             pass  # missing or malformed snapshot is non-fatal
 
-    return {
-        "scenario_id": scenario_id,
-        "run_id": status.run_id,
-        "status": status.status,
-        "episodes_done": episodes_done,
-        "episodes_total": episodes_total,
-        "progress_pct": round(progress_pct, 2),
-        "last_reward": status.last_reward,
-        "last_updated": status.last_updated,
-        "started_at": status.started_at,
-        "finished_at": status.finished_at,
-        "error": status.error,
-        "stop_reason": status.stop_reason,
-        "last_eval_reward": status.last_eval_reward,
-        "logs_dir": str(logs_dir_path),
-        "run_dir": str(run_dir),
-        "latest_snapshot": latest_snapshot,
-    }
+    return status.to_observer_dict(run_dir, scenario_id, latest_snapshot)
 
 
 def _diagnose_physics(

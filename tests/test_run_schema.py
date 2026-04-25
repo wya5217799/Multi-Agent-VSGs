@@ -99,6 +99,52 @@ def test_logs_path_prefers_status_field(tmp_path: Path) -> None:
     assert rs_without.logs_path(run_dir) == run_dir / "logs"
 
 
+def test_to_observer_dict_full_shape(tmp_path: Path) -> None:
+    """Locks the MCP Observer dict shape consumed by training_tasks.training_status."""
+    run_dir = tmp_path / "kundur_x"
+    run_dir.mkdir()
+    rs = RunStatus(
+        run_id="kundur_x",
+        status="running",
+        episodes_done=10,
+        episodes_total=500,
+        last_reward=-50.0,
+        last_eval_reward=-45.0,
+        last_updated="2026-04-26T01:00:00",
+        started_at="2026-04-26T00:30:00",
+        logs_dir=str(run_dir / "logs"),
+    )
+    out = rs.to_observer_dict(run_dir, "kundur", latest_snapshot={"episode": 5})
+
+    expected_keys = {
+        "scenario_id", "run_id", "status", "episodes_done", "episodes_total",
+        "progress_pct", "last_reward", "last_updated", "started_at",
+        "finished_at", "error", "stop_reason", "last_eval_reward",
+        "logs_dir", "run_dir", "latest_snapshot",
+    }
+    assert set(out.keys()) == expected_keys
+    assert out["scenario_id"] == "kundur"
+    assert out["run_id"] == "kundur_x"
+    assert out["status"] == "running"
+    assert out["episodes_done"] == 10
+    assert out["progress_pct"] == 2.0
+    assert out["latest_snapshot"] == {"episode": 5}
+    assert out["logs_dir"] == str(run_dir / "logs")
+    assert out["run_dir"] == str(run_dir)
+
+
+def test_to_observer_dict_empty_status(tmp_path: Path) -> None:
+    """Empty RunStatus still returns full key set; logs_dir falls back."""
+    run_dir = tmp_path / "empty"
+    run_dir.mkdir()
+    out = RunStatus().to_observer_dict(run_dir, "ne39")
+    assert out["status"] is None
+    assert out["episodes_done"] == 0
+    assert out["progress_pct"] == 0.0
+    assert out["latest_snapshot"] is None
+    assert out["logs_dir"] == str(run_dir / "logs")
+
+
 def test_run_status_is_frozen() -> None:
     rs = RunStatus(run_id="kundur_x")
     with pytest.raises(Exception):

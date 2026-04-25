@@ -64,6 +64,41 @@ class RunStatus:
         """Return logs directory: status.logs_dir if set, else run_dir/logs."""
         return Path(self.logs_dir) if self.logs_dir else (run_dir / "logs")
 
+    def to_observer_dict(
+        self,
+        run_dir: Path,
+        scenario_id: str,
+        latest_snapshot: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Render the MCP Observer-shape dict.
+
+        Centralises the field mapping previously duplicated in
+        engine/training_tasks.py::training_status. Adding a field to
+        RunStatus AND wanting it surfaced to MCP callers is now a single
+        edit here.
+
+        Output shape is locked by tests/test_training_tasks.py — do not
+        rename or drop keys without updating that contract.
+        """
+        return {
+            "scenario_id": scenario_id,
+            "run_id": self.run_id,
+            "status": self.status,
+            "episodes_done": self.episodes_done,
+            "episodes_total": self.episodes_total,
+            "progress_pct": round(self.progress_pct, 2),
+            "last_reward": self.last_reward,
+            "last_updated": self.last_updated,
+            "started_at": self.started_at,
+            "finished_at": self.finished_at,
+            "error": self.error,
+            "stop_reason": self.stop_reason,
+            "last_eval_reward": self.last_eval_reward,
+            "logs_dir": str(self.logs_path(run_dir)),
+            "run_dir": str(run_dir),
+            "latest_snapshot": latest_snapshot,
+        }
+
 
 def read_run_status(run_dir: Path) -> RunStatus | None:
     """Read training_status.json under run_dir, return typed view or None.

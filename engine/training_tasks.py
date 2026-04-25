@@ -14,7 +14,8 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
-from utils.run_protocol import find_latest_run, get_run_dir, read_training_status
+from engine.run_schema import RunStatus, read_run_status
+from utils.run_protocol import find_latest_run, get_run_dir
 
 # Repo root: two levels up from engine/
 _REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -146,15 +147,14 @@ def training_status(scenario_id: str, run_id: str | None = None) -> dict[str, An
             "latest_snapshot": None,
         }
 
-    status = read_training_status(run_dir) or {}
-    episodes_done = status.get("episodes_done", 0)
-    episodes_total = status.get("episodes_total", 0)
-    progress_pct = (episodes_done / episodes_total * 100) if episodes_total > 0 else 0.0
+    status = read_run_status(run_dir) or RunStatus()
+    episodes_done = status.episodes_done
+    episodes_total = status.episodes_total
+    progress_pct = status.progress_pct
 
     # Prefer logs_dir from status (written by training script); fall back to
     # conventional run_dir/logs for runs started before this field was added.
-    logs_dir_str = status.get("logs_dir")
-    logs_dir_path = Path(logs_dir_str) if logs_dir_str else (run_dir / "logs")
+    logs_dir_path = status.logs_path(run_dir)
 
     latest_snapshot = None
     latest_state_path = logs_dir_path / "latest_state.json"
@@ -176,18 +176,18 @@ def training_status(scenario_id: str, run_id: str | None = None) -> dict[str, An
 
     return {
         "scenario_id": scenario_id,
-        "run_id": status.get("run_id"),
-        "status": status.get("status"),
+        "run_id": status.run_id,
+        "status": status.status,
         "episodes_done": episodes_done,
         "episodes_total": episodes_total,
         "progress_pct": round(progress_pct, 2),
-        "last_reward": status.get("last_reward"),
-        "last_updated": status.get("last_updated"),
-        "started_at": status.get("started_at"),
-        "finished_at": status.get("finished_at"),
-        "error": status.get("error"),
-        "stop_reason": status.get("stop_reason"),
-        "last_eval_reward": status.get("last_eval_reward"),
+        "last_reward": status.last_reward,
+        "last_updated": status.last_updated,
+        "started_at": status.started_at,
+        "finished_at": status.finished_at,
+        "error": status.error,
+        "stop_reason": status.stop_reason,
+        "last_eval_reward": status.last_eval_reward,
         "logs_dir": str(logs_dir_path),
         "run_dir": str(run_dir),
         "latest_snapshot": latest_snapshot,
@@ -196,7 +196,7 @@ def training_status(scenario_id: str, run_id: str | None = None) -> dict[str, An
 
 def _diagnose_physics(
     run_dir: Path,
-    status: dict[str, Any],
+    status: RunStatus,
 ) -> dict[str, Any]:
     """Read metrics.jsonl and detect early-termination / stuck-at-cap patterns.
 
@@ -205,8 +205,7 @@ def _diagnose_physics(
       - evidence: human-readable summary
       - recommendation: suggested fix
     """
-    logs_dir_str = status.get("logs_dir")
-    logs_dir = Path(logs_dir_str) if logs_dir_str else (run_dir / "logs")
+    logs_dir = status.logs_path(run_dir)
     metrics_path = logs_dir / "metrics.jsonl"
 
     if not metrics_path.exists():
@@ -334,9 +333,8 @@ def training_diagnose(
     if run_dir is None:
         return _empty
 
-    status = read_training_status(run_dir) or {}
-    logs_dir_str = status.get("logs_dir")
-    logs_dir_path = Path(logs_dir_str) if logs_dir_str else (run_dir / "logs")
+    status = read_run_status(run_dir) or RunStatus()
+    logs_dir_path = status.logs_path(run_dir)
 
     events_path = logs_dir_path / "events.jsonl"
     events: list[dict[str, Any]] = []
@@ -349,7 +347,7 @@ def training_diagnose(
                 except json.JSONDecodeError:
                     pass
 
-    actual_run_id = status.get("run_id") or run_dir.name
+    actual_run_id = status.run_id or run_dir.name
 
     training_start_events = [e for e in events if e.get("type") == "training_start"]
     training_end_events = [e for e in events if e.get("type") == "training_end"]

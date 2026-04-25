@@ -690,6 +690,26 @@ class KundurSimulinkEnv(_KundurBaseEnv):
         magnitude > 0: add    Bus15 TripLoad2 by  magnitude  * 100 MW
         """
         cfg = self.bridge.cfg
+        # G3-prep-F OD-F-3 FIX: CVS-only path — Pm_step source-side disturbance.
+        # See 2026-04-26_kundur_cvs_g3prep_F_OD3_FIX_design_note.md.
+        # Legacy SPS TripLoad?_P path is a NO-OP for kundur_cvs.slx (verified
+        # in OD-F-3 verdict, commit a62c1e9). Re-route to the per-VSG
+        # Pm_step_amp_<i> / Pm_step_t_<i> Constants already wired in
+        # build_kundur_cvs.m L257-290.
+        if cfg.model_name == 'kundur_cvs':
+            amp_per_vsg_pu = float(magnitude) * 100e6 / cfg.n_agents / cfg.sbase_va
+            t_now = float(self.bridge.t_current)
+            for i in range(1, cfg.n_agents + 1):
+                self.bridge.apply_workspace_var(f'Pm_step_t_{i}',   t_now)
+                self.bridge.apply_workspace_var(f'Pm_step_amp_{i}', amp_per_vsg_pu)
+            sign = 'increase' if magnitude > 0 else 'decrease'
+            print(
+                f"[Kundur-Simulink-CVS] Pm step {sign}: per-VSG amp="
+                f"{amp_per_vsg_pu:+.4f} pu (magnitude={float(magnitude):+.3f}), "
+                f"step_time={t_now:.4f}s"
+            )
+            return
+
         delta_per_phase_w = abs(float(magnitude)) * cfg.sbase_va / 3.0
         if magnitude < 0:
             tripload1_w = max(0.0, cfg.tripload1_p_default - delta_per_phase_w)

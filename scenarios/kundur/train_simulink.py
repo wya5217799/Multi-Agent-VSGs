@@ -374,6 +374,9 @@ def train(args):
         ep_tail_freq_devs = deque(maxlen=10)
         ep_P_es_min = np.full(env.N_ESS, np.inf)
         ep_P_es_max = np.full(env.N_ESS, -np.inf)
+        # G3-prep-F F-2.A: per-step omega trace for observability of CVS NR-IC
+        # stability vs stale-readout hypothesis (50 step x N_ESS floats per ep).
+        ep_omega_trace: list[list[float]] = []
 
         for step in range(int(env.T_EPISODE / env.DT)):
             # Apply disturbance after warmup (t=0.5s)
@@ -399,6 +402,10 @@ def train(args):
                 p_arr = np.asarray(p_es)
                 ep_P_es_min = np.minimum(ep_P_es_min, p_arr)
                 ep_P_es_max = np.maximum(ep_P_es_max, p_arr)
+            # G3-prep-F F-2.A: append per-step omega vector (per-agent)
+            omega_step = info.get("omega", None)
+            if omega_step is not None:
+                ep_omega_trace.append(np.asarray(omega_step, dtype=float).tolist())
 
             done = terminated or truncated
             agent.store_multi_transitions(
@@ -484,11 +491,28 @@ def train(args):
             ep_power_swing = float(np.max(ep_P_es_max - ep_P_es_min))
         else:
             ep_power_swing = 0.0
+        # G3-prep-F F-2.A: omega trace summary (per-agent min/max/tail-mean)
+        if ep_omega_trace:
+            _omega_arr = np.asarray(ep_omega_trace, dtype=float)  # shape (T, N_ESS)
+            _omega_min  = _omega_arr.min(axis=0).tolist()
+            _omega_max  = _omega_arr.max(axis=0).tolist()
+            _omega_tail = _omega_arr[-min(10, len(_omega_arr)):].mean(axis=0).tolist()
+        else:
+            _omega_min = _omega_max = _omega_tail = [float("nan")] * env.N_ESS
         log["physics_summary"].append({
             "max_freq_dev_hz": float(ep_max_freq_dev),
             "mean_freq_dev_hz": float(ep_mean_freq_dev),
             "settled": ep_settled,
             "max_power_swing": ep_power_swing,
+            # G3-prep-F F-1.A: reward decomposition (r_f / r_h / r_d) per ep
+            "r_f": float(ep_components.get("r_f", 0.0)),
+            "r_h": float(ep_components.get("r_h", 0.0)),
+            "r_d": float(ep_components.get("r_d", 0.0)),
+            # G3-prep-F F-2.A: omega observability (per-agent stats + full trace)
+            "omega_min_per_agent":       _omega_min,
+            "omega_max_per_agent":       _omega_max,
+            "omega_tail_mean_per_agent": _omega_tail,
+            "omega_trace": ep_omega_trace,
         })
         if ep_losses["critic"]:
             log["critic_losses"].append(

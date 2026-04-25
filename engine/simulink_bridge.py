@@ -51,6 +51,19 @@ def list_active_bridges() -> list[str]:
 #   "feedback"       — PeGain_ES{idx} ToWorkspace, true electrical Pe (Kundur main)
 PE_MEASUREMENT_MODES = ("vi", "pout", "vi_then_pout", "feedback")
 
+# step_strategy: how a single RL control step drives the .slx model.
+#   "phang_feedback" — current default for all in-tree callers (NE39 +
+#                      legacy Kundur). step() writes M_i / D_i workspace
+#                      values, calls slx_step_and_read.m, optionally
+#                      injects phAng feedback (NE39 only).
+#   "cvs_signal"     — reserved for the Kundur CVS path (G3-prep-C). The
+#                      CVS model has no phAng feedback; the swing-eq is
+#                      already closed inside the .slx via cosD/sinD/RI2C.
+#                      This value is currently ACCEPTED at construction
+#                      time and stored on the config but NOT yet dispatched
+#                      by step() — actual dispatch is added in G3-prep-C.
+STEP_STRATEGY_MODES = ("phang_feedback", "cvs_signal")
+
 
 def _normalize_per_agent_vector(
     name: str, value: "float | Sequence[float]", n_agents: int
@@ -113,6 +126,11 @@ class BridgeConfig:
     tripload2_p_default: float = 1.0         # initial load (W) — Bus15 default; scenario may override to rated MW
     breaker_step_block_template: str = ''    # '{model}/BrkCtrl_{idx}' (optional Step block path)
     breaker_count: int = 0                   # number of disturbance breaker controls
+    # G3-prep-B (additive): how a single step drives the .slx.
+    #   Default "phang_feedback" reproduces the pre-B behaviour for every
+    #   existing caller (NE39, legacy Kundur). "cvs_signal" is reserved
+    #   for the Kundur CVS profile; dispatch wiring lands in G3-prep-C.
+    step_strategy: str = "phang_feedback"
 
     def __post_init__(self) -> None:
         """Validate configuration at construction time.
@@ -130,6 +148,13 @@ class BridgeConfig:
             errors.append(
                 f"pe_measurement={self.pe_measurement!r} not in "
                 f"{PE_MEASUREMENT_MODES}"
+            )
+
+        # G3-prep-B: validate step_strategy enum
+        if self.step_strategy not in STEP_STRATEGY_MODES:
+            errors.append(
+                f"step_strategy={self.step_strategy!r} not in "
+                f"{STEP_STRATEGY_MODES}"
             )
         elif self.pe_measurement == "vi" and not has_vi:
             errors.append(
@@ -324,9 +349,17 @@ class SimulinkBridge:
         delta_arg = mdbl(self._delta_prev_deg.tolist()) if self._delta_prev_deg is not None else mdbl([])
 
         # New 2-return signature: (model, agent_ids, M, D, t_stop, sbase, cfg, Pe_prev, delta_prev_deg)
+        # G3-prep-C dispatch: cvs_signal routes to slx_step_and_read_cvs.m
+        # (same Python-facing signature; CVS .m ignores Pe_prev/delta_prev_deg).
+        # phang_feedback default keeps NE39 + legacy Kundur path bit-for-bit.
+        step_fn = (
+            "slx_step_and_read_cvs"
+            if self.cfg.step_strategy == "cvs_signal"
+            else "slx_step_and_read"
+        )
         wall_t0 = time.perf_counter()
         state, status = self.session.call(
-            "slx_step_and_read",
+            step_fn,
             self.cfg.model_name,
             agent_ids,
             mdbl(M.tolist()),
@@ -433,6 +466,16 @@ class SimulinkBridge:
         ``_Pe_prev`` / ``_delta_prev_deg`` so the first RL step sends valid
         feedback to slx_step_and_read.m (fixes max_power_swing=0 symptom).
         """
+        # G3-prep-C dispatch: cvs_signal takes a separate path that does NOT
+        # touch the NE39/legacy 5/6-arg or 3-arg branches below. The CVS .slx
+        # has its own base-ws variable scheme (M_<i>, D_<i>, Pm_<i>,
+        # delta0_<i>, Vmag_<i>, Pm_step_*_<i>) and Timeseries loggers
+        # (omega_ts_<i>, delta_ts_<i>, Pe_ts_<i>); slx_episode_warmup_cvs.m
+        # handles all of it. The default phang_feedback path is unchanged.
+        if self.cfg.step_strategy == "cvs_signal":
+            self._warmup_cvs(duration)
+            return
+
         # Constant blocks reference workspace variables by name (e.g. 'M0_val_ES1').
         # These must exist in the base workspace before the model is first compiled.
         #
@@ -538,6 +581,98 @@ class SimulinkBridge:
             duration, do_recompile, bool(self.cfg.delta0_deg),
         )
 
+    def _warmup_cvs(self, duration: float) -> None:
+        """G3-prep-C: CVS-only warmup path. NE39 / legacy paths are NOT touched.
+
+        Reads NR initial condition (delta0_rad, Pm0_pu) from the on-disk
+        ``kundur_ic_cvs.json`` and feeds an init_params struct to
+        ``slx_episode_warmup_cvs.m``. Vmag is NOT pushed (build-time values
+        in the .slx remain authoritative — see _cvs.m header note).
+
+        Only invoked when ``cfg.step_strategy == "cvs_signal"``.
+        """
+        import json
+        from pathlib import Path
+
+        ic_path = Path(self.cfg.model_dir).resolve().parent / "kundur_ic_cvs.json"
+        if not ic_path.exists():
+            raise SimulinkError(
+                f"CVS warmup requires NR IC at {ic_path}; not found"
+            )
+        ic = json.loads(ic_path.read_text(encoding="utf-8"))
+        if not ic.get("powerflow", {}).get("converged", False):
+            raise SimulinkError(
+                f"CVS warmup IC at {ic_path} reports NR did not converge"
+            )
+
+        delta0_rad = ic["vsg_internal_emf_angle_rad"]
+        pm0_pu     = ic["vsg_pm0_pu"]
+        if len(delta0_rad) != self.cfg.n_agents or len(pm0_pu) != self.cfg.n_agents:
+            raise SimulinkError(
+                f"CVS IC has {len(delta0_rad)} agents; bridge expects "
+                f"{self.cfg.n_agents}"
+            )
+
+        mdbl = self._matlab_double
+        agent_ids = mdbl(list(range(1, self.cfg.n_agents + 1)))
+
+        # Push tripload vars and breaker events for parity with phang_feedback
+        # path's pre-warmup workspace setup, even if the CVS .slx ignores them.
+        for var, val in self._tripload_state.items():
+            self.session.eval(f"assignin('base', '{var}', {val})", nargout=0)
+        self._apply_breaker_events()
+
+        # init_params struct (CVS schema; see slx_episode_warmup_cvs.m header)
+        delta_str = ", ".join(f"{v:.10f}" for v in delta0_rad)
+        pm_str    = ", ".join(f"{v:.10f}" for v in pm0_pu)
+        self.session.eval(
+            f"kundur_cvs_ip.M0          = {self.cfg.m0_default}; "
+            f"kundur_cvs_ip.D0          = {self.cfg.d0_default}; "
+            f"kundur_cvs_ip.Pm0_pu      = [{pm_str}]; "
+            f"kundur_cvs_ip.delta0_rad  = [{delta_str}]; "
+            f"kundur_cvs_ip.Pm_step_t   = 5.0; "
+            f"kundur_cvs_ip.Pm_step_amp = 0.0; "
+            f"kundur_cvs_ip.t_warmup    = {duration};",
+            nargout=0,
+        )
+        do_recompile = not self._fr_compiled
+        warmup_state, warmup_status = self.session.call(
+            "slx_episode_warmup_cvs",
+            self.cfg.model_name,
+            agent_ids,
+            float(self.cfg.sbase_va),
+            self._matlab_cfg,
+            self.session.eval("kundur_cvs_ip", nargout=1),
+            bool(do_recompile),
+            nargout=2,
+        )
+        if warmup_status is not None and not warmup_status.get("success", True):
+            raise SimulinkError(
+                f"slx_episode_warmup_cvs failed: "
+                f"{warmup_status.get('error', 'unknown')}"
+            )
+
+        self._fr_compiled = True
+        self.t_current = duration
+
+        # Seed feedback caches so step() has valid Pe_prev / delta_prev_deg
+        # arrays even though the CVS .m ignores them. Use NR IC for delta and
+        # the warmup-extracted Pe (or fall back to NR Pm if extraction failed).
+        self._delta_prev_deg = np.asarray(
+            [d * 180.0 / np.pi for d in delta0_rad], dtype=np.float64
+        )
+        if warmup_state and "Pe" in warmup_state:
+            pe_arr = np.array(warmup_state["Pe"]).flatten()
+            if pe_arr.size == self.cfg.n_agents:
+                self._Pe_prev = pe_arr
+        if self._Pe_prev is None:
+            self._Pe_prev = np.asarray(pm0_pu, dtype=np.float64)
+
+        logger.debug(
+            "CVS warmup complete: t=%.4f s (recompile=%s, Pe=%s, delta_deg=%s)",
+            duration, do_recompile, self._Pe_prev, self._delta_prev_deg,
+        )
+
     def _apply_breaker_events(self) -> None:
         if not self.cfg.breaker_step_block_template:
             return
@@ -595,6 +730,23 @@ class SimulinkBridge:
         self._tripload_state[var_name] = value_w
         self.session.eval(
             f"assignin('base', '{var_name}', {value_w:.6g})", nargout=0
+        )
+
+    def apply_workspace_var(self, var_name: str, value: float) -> None:
+        """Push a single scalar workspace variable to MATLAB base ws.
+
+        Like apply_disturbance_load, but does NOT touch self._tripload_state
+        (which is reserved for the SPS TripLoad batch-write semantics in
+        warmup). Use for mid-episode disturbance vars referenced by .slx
+        Constant blocks (e.g. CVS Pm_step_amp_<i>, Pm_step_t_<i>) that
+        the warmup re-population loop must not own.
+
+        Args:
+            var_name: workspace variable name (no path qualifier)
+            value:    scalar value, written as a double precision literal
+        """
+        self.session.eval(
+            f"assignin('base', '{var_name}', {float(value):.6g})", nargout=0
         )
 
     def reset_episode(self, duration: float = 0.01) -> None:

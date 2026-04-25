@@ -51,6 +51,19 @@ def list_active_bridges() -> list[str]:
 #   "feedback"       — PeGain_ES{idx} ToWorkspace, true electrical Pe (Kundur main)
 PE_MEASUREMENT_MODES = ("vi", "pout", "vi_then_pout", "feedback")
 
+# step_strategy: how a single RL control step drives the .slx model.
+#   "phang_feedback" — current default for all in-tree callers (NE39 +
+#                      legacy Kundur). step() writes M_i / D_i workspace
+#                      values, calls slx_step_and_read.m, optionally
+#                      injects phAng feedback (NE39 only).
+#   "cvs_signal"     — reserved for the Kundur CVS path (G3-prep-C). The
+#                      CVS model has no phAng feedback; the swing-eq is
+#                      already closed inside the .slx via cosD/sinD/RI2C.
+#                      This value is currently ACCEPTED at construction
+#                      time and stored on the config but NOT yet dispatched
+#                      by step() — actual dispatch is added in G3-prep-C.
+STEP_STRATEGY_MODES = ("phang_feedback", "cvs_signal")
+
 
 def _normalize_per_agent_vector(
     name: str, value: "float | Sequence[float]", n_agents: int
@@ -113,6 +126,11 @@ class BridgeConfig:
     tripload2_p_default: float = 1.0         # initial load (W) — Bus15 default; scenario may override to rated MW
     breaker_step_block_template: str = ''    # '{model}/BrkCtrl_{idx}' (optional Step block path)
     breaker_count: int = 0                   # number of disturbance breaker controls
+    # G3-prep-B (additive): how a single step drives the .slx.
+    #   Default "phang_feedback" reproduces the pre-B behaviour for every
+    #   existing caller (NE39, legacy Kundur). "cvs_signal" is reserved
+    #   for the Kundur CVS profile; dispatch wiring lands in G3-prep-C.
+    step_strategy: str = "phang_feedback"
 
     def __post_init__(self) -> None:
         """Validate configuration at construction time.
@@ -130,6 +148,13 @@ class BridgeConfig:
             errors.append(
                 f"pe_measurement={self.pe_measurement!r} not in "
                 f"{PE_MEASUREMENT_MODES}"
+            )
+
+        # G3-prep-B: validate step_strategy enum
+        if self.step_strategy not in STEP_STRATEGY_MODES:
+            errors.append(
+                f"step_strategy={self.step_strategy!r} not in "
+                f"{STEP_STRATEGY_MODES}"
             )
         elif self.pe_measurement == "vi" and not has_vi:
             errors.append(

@@ -176,6 +176,8 @@ KUNDUR_BRIDGE_CONFIG = BridgeConfig(
     src_path_template='{model}/VSrc_ES{idx}',
     p_out_signal='P_out_ES{idx}',        # DEBUG ONLY — swing eq output, not for training
     pe_measurement=KUNDUR_MODEL_PROFILE.pe_measurement,
+    # G3-prep-D-config: route CVS profile to cvs_signal dispatch; legacy/SPS keep phang_feedback default.
+    step_strategy='cvs_signal' if KUNDUR_MODEL_PROFILE.model_name == 'kundur_cvs' else 'phang_feedback',
     pe_feedback_signal='PeFb_ES{idx}',   # PeGain_ES{idx} output, VSG-base pu
     # Dynamic Load disturbance: per-phase W stored in base workspace.
     # Bus14: TripLoad1_P = 248/3 MW per phase (nominal load on).

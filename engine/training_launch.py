@@ -97,25 +97,25 @@ def get_training_launch_status(scenario_id: str) -> dict[str, Any]:
     model_exists = slx_abs.exists()
 
     # --- inspect the latest run (status-aware, ghost-proof via find_latest_run) ---
-    from utils.run_protocol import find_latest_run as _find_latest, \
-        read_training_status as _read_status
+    # File I/O + run discovery: utils.run_protocol.
+    # Typed schema view + checkpoint scan: engine.run_schema.
+    from utils.run_protocol import find_latest_run as _find_latest
+    from engine.run_schema import (
+        list_episode_checkpoints as _list_ckpts,
+        latest_resume_candidate as _latest_ckpt,
+        read_run_status as _read_status,
+    )
     _latest_dir = _find_latest(scenario_id)
     if _latest_dir is None:
         latest_run_id = latest_run_status = resume_candidate = None
         ckpt_count = 0
     else:
         latest_run_id = _latest_dir.name
-        latest_run_status = (_read_status(_latest_dir) or {}).get("status")
-        _ckpt_dir = _latest_dir / "checkpoints"
-        _ep_ckpts = sorted(
-            [f for f in (_ckpt_dir.iterdir() if _ckpt_dir.is_dir() else [])
-             if f.name.startswith("ep") and f.name.endswith(".pt")],
-            key=lambda f: int(f.stem[2:]),
-        )
-        ckpt_count = len(_ep_ckpts)
-        resume_candidate = str(_ep_ckpts[-1]) if _ep_ckpts else (
-            str(_ckpt_dir / "final.pt") if (_ckpt_dir / "final.pt").exists() else None
-        )
+        _rs = _read_status(_latest_dir)
+        latest_run_status = _rs.status if _rs else None
+        ckpt_count = len(_list_ckpts(_latest_dir))
+        _candidate = _latest_ckpt(_latest_dir)
+        resume_candidate = str(_candidate) if _candidate else None
 
     # --- is there an active training process for this scenario? ---
     active_pid = _find_active_pid(train_entry)
@@ -164,7 +164,11 @@ def _inspect_latest_run(runs_root: Path):
 
     Test-only helper; not called by get_training_launch_status().
     find_latest_run() from utils.run_protocol is the production equivalent.
+
+    Tolerant on corrupt training_status.json (returns status=None).
     """
+    from engine.run_schema import list_episode_checkpoints, latest_resume_candidate
+
     if not runs_root.is_dir():
         return None, None, 0, None
 
@@ -178,25 +182,18 @@ def _inspect_latest_run(runs_root: Path):
 
     latest = run_dirs[0]
     status_file = latest / "training_status.json"
-    status = None
+    status: str | None = None
     if status_file.exists():
         try:
             status = json.loads(
                 status_file.read_text(encoding="utf-8")
             ).get("status")
         except Exception:
-            pass
+            pass  # corrupt JSON → status stays None (test contract)
 
-    ckpt_dir = latest / "checkpoints"
-    ep_ckpts = sorted(
-        [f for f in (ckpt_dir.iterdir() if ckpt_dir.is_dir() else [])
-         if f.name.startswith("ep") and f.name.endswith(".pt")],
-        key=lambda f: int(f.stem[2:]),
-    )
-    ckpt_count = len(ep_ckpts)
-    resume_candidate = str(ep_ckpts[-1]) if ep_ckpts else (
-        str(ckpt_dir / "final.pt") if (ckpt_dir / "final.pt").exists() else None
-    )
+    ckpt_count = len(list_episode_checkpoints(latest))
+    candidate = latest_resume_candidate(latest)
+    resume_candidate = str(candidate) if candidate else None
 
     return latest.name, status, ckpt_count, resume_candidate
 

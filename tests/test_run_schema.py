@@ -29,6 +29,7 @@ def test_read_run_status_full_payload(tmp_path: Path) -> None:
     run_dir = tmp_path / "kundur_20260410_120000"
     run_dir.mkdir()
     payload = {
+        "scenario": "kundur",
         "run_id": "kundur_20260410_120000",
         "status": "running",
         "episodes_done": 12,
@@ -44,6 +45,7 @@ def test_read_run_status_full_payload(tmp_path: Path) -> None:
     rs = read_run_status(run_dir)
     assert rs is not None
     assert isinstance(rs, RunStatus)
+    assert rs.scenario == "kundur"
     assert rs.run_id == "kundur_20260410_120000"
     assert rs.status == "running"
     assert rs.episodes_done == 12
@@ -104,28 +106,35 @@ def test_to_observer_dict_full_shape(tmp_path: Path) -> None:
     run_dir = tmp_path / "kundur_x"
     run_dir.mkdir()
     rs = RunStatus(
+        scenario="kundur",
         run_id="kundur_x",
-        status="running",
+        status="failed",
         episodes_done=10,
         episodes_total=500,
         last_reward=-50.0,
         last_eval_reward=-45.0,
         last_updated="2026-04-26T01:00:00",
         started_at="2026-04-26T00:30:00",
+        failed_at="2026-04-26T01:05:00",
+        error="boom",
         logs_dir=str(run_dir / "logs"),
     )
     out = rs.to_observer_dict(run_dir, "kundur", latest_snapshot={"episode": 5})
 
     expected_keys = {
-        "scenario_id", "run_id", "status", "episodes_done", "episodes_total",
-        "progress_pct", "last_reward", "last_updated", "started_at",
-        "finished_at", "error", "stop_reason", "last_eval_reward",
-        "logs_dir", "run_dir", "latest_snapshot",
+        "scenario_id", "scenario", "run_id", "status",
+        "episodes_done", "episodes_total", "progress_pct",
+        "last_reward", "last_updated", "started_at",
+        "finished_at", "failed_at", "error", "stop_reason",
+        "last_eval_reward", "logs_dir", "run_dir", "latest_snapshot",
     }
     assert set(out.keys()) == expected_keys
     assert out["scenario_id"] == "kundur"
+    assert out["scenario"] == "kundur"
     assert out["run_id"] == "kundur_x"
-    assert out["status"] == "running"
+    assert out["status"] == "failed"
+    assert out["failed_at"] == "2026-04-26T01:05:00"
+    assert out["error"] == "boom"
     assert out["episodes_done"] == 10
     assert out["progress_pct"] == 2.0
     assert out["latest_snapshot"] == {"episode": 5}

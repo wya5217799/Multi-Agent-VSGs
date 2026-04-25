@@ -56,11 +56,9 @@ def _check_unknown_status_keys(status: dict[str, Any]) -> None:
     Never raises; never modifies the payload — forward-compat for newly-added
     fields not yet promoted to typed attributes is preserved.
     """
-    # Lazy-import to avoid a circular utils <-> engine dependency on cold start.
-    try:
-        from engine.run_schema import RunStatus
-    except ImportError:
-        return  # cannot validate without schema — silently skip
+    # Lazy-import: engine.run_schema imports utils.run_protocol at module level,
+    # so a top-level import here would create a true circular import.
+    from engine.run_schema import RunStatus
 
     known = {
         name for name in RunStatus.__dataclass_fields__

@@ -38,6 +38,7 @@ class RunStatus:
     with newly-added fields not yet promoted to typed attributes.
     """
 
+    scenario: str | None = None  # "kundur" | "ne39" — written by training scripts
     run_id: str | None = None
     status: str | None = None  # "running" | "finished" | "failed"
     episodes_done: int = 0
@@ -82,6 +83,7 @@ class RunStatus:
         """
         return {
             "scenario_id": scenario_id,
+            "scenario": self.scenario,
             "run_id": self.run_id,
             "status": self.status,
             "episodes_done": self.episodes_done,
@@ -91,6 +93,7 @@ class RunStatus:
             "last_updated": self.last_updated,
             "started_at": self.started_at,
             "finished_at": self.finished_at,
+            "failed_at": self.failed_at,
             "error": self.error,
             "stop_reason": self.stop_reason,
             "last_eval_reward": self.last_eval_reward,
@@ -116,6 +119,7 @@ def read_run_status(run_dir: Path) -> RunStatus | None:
 def _coerce_run_status(raw: dict[str, Any]) -> RunStatus:
     """Coerce a raw dict into RunStatus with tolerant typing."""
     return RunStatus(
+        scenario=_as_str(raw.get("scenario")),
         run_id=_as_str(raw.get("run_id")),
         status=_as_str(raw.get("status")),
         episodes_done=_as_int(raw.get("episodes_done"), default=0),

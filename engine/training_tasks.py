@@ -10,7 +10,6 @@ MCP tools exposed here:
 from __future__ import annotations
 
 import json
-from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
@@ -130,6 +129,7 @@ def training_status(scenario_id: str, run_id: str | None = None) -> dict[str, An
     if run_dir is None:
         return {
             "scenario_id": scenario_id,
+            "scenario": None,
             "status": "no_run",
             "run_id": None,
             "episodes_done": 0,
@@ -139,6 +139,7 @@ def training_status(scenario_id: str, run_id: str | None = None) -> dict[str, An
             "last_updated": None,
             "started_at": None,
             "finished_at": None,
+            "failed_at": None,
             "error": None,
             "stop_reason": None,
             "last_eval_reward": None,

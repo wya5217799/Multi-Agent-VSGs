@@ -74,7 +74,9 @@ def test_write_training_status_no_warning_on_known_keys(tmp_path, caplog):
 
     run_dir = tmp_path / "clean_run"
     run_dir.mkdir()
+    # `scenario` is the field production train_simulink.py writes — must NOT warn.
     payload = {
+        "scenario": "kundur",
         "run_id": "kundur_x",
         "status": "running",
         "episodes_done": 5,

@@ -1,0 +1,235 @@
+{
+  "probe": "p34_5ep_smoke_mcp",
+  "model_name": "kundur_cvs_v3",
+  "profile_path": "C:\\Users\\27443\\Desktop\\Multi-Agent  VSGs\\scenarios\\kundur\\model_profiles\\kundur_cvs_v3.json",
+  "ic_path": "C:\\Users\\27443\\Desktop\\Multi-Agent  VSGs\\scenarios\\kundur\\kundur_ic_cvs_v3.json",
+  "runtime_mat_path": "C:\\Users\\27443\\Desktop\\Multi-Agent  VSGs\\scenarios\\kundur\\simulink_models\\kundur_cvs_v3_runtime.mat",
+  "runtime_mat_exists": true,
+  "profile_id": "kundur_cvs_v3",
+  "ic_schema_version": 3,
+  "ic_topology_variant": "v3_paper_kundur_16bus",
+  "warmup_state": {
+    "omega": [
+      1.000007026268912,
+      1.0000128089993678,
+      1.0004610282566875,
+      1.0003148316312012
+    ],
+    "Pe": [
+      -0.32502674981464552,
+      -0.37353840801672056,
+      -0.40669611842809439,
+      -0.33799525474561809
+    ],
+    "delta_rad": [
+      0.42941915923122165,
+      0.025765637044796418,
+      0.082954521729849712,
+      0.046673775572641144
+    ]
+  },
+  "warmup_status": {
+    "success": true,
+    "error": "",
+    "wall_s": 2.806826
+  },
+  "episodes": [
+    {
+      "episode": 0,
+      "steps_done": 50,
+      "expected_steps": 50,
+      "complete": true,
+      "nan_inf": false,
+      "clip_or_fail": false,
+      "omega_min": [
+        0.99806220555752956,
+        0.99998912788410688,
+        0.99958522595081833,
+        0.99966872478840207
+      ],
+      "omega_max": [
+        1.0024646733528919,
+        1.0000191160668628,
+        1.0003017548063819,
+        1.0002158058466488
+      ],
+      "omega_dev_max_pu": 0.0024646733528919107,
+      "max_freq_dev_hz": 0.12323366764459553,
+      "M_action_mean": [
+        25.558856999826343,
+        25.860014215892409,
+        25.374530847524255,
+        25.320310217143941
+      ],
+      "D_action_mean": [
+        5.9170455938362894,
+        5.5496943464633706,
+        6.1092078664739509,
+        6.0314927698655652
+      ],
+      "reward_proxy_mean": -1.179444857154547E-7,
+      "amp_per_vsg_sys_pu": 0.4,
+      "wall_s": 9.0016858
+    },
+    {
+      "episode": 1,
+      "steps_done": 50,
+      "expected_steps": 50,
+      "complete": true,
+      "nan_inf": false,
+      "clip_or_fail": false,
+      "omega_min": [
+        0.99736225797865075,
+        0.99998630272149225,
+        0.999853615694396,
+        0.99990496099141213
+      ],
+      "omega_max": [
+        1.0022397301707116,
+        1.0000108890983286,
+        1.0001994028289889,
+        1.0001041214803488
+      ],
+      "omega_dev_max_pu": 0.0026377420213492542,
+      "max_freq_dev_hz": 0.13188710106746271,
+      "M_action_mean": [
+        25.119402736246926,
+        25.399564306117423,
+        24.853204344321302,
+        26.137703701897003
+      ],
+      "D_action_mean": [
+        5.8638806193301374,
+        6.386729656528189,
+        5.8805544927025126,
+        6.3456145349661428
+      ],
+      "reward_proxy_mean": -1.2940500389861519E-7,
+      "amp_per_vsg_sys_pu": -0.4,
+      "wall_s": 10.7576192
+    },
+    {
+      "episode": 2,
+      "steps_done": 50,
+      "expected_steps": 50,
+      "complete": true,
+      "nan_inf": false,
+      "clip_or_fail": false,
+      "omega_min": [
+        0.9980924308022604,
+        0.999993093787812,
+        0.999933596214032,
+        0.9999135573760084
+      ],
+      "omega_max": [
+        1.0023589583896264,
+        1.0000065491014172,
+        1.0000579672380896,
+        1.0000720606429581
+      ],
+      "omega_dev_max_pu": 0.0023589583896264088,
+      "max_freq_dev_hz": 0.11794791948132044,
+      "M_action_mean": [
+        25.214925519036921,
+        25.272890872922133,
+        25.457298541226624,
+        25.833045541144205
+      ],
+      "D_action_mean": [
+        6.3895372349501756,
+        6.2017464034981415,
+        6.0205607244485044,
+        5.7806136676618571
+      ],
+      "reward_proxy_mean": -1.1874648981310533E-7,
+      "amp_per_vsg_sys_pu": 0.4,
+      "wall_s": 13.1374812
+    },
+    {
+      "episode": 3,
+      "steps_done": 50,
+      "expected_steps": 50,
+      "complete": true,
+      "nan_inf": false,
+      "clip_or_fail": false,
+      "omega_min": [
+        0.99766271533296391,
+        0.99999377809352019,
+        0.99996025056879612,
+        0.99994658368532474
+      ],
+      "omega_max": [
+        1.0019925660374585,
+        1.0000063394179066,
+        1.0000470089314353,
+        1.0000362441832358
+      ],
+      "omega_dev_max_pu": 0.0023372846670360881,
+      "max_freq_dev_hz": 0.1168642333518044,
+      "M_action_mean": [
+        25.633085336526083,
+        25.197412708898174,
+        25.326126982801966,
+        25.18452915390127
+      ],
+      "D_action_mean": [
+        6.2551475415304409,
+        6.0459492002777315,
+        5.9227996046162961,
+        6.2757593235647393
+      ],
+      "reward_proxy_mean": -1.1343096707451562E-7,
+      "amp_per_vsg_sys_pu": -0.4,
+      "wall_s": 15.5316467
+    },
+    {
+      "episode": 4,
+      "steps_done": 50,
+      "expected_steps": 50,
+      "complete": true,
+      "nan_inf": false,
+      "clip_or_fail": false,
+      "omega_min": [
+        0.9978360296150075,
+        0.99999268587260048,
+        0.9999766836692251,
+        0.999976919253567
+      ],
+      "omega_max": [
+        1.0026048769272335,
+        1.0000075116935268,
+        1.0000135827971135,
+        1.0000274738857986
+      ],
+      "omega_dev_max_pu": 0.0026048769272335459,
+      "max_freq_dev_hz": 0.1302438463616773,
+      "M_action_mean": [
+        25.751942637657532,
+        25.610720637273207,
+        25.424551240320039,
+        25.7962905081961
+      ],
+      "D_action_mean": [
+        5.7725527858779166,
+        5.6753592672766526,
+        5.8272661529293348,
+        6.09494418424865
+      ],
+      "reward_proxy_mean": -1.2448604495237033E-7,
+      "amp_per_vsg_sys_pu": 0.4,
+      "wall_s": 17.6282475
+    }
+  ],
+  "gates": {
+    "identity_ok": true,
+    "runtime_mat_v3_correct": true,
+    "warmup_passed": true,
+    "all_5_episodes_complete": true,
+    "no_nan_inf": true,
+    "no_clip_or_fail": true,
+    "omega_non_stale": true,
+    "max_freq_dev_nonzero": true
+  },
+  "all_pass": true,
+  "timestamp": "2026-04-26T22:20:04+08:00"
+}

@@ -73,7 +73,13 @@ function [state, status] = slx_episode_warmup_cvs( ...
     % episodes, so we only need to (re)load on do_recompile=true (cold start
     % or after a sim crash forced a recompile).
     if logical(do_recompile)
-        runtime_mat = fullfile(fileparts(which(model_name)), 'kundur_cvs_runtime.mat');
+        % R-h1 (P3.4 BLOCKER fix, 2026-04-26): derive sidecar basename from
+        % model_name so the helper supports any CVS-pattern profile, not just
+        % the v2 'kundur_cvs' name. v2 regression-safe: model_name='kundur_cvs'
+        % maps to 'kundur_cvs_runtime.mat' (unchanged from prior hardcoded
+        % literal). v3: model_name='kundur_cvs_v3' maps to
+        % 'kundur_cvs_v3_runtime.mat' (the file build_kundur_cvs_v3.m emits).
+        runtime_mat = fullfile(fileparts(which(model_name)), [model_name '_runtime.mat']);
         if exist(runtime_mat, 'file') == 2
             consts = load(runtime_mat);
             const_fns = fieldnames(consts);

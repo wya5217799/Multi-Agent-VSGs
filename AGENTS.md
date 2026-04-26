@@ -40,7 +40,7 @@ Default execution layer for Track 2: MCP tools in `engine/mcp_simulink_tools.py`
 
 **Directory roles** (helper scripts layer):
 - `scripts/` — general repo helper scripts (launch, lint, profiling, workspace hygiene).
-- `probes/` — scenario-specific, reusable regression probes bound to concrete model semantics (e.g. `probes/ne39/probe_phang_sensitivity.m`). One-off debugging does NOT go here.
+- `probes/` — scenario-specific, reusable regression probes bound to concrete model semantics. `probes/<scenario>/gates/` holds pipeline gate scripts for the active development phase. One-off debugging does NOT go here — archive it when done.
 
 ## Non-Goals
 

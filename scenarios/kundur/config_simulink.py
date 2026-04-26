@@ -43,7 +43,23 @@ KUNDUR_MODEL_PROFILE = load_runtime_kundur_profile()
 # ConvGen and VSG P_ref ramps start at 0 (X0=0 in build_powerlib_kundur.m),
 # so T_WARMUP must cover the full T_ramp=2s plus settling time (~1s).
 # Base value 0.5s is too short — delta crashes before the ramp completes.
-T_WARMUP = 3.0  # overrides config_simulink_base.T_WARMUP = 0.5
+#
+# P3.3b (2026-04-26) — SMOKE-STAGE ONLY DECISION (NOT permanent for
+# 2000-ep training): raised 3.0 -> 10.0 to absorb the v3 Phasor inductor-
+# IC kick observed in Phase 2 zero-action probe (P2.1 fix-A2). At t=10 s
+# residual |omega - 1| < 0.5 mHz across all 7 sources (ω/Pe both within
+# 0.5 % of NR steady; full settling at t=30 s but the residual is below
+# typical RL signal magnitude after t=10 s). v2 path (kundur_cvs) was
+# previously running on T_WARMUP=3.0 and works fine at that value, but
+# raising the shared override is acceptable: v2 also benefits from extra
+# settle margin and the wall-clock cost is uniform per episode.
+#
+# Phase 4 / Phase 5 may revisit and either:
+#   - keep 10 s if 50-ep r_f signal under PHI_F=100 is clean,
+#   - raise to 20-30 s if residual contaminates reward shaping,
+#   - or pursue an inductor-IC pre-loading fix (build edit; out of scope
+#     for the current Phase 3 allow-list).
+T_WARMUP = 10.0  # smoke-stage; was 3.0 (v2 baseline), bumped per P3.3b
 
 # ========== System (from contract) ==========
 N_AGENTS = _CONTRACT.n_agents

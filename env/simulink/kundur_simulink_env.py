@@ -696,7 +696,11 @@ class KundurSimulinkEnv(_KundurBaseEnv):
         # in OD-F-3 verdict, commit a62c1e9). Re-route to the per-VSG
         # Pm_step_amp_<i> / Pm_step_t_<i> Constants already wired in
         # build_kundur_cvs.m L257-290.
-        if cfg.model_name == 'kundur_cvs':
+        # P3.3 (2026-04-26): v3 build_kundur_cvs_v3.m wires the same per-ESS
+        # Pm_step_t_<i> / Pm_step_amp_<i> workspace-variable gating cluster,
+        # so the CVS Pm-step routing applies verbatim to kundur_cvs_v3.
+        # Magnitude / sign / timing / strategy unchanged from the v2 CVS path.
+        if cfg.model_name in ('kundur_cvs', 'kundur_cvs_v3'):
             # Asymmetric Pm step (2026-04-26 minimal-path change after 50ep
             # symmetric baseline kundur_simulink_20260426_142847 showed r_f
             # identically 0): paper r_f = -Σ(Δω_i - local_mean)^2 vanishes

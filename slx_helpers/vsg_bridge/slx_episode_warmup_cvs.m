@@ -43,7 +43,7 @@ function [state, status] = slx_episode_warmup_cvs( ...
 %     state.omega(N), state.Pe(N), state.rocof(N), state.delta(N), state.delta_deg(N)
 %     status.success, status.error, status.elapsed_ms
 
-    if nargin < 6, do_recompile = true; end %#ok<NASGU>  % CVS path: no FastRestart cache to flip
+    if nargin < 6, do_recompile = true; end
 
     status.success = true;
     status.error   = '';
@@ -69,34 +69,82 @@ function [state, status] = slx_episode_warmup_cvs( ...
     % Sbase_const, Pe_scale, L_v_H / L_tie_H / L_inf_H, R_loadA / R_loadB,
     % Vmag_<i>) to kundur_cvs_runtime.mat alongside the .slx. These are
     % referenced by the .slx Constant blocks and Inductance / Resistance
-    % parameters. A fresh MATLAB session that loads the .slx without first
-    % running build_kundur_cvs.m has none of these vars — sim() then fails
-    % with Simulink:Parameters:BlkParamUndefined. Load the sidecar here to
-    % make warmup robust across MATLAB sessions.
-    runtime_mat = fullfile(fileparts(which(model_name)), 'kundur_cvs_runtime.mat');
-    if exist(runtime_mat, 'file') == 2
-        consts = load(runtime_mat);
-        const_fns = fieldnames(consts);
-        for k = 1:numel(const_fns)
-            assignin('base', const_fns{k}, consts.(const_fns{k}));
+    % parameters and consumed at compile-time. They do not change between
+    % episodes, so we only need to (re)load on do_recompile=true (cold start
+    % or after a sim crash forced a recompile).
+    if logical(do_recompile)
+        runtime_mat = fullfile(fileparts(which(model_name)), 'kundur_cvs_runtime.mat');
+        if exist(runtime_mat, 'file') == 2
+            consts = load(runtime_mat);
+            const_fns = fieldnames(consts);
+            for k = 1:numel(const_fns)
+                assignin('base', const_fns{k}, consts.(const_fns{k}));
+            end
+        else
+            status.success    = false;
+            status.error      = sprintf( ...
+                ['CVS runtime sidecar missing at %s. ' ...
+                 'Run build_kundur_cvs.m to regenerate.'], runtime_mat);
+            state             = warmup_cvs_empty_state(N);
+            status.elapsed_ms = toc * 1000;
+            return;
         end
-    else
-        status.success    = false;
-        status.error      = sprintf( ...
-            ['CVS runtime sidecar missing at %s. ' ...
-             'Run build_kundur_cvs.m to regenerate.'], runtime_mat);
-        state             = warmup_cvs_empty_state(N);
-        status.elapsed_ms = toc * 1000;
-        return;
     end
 
-    % --- Phase 1: Reset workspace state for the CVS .slx ---
+    % --- Phase 1a: FastRestart-aware runtime reset ---
+    %
+    % Pattern matches slx_episode_warmup.m (legacy/NE39 path). The CVS .slx
+    % logs Timeseries via "To Workspace" blocks named omega_ts_<i> /
+    % delta_ts_<i> / Pe_ts_<i>; these accumulate base-ws variables across
+    % episodes and must be cleared between resets.
+    %
+    %   do_recompile=true  (first episode, or after a sim crash):
+    %     Force FR off (clear SDI + ts vars), then re-enable FR before sim.
+    %     This pays the one-time compile + Phasor steady-state init.
+    %
+    %   do_recompile=false (subsequent episodes):
+    %     Keep FR on; only clear SDI + ts vars. The warmup sim() below
+    %     restarts from t=0 automatically because the new StopTime
+    %     (= t_warmup) is < the previous final sim time. No recompile.
+    if logical(do_recompile)
+        slx_runtime_reset(model_name, 'off', true, '^(omega|delta|Pe)_ts_\d+$');
+        % --- Phase 1a-bis: idempotent ToWorkspace cap patch ---
+        %
+        % Newer build_kundur_cvs.m sets LimitDataPoints='on' / MaxDataPoints='2'
+        % on the W_omega_<i> / W_delta_<i> / W_Pe_<i> blocks at build time so
+        % the Timeseries IPC return stays O(1) regardless of t_stop. For .slx
+        % files built before that change, patch them here under FR=off so the
+        % structural change is safe. set_param is no-op if the value already
+        % matches, so this is idempotent and cheap.
+        for k = 1:N
+            idx = agent_ids(k);
+            for prefix = {'W_omega_', 'W_delta_', 'W_Pe_'}
+                blk = [model_name '/' prefix{1} num2str(idx)];
+                try
+                    set_param(blk, 'LimitDataPoints', 'on', 'MaxDataPoints', '2');
+                catch
+                    % Block missing or model doesn't expose params: skip silently.
+                    % Failure here means an old or non-CVS .slx; warmup will
+                    % then surface that via the Phase 2 sim() error path.
+                end
+            end
+        end
+    else
+        slx_runtime_reset(model_name, '',    true, '^(omega|delta|Pe)_ts_\d+$');
+    end
+
+    % --- Phase 1b: Reset workspace state for the CVS .slx ---
     %
     % cfg.m_var_template / cfg.d_var_template come from the CVS profile
     % (BridgeConfig fields already exist). The remaining per-VSG CVS variable
     % names are hard-coded here (Pm_<i>, delta0_<i>, Pm_step_t_<i>,
     % Pm_step_amp_<i>, optional Vmag_<i> override). Build-time scalars are
     % loaded by Phase 0 above; do not duplicate them here.
+    %
+    % All these vars feed Constant blocks (and one Integrator IC for
+    % delta0_<i>); under FastRestart, Constant Value and Integrator IC are
+    % both tunable parameters, so changes here propagate to the next sim()
+    % without recompile.
     vars = struct();
     for i = 1:N
         idx = agent_ids(i);
@@ -122,11 +170,23 @@ function [state, status] = slx_episode_warmup_cvs( ...
         return;
     end
 
+    % --- Phase 1c: Enable FastRestart (only on do_recompile path) ---
+    if logical(do_recompile)
+        reset_result = slx_runtime_reset(model_name, 'on', false, '');
+        if ~reset_result.ok
+            status.success    = false;
+            status.error      = ['FastRestart enable failed: ' reset_result.error_message];
+            state             = warmup_cvs_empty_state(N);
+            status.elapsed_ms = toc * 1000;
+            return;
+        end
+    end
+
     % --- Phase 2: Run warmup sim ---
     %
-    % CVS path uses powergui Phasor mode; no FastRestart cache flip needed.
     % build_kundur_cvs.m sets the model's StopTime to '0.5' at build time;
-    % we override it here to t_warmup.
+    % we override it here to t_warmup. With FR on, this restarts from t=0
+    % automatically when StopTime < prev final sim time (subsequent eps).
     try
         set_param(model_name, 'StopTime', num2str(init_params.t_warmup, '%.6f'));
         simOut = sim(model_name);

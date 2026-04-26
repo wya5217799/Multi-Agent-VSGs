@@ -601,14 +601,31 @@ class KundurSimulinkEnv(_KundurBaseEnv):
         render_mode: Optional[str] = None,
         training: bool = True,
         model_profile_path: Optional[str] = None,
+        disturbance_type: Optional[str] = None,
     ):
-        from scenarios.kundur.config_simulink import DEFAULT_KUNDUR_MODEL_PROFILE
+        from scenarios.kundur.config_simulink import (
+            DEFAULT_KUNDUR_MODEL_PROFILE,
+            KUNDUR_DISTURBANCE_TYPE,
+            KUNDUR_DISTURBANCE_TYPES_VALID,
+        )
         from scenarios.kundur.model_profile import load_kundur_model_profile
         selected_path = model_profile_path or os.getenv(
             "KUNDUR_MODEL_PROFILE",
             str(DEFAULT_KUNDUR_MODEL_PROFILE),
         )
         self._runtime_profile = load_kundur_model_profile(selected_path)
+
+        # Phase 4 Gap 1 Path (C): resolve disturbance_type from explicit
+        # constructor arg, env-var-driven config default, or legacy fallback.
+        # Class attribute DISTURBANCE_VSG_INDICES still honored for legacy
+        # `pm_step_single_vsg` (preserves existing training behavior).
+        resolved_dtype = disturbance_type or KUNDUR_DISTURBANCE_TYPE
+        if resolved_dtype not in KUNDUR_DISTURBANCE_TYPES_VALID:
+            raise ValueError(
+                f"disturbance_type={resolved_dtype!r} not in "
+                f"{KUNDUR_DISTURBANCE_TYPES_VALID}"
+            )
+        self._disturbance_type = resolved_dtype
 
         super().__init__(
             comm_delay_steps=comm_delay_steps,
@@ -706,13 +723,39 @@ class KundurSimulinkEnv(_KundurBaseEnv):
             # identically 0): paper r_f = -Σ(Δω_i - local_mean)^2 vanishes
             # under fully symmetric disturbance + symmetric CVS v2 topology.
             # Apply the full magnitude to a configurable subset of VSGs
-            # (default DISTURBANCE_VSG_INDICES=(0,) → VSG1 only) so ω_i
-            # diverges across nodes and r_f carries a learning signal.
+            # so ω_i diverges across nodes and r_f carries a learning signal.
             #
             # Total Pm injection is unchanged vs the previous symmetric path:
             #   old: 4 × (magnitude/4)  =  magnitude  (spread)
             #   new: |targets| × (magnitude/|targets|) = magnitude  (focused)
-            target_indices = tuple(getattr(self, 'DISTURBANCE_VSG_INDICES', (0,)))
+            #
+            # Phase 4 Gap 1 Path (C) — Pm-step proxy dispatch.
+            # See plan §Gap 1 + audit §R2-Blocker1 (LoadStep workspace path
+            # is provably DEAD; build_kundur_cvs_v3.m hardcodes 'Resistance'
+            # at lines 316-336). Map disturbance_type -> target_indices:
+            #   pm_step_proxy_bus7        -> (0,)  ES1, electrically nearest Bus 7 (P2.3-L1)
+            #   pm_step_proxy_bus9        -> (3,)  ES4, electrically nearest Bus 9 (P2.3-L1)
+            #   pm_step_proxy_random_bus  -> per-call 50/50 pick of (0,) or (3,)
+            #   pm_step_single_vsg        -> legacy: honors class attr DISTURBANCE_VSG_INDICES
+            dtype = getattr(self, '_disturbance_type', 'pm_step_single_vsg')
+            if dtype == 'pm_step_proxy_bus7':
+                target_indices = (0,)
+                proxy_bus = 7
+            elif dtype == 'pm_step_proxy_bus9':
+                target_indices = (3,)
+                proxy_bus = 9
+            elif dtype == 'pm_step_proxy_random_bus':
+                if float(self.np_random.random()) < 0.5:
+                    target_indices = (0,)
+                    proxy_bus = 7
+                else:
+                    target_indices = (3,)
+                    proxy_bus = 9
+            else:  # pm_step_single_vsg (legacy default)
+                target_indices = tuple(
+                    getattr(self, 'DISTURBANCE_VSG_INDICES', (0,))
+                )
+                proxy_bus = None
             n_tgt = max(len(target_indices), 1)
             amp_focused_pu = float(magnitude) * 100e6 / n_tgt / cfg.sbase_va
             t_now = float(self.bridge.t_current)
@@ -724,9 +767,10 @@ class KundurSimulinkEnv(_KundurBaseEnv):
                 self.bridge.apply_workspace_var(f'Pm_step_t_{i+1}',   t_now)
                 self.bridge.apply_workspace_var(f'Pm_step_amp_{i+1}', amps_per_vsg[i])
             sign = 'increase' if magnitude > 0 else 'decrease'
+            proxy_tag = f"proxy_bus{proxy_bus}" if proxy_bus is not None else dtype
             print(
                 f"[Kundur-Simulink-CVS] Pm step {sign} targets VSG"
-                f"{list(target_indices)}: amp={amp_focused_pu:+.4f} pu "
+                f"{list(target_indices)} ({proxy_tag}): amp={amp_focused_pu:+.4f} pu "
                 f"(magnitude={float(magnitude):+.3f}), step_time={t_now:.4f}s, "
                 f"per_vsg_amps={[f'{a:+.3f}' for a in amps_per_vsg]}"
             )

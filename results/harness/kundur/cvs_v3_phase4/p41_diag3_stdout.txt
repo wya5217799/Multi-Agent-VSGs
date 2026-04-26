@@ -1,0 +1,4 @@
+DIAG3: starting matlab engine ...
+DIAG3: engine ready
+DIAG3: extended report written: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\harness\kundur\cvs_v3_phase4\p41_native_err_extended.txt
+DIAG3: ----- extended report -----

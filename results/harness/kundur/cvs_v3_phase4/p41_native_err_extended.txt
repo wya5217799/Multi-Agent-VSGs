@@ -1,0 +1,28 @@
+多种原因导致错误。
+原因:
+    多种原因导致错误。
+        计算 'kundur_cvs_v3/PVS_W1' 中的参数 'Amplitude' 时出错
+            函数或变量 'WindAmp_1' 无法识别。
+                变量 'WindAmp_1' 不存在。
+                Suggested Actions:
+                    • Load a file into base workspace. - Fix
+                    • 创建一个新变量。 - Fix
+        计算 'kundur_cvs_v3/PVS_W1' 中的参数 'Phase' 时出错
+            函数或变量 'Wphase_1' 无法识别。
+                变量 'Wphase_1' 不存在。
+                Suggested Actions:
+                    • Load a file into base workspace. - Fix
+                    • 创建一个新变量。 - Fix
+    多种原因导致错误。
+        计算 'kundur_cvs_v3/PVS_W2' 中的参数 'Amplitude' 时出错
+            函数或变量 'WindAmp_2' 无法识别。
+                变量 'WindAmp_2' 不存在。
+                Suggested Actions:
+                    • Load a file into base workspace. - Fix
+                    • 创建一个新变量。 - Fix
+        计算 'kundur_cvs_v3/PVS_W2' 中的参数 'Phase' 时出错
+            函数或变量 'Wphase_2' 无法识别。
+                变量 'Wphase_2' 不存在。
+                Suggested Actions:
+                    • Load a file into base workspace. - Fix
+                    • 创建一个新变量。 - Fix

@@ -1,0 +1,7 @@
+Traceback (most recent call last):
+  File "C:\Users\27443\Desktop\Multi-Agent  VSGs\probes\kundur\v3_dryrun\_diag_p41_getreport_extended.py", line 96, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "C:\Users\27443\Desktop\Multi-Agent  VSGs\probes\kundur\v3_dryrun\_diag_p41_getreport_extended.py", line 88, in main
+    print(text)
+UnicodeEncodeError: 'gbk' codec can't encode character '\u2022' in position 217: illegal multibyte sequence

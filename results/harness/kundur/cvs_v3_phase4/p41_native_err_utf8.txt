@@ -1,0 +1,11 @@
+IDENT: MATLAB:MException:MultipleErrors
+MESSAGE:
+多种原因导致错误。
+
+CAUSE[1] IDENT: MATLAB:MException:MultipleErrors
+CAUSE[1] MESSAGE:
+多种原因导致错误。
+
+CAUSE[2] IDENT: MATLAB:MException:MultipleErrors
+CAUSE[2] MESSAGE:
+多种原因导致错误。

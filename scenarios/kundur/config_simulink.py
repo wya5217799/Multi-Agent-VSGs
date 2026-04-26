@@ -106,8 +106,15 @@ PHI_F = 100.0
 # Math: r_f abs_mean ≈ 1.7e-3, r_h ≈ 0.293, r_d ≈ 0.080 → r_f / total ≈ 0.45%.
 # Drop another decade to bring r_f% into the 3%-8% target band:
 #   r_h ≈ 0.029, r_d ≈ 0.008 → predicted r_f% ≈ 1.7e-3/(1.7e-3+0.029+0.008) ≈ 4.4%.
-PHI_H = 0.0001
-PHI_D = 0.0001
+# P4.2 (2026-04-27): allow per-run override via env vars without editing this
+# file between sweep candidates. Plan §Gap 2 sweep candidates:
+#   phi_b1            -> KUNDUR_PHI_H=1e-4  KUNDUR_PHI_D=1e-4   (defaults)
+#   phi_asym_a        -> KUNDUR_PHI_H=1e-3  KUNDUR_PHI_D=1e-4
+#   phi_paper_scaled  -> KUNDUR_PHI_H=1e-2  KUNDUR_PHI_D=1e-2
+#   phi_asym_b        -> KUNDUR_PHI_H=1e-2  KUNDUR_PHI_D=1e-3   (only if needed)
+#   phi_paper         -> KUNDUR_PHI_H=1.0   KUNDUR_PHI_D=1.0    (only if needed)
+PHI_H = float(_os.getenv("KUNDUR_PHI_H", "0.0001"))
+PHI_D = float(_os.getenv("KUNDUR_PHI_D", "0.0001"))
 
 # ========== Electrical Network ==========
 # Full 16-bus Modified Kundur topology is in the Simulink model.
@@ -196,6 +203,43 @@ NORM_FREQ = 8.0
 # (run kundur_simulink_20260414_211958), filling replay buffer with distorted physics.
 DIST_MIN = 0.1   # 10 MW minimum disturbance
 DIST_MAX = 0.5   # 50 MW maximum disturbance — verified safe below IntW clip
+
+# ========== Disturbance Type (Phase 4 Gap 1 — Path C Pm-step proxy) ==========
+# Plan: quality_reports/plans/2026-04-26_kundur_cvs_v3_phase4_phase5_roadmap.md
+# Audit: results/harness/kundur/cvs_v3_phase4/phase4_p40_audit_verdict.md
+#
+# Paper Sec.IV-C names disturbances "load step 1 / 2" at Bus 7 / Bus 9. v3
+# build_kundur_cvs_v3.m creates G_perturb_*/LoadStep_t_*/LoadStep_amp_*
+# workspace vars but the LoadStep R-only branches at lines 316-336 hardcode
+# Resistance='1e9' as a string literal — workspace path is provably DEAD
+# (Phase 4.0 audit §R2-Blocker1). Path (A) build-edit is forbidden under §0
+# allow-list. Path (C) Pm-step proxy uses existing apply_workspace_var on
+# Pm_step_t_<i>/Pm_step_amp_<i> with target ESS chosen by electrical
+# proximity to the paper bus (P2.3-L1 measurements):
+#   pm_step_proxy_bus7        -> ES1 (idx 0)  electrically nearest to Bus 7
+#   pm_step_proxy_bus9        -> ES4 (idx 3)  electrically nearest to Bus 9
+#   pm_step_proxy_random_bus  -> per-disturbance 50/50 pick (bus7 or bus9)
+#   pm_step_single_vsg        -> legacy default: honors class attr
+#                                DISTURBANCE_VSG_INDICES (fallback (0,))
+#
+# Phase 4 default keeps `pm_step_single_vsg` to preserve existing training
+# behavior for any legacy path that imports the env without specifying
+# disturbance_type. P4.2 PHI sweep launches will set
+# `KUNDUR_DISTURBANCE_TYPE=pm_step_proxy_random_bus` via env var.
+KUNDUR_DISTURBANCE_TYPES_VALID = (
+    "pm_step_single_vsg",
+    "pm_step_proxy_bus7",
+    "pm_step_proxy_bus9",
+    "pm_step_proxy_random_bus",
+)
+KUNDUR_DISTURBANCE_TYPE = _os.getenv(
+    "KUNDUR_DISTURBANCE_TYPE", "pm_step_single_vsg"
+)
+if KUNDUR_DISTURBANCE_TYPE not in KUNDUR_DISTURBANCE_TYPES_VALID:
+    raise ValueError(
+        f"KUNDUR_DISTURBANCE_TYPE={KUNDUR_DISTURBANCE_TYPE!r} not in "
+        f"{KUNDUR_DISTURBANCE_TYPES_VALID}"
+    )
 
 
 # ========== Breaker Mapping for Simulink ==========

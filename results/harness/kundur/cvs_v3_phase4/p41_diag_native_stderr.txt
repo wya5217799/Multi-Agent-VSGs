@@ -1,0 +1,3 @@
+错误使用 char
+无法从 struct 转换为 char。
+

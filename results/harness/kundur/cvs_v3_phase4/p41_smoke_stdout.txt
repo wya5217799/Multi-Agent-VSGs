@@ -1,0 +1,29 @@
+RESULT: KUNDUR_MODEL_PROFILE=C:\Users\27443\Desktop\Multi-Agent  VSGs\scenarios\kundur\model_profiles\kundur_cvs_v3.json
+RESULT: starting Phase 4.1 disturbance-routing smoke
+RESULT: profile.model_name=kundur_cvs_v3 profile_id=kundur_cvs_v3 T_WARMUP=10.0
+RESULT: KUNDUR_DISTURBANCE_TYPE_default_config=pm_step_single_vsg valid=('pm_step_single_vsg', 'pm_step_proxy_bus7', 'pm_step_proxy_bus9', 'pm_step_proxy_random_bus')
+RESULT: --- run label=bus7 mode=pm_step_proxy_bus7 ---
+[Kundur-Simulink] Reset failed: slx_episode_warmup_cvs failed: Warmup sim failed: 多种原因导致错误。
+RESULT: episode FAILED label=bus7 mode=pm_step_proxy_bus7: slx_episode_warmup_cvs failed: Warmup sim failed: 多种原因导致错误。
+RESULT: --- run label=bus9 mode=pm_step_proxy_bus9 ---
+[Kundur-Simulink] Reset failed: slx_episode_warmup_cvs failed: Warmup sim failed: 多种原因导致错误。
+RESULT: episode FAILED label=bus9 mode=pm_step_proxy_bus9: slx_episode_warmup_cvs failed: Warmup sim failed: 多种原因导致错误。
+RESULT: --- run label=random_1 mode=pm_step_proxy_random_bus ---
+[Kundur-Simulink] Reset failed: slx_episode_warmup_cvs failed: Warmup sim failed: 多种原因导致错误。
+RESULT: episode FAILED label=random_1 mode=pm_step_proxy_random_bus: slx_episode_warmup_cvs failed: Warmup sim failed: 多种原因导致错误。
+RESULT: --- run label=random_2 mode=pm_step_proxy_random_bus ---
+[Kundur-Simulink] Reset failed: slx_episode_warmup_cvs failed: Warmup sim failed: 多种原因导致错误。
+RESULT: episode FAILED label=random_2 mode=pm_step_proxy_random_bus: slx_episode_warmup_cvs failed: Warmup sim failed: 多种原因导致错误。
+RESULT: --- run label=random_3 mode=pm_step_proxy_random_bus ---
+[Kundur-Simulink] Reset failed: slx_episode_warmup_cvs failed: Warmup sim failed: 多种原因导致错误。
+RESULT: episode FAILED label=random_3 mode=pm_step_proxy_random_bus: slx_episode_warmup_cvs failed: Warmup sim failed: 多种原因导致错误。
+RESULT: --- run label=random_4 mode=pm_step_proxy_random_bus ---
+[Kundur-Simulink] Reset failed: slx_episode_warmup_cvs failed: Warmup sim failed: 多种原因导致错误。
+RESULT: episode FAILED label=random_4 mode=pm_step_proxy_random_bus: slx_episode_warmup_cvs failed: Warmup sim failed: 多种原因导致错误。
+RESULT: --- run label=legacy_single_vsg mode=pm_step_single_vsg ---
+[Kundur-Simulink] Reset failed: slx_episode_warmup_cvs failed: Warmup sim failed: 多种原因导致错误。
+RESULT: episode FAILED label=legacy_single_vsg mode=pm_step_single_vsg: slx_episode_warmup_cvs failed: Warmup sim failed: 多种原因导致错误。
+RESULT: random_bus draws=0 bus7(idx0)=0 bus9(idx3)=0
+RESULT: JSON written to C:\Users\27443\Desktop\Multi-Agent  VSGs\results\harness\kundur\cvs_v3_phase4\p41_disturbance_routing_smoke.json
+RESULT: smoke_ok=False
+RESULT: fail_reasons=['bus7:episode_exc:slx_episode_warmup_cvs failed: Warmup sim failed: 多种原因导致错误。', 'bus9:episode_exc:slx_episode_warmup_cvs failed: Warmup sim failed: 多种原因导致错误。', 'random_1:episode_exc:slx_episode_warmup_cvs failed: Warmup sim failed: 多种原因导致错误。', 'random_2:episode_exc:slx_episode_warmup_cvs failed: Warmup sim failed: 多种原因导致错误。', 'random_3:episode_exc:slx_episode_warmup_cvs failed: Warmup sim failed: 多种原因导致错误。', 'random_4:episode_exc:slx_episode_warmup_cvs failed: Warmup sim failed: 多种原因导致错误。', 'legacy_single_vsg:episode_exc:slx_episode_warmup_cvs failed: Warmup sim failed: 多种原因导致错误。']

@@ -1,0 +1,21 @@
+P4.2 PHI sweep starting
+  REPO_ROOT=C:\Users\27443\Desktop\Multi-Agent  VSGs
+  PYTHON_EXE=C:\Users\27443\miniconda3\envs\andes_env\python.exe
+  RUNS_ROOT=C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_kundur\runs
+  HARNESS_DIR=C:\Users\27443\Desktop\Multi-Agent  VSGs\results\harness\kundur\cvs_v3_phase4
+
+=== P4.2 RUN: phi_b1 ===
+  PHI_H=0.0001 PHI_D=0.0001  (regression check vs current Kundur v3 baseline)
+  KUNDUR_DISTURBANCE_TYPE=pm_step_proxy_random_bus
+  cmd: C:\Users\27443\miniconda3\envs\andes_env\python.exe C:\Users\27443\Desktop\Multi-Agent  VSGs\scenarios\kundur\train_simulink.py --mode simulink --episodes 50 --resume none --seed 42 --save-interval 50 --eval-interval 50
+  stdout -> C:\Users\27443\Desktop\Multi-Agent  VSGs\results\harness\kundur\cvs_v3_phase4\p42_phi_b1_stdout.txt
+  exit_code=0 wall=647s (10.8 min)
+  run_dir=C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_kundur\runs\kundur_simulink_20260427_011559
+  disturbance_bus_counts={'bus7': 31, 'bus9': 22, 'single_vsg': 0, 'other': 0, 'total': 53}
+  metrics -> C:\Users\27443\Desktop\Multi-Agent  VSGs\results\harness\kundur\cvs_v3_phase4\p42_phi_b1_metrics.json
+  PASS=True fails=[]
+
+P4.2 STOP: phi_b1 PASSED ¡ª no further runs needed.
+
+Aggregate -> C:\Users\27443\Desktop\Multi-Agent  VSGs\results\harness\kundur\cvs_v3_phase4\p42_aggregate_metrics.json
+P4.2 complete: pass_index=0 winning_tag=phi_b1

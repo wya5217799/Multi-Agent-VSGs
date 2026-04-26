@@ -1,0 +1,21 @@
+DIAG2: starting matlab engine ...
+DIAG2: engine started
+DIAG2: cwd=C:\Users\27443\Desktop\Multi-Agent  VSGs\scenarios\kundur\simulink_models
+DIAG2: IC schema=3 converged=True
+DIAG2: workspace vars seeded for ESS 1..4
+DIAG2: FastRestart enabled, StopTime=10.0
+DIAG2: native error file written: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\harness\kundur\cvs_v3_phase4\p41_native_err_utf8.txt
+DIAG2: ----- native UTF-8 error -----
+IDENT: MATLAB:MException:MultipleErrors
+MESSAGE:
+多种原因导致错误。
+
+CAUSE[1] IDENT: MATLAB:MException:MultipleErrors
+CAUSE[1] MESSAGE:
+多种原因导致错误。
+
+CAUSE[2] IDENT: MATLAB:MException:MultipleErrors
+CAUSE[2] MESSAGE:
+多种原因导致错误。
+
+DIAG2: ----- end native error -----

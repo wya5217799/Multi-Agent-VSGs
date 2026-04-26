@@ -1,0 +1,27 @@
+P41A: pre-regen slx_sha256  = e9a6f223442fc784e1a3799b6f8c14f3d25f4657dd0f96686ddc8ac2753b903e
+P41A: pre-regen mat_sha256  = bff39964906067933f1c50548471b99f8dd61b1dccf63a88e68755038c1f45fd
+P41A: starting matlab engine ...
+P41A: engine ready, invoking build_kundur_cvs_v3() ...
+P41A: ----- build stdout -----
+警告: The model name 'kundur_cvs_v3' is shadowing another name in the MATLAB workspace or path. Type "which -all kundur_cvs_v3" at the command line to find the other uses of this name. You should change the name of the model to avoid problems.
+> 位置：build_kundur_cvs_v3 (第 152 行)
+RESULT: build_kundur_cvs_v3 saved C:\Users\27443\Desktop\Multi-Agent  VSGs\scenarios\kundur\simulink_models\kundur_cvs_v3.slx
+RESULT: 16-bus paper topology, 3 SG + 4 ESS swing-eq + 2 PVS
+RESULT: lines=20, loads=2, shunts=2, loadsteps=2
+RESULT: ESS Pm0_sys_pu = [-0.3691 -0.3691 -0.3691 -0.3691]
+RESULT: SG  Pm0_sys_pu = [7.0000 7.0000 7.1900]
+RESULT: ESS Vemf_pu    = [0.8401 0.9816 0.7215 0.9748]
+RESULT: SG  Vemf_pu    = [1.1599 1.1128 1.1584]
+RESULT: runtime_mat = C:\Users\27443\Desktop\Multi-Agent  VSGs\scenarios\kundur\simulink_models\kundur_cvs_v3_runtime.mat (40 fields)
+
+P41A: ----- build stderr -----
+
+P41A: verifying runtime.mat contents ...
+P41A: runtime.mat field count = 40
+P41A: WindAmp_1 in mat = True
+P41A: WindAmp_2 in mat = True
+P41A: WindAmp_1 value = 1.0
+P41A: WindAmp_2 value = 1.0
+P41A: post-regen slx_sha256 = 4a69f31753a2e5e55b3bb9f3e2f24e61767f4bce7573bfe6bf8e6e34ca00741a
+P41A: post-regen mat_sha256 = e9cb499798bd39a347904d65672b435fa265d92ddf58479a6219b8df7d869ae3
+P41A: regen OK

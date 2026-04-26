@@ -1,0 +1,21 @@
+RESULT: KUNDUR_MODEL_PROFILE=C:\Users\27443\Desktop\Multi-Agent  VSGs\scenarios\kundur\model_profiles\kundur_cvs_v3.json
+RESULT: starting Phase 4.1 disturbance-routing smoke
+RESULT: profile.model_name=kundur_cvs_v3 profile_id=kundur_cvs_v3 T_WARMUP=10.0
+RESULT: KUNDUR_DISTURBANCE_TYPE_default_config=pm_step_single_vsg valid=('pm_step_single_vsg', 'pm_step_proxy_bus7', 'pm_step_proxy_bus9', 'pm_step_proxy_random_bus')
+RESULT: --- run label=bus7 mode=pm_step_proxy_bus7 ---
+RESULT: label=bus7 mode=pm_step_proxy_bus7 target=[0] max_dev_Hz=0.1476 max_abs_omega_dev_pu=0.002953 nan_inf=False tds_failed=False steps=50 wall=17.4s
+RESULT: --- run label=bus9 mode=pm_step_proxy_bus9 ---
+RESULT: label=bus9 mode=pm_step_proxy_bus9 target=[3] max_dev_Hz=0.1427 max_abs_omega_dev_pu=0.002854 nan_inf=False tds_failed=False steps=50 wall=10.5s
+RESULT: --- run label=random_1 mode=pm_step_proxy_random_bus ---
+RESULT: label=random_1 mode=pm_step_proxy_random_bus target=[0] max_dev_Hz=0.1476 max_abs_omega_dev_pu=0.002953 nan_inf=False tds_failed=False steps=50 wall=10.2s
+RESULT: --- run label=random_2 mode=pm_step_proxy_random_bus ---
+RESULT: label=random_2 mode=pm_step_proxy_random_bus target=[0] max_dev_Hz=0.1476 max_abs_omega_dev_pu=0.002953 nan_inf=False tds_failed=False steps=50 wall=10.3s
+RESULT: --- run label=random_3 mode=pm_step_proxy_random_bus ---
+RESULT: label=random_3 mode=pm_step_proxy_random_bus target=[0] max_dev_Hz=0.1476 max_abs_omega_dev_pu=0.002953 nan_inf=False tds_failed=False steps=50 wall=10.5s
+RESULT: --- run label=random_4 mode=pm_step_proxy_random_bus ---
+RESULT: label=random_4 mode=pm_step_proxy_random_bus target=[3] max_dev_Hz=0.1427 max_abs_omega_dev_pu=0.002854 nan_inf=False tds_failed=False steps=50 wall=10.2s
+RESULT: --- run label=legacy_single_vsg mode=pm_step_single_vsg ---
+RESULT: label=legacy_single_vsg mode=pm_step_single_vsg target=[0] max_dev_Hz=0.1476 max_abs_omega_dev_pu=0.002953 nan_inf=False tds_failed=False steps=50 wall=10.0s
+RESULT: random_bus draws=4 bus7(idx0)=3 bus9(idx3)=1
+RESULT: JSON written to C:\Users\27443\Desktop\Multi-Agent  VSGs\results\harness\kundur\cvs_v3_phase4\p41_disturbance_routing_smoke.json
+RESULT: smoke_ok=True

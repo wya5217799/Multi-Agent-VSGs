@@ -1,0 +1,218 @@
+runtime_mat=C:\Users\27443\Desktop\Multi-Agent  VSGs\scenarios\kundur\simulink_models\kundur_cvs_v3_runtime.mat exists=1
+runtime_mat fields: wn_const, Vbase_const, Sbase_const, Pe_scale, L_gen_H, L_vsg_H, SG_SN, VSG_SN, SG_M_paper, SG_D_paper, SG_R_paper, ESS_M0, ESS_D0, VemfG_1, deltaG0_1, Pmg_1, VemfG_2, deltaG0_2, Pmg_2, VemfG_3, deltaG0_3, Pmg_3, Vmag_1, delta0_1, Pm_1, Vmag_2, delta0_2, Pm_2, Vmag_3, delta0_3, Pm_3, Vmag_4, delta0_4, Pm_4, Wphase_1, WVmag_1, WindAmp_1, Wphase_2, WVmag_2, WindAmp_2
+
+ws_before_helper:
+ans, cn, cn_str, consts, fid, kundur_cvs_ip, mat_info, matlab_cfg, rmat
+
+helper.success=0
+ws_after_helper:
+D_1, D_2, D_3, D_4, ESS_D0, ESS_M0, L_gen_H, L_vsg_H, M_1, M_2, M_3, M_4, Pe_scale, Pm_1, Pm_2, Pm_3, Pm_4, Pm_step_amp_1, Pm_step_amp_2, Pm_step_amp_3, Pm_step_amp_4, Pm_step_t_1, Pm_step_t_2, Pm_step_t_3, Pm_step_t_4, Pmg_1, Pmg_2, Pmg_3, SG_D_paper, SG_M_paper, SG_R_paper, SG_SN, Sbase_const, VSG_SN, Vbase_const, VemfG_1, VemfG_2, VemfG_3, Vmag_1, Vmag_2, Vmag_3, Vmag_4, WVmag_1, WVmag_2, WindAmp_1, WindAmp_2, Wphase_1, Wphase_2, agent_ids, ans, cn, cn_str, consts, delta0_1, delta0_2, delta0_3, delta0_4, deltaG0_1, deltaG0_2, deltaG0_3, fid, kundur_cvs_ip, mat_info, matlab_cfg, rmat, state, status, wn_const, ws_before
+
+helper status.error native=Warmup sim failed: 多种原因导致错误。
+
+---- replaying sim() with same workspace ----
+多种原因导致错误。
+原因:
+    参数 'Gain' 的 'kundur_cvs_v3/Dgain_G1' 中的设置无效。
+        计算 'kundur_cvs_v3/Dgain_G1' 中的参数 'Gain' 时出错
+            函数或变量 'Dg_1' 无法识别。
+                变量 'Dg_1' 不存在。
+                Suggested Actions:
+                    • Load a file into base workspace. - Fix
+                    • 创建一个新变量。 - Fix
+    参数 'Gain' 的 'kundur_cvs_v3/Dgain_G2' 中的设置无效。
+        计算 'kundur_cvs_v3/Dgain_G2' 中的参数 'Gain' 时出错
+            函数或变量 'Dg_2' 无法识别。
+                变量 'Dg_2' 不存在。
+                Suggested Actions:
+                    • Load a file into base workspace. - Fix
+                    • 创建一个新变量。 - Fix
+    参数 'Gain' 的 'kundur_cvs_v3/Dgain_G3' 中的设置无效。
+        计算 'kundur_cvs_v3/Dgain_G3' 中的参数 'Gain' 时出错
+            函数或变量 'Dg_3' 无法识别。
+                变量 'Dg_3' 不存在。
+                Suggested Actions:
+                    • Load a file into base workspace. - Fix
+                    • 创建一个新变量。 - Fix
+    参数 'Gain' 的 'kundur_cvs_v3/InvR_G1' 中的设置无效。
+        计算 'kundur_cvs_v3/InvR_G1' 中的参数 'Gain' 时出错
+            函数或变量 'Rg_1' 无法识别。
+                变量 'Rg_1' 不存在。
+                Suggested Actions:
+                    • Load a file into base workspace. - Fix
+                    • 创建一个新变量。 - Fix
+    参数 'Gain' 的 'kundur_cvs_v3/InvR_G2' 中的设置无效。
+        计算 'kundur_cvs_v3/InvR_G2' 中的参数 'Gain' 时出错
+            函数或变量 'Rg_2' 无法识别。
+                变量 'Rg_2' 不存在。
+                Suggested Actions:
+                    • Load a file into base workspace. - Fix
+                    • 创建一个新变量。 - Fix
+    参数 'Gain' 的 'kundur_cvs_v3/InvR_G3' 中的设置无效。
+        计算 'kundur_cvs_v3/InvR_G3' 中的参数 'Gain' 时出错
+            函数或变量 'Rg_3' 无法识别。
+                变量 'Rg_3' 不存在。
+                Suggested Actions:
+                    • Load a file into base workspace. - Fix
+                    • 创建一个新变量。 - Fix
+    参数 'Gain' 的 'kundur_cvs_v3/Mgain_G1' 中的设置无效。
+        计算 'kundur_cvs_v3/Mgain_G1' 中的参数 'Gain' 时出错
+            函数或变量 'Mg_1' 无法识别。
+                变量 'Mg_1' 不存在。
+                Suggested Actions:
+                    • Load a file into base workspace. - Fix
+                    • 创建一个新变量。 - Fix
+    参数 'Gain' 的 'kundur_cvs_v3/Mgain_G2' 中的设置无效。
+        计算 'kundur_cvs_v3/Mgain_G2' 中的参数 'Gain' 时出错
+            函数或变量 'Mg_2' 无法识别。
+                变量 'Mg_2' 不存在。
+                Suggested Actions:
+                    • Load a file into base workspace. - Fix
+                    • 创建一个新变量。 - Fix
+    参数 'Gain' 的 'kundur_cvs_v3/Mgain_G3' 中的设置无效。
+        计算 'kundur_cvs_v3/Mgain_G3' 中的参数 'Gain' 时出错
+            函数或变量 'Mg_3' 无法识别。
+                变量 'Mg_3' 不存在。
+                Suggested Actions:
+                    • Load a file into base workspace. - Fix
+                    • 创建一个新变量。 - Fix
+    参数 'Value' 的 'kundur_cvs_v3/Pm_step_amp_c_G1' 中的设置无效。
+        计算 'kundur_cvs_v3/Pm_step_amp_c_G1' 中的参数 'Value' 时出错
+            函数或变量 'PmgStep_amp_1' 无法识别。
+                变量 'PmgStep_amp_1' 不存在。
+                Suggested Actions:
+                    • Load a file into base workspace. - Fix
+                    • 创建一个新变量。 - Fix
+    参数 'Value' 的 'kundur_cvs_v3/Pm_step_amp_c_G2' 中的设置无效。
+        计算 'kundur_cvs_v3/Pm_step_amp_c_G2' 中的参数 'Value' 时出错
+            函数或变量 'PmgStep_amp_2' 无法识别。
+                变量 'PmgStep_amp_2' 不存在。
+                Suggested Actions:
+                    • Load a file into base workspace. - Fix
+                    • 创建一个新变量。 - Fix
+    参数 'Value' 的 'kundur_cvs_v3/Pm_step_amp_c_G3' 中的设置无效。
+        计算 'kundur_cvs_v3/Pm_step_amp_c_G3' 中的参数 'Value' 时出错
+            函数或变量 'PmgStep_amp_3' 无法识别。
+                变量 'PmgStep_amp_3' 不存在。
+                Suggested Actions:
+                    • Load a file into base workspace. - Fix
+                    • 创建一个新变量。 - Fix
+    参数 'Value' 的 'kundur_cvs_v3/Pm_step_t_c_G1' 中的设置无效。
+        计算 'kundur_cvs_v3/Pm_step_t_c_G1' 中的参数 'Value' 时出错
+            函数或变量 'PmgStep_t_1' 无法识别。
+                变量 'PmgStep_t_1' 不存在。
+                Suggested Actions:
+                    • Load a file into base workspace. - Fix
+                    • 创建一个新变量。 - Fix
+    参数 'Value' 的 'kundur_cvs_v3/Pm_step_t_c_G2' 中的设置无效。
+        计算 'kundur_cvs_v3/Pm_step_t_c_G2' 中的参数 'Value' 时出错
+            函数或变量 'PmgStep_t_2' 无法识别。
+                变量 'PmgStep_t_2' 不存在。
+                Suggested Actions:
+                    • Load a file into base workspace. - Fix
+                    • 创建一个新变量。 - Fix
+    参数 'Value' 的 'kundur_cvs_v3/Pm_step_t_c_G3' 中的设置无效。
+        计算 'kundur_cvs_v3/Pm_step_t_c_G3' 中的参数 'Value' 时出错
+            函数或变量 'PmgStep_t_3' 无法识别。
+                变量 'PmgStep_t_3' 不存在。
+                Suggested Actions:
+                    • Load a file into base workspace. - Fix
+                    • 创建一个新变量。 - Fix
+    参数 'Value' 的 'kundur_cvs_v3/SCvar_c_ES1' 中的设置无效。
+        计算 'kundur_cvs_v3/SCvar_c_ES1' 中的参数 'Value' 时出错
+            函数或变量 'VSGScale_1' 无法识别。
+                变量 'VSGScale_1' 不存在。
+                Suggested Actions:
+                    • Load a file into base workspace. - Fix
+                    • 创建一个新变量。 - Fix
+    参数 'Value' 的 'kundur_cvs_v3/SCvar_c_ES2' 中的设置无效。
+        计算 'kundur_cvs_v3/SCvar_c_ES2' 中的参数 'Value' 时出错
+            函数或变量 'VSGScale_2' 无法识别。
+                变量 'VSGScale_2' 不存在。
+                Suggested Actions:
+                    • Load a file into base workspace. - Fix
+                    • 创建一个新变量。 - Fix
+    参数 'Value' 的 'kundur_cvs_v3/SCvar_c_ES3' 中的设置无效。
+        计算 'kundur_cvs_v3/SCvar_c_ES3' 中的参数 'Value' 时出错
+            函数或变量 'VSGScale_3' 无法识别。
+                变量 'VSGScale_3' 不存在。
+                Suggested Actions:
+                    • Load a file into base workspace. - Fix
+                    • 创建一个新变量。 - Fix
+    参数 'Value' 的 'kundur_cvs_v3/SCvar_c_ES4' 中的设置无效。
+        计算 'kundur_cvs_v3/SCvar_c_ES4' 中的参数 'Value' 时出错
+            函数或变量 'VSGScale_4' 无法识别。
+                变量 'VSGScale_4' 不存在。
+                Suggested Actions:
+                    • Load a file into base workspace. - Fix
+                    • 创建一个新变量。 - Fix
+    参数 'Value' 的 'kundur_cvs_v3/SCvar_c_G1' 中的设置无效。
+        计算 'kundur_cvs_v3/SCvar_c_G1' 中的参数 'Value' 时出错
+            函数或变量 'SGScale_1' 无法识别。
+                变量 'SGScale_1' 不存在。
+                Suggested Actions:
+                    • Load a file into base workspace. - Fix
+                    • 创建一个新变量。 - Fix
+    参数 'Value' 的 'kundur_cvs_v3/SCvar_c_G2' 中的设置无效。
+        计算 'kundur_cvs_v3/SCvar_c_G2' 中的参数 'Value' 时出错
+            函数或变量 'SGScale_2' 无法识别。
+                变量 'SGScale_2' 不存在。
+                Suggested Actions:
+                    • Load a file into base workspace. - Fix
+                    • 创建一个新变量。 - Fix
+    参数 'Value' 的 'kundur_cvs_v3/SCvar_c_G3' 中的设置无效。
+        计算 'kundur_cvs_v3/SCvar_c_G3' 中的参数 'Value' 时出错
+            函数或变量 'SGScale_3' 无法识别。
+                变量 'SGScale_3' 不存在。
+                Suggested Actions:
+                    • Load a file into base workspace. - Fix
+                    • 创建一个新变量。 - Fix
+    参数 'Value' 的 'kundur_cvs_v3/Sscale_c_ES1' 中的设置无效。
+        计算 'kundur_cvs_v3/Sscale_c_ES1' 中的参数 'Value' 时出错
+            函数或变量 'VSGScale_1' 无法识别。
+                变量 'VSGScale_1' 不存在。
+                Suggested Actions:
+                    • Load a file into base workspace. - Fix
+                    • 创建一个新变量。 - Fix
+    参数 'Value' 的 'kundur_cvs_v3/Sscale_c_ES2' 中的设置无效。
+        计算 'kundur_cvs_v3/Sscale_c_ES2' 中的参数 'Value' 时出错
+            函数或变量 'VSGScale_2' 无法识别。
+                变量 'VSGScale_2' 不存在。
+                Suggested Actions:
+                    • Load a file into base workspace. - Fix
+                    • 创建一个新变量。 - Fix
+    参数 'Value' 的 'kundur_cvs_v3/Sscale_c_ES3' 中的设置无效。
+        计算 'kundur_cvs_v3/Sscale_c_ES3' 中的参数 'Value' 时出错
+            函数或变量 'VSGScale_3' 无法识别。
+                变量 'VSGScale_3' 不存在。
+                Suggested Actions:
+                    • Load a file into base workspace. - Fix
+                    • 创建一个新变量。 - Fix
+    参数 'Value' 的 'kundur_cvs_v3/Sscale_c_ES4' 中的设置无效。
+        计算 'kundur_cvs_v3/Sscale_c_ES4' 中的参数 'Value' 时出错
+            函数或变量 'VSGScale_4' 无法识别。
+                变量 'VSGScale_4' 不存在。
+                Suggested Actions:
+                    • Load a file into base workspace. - Fix
+                    • 创建一个新变量。 - Fix
+    参数 'Value' 的 'kundur_cvs_v3/Sscale_c_G1' 中的设置无效。
+        计算 'kundur_cvs_v3/Sscale_c_G1' 中的参数 'Value' 时出错
+            函数或变量 'SGScale_1' 无法识别。
+                变量 'SGScale_1' 不存在。
+                Suggested Actions:
+                    • Load a file into base workspace. - Fix
+                    • 创建一个新变量。 - Fix
+    参数 'Value' 的 'kundur_cvs_v3/Sscale_c_G2' 中的设置无效。
+        计算 'kundur_cvs_v3/Sscale_c_G2' 中的参数 'Value' 时出错
+            函数或变量 'SGScale_2' 无法识别。
+                变量 'SGScale_2' 不存在。
+                Suggested Actions:
+                    • Load a file into base workspace. - Fix
+                    • 创建一个新变量。 - Fix
+    参数 'Value' 的 'kundur_cvs_v3/Sscale_c_G3' 中的设置无效。
+        计算 'kundur_cvs_v3/Sscale_c_G3' 中的参数 'Value' 时出错
+            函数或变量 'SGScale_3' 无法识别。
+                变量 'SGScale_3' 不存在。
+                Suggested Actions:
+                    • Load a file into base workspace. - Fix
+                    • 创建一个新变量。 - Fix

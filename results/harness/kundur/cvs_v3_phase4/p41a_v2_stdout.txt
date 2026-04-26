@@ -1,0 +1,37 @@
+P41A2: pre-regen slx_sha256 = 90ac77545ae947f01a1d65cfe50dd436efb7d3ef6dabb7a22db6ce7da708c649
+P41A2: pre-regen mat_sha256 = 9825a49b13fa365ff91ea02bcd45023bb01697cc26e109fcdee0387cbcd3404a
+P41A2: starting matlab engine #1 (regen) ...
+P41A2: invoking build_kundur_cvs_v3() ...
+P41A2: ----- build stdout -----
+警告: The model name 'kundur_cvs_v3' is shadowing another name in the MATLAB workspace or path. Type "which -all kundur_cvs_v3" at the command line to find the other uses of this name. You should change the name of the model to avoid problems.
+> 位置：build_kundur_cvs_v3 (第 152 行)
+RESULT: build_kundur_cvs_v3 saved C:\Users\27443\Desktop\Multi-Agent  VSGs\scenarios\kundur\simulink_models\kundur_cvs_v3.slx
+RESULT: 16-bus paper topology, 3 SG + 4 ESS swing-eq + 2 PVS
+RESULT: lines=20, loads=2, shunts=2, loadsteps=2
+RESULT: ESS Pm0_sys_pu = [-0.3691 -0.3691 -0.3691 -0.3691]
+RESULT: SG  Pm0_sys_pu = [7.0000 7.0000 7.1900]
+RESULT: ESS Vemf_pu    = [0.8401 0.9816 0.7215 0.9748]
+RESULT: SG  Vemf_pu    = [1.1599 1.1128 1.1584]
+RESULT: runtime_mat = C:\Users\27443\Desktop\Multi-Agent  VSGs\scenarios\kundur\simulink_models\kundur_cvs_v3_runtime.mat (62 fields)
+
+P41A2: ----- build stderr -----
+
+P41A2: post-regen runtime.mat field count = 62
+P41A2: expected-new present 22 of 22
+P41A2: WindAmp_1=True WindAmp_2=True
+P41A2: matlab engine #1 closed.
+P41A2: post-regen slx_sha256 = de674209aa69a067f25285acb017becac048a4ec800ea86af5ae6dc6966524d9
+P41A2: post-regen mat_sha256 = b4a3af524ff1c4200159435951f3655ef43f52e4251dcff922222f5df0ce6d8d
+P41A2: starting matlab engine #2 (verify) ...
+P41A2: ws_pre_count = 0 : []
+P41A2: invoking slx_episode_warmup_cvs(do_recompile=true) via eval ...
+P41A2: helper.success=True
+P41A2: omega = [1.00000702697 1.00001280257 1.00046085837 1.00031466886]
+P41A2: Pe    = [-0.325048413016 -0.373536049163 -0.406682545229 -0.338011774228]
+P41A2: omega max|dev|=0.000461 min=1.000007 max=1.000461 all_finite=True
+P41A2: Pe    min=-0.406683 max=-0.325048 all_finite=True
+P41A2: invoking 2-second zero-action sim() ...
+P41A2: short sim OK
+P41A2: matlab engine #2 closed.
+P41A2: summary written: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\harness\kundur\cvs_v3_phase4\p41a_v2_summary.json
+P41A2: overall_ok=True

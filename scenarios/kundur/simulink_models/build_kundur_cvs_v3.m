@@ -760,19 +760,48 @@ runtime_consts.SG_R_paper  = sg_R_paper(:)';
 runtime_consts.ESS_M0      = double(ESS_M0_default);
 runtime_consts.ESS_D0      = double(ESS_D0_default);
 % Per-source IC for fast resets
+% P4.1a-v2 (2026-04-27): the runtime contract was previously incomplete —
+% these per-source dynamics + scale factors were seeded ONLY via build-time
+% `assignin('base', ...)` at L170-190, which lives in the BUILD-process
+% workspace and does NOT survive a cold-start MATLAB engine. Cold-start sim
+% then failed at Mgain_G<g> / Dgain_G<g> / InvR_G<g> / Pm_step_amp_c_G<g> /
+% Pm_step_t_c_G<g> / SCvar_c_<src> / Sscale_c_<src> blocks with unrecognized
+% variable errors. Plug the gap by routing every block-referenced workspace
+% scalar through `runtime_consts` so `slx_episode_warmup_cvs` Phase 0 .mat
+% load seeds them on every cold-start. `runtime.mat` regen is approved by
+% the user GO message; .slx topology unchanged (deterministic build inputs).
 for g = 1:3
-    runtime_consts.(sprintf('VemfG_%d',   g)) = double(sg_Vemf_pu(g) * Vbase);
-    runtime_consts.(sprintf('deltaG0_%d', g)) = double(sg_delta0_rad(g));
-    runtime_consts.(sprintf('Pmg_%d',     g)) = double(sg_Pm0_sys(g));
+    runtime_consts.(sprintf('VemfG_%d',     g)) = double(sg_Vemf_pu(g) * Vbase);
+    runtime_consts.(sprintf('deltaG0_%d',   g)) = double(sg_delta0_rad(g));
+    runtime_consts.(sprintf('Pmg_%d',       g)) = double(sg_Pm0_sys(g));
+    % SG dynamics — referenced by Mgain_G<g> / Dgain_G<g> / InvR_G<g>.
+    runtime_consts.(sprintf('Mg_%d',        g)) = double(2 * sg_H_paper(g));
+    runtime_consts.(sprintf('Dg_%d',        g)) = double(sg_D_paper(g));
+    runtime_consts.(sprintf('Rg_%d',        g)) = double(sg_R_paper(g));
+    % SG Pm-step gating defaults (off) — referenced by Pm_step_t_c_G<g> and
+    % Pm_step_amp_c_G<g> Constants. helper Phase 1b only seeds the ESS
+    % Pm_step_t/amp variants; SG analogues live here.
+    runtime_consts.(sprintf('PmgStep_t_%d',  g)) = double(5.0);
+    runtime_consts.(sprintf('PmgStep_amp_%d', g)) = double(0.0);
+    % SG source scale factor (gen-pu -> sys-pu) — referenced by SCvar_c_G<g>
+    % and Sscale_c_G<g> Constants.
+    runtime_consts.(sprintf('SGScale_%d',    g)) = double(Sbase / SG_SN);
 end
 for i = 1:4
-    runtime_consts.(sprintf('Vmag_%d',   i)) = double(ess_Vemf_pu(i) * Vbase);
-    runtime_consts.(sprintf('delta0_%d', i)) = double(ess_delta0_rad(i));
-    runtime_consts.(sprintf('Pm_%d',     i)) = double(ess_Pm0_sys(i));
+    runtime_consts.(sprintf('Vmag_%d',     i)) = double(ess_Vemf_pu(i) * Vbase);
+    runtime_consts.(sprintf('delta0_%d',   i)) = double(ess_delta0_rad(i));
+    runtime_consts.(sprintf('Pm_%d',       i)) = double(ess_Pm0_sys(i));
+    % ESS source scale factor (vsg-pu -> sys-pu) — referenced by SCvar_c_ES<i>
+    % and Sscale_c_ES<i> Constants.
+    runtime_consts.(sprintf('VSGScale_%d', i)) = double(Sbase / VSG_SN);
 end
 for w = 1:2
     runtime_consts.(sprintf('Wphase_%d', w)) = double(wind_term_a_rad(w));
     runtime_consts.(sprintf('WVmag_%d',  w)) = double(wind_term_v_pu(w) * Vbase);
+    % WindAmp_<w> default 1.0 = full wind injection (matches build-time
+    % default at L195). v3 supports W1/W2 partial trip via
+    % `apply_workspace_var('WindAmp_<w>', <0..1>)` at runtime. P4.1a (2026-04-27).
+    runtime_consts.(sprintf('WindAmp_%d', w)) = double(1.0);
 end
 save(runtime_mat, '-struct', 'runtime_consts');
 

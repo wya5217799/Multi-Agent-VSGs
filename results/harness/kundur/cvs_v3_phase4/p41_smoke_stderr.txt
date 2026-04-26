@@ -1,0 +1,112 @@
+Traceback (most recent call last):
+  File "C:\Users\27443\Desktop\Multi-Agent  VSGs\probes\kundur\v3_dryrun\probe_loadstep_disturbance_routing.py", line 184, in main
+    rec = _run_one_episode(env, steps_per_ep, magnitude, mode)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\27443\Desktop\Multi-Agent  VSGs\probes\kundur\v3_dryrun\probe_loadstep_disturbance_routing.py", line 66, in _run_one_episode
+    obs, _ = env.reset()
+             ^^^^^^^^^^^
+  File "C:\Users\27443\Desktop\Multi-Agent  VSGs\env\simulink\kundur_simulink_env.py", line 235, in reset
+    self._reset_backend(options=options)
+  File "C:\Users\27443\Desktop\Multi-Agent  VSGs\env\simulink\kundur_simulink_env.py", line 670, in _reset_backend
+    self.bridge.warmup(T_WARMUP)
+  File "C:\Users\27443\Desktop\Multi-Agent  VSGs\engine\simulink_bridge.py", line 476, in warmup
+    self._warmup_cvs(duration)
+  File "C:\Users\27443\Desktop\Multi-Agent  VSGs\engine\simulink_bridge.py", line 650, in _warmup_cvs
+    raise SimulinkError(
+engine.exceptions.SimulinkError: slx_episode_warmup_cvs failed: Warmup sim failed: 多种原因导致错误。
+Traceback (most recent call last):
+  File "C:\Users\27443\Desktop\Multi-Agent  VSGs\probes\kundur\v3_dryrun\probe_loadstep_disturbance_routing.py", line 184, in main
+    rec = _run_one_episode(env, steps_per_ep, magnitude, mode)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\27443\Desktop\Multi-Agent  VSGs\probes\kundur\v3_dryrun\probe_loadstep_disturbance_routing.py", line 66, in _run_one_episode
+    obs, _ = env.reset()
+             ^^^^^^^^^^^
+  File "C:\Users\27443\Desktop\Multi-Agent  VSGs\env\simulink\kundur_simulink_env.py", line 235, in reset
+    self._reset_backend(options=options)
+  File "C:\Users\27443\Desktop\Multi-Agent  VSGs\env\simulink\kundur_simulink_env.py", line 670, in _reset_backend
+    self.bridge.warmup(T_WARMUP)
+  File "C:\Users\27443\Desktop\Multi-Agent  VSGs\engine\simulink_bridge.py", line 476, in warmup
+    self._warmup_cvs(duration)
+  File "C:\Users\27443\Desktop\Multi-Agent  VSGs\engine\simulink_bridge.py", line 650, in _warmup_cvs
+    raise SimulinkError(
+engine.exceptions.SimulinkError: slx_episode_warmup_cvs failed: Warmup sim failed: 多种原因导致错误。
+Traceback (most recent call last):
+  File "C:\Users\27443\Desktop\Multi-Agent  VSGs\probes\kundur\v3_dryrun\probe_loadstep_disturbance_routing.py", line 184, in main
+    rec = _run_one_episode(env, steps_per_ep, magnitude, mode)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\27443\Desktop\Multi-Agent  VSGs\probes\kundur\v3_dryrun\probe_loadstep_disturbance_routing.py", line 66, in _run_one_episode
+    obs, _ = env.reset()
+             ^^^^^^^^^^^
+  File "C:\Users\27443\Desktop\Multi-Agent  VSGs\env\simulink\kundur_simulink_env.py", line 235, in reset
+    self._reset_backend(options=options)
+  File "C:\Users\27443\Desktop\Multi-Agent  VSGs\env\simulink\kundur_simulink_env.py", line 670, in _reset_backend
+    self.bridge.warmup(T_WARMUP)
+  File "C:\Users\27443\Desktop\Multi-Agent  VSGs\engine\simulink_bridge.py", line 476, in warmup
+    self._warmup_cvs(duration)
+  File "C:\Users\27443\Desktop\Multi-Agent  VSGs\engine\simulink_bridge.py", line 650, in _warmup_cvs
+    raise SimulinkError(
+engine.exceptions.SimulinkError: slx_episode_warmup_cvs failed: Warmup sim failed: 多种原因导致错误。
+Traceback (most recent call last):
+  File "C:\Users\27443\Desktop\Multi-Agent  VSGs\probes\kundur\v3_dryrun\probe_loadstep_disturbance_routing.py", line 184, in main
+    rec = _run_one_episode(env, steps_per_ep, magnitude, mode)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\27443\Desktop\Multi-Agent  VSGs\probes\kundur\v3_dryrun\probe_loadstep_disturbance_routing.py", line 66, in _run_one_episode
+    obs, _ = env.reset()
+             ^^^^^^^^^^^
+  File "C:\Users\27443\Desktop\Multi-Agent  VSGs\env\simulink\kundur_simulink_env.py", line 235, in reset
+    self._reset_backend(options=options)
+  File "C:\Users\27443\Desktop\Multi-Agent  VSGs\env\simulink\kundur_simulink_env.py", line 670, in _reset_backend
+    self.bridge.warmup(T_WARMUP)
+  File "C:\Users\27443\Desktop\Multi-Agent  VSGs\engine\simulink_bridge.py", line 476, in warmup
+    self._warmup_cvs(duration)
+  File "C:\Users\27443\Desktop\Multi-Agent  VSGs\engine\simulink_bridge.py", line 650, in _warmup_cvs
+    raise SimulinkError(
+engine.exceptions.SimulinkError: slx_episode_warmup_cvs failed: Warmup sim failed: 多种原因导致错误。
+Traceback (most recent call last):
+  File "C:\Users\27443\Desktop\Multi-Agent  VSGs\probes\kundur\v3_dryrun\probe_loadstep_disturbance_routing.py", line 184, in main
+    rec = _run_one_episode(env, steps_per_ep, magnitude, mode)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\27443\Desktop\Multi-Agent  VSGs\probes\kundur\v3_dryrun\probe_loadstep_disturbance_routing.py", line 66, in _run_one_episode
+    obs, _ = env.reset()
+             ^^^^^^^^^^^
+  File "C:\Users\27443\Desktop\Multi-Agent  VSGs\env\simulink\kundur_simulink_env.py", line 235, in reset
+    self._reset_backend(options=options)
+  File "C:\Users\27443\Desktop\Multi-Agent  VSGs\env\simulink\kundur_simulink_env.py", line 670, in _reset_backend
+    self.bridge.warmup(T_WARMUP)
+  File "C:\Users\27443\Desktop\Multi-Agent  VSGs\engine\simulink_bridge.py", line 476, in warmup
+    self._warmup_cvs(duration)
+  File "C:\Users\27443\Desktop\Multi-Agent  VSGs\engine\simulink_bridge.py", line 650, in _warmup_cvs
+    raise SimulinkError(
+engine.exceptions.SimulinkError: slx_episode_warmup_cvs failed: Warmup sim failed: 多种原因导致错误。
+Traceback (most recent call last):
+  File "C:\Users\27443\Desktop\Multi-Agent  VSGs\probes\kundur\v3_dryrun\probe_loadstep_disturbance_routing.py", line 184, in main
+    rec = _run_one_episode(env, steps_per_ep, magnitude, mode)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\27443\Desktop\Multi-Agent  VSGs\probes\kundur\v3_dryrun\probe_loadstep_disturbance_routing.py", line 66, in _run_one_episode
+    obs, _ = env.reset()
+             ^^^^^^^^^^^
+  File "C:\Users\27443\Desktop\Multi-Agent  VSGs\env\simulink\kundur_simulink_env.py", line 235, in reset
+    self._reset_backend(options=options)
+  File "C:\Users\27443\Desktop\Multi-Agent  VSGs\env\simulink\kundur_simulink_env.py", line 670, in _reset_backend
+    self.bridge.warmup(T_WARMUP)
+  File "C:\Users\27443\Desktop\Multi-Agent  VSGs\engine\simulink_bridge.py", line 476, in warmup
+    self._warmup_cvs(duration)
+  File "C:\Users\27443\Desktop\Multi-Agent  VSGs\engine\simulink_bridge.py", line 650, in _warmup_cvs
+    raise SimulinkError(
+engine.exceptions.SimulinkError: slx_episode_warmup_cvs failed: Warmup sim failed: 多种原因导致错误。
+Traceback (most recent call last):
+  File "C:\Users\27443\Desktop\Multi-Agent  VSGs\probes\kundur\v3_dryrun\probe_loadstep_disturbance_routing.py", line 184, in main
+    rec = _run_one_episode(env, steps_per_ep, magnitude, mode)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\27443\Desktop\Multi-Agent  VSGs\probes\kundur\v3_dryrun\probe_loadstep_disturbance_routing.py", line 66, in _run_one_episode
+    obs, _ = env.reset()
+             ^^^^^^^^^^^
+  File "C:\Users\27443\Desktop\Multi-Agent  VSGs\env\simulink\kundur_simulink_env.py", line 235, in reset
+    self._reset_backend(options=options)
+  File "C:\Users\27443\Desktop\Multi-Agent  VSGs\env\simulink\kundur_simulink_env.py", line 670, in _reset_backend
+    self.bridge.warmup(T_WARMUP)
+  File "C:\Users\27443\Desktop\Multi-Agent  VSGs\engine\simulink_bridge.py", line 476, in warmup
+    self._warmup_cvs(duration)
+  File "C:\Users\27443\Desktop\Multi-Agent  VSGs\engine\simulink_bridge.py", line 650, in _warmup_cvs
+    raise SimulinkError(
+engine.exceptions.SimulinkError: slx_episode_warmup_cvs failed: Warmup sim failed: 多种原因导致错误。

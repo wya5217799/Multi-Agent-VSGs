@@ -1,0 +1,14 @@
+DIAG: starting matlab engine ...
+DIAG: engine started
+DIAG: invoking slx_episode_warmup_cvs(do_recompile=true) ...
+DIAG: status.success = False
+DIAG: status.error = 'Warmup sim failed: 多种原因导致错误。'
+DIAG: status.error decoded (latin1->gb18030) = 'Warmup sim failed: ?????????'
+DIAG: status.error decoded (cp1252->gb18030) = 'Warmup sim failed: ?????????'
+DIAG: status keys = ['success', 'error', 'elapsed_ms']
+DIAG: ----- captured matlab stdout (head) -----
+
+DIAG: ----- captured matlab stderr (head) -----
+
+DIAG: LANG|MATLAB release = |2025b
+DIAG: bdIsLoaded(kundur_cvs_v3) = True

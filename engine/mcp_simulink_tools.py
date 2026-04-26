@@ -1000,6 +1000,99 @@ def simulink_compile_diagnostics(model_name: str, mode: str = "update") -> dict:
     }
 
 
+def simulink_block_workspace_dependency(
+    model_name: str,
+    workspace_vars: list[str],
+) -> dict:
+    """Detect which blocks (if any) reference each given workspace variable.
+
+    Use to find DEAD workspace vars — variables created via ``assignin('base',
+    ...)`` that no block dialog parameter actually consumes. The classic
+    example: a build script ``assignin``s ``LoadStep_t_1`` but the LoadStep
+    block hardcodes ``Resistance='1e9'`` as a string literal — the var is
+    never looked up.
+
+    Detection uses a static text scan with word-boundary regex:
+    ``Pm_step_amp_1`` does NOT match ``Pm_step_amp_10``. Mask blocks are
+    expanded via ``LookUnderMasks='all'``.
+
+    Limitations: does not detect variables accessed via ``evalin('base', ...)``
+    inside block callbacks or m-script blocks. The helper docstring lists
+    these caveats; check those paths separately when chasing a "live var
+    that says DEAD" mystery.
+
+    Args:
+        model_name: Loaded Simulink model name (without .slx).
+        workspace_vars: List of base-workspace variable names to check.
+
+    Returns:
+        dict with ``model``, ``vars`` (per-var dict with consumer list +
+        verdict ``LIVE``/``DEAD``), and ``scan_summary``.
+
+    Phase B / plan §3.B.
+    """
+    if not isinstance(workspace_vars, list) or not all(isinstance(v, str) for v in workspace_vars):
+        raise ValueError(
+            "simulink_block_workspace_dependency: workspace_vars must be list[str]"
+        )
+    if not workspace_vars:
+        raise ValueError(
+            "simulink_block_workspace_dependency: workspace_vars must be non-empty"
+        )
+    session = MatlabSession.get()
+    loaded_model_name = _ensure_model_bootstrapped(session, model_name)
+    raw = session.call(
+        "slx_block_workspace_deps",
+        loaded_model_name,
+        list(workspace_vars),
+        nargout=1,
+    )
+    # MATLAB returns vars keyed by makeValidName output; normalize back to
+    # original var names from our input list when fetching.
+    raw_vars = raw.get("vars", {}) if isinstance(raw, dict) else {}
+    vars_out: dict[str, dict] = {}
+    for original_name in workspace_vars:
+        # Find the entry by var_name field rather than the makeValidName key
+        match = None
+        for entry in raw_vars.values():
+            if isinstance(entry, dict) and entry.get("var_name") == original_name:
+                match = entry
+                break
+        if match is None:
+            vars_out[original_name] = {
+                "consumed_by_blocks": [],
+                "consumer_count": 0,
+                "verdict": "DEAD",
+            }
+            continue
+        consumers_raw = match.get("consumed_by_blocks", [])
+        if not isinstance(consumers_raw, list):
+            consumers_raw = []
+        consumers: list[dict[str, str]] = []
+        for c in consumers_raw:
+            if isinstance(c, dict):
+                consumers.append({
+                    "block_path": str(c.get("block_path", "")),
+                    "param": str(c.get("param", "")),
+                    "expression": str(c.get("expression", "")),
+                })
+        vars_out[original_name] = {
+            "consumed_by_blocks": consumers,
+            "consumer_count": int(match.get("consumer_count", len(consumers))),
+            "verdict": str(match.get("verdict", "LIVE" if consumers else "DEAD")),
+        }
+    scan_summary = raw.get("scan_summary", {}) if isinstance(raw, dict) else {}
+    return {
+        "model": str(raw.get("model", model_name)) if isinstance(raw, dict) else model_name,
+        "vars": vars_out,
+        "scan_summary": {
+            "blocks_scanned": int(scan_summary.get("blocks_scanned", 0)),
+            "params_scanned": int(scan_summary.get("params_scanned", 0)),
+            "elapsed_sec": float(scan_summary.get("elapsed_sec", 0.0)),
+        },
+    }
+
+
 def simulink_step_diagnostics(
     model_name: str,
     start_time: float,

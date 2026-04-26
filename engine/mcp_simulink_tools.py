@@ -9,6 +9,7 @@ All tools share the same MATLAB engine via MatlabSession.get().
 from __future__ import annotations
 
 import logging
+import os
 import re
 import threading
 import time
@@ -491,6 +492,10 @@ def simulink_run_script(code_or_file: str, timeout_sec: _IntArg = 600) -> dict:
         "n_errors":          int(summary.get("n_errors", 0)),
         "error_message":     str(summary.get("error_message", "")),
         "important_lines":   _to_list(summary.get("important_lines", [])),
+        "windows_pid":       os.getpid(),  # MCP server Python PID (Phase A.1) —
+        # use to correlate with `tasklist | findstr python.exe` on Windows;
+        # the MATLAB engine subprocess is this PID's child (visible via
+        # `wmic process where parentprocessid=<this>`).
     }
 
 
@@ -610,6 +615,7 @@ def simulink_poll_script(job_id: str) -> dict:
             "status": "running",
             "elapsed_sec": elapsed,
             "message": "Script still running — poll again later.",
+            "windows_pid": os.getpid(),  # MCP server Python PID (Phase A.1)
         }
 
     # Job is done — read result then evict to prevent unbounded growth.
@@ -626,6 +632,7 @@ def simulink_poll_script(job_id: str) -> dict:
         "n_errors": int(result.get("n_errors", 0)),
         "error_message": str(result.get("error_message", "")),
         "important_lines": list(result.get("important_lines", [])),
+        "windows_pid": os.getpid(),  # MCP server Python PID (Phase A.1)
     }
 
 

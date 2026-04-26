@@ -1,0 +1,220 @@
+{
+  "schema_version": 3,
+  "source": "compute_kundur_cvs_v3_powerflow",
+  "source_hash": "sha256:f9cb24f18e237e2692f87b8c7e1f47ed8814b0c792d57c20c5729b63488ad97d",
+  "timestamp": "2026-04-26T18:51:39+08:00",
+  "topology_variant": "v3_paper_kundur_16bus",
+  "decisions": {
+    "q1_ess_dispatch": "(a) preserve paper dispatch; ESS group absorbs surplus",
+    "q2_wind_model": "(a) const-power PVS; no Type-3/4"
+  },
+  "powerflow": {
+    "converged": true,
+    "outer_iterations": 8,
+    "inner_iterations_total": 40,
+    "max_mismatch_pu": 9.130802349759637E-13,
+    "closure_ok": true,
+    "closure_residual_pu": 8.821649521983943E-10,
+    "closure_tolerance_pu": 0.001,
+    "closure_residual_origin": "aggregate_balance_const_PQ_load_NR_to_constZ_build_residual",
+    "g1_residual_pu": 8.8248075513774893E-10,
+    "g1_target_sys_pu": 7
+  },
+  "global_balance": {
+    "p_gen_paper_sys_pu": 21.19,
+    "p_wind_paper_sys_pu": 8,
+    "p_load_total_sys_pu": -27.340000000000003,
+    "p_loss_sys_pu": 0.37363799465170416,
+    "p_loss_pct_load": 1.3666349475190347,
+    "p_ess_total_sys_pu": -1.476362004466129,
+    "p_es_each_sys_pu": -0.3690905011164729,
+    "p_es_each_mw": -36.909050111647296,
+    "p_es_each_vsg_pu": -0.18454525055823645,
+    "no_hidden_slack": true
+  },
+  "vsg_internal_emf_angle_rad": [
+    0.19525650632891109,
+    0.025046117739088009,
+    0.19487524487190436,
+    0.0088554337224884937
+  ],
+  "vsg_terminal_voltage_mag_pu": [
+    1,
+    1,
+    0.99999999999999989,
+    1
+  ],
+  "vsg_terminal_voltage_angle_rad": [
+    0.1941940033436993,
+    0.077748273197433437,
+    0.13116441775907309,
+    0.059348197159043381
+  ],
+  "vsg_pm0_pu": [
+    -0.3690905011165817,
+    -0.36909050111650982,
+    -0.36909050111621261,
+    -0.36909050111682484
+  ],
+  "vsg_pe_target_pu": [
+    -0.3690905011165817,
+    -0.36909050111650982,
+    -0.36909050111621261,
+    -0.36909050111682484
+  ],
+  "vsg_emf_mag_pu": [
+    0.84006288355318182,
+    0.981563991290504,
+    0.72151483828653529,
+    0.97475805963156636
+  ],
+  "sg_names": [
+    "G1",
+    "G2",
+    "G3"
+  ],
+  "sg_internal_emf_angle_rad": [
+    0.52212965939981659,
+    0.4761747116270974,
+    0.33782356157455479
+  ],
+  "sg_terminal_voltage_mag_pu": [
+    1.03,
+    1.0099999999999998,
+    1.01
+  ],
+  "sg_terminal_voltage_angle_rad": [
+    0.3490658503988659,
+    0.280726582605325,
+    0.16027836615595822
+  ],
+  "sg_pm0_sys_pu": [
+    6.9999999991175192,
+    7,
+    7.1900000000000093
+  ],
+  "sg_emf_mag_pu": [
+    1.1598847671679209,
+    1.1128487941501266,
+    1.1584290748684185
+  ],
+  "wind_names": [
+    "W1",
+    "W2"
+  ],
+  "wind_terminal_voltage_mag_pu": [
+    1,
+    1
+  ],
+  "wind_terminal_voltage_angle_rad": [
+    0.08913769839381569,
+    0.078156448830078329
+  ],
+  "wind_pref_sys_pu": [
+    7,
+    1
+  ],
+  "bus_voltages": {
+    "Bus1_G1": {
+      "bus_id": 1,
+      "v_mag_pu": 1.03,
+      "v_ang_rad_pf": 0,
+      "v_ang_rad_abs": 0.3490658503988659
+    },
+    "Bus2_G2": {
+      "bus_id": 2,
+      "v_mag_pu": 1.01,
+      "v_ang_rad_pf": -0.068339267793540881,
+      "v_ang_rad_abs": 0.280726582605325
+    },
+    "Bus3_G3": {
+      "bus_id": 3,
+      "v_mag_pu": 1.01,
+      "v_ang_rad_pf": -0.18878748424290767,
+      "v_ang_rad_abs": 0.16027836615595822
+    },
+    "Bus4_W1": {
+      "bus_id": 4,
+      "v_mag_pu": 1,
+      "v_ang_rad_pf": -0.25992815200505021,
+      "v_ang_rad_abs": 0.08913769839381569
+    },
+    "Bus5": {
+      "bus_id": 5,
+      "v_mag_pu": 1.0225404794170165,
+      "v_ang_rad_pf": -0.027311114236405,
+      "v_ang_rad_abs": 0.32175473616246092
+    },
+    "Bus6": {
+      "bus_id": 6,
+      "v_mag_pu": 1.0068664474710327,
+      "v_ang_rad_pf": -0.097153406299013131,
+      "v_ang_rad_abs": 0.25191244409985275
+    },
+    "Bus7_load": {
+      "bus_id": 7,
+      "v_mag_pu": 1.0003037828403853,
+      "v_ang_rad_pf": -0.15478117297847407,
+      "v_ang_rad_abs": 0.19428467742039182
+    },
+    "Bus8": {
+      "bus_id": 8,
+      "v_mag_pu": 1.0000074865869339,
+      "v_ang_rad_pf": -0.27120801347401069,
+      "v_ang_rad_abs": 0.0778578369248552
+    },
+    "Bus9_load": {
+      "bus_id": 9,
+      "v_mag_pu": 1.0000216215844815,
+      "v_ang_rad_pf": -0.28960899090974773,
+      "v_ang_rad_abs": 0.059456859489118163
+    },
+    "Bus10": {
+      "bus_id": 10,
+      "v_mag_pu": 1.000557524039656,
+      "v_ang_rad_pf": -0.21782692630843861,
+      "v_ang_rad_abs": 0.13123892409042728
+    },
+    "Bus11_W2": {
+      "bus_id": 11,
+      "v_mag_pu": 1,
+      "v_ang_rad_pf": -0.27090940156878757,
+      "v_ang_rad_abs": 0.078156448830078329
+    },
+    "Bus12_ES1": {
+      "bus_id": 12,
+      "v_mag_pu": 1,
+      "v_ang_rad_pf": -0.1548718470551666,
+      "v_ang_rad_abs": 0.1941940033436993
+    },
+    "Bus14_ES3": {
+      "bus_id": 14,
+      "v_mag_pu": 1,
+      "v_ang_rad_pf": -0.21790143263979281,
+      "v_ang_rad_abs": 0.13116441775907309
+    },
+    "Bus15_ES4": {
+      "bus_id": 15,
+      "v_mag_pu": 1,
+      "v_ang_rad_pf": -0.28971765323982251,
+      "v_ang_rad_abs": 0.059348197159043381
+    },
+    "Bus16_ES2": {
+      "bus_id": 16,
+      "v_mag_pu": 1,
+      "v_ang_rad_pf": -0.27131757720143246,
+      "v_ang_rad_abs": 0.077748273197433437
+    }
+  },
+  "x_v_pu": {
+    "sg_internal": 0.033333333333333333,
+    "vsg_internal": 0.15,
+    "wind_const_power": null
+  },
+  "physical_invariants_checked": [
+    "p_balance_per_bus",
+    "global_balance_no_hidden_slack",
+    "pi_line_lossy_NR_with_R_jwL_jwC_2",
+    "ess_group_distributed_slack_resolved"
+  ]
+}

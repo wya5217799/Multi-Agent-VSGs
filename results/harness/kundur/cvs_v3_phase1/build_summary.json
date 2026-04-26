@@ -1,0 +1,91 @@
+{
+  "phase": "1.3",
+  "task": "Build kundur_cvs_v3.slx + 0.5s smoke",
+  "script": "scenarios/kundur/simulink_models/build_kundur_cvs_v3.m",
+  "outputs": [
+    "scenarios/kundur/simulink_models/kundur_cvs_v3.slx",
+    "scenarios/kundur/simulink_models/kundur_cvs_v3_runtime.mat",
+    "results/harness/kundur/cvs_v3_phase1/build_summary.json",
+    "results/harness/kundur/cvs_v3_phase1/phase1_verdict.md"
+  ],
+  "ic_consumed": "scenarios/kundur/kundur_ic_cvs_v3.json (schema_version=3)",
+
+  "build": {
+    "ok": true,
+    "elapsed_sec": 9.9,
+    "errors": 0,
+    "warnings": 0,
+    "n_branches": 20,
+    "n_loads": 2,
+    "n_shunt_caps": 2,
+    "n_loadstep_branches": 2,
+    "n_dynamic_sources": 7,
+    "n_pvs_wind": 2,
+    "n_pm_step_clusters": 7,
+    "runtime_mat_fields": 38,
+    "note": "spec §8 narrative said 18 lines; actual count 20 (parallels counted explicitly: 5+5+25x2+10x2+110x3+10x2+25x2 = 15 std + 5 short = 20). spec §4 table is consistent with 20."
+  },
+
+  "compile_diagnostics": {
+    "mode": "update",
+    "ok": true,
+    "errors": 0,
+    "warnings": 0
+  },
+
+  "smoke_0p5s": {
+    "ok": true,
+    "status": "success",
+    "elapsed_sec": 1.35,
+    "sim_time_reached": 0.5,
+    "warning_count": 0,
+    "error_count": 0,
+    "simscape_constraint_violation": false
+  },
+
+  "state_snapshot_t0p5s": {
+    "omega_pu": {
+      "G1": 1.003097, "G2": 1.002342, "G3": 0.991202,
+      "ES1": 0.994153, "ES2": 0.999982, "ES3": 1.002475, "ES4": 1.000370,
+      "min": 0.991202, "max": 1.003097, "spread": 0.011895
+    },
+    "delta_rad": {
+      "G1": 1.069242, "G2": 0.966726, "G3": 0.439646,
+      "ES1": 0.252244, "ES2": 0.025141, "ES3": 0.159685, "ES4": 0.009900,
+      "abs_max": 1.069242, "intd_safe_band_rad": 1.520796
+    },
+    "pe_sys_pu": {
+      "G1": 9.460655, "G2": 8.582534, "G3": 8.097882,
+      "ES1": -1.842995, "ES2": -0.382484, "ES3": -0.107157, "ES4": -0.593237,
+      "note": "transient at t=0.5s — sources have not settled to NR steady state. SG Pe overshoot 1.13-1.35x Pm. ESS Pe spread 0.1-1.84 vs NR steady -0.369 each. Phasor solver still converging through inductor L/R (~10 ms) plus swing-eq slow dynamics."
+    },
+    "interpretation": "0.5s smoke is a build-integrity check, NOT a settling check. Stability and steady-state accuracy will be measured in Phase 2.1 (30s zero-action stability probe)."
+  },
+
+  "ic_to_build_consumption_audit": {
+    "cvs_amplitude_source": "ws Vmag_<i> = vsg_emf_mag_pu * Vbase (ESS) / VemfG_<g> = sg_emf_mag_pu * Vbase (SG)",
+    "amplitude_hardcoded_to_unity": "no (Phase 1.1 observation honoured)",
+    "ess_vmag_volts": [193224.4, 225764.1, 165948.4, 224194.4],
+    "sg_vmag_volts":  [266773.5, 256052.2, 266438.7],
+    "delta0_source_per_src": "rad, sim-absolute frame, IC fields vsg_internal_emf_angle_rad / sg_internal_emf_angle_rad",
+    "pm0_source_per_src": "sys-pu, IC fields vsg_pm0_pu / sg_pm0_sys_pu (negative ESS Pm0 preserved)"
+  },
+
+  "scope_audit": {
+    "files_created": [
+      "scenarios/kundur/simulink_models/build_kundur_cvs_v3.m",
+      "scenarios/kundur/simulink_models/kundur_cvs_v3.slx",
+      "scenarios/kundur/simulink_models/kundur_cvs_v3_runtime.mat",
+      "results/harness/kundur/cvs_v3_phase1/build_summary.json",
+      "results/harness/kundur/cvs_v3_phase1/phase1_verdict.md"
+    ],
+    "files_modified": [],
+    "v2_files_touched": "none",
+    "ne39_files_touched": "none",
+    "sac_files_touched": "none",
+    "bridge_modified": "no",
+    "env_modified": "no",
+    "profile_added": "no",
+    "training_started": "no"
+  }
+}

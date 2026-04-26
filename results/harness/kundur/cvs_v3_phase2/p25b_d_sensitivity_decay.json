@@ -1,0 +1,39 @@
+{
+  "probe": "p25b_d_sensitivity_decay",
+  "model": "kundur_cvs_v3",
+  "controlled_src": "ES1",
+  "t_step_s": 35,
+  "amp_step_sys_pu": 0.2,
+  "M_fixed": 24,
+  "D_cases": [
+    1.5,
+    7.5
+  ],
+  "tau_per_D_s": [
+    4.252148975283637,
+    2.9567082679045034
+  ],
+  "tau_R2_per_D": [
+    0.99563703213613408,
+    0.9965957338966499
+  ],
+  "n_peaks_per_D": [
+    30,
+    28
+  ],
+  "tau_ratio": 1.4381361263947918,
+  "expected_ratio": 5,
+  "gates": {
+    "tau_ratio_in_band": false,
+    "r2_above_0p7": true,
+    "above_noise_3plus_peaks": true,
+    "all_pass": false
+  },
+  "gate_def": {
+    "metric": "tau = -1 / slope of log(|ω−1|_peak_envelope) vs t_post_peak",
+    "expected": "tau ∝ M / D ⇒ tau(D=1.5)/tau(D=7.5) ≈ 5",
+    "tolerance": "[3, 10]",
+    "r2_floor": "0.7 on the linear fit",
+    "noise_floor": "at least 3 peaks above 1e-5 pu envelope"
+  }
+}

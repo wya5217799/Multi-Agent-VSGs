@@ -1,0 +1,42 @@
+{
+  "probe": "p23_loadstep_reach",
+  "model": "kundur_cvs_v3",
+  "dP_step_sys_pu": 1,
+  "dP_step_mw": 100,
+  "t_settle_s": 30,
+  "stop_time_s": 60,
+  "src_names": [
+    "G1",
+    "G2",
+    "G3",
+    "ES1",
+    "ES2",
+    "ES3",
+    "ES4"
+  ],
+  "df_b7_per_src_hz": [
+    4.2087444640515059E-9,
+    2.1516899373352771E-9,
+    2.8376190286394376E-9,
+    -3.6743419418172607E-8,
+    -1.6848267225810787E-8,
+    3.0829205854843167E-8,
+    1.3037704249541093E-8
+  ],
+  "df_b9_per_src_hz": [
+    1.0640599512612425E-9,
+    7.9790618556785375E-10,
+    -6.3058186450248854E-8,
+    1.4681089677281989E-9,
+    -5.1472748285874559E-8,
+    -4.6482607207742888E-7,
+    -6.9020119619622733E-7
+  ],
+  "df_b7_max_hz": 3.6743419418172607E-8,
+  "df_b9_max_hz": 6.9020119619622733E-7,
+  "gate_b7": false,
+  "gate_b9": false,
+  "gates_pass": false,
+  "gate_def": "|omega_steady_step - omega_steady_baseline| * fn ∈ [0.05, 2] Hz for the maximally-responding source",
+  "wall_time_s": 2.4867604
+}

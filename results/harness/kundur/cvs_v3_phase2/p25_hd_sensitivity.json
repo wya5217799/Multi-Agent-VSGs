@@ -1,0 +1,60 @@
+{
+  "probe": "p25_hd_sensitivity",
+  "model": "kundur_cvs_v3",
+  "controlled_src": "ES1",
+  "t_step_s": 35,
+  "amp_step_sys_pu": 0.2,
+  "subprobe_a_H_sensitivity": {
+    "H_cases": [
+      6,
+      30
+    ],
+    "M_cases": [
+      12,
+      60
+    ],
+    "D_fixed": 4.5,
+    "rocof_hz_per_s": [
+      0.83105680893604483,
+      0.1708984375
+    ],
+    "df_peak_hz": [
+      0.096605341926836452,
+      0.044768280209561695
+    ],
+    "rocof_ratio_H6_over_H30": 4.8628695562886284,
+    "expected_ratio": 5,
+    "tolerance_band": [
+      3,
+      10
+    ]
+  },
+  "subprobe_b_D_sensitivity": {
+    "M_fixed": 24,
+    "D_cases": [
+      1.5,
+      7.5
+    ],
+    "rocof_hz_per_s": [
+      0.41635385997752306,
+      0.41579172749251875
+    ],
+    "df_peak_hz": [
+      0.0703225955129616,
+      0.068052075817870428
+    ],
+    "peak_df_ratio_D15_over_D75": 1.0333644443288965,
+    "expected_ratio": 5,
+    "tolerance_band": [
+      3,
+      10
+    ]
+  },
+  "gates": {
+    "rocof_ratio_in_band": true,
+    "peakdf_ratio_in_band": false,
+    "above_noise_a": true,
+    "above_noise_b": true,
+    "all_pass": false
+  }
+}

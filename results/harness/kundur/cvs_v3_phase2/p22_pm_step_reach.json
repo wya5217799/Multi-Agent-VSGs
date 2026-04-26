@@ -1,0 +1,37 @@
+{
+  "probe": "p22_pm_step_reach",
+  "model": "kundur_cvs_v3",
+  "amp_sys_pu": 0.2,
+  "t_pre_s": 35,
+  "t_step_s": 15,
+  "src_names": [
+    "G1",
+    "G2",
+    "G3",
+    "ES1",
+    "ES2",
+    "ES3",
+    "ES4"
+  ],
+  "df_max_hz": [
+    0.094243385772252442,
+    0.089772957284117716,
+    0.084989945485969276,
+    0.069170673792617876,
+    0.062574324830622086,
+    0.074445534486256015,
+    0.063845627031200447
+  ],
+  "df_max_at_src": [
+    "G1",
+    "G2",
+    "G3",
+    "ES1",
+    "ES2",
+    "ES3",
+    "ES4"
+  ],
+  "gate_in_band_005_5_Hz": true,
+  "wall_time_s": 4.7557255,
+  "gate_def": "|omega-1|*fn ∈ [0.05, 5] Hz post-step for the maximally responding source per tested source"
+}

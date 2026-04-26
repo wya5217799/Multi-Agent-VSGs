@@ -1,0 +1,99 @@
+{
+  "probe": "p24_wind_trip_reach_L1",
+  "model": "kundur_cvs_v3",
+  "metric": "transient_peak_df_subtract_baseline",
+  "trip_frac_list": [
+    0.25,
+    0.5,
+    0.75,
+    1
+  ],
+  "W1_dP_mw": [
+    175,
+    350,
+    525,
+    700
+  ],
+  "W2_dP_mw": [
+    25,
+    50,
+    75,
+    100
+  ],
+  "src_names": [
+    "G1",
+    "G2",
+    "G3",
+    "ES1",
+    "ES2",
+    "ES3",
+    "ES4"
+  ],
+  "df_w1_peak_hz": [
+    0.050416655637364194,
+    0.069782170622301187,
+    0.11544666212868204,
+    0.1735245938282004
+  ],
+  "df_w2_peak_hz": [
+    0.16438564373409403,
+    2.0293591124137866,
+    1.453702301551818,
+    2.0801440554398196
+  ],
+  "t_w1_peak_s": [
+    6.493209638195685,
+    0.24969945511325181,
+    0.28000000000000014,
+    0.31414151631396864
+  ],
+  "t_w2_peak_s": [
+    1.4680307273967756,
+    2.3788103158772618,
+    4.74893440050789,
+    58.403408918441237
+  ],
+  "src_w1_peak": [
+    "ES3",
+    "G3",
+    "G3",
+    "G3"
+  ],
+  "src_w2_peak": [
+    "ES1",
+    "ES1",
+    "G2",
+    "ES2"
+  ],
+  "in_band_w1": [
+    true,
+    true,
+    true,
+    true
+  ],
+  "in_band_w2": [
+    true,
+    true,
+    true,
+    true
+  ],
+  "gates": {
+    "absolute_reach": true,
+    "sensitivity_w1_monotone": true,
+    "sensitivity_w1_linear": true,
+    "sensitivity_w1_above_noise": true,
+    "sensitivity_w1_local_src": true,
+    "sensitivity_w1_pass": true,
+    "sensitivity_w2_monotone": false,
+    "sensitivity_w2_linear": false,
+    "sensitivity_w2_above_noise": true,
+    "sensitivity_w2_local_src": false,
+    "sensitivity_w2_pass": false,
+    "all_pass": false
+  },
+  "gate_def": {
+    "absolute": "any df_peak ∈ [0.05, 5] Hz across W1 / W2 trips",
+    "sensitivity": "monotone, linear within 30%, above 1 mHz at full trip, peak source in plausible-neighbour set"
+  },
+  "wall_time_s": 5.8092754
+}

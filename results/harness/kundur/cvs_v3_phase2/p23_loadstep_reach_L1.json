@@ -1,0 +1,78 @@
+{
+  "probe": "p23_loadstep_reach_L1",
+  "model": "kundur_cvs_v3",
+  "metric": "transient_peak_df",
+  "dP_list_sys_pu": [
+    1,
+    2,
+    5,
+    9.67
+  ],
+  "dP_list_mw": [
+    100,
+    200,
+    500,
+    967
+  ],
+  "stop_time_s": 60,
+  "src_names": [
+    "G1",
+    "G2",
+    "G3",
+    "ES1",
+    "ES2",
+    "ES3",
+    "ES4"
+  ],
+  "df_b7_peak_hz": [
+    0.022208046766714062,
+    0.044341527286217985,
+    0.11014166923212221,
+    0.20994977617087573
+  ],
+  "df_b9_peak_hz": [
+    0.002165555858435475,
+    0.004329944940795194,
+    0.010815660769969426,
+    0.020888468598401211
+  ],
+  "t_b7_peak_s": [
+    0.40259429387970991,
+    0.40259676207309536,
+    0.39760425495815083,
+    0.39761605420218793
+  ],
+  "t_b9_peak_s": [
+    0.24768478913985589,
+    0.24778844340745015,
+    0.24818980761024509,
+    0.24441959183922163
+  ],
+  "src_at_b7_peak": [
+    "ES1",
+    "ES1",
+    "ES1",
+    "ES1"
+  ],
+  "src_at_b9_peak": [
+    "ES4",
+    "ES4",
+    "ES4",
+    "ES4"
+  ],
+  "in_band_b7": [
+    false,
+    false,
+    true,
+    true
+  ],
+  "in_band_b9": [
+    false,
+    false,
+    false,
+    false
+  ],
+  "gate_pass": false,
+  "gate_def": "df_peak = max_t max_src |ω_step(t) − ω_baseline(t)| · fn ∈ [0.05, 5] Hz for at least one ΔP in list",
+  "wall_time_s": 6.4175962
+}

@@ -30,6 +30,7 @@ from engine.harness_reference import (
 )
 from engine.harness_registry import resolve_scenario
 from engine.harness_repair import generate_repair_hints
+from engine._harness_profile_gate import check_harness_profile
 from engine.mcp_simulink_tools import (
     _simulink_get_block_tree_raw,
     _simulink_loaded_models_raw,
@@ -149,6 +150,11 @@ def harness_scenario_status(
         {"goal": goal, "requested_tasks": requested_tasks or ["scenario_status"]},
     )
     run_dir = harness_reports.ensure_run_dir(scenario_id, run_id)
+    # Phase E gate: reject unsupported runtime profiles (e.g. kundur_cvs_v3) up front.
+    _gate = check_harness_profile(scenario_id)
+    if _gate is not None:
+        record_failure(record, "harness_profile_mismatch", _gate["message"], _gate)
+        return finish(record, extra={"supported": False, "notes": [_gate["message"]]})
     try:
         spec = resolve_scenario(scenario_id)
     except ValueError as exc:
@@ -218,6 +224,19 @@ def harness_model_inspect(
         },
     )
     run_dir = harness_reports.ensure_run_dir(scenario_id, run_id)
+    # Phase E gate: reject unsupported runtime profiles (e.g. kundur_cvs_v3) up front.
+    _gate = check_harness_profile(scenario_id)
+    if _gate is not None:
+        record_failure(record, "harness_profile_mismatch", _gate["message"], _gate)
+        return finish(record, extra={
+            "model_loaded": False,
+            "loaded_models": [],
+            "focus_blocks": [],
+            "solver_audit": {},
+            "param_suspects": [],
+            "reference_validation": {"checks": [], "mismatch_keys": [], "missing_keys": [], "has_warnings": False},
+            "recommended_next_task": "scenario_status",
+        })
     transition_ok, transition_reason = check_transition(run_dir, "model_inspect")
     if not transition_ok:
         record.summary.append(f"transition_advisory: {transition_reason}")
@@ -373,6 +392,18 @@ def harness_model_patch_verify(
         },
     )
     run_dir = harness_reports.ensure_run_dir(scenario_id, run_id)
+    # Phase E gate: reject unsupported runtime profiles (e.g. kundur_cvs_v3) up front.
+    _gate = check_harness_profile(scenario_id)
+    if _gate is not None:
+        record_failure(record, "harness_profile_mismatch", _gate["message"], _gate)
+        return finish(record, extra={
+            "applied_edits": [],
+            "readback": [],
+            "update_ok": False,
+            "smoke_test_ok": False,
+            "smoke_test_summary": {},
+            "recommended_next_task": "scenario_status",
+        })
     transition_ok, transition_reason = check_transition(run_dir, "model_patch_verify")
     if not transition_ok:
         record.summary.append(f"transition_advisory: {transition_reason}")
@@ -469,6 +500,15 @@ def harness_model_diagnose(
         },
     )
     run_dir_diag = harness_reports.ensure_run_dir(scenario_id, run_id)
+    # Phase E gate: reject unsupported runtime profiles (e.g. kundur_cvs_v3) up front.
+    _gate = check_harness_profile(scenario_id)
+    if _gate is not None:
+        record_failure(record, "harness_profile_mismatch", _gate["message"], _gate)
+        return finish(record, extra={
+            "compile_diagnostics": {},
+            "step_diagnostics": {},
+            "recommended_next_task": "scenario_status",
+        })
     transition_ok, transition_reason = check_transition(run_dir_diag, "model_diagnose")
     if not transition_ok:
         record.summary.append(f"transition_advisory: {transition_reason}")
@@ -558,6 +598,19 @@ def harness_model_report(
         {"include_summary_md": include_summary_md},
     )
     run_dir = harness_reports.ensure_run_dir(scenario_id, run_id)
+    # Phase E gate: reject unsupported runtime profiles (e.g. kundur_cvs_v3) up front.
+    _gate = check_harness_profile(scenario_id)
+    if _gate is not None:
+        record_failure(record, "harness_profile_mismatch", _gate["message"], _gate)
+        return finish(record, extra={
+            "run_status": "failed",
+            "completed_tasks": [],
+            "failed_tasks": [],
+            "precondition_failed": True,
+            "key_findings": [_gate["message"]],
+            "recommended_followups": ["Use scenario-specific probe instead"],
+            "memory_hints": [],
+        })
     prior_records = list_existing_task_records(run_dir)
     completed_tasks = [item.get("task", Path(item.get("task", "")).stem) for item in prior_records if item.get("task")]
     failed_tasks = [item.get("task", "") for item in prior_records if item.get("status") == "failed"]

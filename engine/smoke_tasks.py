@@ -22,6 +22,7 @@ from engine.task_primitives import (
 )
 from engine.harness_registry import resolve_scenario
 from engine.task_state import check_transition
+from engine._harness_profile_gate import check_harness_profile
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
@@ -212,6 +213,12 @@ def harness_train_smoke(
         {"episodes": episodes, "mode": mode},
     )
     run_dir = harness_reports.ensure_run_dir(scenario_id, run_id)
+    # Phase E gate: reject unsupported runtime profiles up front.
+    _gate = check_harness_profile(scenario_id)
+    if _gate is not None:
+        record_failure(record, "harness_profile_mismatch", _gate["message"], _gate)
+        extra = {"command": "", "exit_code": None, "native_log_paths": [], "native_checkpoint_paths": [], "smoke_passed": False}
+        return finish(record, extra=extra)
     record_failure(
         record,
         "contract_error",
@@ -244,6 +251,11 @@ def harness_train_smoke_start(
         {"episodes": episodes, "mode": mode},
     )
     run_dir = harness_reports.ensure_run_dir(scenario_id, run_id)
+    # Phase E gate: reject unsupported runtime profiles up front.
+    _gate = check_harness_profile(scenario_id)
+    if _gate is not None:
+        record_failure(record, "harness_profile_mismatch", _gate["message"], _gate)
+        return finish(record, extra={"command": "", "pid": None, "smoke_started": False})
     preconditions_ok, failures = _train_smoke_preconditions(run_dir)
     if not preconditions_ok:
         record_failure(
@@ -328,6 +340,12 @@ def harness_train_smoke_poll(
     record = create_record("train_smoke_poll", scenario_id, run_id, {})
     key = (scenario_id, run_id)
     run_dir = harness_reports.ensure_run_dir(scenario_id, run_id)
+    # Phase E gate: reject unsupported runtime profiles up front (poll on a
+    # v3-active session is also meaningless — start would have been blocked).
+    _gate = check_harness_profile(scenario_id)
+    if _gate is not None:
+        record_failure(record, "harness_profile_mismatch", _gate["message"], _gate)
+        return finish(record, extra={"process_status": "blocked", "smoke_passed": False})
 
     proc = _SMOKE_PROCESSES.get(key)
 

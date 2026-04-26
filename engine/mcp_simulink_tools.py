@@ -1093,6 +1093,74 @@ def simulink_block_workspace_dependency(
     }
 
 
+def simulink_powerlib_net_query(
+    model_name: str,
+    start_block: str,
+    start_port: str,
+) -> dict:
+    """Enumerate all blocks/ports on a powerlib electrical net.
+
+    Powerlib (SimPowerSystems / Specialised Power Systems) physical ports
+    (LConn / RConn) are NOT visible to ``simulink_explore_block`` —
+    that tool returns ``is_connected=true`` with empty source/sink lists,
+    which can mislead callers into thinking the net is empty. This tool
+    walks the underlying physical lines via PortHandles + LineChildren
+    and returns the actual member list.
+
+    Use to debug "I think Block X is on the same bus as Block Y but
+    nothing connects" mysteries — common when reading powerlib v3 models
+    with branched buses.
+
+    Args:
+        model_name: Loaded Simulink model name (without .slx).
+        start_block: Path of one block on the net of interest.
+        start_port: Port label on start_block — typically 'LConn1' or
+            'RConn1' for powerlib physical ports.
+
+    Returns:
+        dict with ``net_id`` (synthesized from start_block/port),
+        ``members`` (list of {block, port} dicts), ``anchor`` (the entry
+        point), ``supported`` (bool), and ``reason`` (str — populated when
+        supported=False).
+
+    Phase D.1 / plan §3.D.1.
+    """
+    if not start_block or not start_port:
+        raise ValueError(
+            "simulink_powerlib_net_query: start_block and start_port required"
+        )
+    session = MatlabSession.get()
+    loaded_model_name = _ensure_model_bootstrapped(session, model_name)
+    raw = session.call(
+        "slx_powerlib_net_query",
+        loaded_model_name,
+        str(start_block),
+        str(start_port),
+        nargout=1,
+    )
+    members_raw = raw.get("members", []) if isinstance(raw, dict) else []
+    if not isinstance(members_raw, list):
+        members_raw = []
+    members: list[dict[str, str]] = []
+    for m in members_raw:
+        if isinstance(m, dict):
+            members.append({
+                "block": str(m.get("block", "")),
+                "port": str(m.get("port", "")),
+            })
+    anchor_raw = raw.get("anchor", {}) if isinstance(raw, dict) else {}
+    return {
+        "net_id": str(raw.get("net_id", "")) if isinstance(raw, dict) else "",
+        "members": members,
+        "anchor": {
+            "block": str(anchor_raw.get("block", start_block)) if isinstance(anchor_raw, dict) else start_block,
+            "port": str(anchor_raw.get("port", start_port)) if isinstance(anchor_raw, dict) else start_port,
+        },
+        "supported": bool(raw.get("supported", False)) if isinstance(raw, dict) else False,
+        "reason": str(raw.get("reason", "")) if isinstance(raw, dict) else "",
+    }
+
+
 def simulink_step_diagnostics(
     model_name: str,
     start_time: float,

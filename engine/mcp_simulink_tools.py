@@ -451,7 +451,7 @@ def simulink_library_lookup(lib_name: str, block_display_name: str) -> dict:
 simulink_preflight = simulink_library_lookup
 
 
-def simulink_run_script(code_or_file: str, timeout_sec: _IntArg = 120) -> dict:
+def simulink_run_script(code_or_file: str, timeout_sec: _IntArg = 600) -> dict:
     """Run a MATLAB script or code string with noise suppression.
 
     Wraps slx_run_quiet: captures full stdout but only surfaces three categories
@@ -472,8 +472,9 @@ def simulink_run_script(code_or_file: str, timeout_sec: _IntArg = 120) -> dict:
 
     Args:
         code_or_file: MATLAB code string or script name (e.g. 'build_powerlib_kundur')
-        timeout_sec: Engine-level timeout in seconds (default 120). Increase for large
-            build scripts — e.g. 600 for NE39 full model build.
+        timeout_sec: Engine-level timeout in seconds (default 600 — was 120 prior to
+            Phase A.2). Long build / NR / sim scripts are common; for unbounded /
+            very-long workloads, prefer ``simulink_run_script_async``.
 
     Returns:
         dict with ok (bool), elapsed (float), n_warnings (int), n_errors (int),
@@ -960,8 +961,26 @@ def simulink_add_line_by_handles(
     )
 
 
+_COMPILE_DIAGNOSTICS_VALID_MODES = ("update", "rebuild")
+
+
 def simulink_compile_diagnostics(model_name: str, mode: str = "update") -> dict:
-    """Run update/compile analysis and return structured diagnostics."""
+    """Run update/rebuild analysis and return structured diagnostics.
+
+    Args:
+        model_name: Loaded model name.
+        mode: Either ``'update'`` (default — runs ``set_param(... 'SimulationCommand', 'update')``;
+            cheap, < 5 s typical) or ``'rebuild'``. ``'compile'`` is **not** a valid value
+            (Simulink.BlockDiagram has no static method by that name); pass ``'update'``
+            for a deep-update diagnostic instead. Phase A.3.
+    """
+    if mode not in _COMPILE_DIAGNOSTICS_VALID_MODES:
+        raise ValueError(
+            f"simulink_compile_diagnostics: mode={mode!r} is not supported. "
+            f"Valid modes: {_COMPILE_DIAGNOSTICS_VALID_MODES}. "
+            f"Note: 'compile' was historically attempted but Simulink.BlockDiagram has no "
+            f"static method named 'compile'; use 'update' for deep-update diagnostics."
+        )
     session = MatlabSession.get()
     loaded_model_name = _ensure_model_bootstrapped(session, model_name)
     raw = session.call("slx_compile_diagnostics", loaded_model_name, mode, nargout=1)

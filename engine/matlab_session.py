@@ -102,6 +102,13 @@ class MatlabSession:
                 logger.debug("Added to MATLAB path: %s", helper_path)
             else:
                 logger.warning("MATLAB helper dir not found: %s", helper_path)
+        # Force UTF-8 character set so MATLAB stdout (e.g. Chinese error
+        # messages) round-trips cleanly through MCP rather than getting
+        # GBK-decoded as mojibake (Phase A.1 / plan §3.A.1).
+        try:
+            self._eng.feature("DefaultCharacterSet", "UTF-8", nargout=0)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Could not set MATLAB DefaultCharacterSet=UTF-8: %s", exc)
         logger.info("MATLAB engine ready (session=%s).", self._session_id)
 
     def _get_engine(self) -> Any:

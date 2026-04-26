@@ -333,17 +333,34 @@ def train(args):
     meta_dir = getattr(args, "run_dir", args.checkpoint_dir)
     save_run_meta(meta_dir, args, _cfg_module)
 
-    # Plan X (2026-04-26): override reward_divergence to "warn" (Kundur only).
-    # The default monitor uses a 10% relative-change threshold (normalised by
-    # |reward mean|) that is over-sensitive to small reward magnitudes. After
-    # the B1 reward-shaping lock (PHI_H=PHI_D=1e-4) the reward absolute scale
-    # is ~5e-2, so any few-decimal fluctuation crosses the relative threshold
-    # and forces a stop even when SAC, physics, and r_f% are healthy (run
-    # kundur_simulink_20260426_153450 ep0-67: r_f% mean 4.7%, df mean 1.0Hz,
-    # critic_loss decreasing). Down-grade to warn so divergence still
-    # surfaces in events.jsonl but does not abort.
+    # Plan X / X2 (2026-04-26): override two statistical-heuristic stop
+    # checks to "warn" (Kundur only). Both are heuristics that misfire on
+    # the small-magnitude reward landscape produced by the B1 reward-shaping
+    # lock (PHI_H = PHI_D = 1e-4 → reward absolute scale ~5e-2):
+    #
+    #   * reward_divergence: 10%-relative-change threshold normalised by
+    #     |reward mean|; with mean ~5e-2 any few-decimal SAC fluctuation
+    #     crosses 10% and stops training even when r_f%, df, critic_loss,
+    #     and policy entropy decay are healthy. Verified: run
+    #     kundur_simulink_20260426_153450 stopped at ep67 with r_f%=4.7%
+    #     mean and critic_loss still decreasing.
+    #
+    #   * reward_magnitude: |current| / |calibration baseline| ≥ 100x
+    #     trigger. The calibration baseline is the mean of the first ~20
+    #     ep, when alpha is ~1.0 and rewards are noisy. After alpha decays
+    #     to the 0.05 floor the policy can swing reward up to 10-20x with
+    #     no algorithmic problem; cross-PHI resume (loading a ckpt under a
+    #     different reward shaping) can also push the ratio past 100x. Stop
+    #     here would force a kill on a recoverable state.
+    #
+    # physics_frozen is intentionally LEFT at "stop" — it triggers only
+    # when max_power_swing ≤ 1e-9 for 10 consecutive episodes (an actual
+    # electrical decoupling between M/D commands and the grid). Current
+    # B1 swing mean is 0.36, so this gate is far from misfiring; if it
+    # ever fires, the model genuinely needs intervention.
     monitor = TrainingMonitor(checks={
         "reward_divergence": {"action": "warn"},
+        "reward_magnitude":  {"action": "warn"},
     })
 
     log = load_or_create_log(args.log_file, fresh=fresh_run)

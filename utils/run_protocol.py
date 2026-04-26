@@ -28,6 +28,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import time
 import tempfile
 import threading
 from datetime import datetime, timedelta
@@ -136,6 +137,15 @@ def write_training_status(run_dir: Path, status: dict[str, Any]) -> None:
 
     Uses tempfile + os.replace so readers never see a partial write.
 
+    Windows file-lock retry (P1, 2026-04-26): a concurrent reader (e.g.
+    PowerShell ``Get-Content`` or any tool that briefly opens the target)
+    can hold a sharing lock that makes ``os.replace`` raise
+    ``PermissionError`` (WinError 5/32). Without retry this aborted a 200ep
+    Kundur training run at ep194 — a self-inflicted operational crash, not
+    an algorithmic failure. Retry up to 5 times with exponential backoff
+    (50/100/200/400/800 ms = ~1.55s total) before giving up. Linux/macOS
+    don't show this contention so the retry is effectively a no-op there.
+
     Logs a once-per-process warning when ``status`` contains keys outside
     the engine.run_schema.RunStatus contract — a guard against writer-side
     typos that the read-side default-coercion would otherwise hide.
@@ -146,7 +156,25 @@ def write_training_status(run_dir: Path, status: dict[str, Any]) -> None:
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as f:
             json.dump(status, f)
-        os.replace(tmp_path, target)
+        # Retry os.replace on Windows file-lock contention (PermissionError).
+        last_err: Exception | None = None
+        for attempt in range(5):
+            try:
+                os.replace(tmp_path, target)
+                last_err = None
+                break
+            except PermissionError as exc:
+                last_err = exc
+                # Exponential backoff: 50, 100, 200, 400, 800 ms
+                time.sleep(0.05 * (2 ** attempt))
+        if last_err is not None:
+            # All retries exhausted — log and re-raise so caller sees it.
+            logging.getLogger(__name__).warning(
+                "write_training_status: os.replace gave up after 5 retries on "
+                "Windows file-lock contention (PermissionError). target=%s",
+                target,
+            )
+            raise last_err
     except Exception:
         try:
             os.unlink(tmp_path)

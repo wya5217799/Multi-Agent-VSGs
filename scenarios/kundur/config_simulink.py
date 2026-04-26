@@ -124,6 +124,29 @@ if KUNDUR_MODEL_PROFILE.model_name == 'kundur_cvs':
         _cvs_ic_raw = _json.load(_f)
     VSG_PE0_DEFAULT_SYS = np.asarray(_cvs_ic_raw['vsg_pm0_pu'], dtype=np.float64)
     VSG_DELTA0_RAD = np.asarray(_cvs_ic_raw['vsg_internal_emf_angle_rad'], dtype=np.float64)
+elif KUNDUR_MODEL_PROFILE.model_name == 'kundur_cvs_v3':
+    # P3.2 (2026-04-26): v3 paper-faithful 16-bus CVS path.
+    # IC schema_version=3 ships with NR-derived ESS Pm0 ≈ -0.369 sys-pu/source
+    # (group absorbs the +185 MW lossless surplus minus ~37 MW lossy losses).
+    # Identity contract enforced by build_kundur_cvs_v3.m: refuses to load
+    # a non-v3 IC. config side enforces here that the v3 profile reads
+    # kundur_ic_cvs_v3.json and NOT the v2 IC.
+    import json as _json
+    _v3_ic_path = Path(__file__).resolve().parent / 'kundur_ic_cvs_v3.json'
+    with _v3_ic_path.open(encoding='utf-8') as _f:
+        _v3_ic_raw = _json.load(_f)
+    assert _v3_ic_raw.get('schema_version') == 3, (
+        f"kundur_ic_cvs_v3.json: expected schema_version=3, got "
+        f"{_v3_ic_raw.get('schema_version')!r}"
+    )
+    assert _v3_ic_raw.get('topology_variant') == 'v3_paper_kundur_16bus', (
+        "kundur_ic_cvs_v3.json: topology_variant must be "
+        "'v3_paper_kundur_16bus'"
+    )
+    VSG_PE0_DEFAULT_SYS = np.asarray(_v3_ic_raw['vsg_pm0_pu'], dtype=np.float64)
+    VSG_DELTA0_RAD = np.asarray(
+        _v3_ic_raw['vsg_internal_emf_angle_rad'], dtype=np.float64
+    )
 else:
     VSG_PE0_DEFAULT_SYS = VSG_P0_SBASE
     VSG_DELTA0_RAD = np.asarray(_ic.vsg_delta0_deg, dtype=np.float64) * np.pi / 180.0
@@ -195,6 +218,18 @@ MINGW_PATH = r'D:\mingw64'
 # ========== SimulinkBridge Configuration ==========
 from engine.simulink_bridge import BridgeConfig
 
+# P3.2 (2026-04-26): v3 inherits the v2 CVS bridge contract verbatim.
+# Both v2 (kundur_cvs) and v3 (kundur_cvs_v3) profiles use:
+#   - Timeseries logger naming `omega_ts_{idx}` (v3 enforced via P3.0b
+#     interface rename: ESS loggers emit integer suffix 1..4)
+#   - cvs_signal step strategy
+#   - M_{idx} / D_{idx} workspace variable names
+#   - M0=24, D0=4.5 defaults
+# Only the IC dispatched into pe0_default_vsg / delta0_deg differs (handled
+# in the if/elif/else block above). Legacy/SPS profiles keep the
+# phang_feedback path with its own template set.
+_IS_CVS = KUNDUR_MODEL_PROFILE.model_name in ('kundur_cvs', 'kundur_cvs_v3')
+
 KUNDUR_BRIDGE_CONFIG = BridgeConfig(
     model_name=KUNDUR_MODEL_PROFILE.model_name,
     phase_command_mode=KUNDUR_MODEL_PROFILE.phase_command_mode,
@@ -207,7 +242,8 @@ KUNDUR_BRIDGE_CONFIG = BridgeConfig(
     m_path_template='{model}/VSG_ES{idx}/M0',
     d_path_template='{model}/VSG_ES{idx}/D0',
     # G3-prep-E B1: CVS .slx logs Timeseries omega_ts_<i>; legacy/SPS uses ToWorkspace omega_ES<i>.
-    omega_signal='omega_ts_{idx}' if KUNDUR_MODEL_PROFILE.model_name == 'kundur_cvs' else 'omega_ES{idx}',
+    # P3.2: v3 honors the same template (P3.0b rename ensures ESS loggers emit omega_ts_1..4).
+    omega_signal='omega_ts_{idx}' if _IS_CVS else 'omega_ES{idx}',
     vabc_signal='Vabc_ES{idx}',
     iabc_signal='Iabc_ES{idx}',
     pe_path_template='{model}/Pe_{idx}',
@@ -215,17 +251,21 @@ KUNDUR_BRIDGE_CONFIG = BridgeConfig(
     p_out_signal='P_out_ES{idx}',        # DEBUG ONLY — swing eq output, not for training
     pe_measurement=KUNDUR_MODEL_PROFILE.pe_measurement,
     # G3-prep-D-config: route CVS profile to cvs_signal dispatch; legacy/SPS keep phang_feedback default.
-    step_strategy='cvs_signal' if KUNDUR_MODEL_PROFILE.model_name == 'kundur_cvs' else 'phang_feedback',
+    # P3.2: v3 also routes to cvs_signal (same swing-eq closure pattern).
+    step_strategy='cvs_signal' if _IS_CVS else 'phang_feedback',
     # G3-prep-E B1: CVS Constant blocks reference workspace M_<i>/D_<i> with M0=24,D0=18 (paper baseline).
+    # P3.2: v3 build emits identical M_1..4 / D_1..4 workspace vars for ESS.
     # Legacy/SPS path keeps BridgeConfig defaults (M0_val_ES{idx}/D0_val_ES{idx}, M0=12,D0=3).
-    m_var_template='M_{idx}' if KUNDUR_MODEL_PROFILE.model_name == 'kundur_cvs' else 'M0_val_ES{idx}',
-    d_var_template='D_{idx}' if KUNDUR_MODEL_PROFILE.model_name == 'kundur_cvs' else 'D0_val_ES{idx}',
-    m0_default=24.0 if KUNDUR_MODEL_PROFILE.model_name == 'kundur_cvs' else 12.0,
+    m_var_template='M_{idx}' if _IS_CVS else 'M0_val_ES{idx}',
+    d_var_template='D_{idx}' if _IS_CVS else 'D0_val_ES{idx}',
+    m0_default=24.0 if _IS_CVS else 12.0,
     # Promotion 2026-04-26: CVS d0 lowered 18.0 -> 4.5 to escape over-damping.
     # Dry-run verdict in results/harness/kundur/cvs_v2_dryrun/verdict.md.
     # With DD_MIN/DD_MAX = [-1.5, +4.5] this gives D_runtime ∈ [3.0, 9.0],
     # the H-sensitive band where dry-run probes confirmed RL learnability.
-    d0_default=4.5 if KUNDUR_MODEL_PROFILE.model_name == 'kundur_cvs' else 3.0,
+    # P3.2: v3 inherits the same default; Phase 2.5 H/D probes ran with
+    # M_1..4=24, D_1..4=4.5 and confirmed both axes function.
+    d0_default=4.5 if _IS_CVS else 3.0,
     pe_feedback_signal='PeFb_ES{idx}',   # PeGain_ES{idx} output, VSG-base pu
     # Dynamic Load disturbance: per-phase W stored in base workspace.
     # Bus14: TripLoad1_P = 248/3 MW per phase (nominal load on).

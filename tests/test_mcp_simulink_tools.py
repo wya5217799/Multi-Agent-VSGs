@@ -383,6 +383,11 @@ class TestSimulinkStructuredOps:
         code = "disp(['RESULT=' get_param('NE39bus_v2/VSrc_ES1','ReferenceBlock')])"
         result = simulink_run_script(code, timeout_sec=30)
 
+        # Phase A.1: windows_pid field present for cross-tool PID correlation
+        assert "windows_pid" in result
+        assert isinstance(result["windows_pid"], int)
+        assert result["windows_pid"] > 0
+
         repo_root = Path(__file__).resolve().parents[1]
         expected_model = repo_root / "scenarios" / "new_england" / "simulink_models" / "NE39bus_v2.slx"
         expected_model_dir = str(expected_model.parent)
@@ -649,6 +654,18 @@ class TestSimulinkDiagnosticsWave1:
         assert result["ok"] is False
         assert result["errors"][0]["block_path"] == "mdl/Const"
         assert result["errors"][0]["phase"] == "update"
+
+    def test_compile_diagnostics_rejects_invalid_mode(self):
+        """Phase A.3: mode='compile' must raise ValueError (Simulink.BlockDiagram has no
+        'compile' static method; was historically attempted and silently failed)."""
+        import pytest
+        from engine.mcp_simulink_tools import simulink_compile_diagnostics
+
+        with pytest.raises(ValueError, match="not supported"):
+            simulink_compile_diagnostics("any_model", mode="compile")
+
+        with pytest.raises(ValueError, match="not supported"):
+            simulink_compile_diagnostics("any_model", mode="bogus")
 
     @patch("engine.mcp_simulink_tools.MatlabSession.get")
     def test_step_diagnostics_maps_engine_timeout(self, mock_get):

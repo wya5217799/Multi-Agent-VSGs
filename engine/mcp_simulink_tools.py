@@ -1118,10 +1118,16 @@ def simulink_powerlib_net_query(
             'RConn1' for powerlib physical ports.
 
     Returns:
-        dict with ``net_id`` (synthesized from start_block/port),
-        ``members`` (list of {block, port} dicts), ``anchor`` (the entry
-        point), ``supported`` (bool), and ``reason`` (str — populated when
-        supported=False).
+        dict with:
+          - ``net_id``: synthesized from start_block/port
+          - ``members``: list of {block, port} dicts. **The anchor (start_block,
+            start_port) is always included as the first member**, even on an
+            isolated port. Callers checking emptiness must compare against
+            ``len(members) <= 1`` (anchor only) rather than ``== 0``.
+          - ``anchor``: the entry point (block, port)
+          - ``supported``: bool — false on non-powerlib blocks or unsupported
+            MATLAB API versions
+          - ``reason``: str — populated when supported=False
 
     Phase D.1 / plan §3.D.1.
     """

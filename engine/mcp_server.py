@@ -75,8 +75,10 @@ from engine.mcp_simulink_tools import (
     simulink_compile_diagnostics,
     simulink_step_diagnostics,
     simulink_solver_audit,
-    # --- Advanced (1) ---
+    # --- Advanced (3) ---
     simulink_patch_and_verify,
+    simulink_block_workspace_dependency,  # Phase B: workspace var consumer xref
+    simulink_powerlib_net_query,           # Phase D.1: powerlib electrical net member enumeration
     # --- Escape hatch (1) ---
     simulink_run_script,
     # --- Async run (2) ---
@@ -95,7 +97,7 @@ from engine.mcp_simulink_tools import (
 mcp = FastMCP(
     "simulink-tools",
     instructions=(
-        "Structured Simulink and training control tools (43 total). "
+        "Structured Simulink and training control tools (45 total). "
         "Use training_status to poll live training progress (Tier 1). "
         "Use training_diagnose only when training_status shows anomaly/failure (Tier 2). "
         "Use training_evaluate_run / training_compare_runs for post-run Training Control workflows. "
@@ -160,6 +162,8 @@ PUBLIC_TOOLS = [
     simulink_solver_audit,
     # --- Advanced ---
     simulink_patch_and_verify,
+    simulink_block_workspace_dependency,
+    simulink_powerlib_net_query,
     # --- Escape hatch ---
     simulink_run_script,
     # --- Async run ---

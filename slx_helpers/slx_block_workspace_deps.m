@@ -31,8 +31,8 @@ function result = slx_block_workspace_deps(model_name, workspace_vars)
 %     parameter Values that reference vars by name are detected.
 %   - NOT detected: vars accessed via evalin('base', ...) inside callbacks
 %     or m-script blocks. Such cases must be tracked separately.
-%   - Word-boundary regex avoids false matches like "Pm_step_amp_1" matching
-%     "Pm_step_amp_10" — but a substring like "my_var * 2" matches "my_var".
+%   - Word-boundary regex avoids false matches like "my_var_1" matching
+%     "my_var_10" — but a substring like "my_var * 2" matches "my_var".
 %
 %   Project-neutral: contains no scenario-specific names. Project test
 %   fixtures live under tests/fixtures/ — see plan §3.B.5.

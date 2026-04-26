@@ -123,14 +123,18 @@ function result = slx_powerlib_net_query(model_name, start_block, start_port)
         catch
             continue;
         end
-        if isempty(parent_path) || strcmp(parent_path, start_block) && strcmp(port_label, start_port)
+        if isempty(parent_path)
             continue;
         end
-        if isKey(visited_blocks, parent_path)
-            % Same block, possibly different port — record it
-        else
-            visited_blocks(parent_path) = true;
+        % Skip the anchor (start_block + start_port) only — the same block
+        % on a different port (multi-port T-junction or coupling block) is
+        % a legitimate distinct (block,port) member of the net.
+        if strcmp(parent_path, start_block) && strcmp(port_label, start_port)
+            continue;
         end
+        % Track block-level visit (deduplication is at (block,port) granularity
+        % via members; visited_blocks is informational here).
+        visited_blocks(parent_path) = true;
         members(end+1) = struct('block', parent_path, 'port', port_label); %#ok<AGROW>
     end
 

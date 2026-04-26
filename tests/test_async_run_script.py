@@ -39,7 +39,7 @@ class TestRunScriptAsync:
     def test_returns_job_id_immediately(self):
         gate = threading.Event()
 
-        def slow_run_script(code_or_file, timeout_sec=120):
+        def slow_run_script(code_or_file, timeout_sec=600):
             gate.wait(timeout=5)
             return {"ok": True, "elapsed": 1.0, "n_warnings": 0, "n_errors": 0,
                     "error_message": "", "important_lines": []}
@@ -58,7 +58,7 @@ class TestRunScriptAsync:
     def test_job_registered_in_dict(self):
         gate = threading.Event()
 
-        def slow_run_script(code_or_file, timeout_sec=120):
+        def slow_run_script(code_or_file, timeout_sec=600):
             gate.wait(timeout=5)
             return {"ok": True, "elapsed": 0.5, "n_warnings": 0, "n_errors": 0,
                     "error_message": "", "important_lines": []}
@@ -74,7 +74,7 @@ class TestRunScriptAsync:
     def test_busy_when_job_already_running(self):
         gate = threading.Event()
 
-        def slow_run_script(code_or_file, timeout_sec=120):
+        def slow_run_script(code_or_file, timeout_sec=600):
             gate.wait(timeout=5)
             return {"ok": True, "elapsed": 0.5, "n_warnings": 0, "n_errors": 0,
                     "error_message": "", "important_lines": []}
@@ -109,7 +109,7 @@ class TestPollScript:
     def test_running_while_in_progress(self):
         gate = threading.Event()
 
-        def slow_run_script(code_or_file, timeout_sec=120):
+        def slow_run_script(code_or_file, timeout_sec=600):
             gate.wait(timeout=5)
             return {"ok": True, "elapsed": 0.5, "n_warnings": 0, "n_errors": 0,
                     "error_message": "", "important_lines": []}
@@ -127,7 +127,7 @@ class TestPollScript:
             gate.set()
 
     def test_done_after_completion(self):
-        def fast_run_script(code_or_file, timeout_sec=120):
+        def fast_run_script(code_or_file, timeout_sec=600):
             return {"ok": True, "elapsed": 0.1, "n_warnings": 1, "n_errors": 0,
                     "error_message": "", "important_lines": ["RESULT: done"]}
 
@@ -146,7 +146,7 @@ class TestPollScript:
 
     def test_done_evicts_job_from_registry(self):
         """Polling a completed job removes it from _SCRIPT_JOBS (no memory leak)."""
-        def fast_run_script(code_or_file, timeout_sec=120):
+        def fast_run_script(code_or_file, timeout_sec=600):
             return {"ok": True, "elapsed": 0.0, "n_warnings": 0, "n_errors": 0,
                     "error_message": "", "important_lines": []}
 
@@ -162,7 +162,7 @@ class TestPollScript:
 
     def test_evicted_job_returns_not_found_on_second_poll(self):
         """Second poll after eviction returns not_found (expected caller behaviour)."""
-        def fast_run_script(code_or_file, timeout_sec=120):
+        def fast_run_script(code_or_file, timeout_sec=600):
             return {"ok": True, "elapsed": 0.0, "n_warnings": 0, "n_errors": 0,
                     "error_message": "", "important_lines": []}
 
@@ -176,7 +176,7 @@ class TestPollScript:
         assert second_poll["status"] == "not_found"
 
     def test_done_with_script_failure(self):
-        def failing_run_script(code_or_file, timeout_sec=120):
+        def failing_run_script(code_or_file, timeout_sec=600):
             return {"ok": False, "elapsed": 0.2, "n_warnings": 0, "n_errors": 1,
                     "error_message": "Undefined function 'bad_func'",
                     "important_lines": ["error: bad_func"]}
@@ -193,7 +193,7 @@ class TestPollScript:
         assert "bad_func" in poll_result["error_message"]
 
     def test_done_when_run_script_raises(self):
-        def raising_run_script(code_or_file, timeout_sec=120):
+        def raising_run_script(code_or_file, timeout_sec=600):
             raise RuntimeError("Engine crashed")
 
         with patch("engine.mcp_simulink_tools.simulink_run_script", side_effect=raising_run_script):
@@ -208,7 +208,7 @@ class TestPollScript:
 
     def test_second_job_allowed_after_first_completes(self):
         """busy guard releases once done_event is set — no thread.join() needed."""
-        def fast_run_script(code_or_file, timeout_sec=120):
+        def fast_run_script(code_or_file, timeout_sec=600):
             return {"ok": True, "elapsed": 0.0, "n_warnings": 0, "n_errors": 0,
                     "error_message": "", "important_lines": []}
 

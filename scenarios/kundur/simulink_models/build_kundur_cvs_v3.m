@@ -204,12 +204,15 @@ for k = 1:2
     assignin('base', sprintf('LoadStep_amp_%d', k), double(0.0));
 end
 
-%% ===== Build line branches (Π-line: Series RLC with R+L only; shunt cap deferred) =====
-% Phasor solver: per build_kundur_cvs.m v2, lines were L-only (X_tie). v3
-% adds R+L branches (lossless line shunts handled via PI Section if needed).
-% For Phase 1.3 minimum scope: use Series RLC type='RL' for each branch
-% (R + jωL); shunt C handled implicitly by the powergui Phasor solver if
-% PI Section is desired — defer to Phase 2.x if losses don't match.
+%% ===== Build line branches (Π-line: series R+L + shunt C/2 each end) =====
+% P2.1 fix-A (2026-04-26): NR uses lossy Π model with shunt cap at each
+% line end (Y_sh = jωC·L/2, in Siemens). The earlier 'RL'-only build
+% omitted ~200 MVAr line cap injection and caused a ω steady-region drift
+% above 1 plus initial transient kick. Match NR by emitting:
+%   - 1 series RL branch  (`<name>` block)
+%   - 2 shunt C branches  (`<name>_Csh_F` and `<name>_Csh_T`), each = C·L/2
+% Both shunt caps connect to ground at their respective bus end. Parallel
+% lines instantiate independently (each parallel adds its own pair of caps).
 n_lines = size(line_defs, 1);
 for li = 1:n_lines
     name  = line_defs{li, 1};
@@ -218,20 +221,46 @@ for li = 1:n_lines
     Lkm   = line_defs{li, 4};
     Rk    = line_defs{li, 5};
     Lk    = line_defs{li, 6};
+    Ck    = line_defs{li, 7};
 
     R_tot = Rk * Lkm;                  % Ω
     L_tot = Lk * Lkm;                  % H
+    C_half = Ck * Lkm / 2;             % F (per end)
 
     yposS = 200 + (li - 1) * 70;
+
+    % Series RL branch
     add_block('powerlib/Elements/Series RLC Branch', [mdl '/' name], ...
         'Position', [400 yposS 460 yposS+50]);
     set_param([mdl '/' name], 'BranchType', 'RL', ...
         'Resistance', sprintf('%.10g', R_tot), ...
         'Inductance', sprintf('%.10g', L_tot));
-
-    % Tag from/to in block UserData for connection bookkeeping
     set_param([mdl '/' name], 'UserDataPersistent', 'on', ...
         'UserData', struct('from', fb, 'to', tb));
+
+    % Shunt cap at FROM-end
+    cshF = [name '_Csh_F'];
+    add_block('powerlib/Elements/Series RLC Branch', [mdl '/' cshF], ...
+        'Position', [320 yposS+70 380 yposS+110]);
+    set_param([mdl '/' cshF], 'BranchType', 'C', ...
+        'Capacitance', sprintf('%.10g', C_half));
+    add_block('powerlib/Elements/Ground', [mdl '/' cshF '_GND'], ...
+        'Position', [320 yposS+130 360 yposS+160]);
+    add_line(mdl, [cshF '/RConn1'], [cshF '_GND/LConn1'], 'autorouting', 'smart');
+    set_param([mdl '/' cshF], 'UserDataPersistent', 'on', ...
+        'UserData', struct('bus', fb, 'src_line', name, 'role', 'shunt_C_half_F'));
+
+    % Shunt cap at TO-end
+    cshT = [name '_Csh_T'];
+    add_block('powerlib/Elements/Series RLC Branch', [mdl '/' cshT], ...
+        'Position', [480 yposS+70 540 yposS+110]);
+    set_param([mdl '/' cshT], 'BranchType', 'C', ...
+        'Capacitance', sprintf('%.10g', C_half));
+    add_block('powerlib/Elements/Ground', [mdl '/' cshT '_GND'], ...
+        'Position', [480 yposS+130 520 yposS+160]);
+    add_line(mdl, [cshT '/RConn1'], [cshT '_GND/LConn1'], 'autorouting', 'smart');
+    set_param([mdl '/' cshT], 'UserDataPersistent', 'on', ...
+        'UserData', struct('bus', tb, 'src_line', name, 'role', 'shunt_C_half_T'));
 end
 
 %% ===== Build loads (Series RLC R+L for P+Q_ind, then shunt cap) =====
@@ -444,13 +473,14 @@ for s = 1:n_src
     %     For Phase 1.3 we store Pm0 in sys-pu via base-ws Pm_var, then divide
     %     by SCvar=Sbase/Sn_src inside the model to get source-base pu.
 
-    % Pm0 source-base = Pm_var / SCvar   (Pm_var sys-pu, SCvar=Sbase/Sn_src)
+    % Pm0 source-base = Pm_var * SCvar  (Pm_var sys-pu, SCvar=Sbase/Sn_src)
+    % MULTIPLY: P_src_pu = P_W/Sn = (P_W/Sbase)*(Sbase/Sn) = Pm_sys * SCvar
     add_block('simulink/Sources/Constant', [mdl '/Pm_sys_c_' sname], ...
         'Position', [bx-450 cy+50 bx-410 cy+70], 'Value', Pmvar);
     add_block('simulink/Sources/Constant', [mdl '/Sscale_c_' sname], ...
         'Position', [bx-450 cy+90 bx-410 cy+110], 'Value', SCvar);
-    add_block('simulink/Math Operations/Divide', [mdl '/PmSrcPU_' sname], ...
-        'Position', [bx-400 cy+60 bx-370 cy+90], 'Inputs', '*/');
+    add_block('simulink/Math Operations/Product', [mdl '/PmSrcPU_' sname], ...
+        'Position', [bx-400 cy+60 bx-370 cy+90], 'Inputs', '2');
     add_line(mdl, ['Pm_sys_c_' sname '/1'], ['PmSrcPU_' sname '/1']);
     add_line(mdl, ['Sscale_c_' sname '/1'], ['PmSrcPU_' sname '/2']);
 
@@ -461,16 +491,12 @@ for s = 1:n_src
     add_line(mdl, ['PmStepMul_' sname '/1'], ['PmTotal_' sname '/2']);
 
     % SG governor droop: subtract (1/R)·(ω−1) from Pm_total
+    % Use Gain with literal '1/<Rvar>' so 1/R is computed once at compile.
     if strcmp(stype, 'sg')
-        add_block('simulink/Sources/Constant', [mdl '/RDrop_c_' sname], ...
-            'Position', [bx-360 cy+110 bx-330 cy+130], 'Value', Rvar);
-        add_block('simulink/Math Operations/Divide', [mdl '/InvR_' sname], ...
-            'Position', [bx-310 cy+105 bx-280 cy+135], 'Inputs', '/*');
-        % InvR computes 1/R using one constant (1) divided by R
-        add_block('simulink/Sources/Constant', [mdl '/One_R_' sname], ...
-            'Position', [bx-340 cy+95 bx-320 cy+115], 'Value', '1');
-        add_line(mdl, ['One_R_' sname '/1'], ['InvR_' sname '/1']);
-        add_line(mdl, ['RDrop_c_' sname '/1'], ['InvR_' sname '/2']);
+        add_block('simulink/Math Operations/Gain', [mdl '/InvR_' sname], ...
+            'Position', [bx-310 cy+105 bx-280 cy+135], ...
+            'Gain', ['1/' Rvar]);
+        % InvR will be wired to (ω−1) downstream via DroopMul.
     end
 
     % ω integrator
@@ -490,16 +516,14 @@ for s = 1:n_src
     add_line(mdl, ['SumDw_' sname '/1'], ['Dgain_' sname '/1']);
 
     if strcmp(stype, 'sg')
-        % Pm_after_droop = PmTotal − (1/R)·(ω−1)
-        add_block('simulink/Math Operations/Product', [mdl '/DroopMul_' sname], ...
-            'Position', [bx-260 cy+105 bx-230 cy+130], 'Inputs', '2');
-        add_line(mdl, ['InvR_' sname '/1'], ['DroopMul_' sname '/1']);
-        add_line(mdl, ['SumDw_' sname '/1'], ['DroopMul_' sname '/2']);
+        % InvR Gain consumes (ω−1) directly: InvR/1 = (1/R)·(ω−1)
+        add_line(mdl, ['SumDw_' sname '/1'], ['InvR_' sname '/1']);
 
+        % Pm_after_droop = PmTotal − (1/R)·(ω−1)
         add_block('simulink/Math Operations/Sum', [mdl '/PmAfterDroop_' sname], ...
             'Position', [bx-220 cy+70 bx-190 cy+100], 'Inputs', '+-');
         add_line(mdl, ['PmTotal_' sname '/1'], ['PmAfterDroop_' sname '/1']);
-        add_line(mdl, ['DroopMul_' sname '/1'], ['PmAfterDroop_' sname '/2']);
+        add_line(mdl, ['InvR_' sname '/1'],   ['PmAfterDroop_' sname '/2']);
 
         add_block('simulink/Math Operations/Sum', [mdl '/SwingSum_' sname], ...
             'Position', [bx-180 cy+50 bx-150 cy+110], 'Inputs', '+--');
@@ -523,8 +547,9 @@ for s = 1:n_src
     % Implementation: add `Pe_src_pu_<sname>` Divide block between Pe_pu and
     % SwingSum.  Easier: replace the line into SwingSum/2 with the divided
     % signal.
-    add_block('simulink/Math Operations/Divide', [mdl '/PeSrcPU_' sname], ...
-        'Position', [bx-100 cy+135 bx-70 cy+165], 'Inputs', '*/');
+    % Pe_src_pu = Pe_sys_pu * SCvar  (multiply, see Pm conversion above)
+    add_block('simulink/Math Operations/Product', [mdl '/PeSrcPU_' sname], ...
+        'Position', [bx-100 cy+135 bx-70 cy+165], 'Inputs', '2');
     add_block('simulink/Sources/Constant', [mdl '/SCvar_c_' sname], ...
         'Position', [bx-130 cy+170 bx-100 cy+190], 'Value', SCvar);
     add_line(mdl, ['Pe_pu_' sname '/1'], ['PeSrcPU_' sname '/1']);
@@ -650,13 +675,15 @@ bus_anchor = containers.Map('KeyType', 'double', 'ValueType', 'char');
 % --- helper: register an element-port at a bus (anchor or auto-link) ---
 register = @(bus, blkpath_port) local_register_at_bus(mdl, bus_anchor, bus, blkpath_port);
 
-% Line endpoints
+% Line endpoints + Π shunt caps (each line: 2 series ports + 2 shunt-C ports)
 for li = 1:n_lines
     name = line_defs{li, 1};
     fb   = line_defs{li, 2};
     tb   = line_defs{li, 3};
     register(fb, [name '/LConn1']);
     register(tb, [name '/RConn1']);
+    register(fb, [name '_Csh_F/LConn1']);    % shunt C/2 at FROM-end → bus fb
+    register(tb, [name '_Csh_T/LConn1']);    % shunt C/2 at TO-end   → bus tb
 end
 
 % Loads + shunts + LoadStep — all anchor at their bus

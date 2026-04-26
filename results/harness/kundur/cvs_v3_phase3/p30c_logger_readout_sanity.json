@@ -1,0 +1,201 @@
+{
+  "probe": "p30c_logger_readout_sanity",
+  "model": "kundur_cvs_v3",
+  "elapsed_sim_s": 0.3760289,
+  "ess_int_names_checked": [
+    [
+      "omega_ts_1",
+      "delta_ts_1",
+      "Pe_ts_1"
+    ],
+    [
+      "omega_ts_2",
+      "delta_ts_2",
+      "Pe_ts_2"
+    ],
+    [
+      "omega_ts_3",
+      "delta_ts_3",
+      "Pe_ts_3"
+    ],
+    [
+      "omega_ts_4",
+      "delta_ts_4",
+      "Pe_ts_4"
+    ]
+  ],
+  "ess_present": [
+    [
+      true,
+      true,
+      true
+    ],
+    [
+      true,
+      true,
+      true
+    ],
+    [
+      true,
+      true,
+      true
+    ],
+    [
+      true,
+      true,
+      true
+    ]
+  ],
+  "ess_finite": [
+    [
+      true,
+      true,
+      true
+    ],
+    [
+      true,
+      true,
+      true
+    ],
+    [
+      true,
+      true,
+      true
+    ],
+    [
+      true,
+      true,
+      true
+    ]
+  ],
+  "ess_values_at_t_end": [
+    [
+      1.003164131316874,
+      0.48087612658604562,
+      -0.33185411908675394
+    ],
+    [
+      1.0000294770986926,
+      0.02673567765429595,
+      -0.36996582606221656
+    ],
+    [
+      0.99966664516681725,
+      -0.00031345633694824295,
+      -0.82923079325108817
+    ],
+    [
+      0.99999294440511222,
+      0.073950653507837791,
+      -0.16727033442687997
+    ]
+  ],
+  "sg_str_names_checked": [
+    [
+      "omega_ts_G1",
+      "delta_ts_G1",
+      "Pe_ts_G1"
+    ],
+    [
+      "omega_ts_G2",
+      "delta_ts_G2",
+      "Pe_ts_G2"
+    ],
+    [
+      "omega_ts_G3",
+      "delta_ts_G3",
+      "Pe_ts_G3"
+    ]
+  ],
+  "sg_present": [
+    [
+      true,
+      true,
+      true
+    ],
+    [
+      true,
+      true,
+      true
+    ],
+    [
+      true,
+      true,
+      true
+    ]
+  ],
+  "sg_finite": [
+    [
+      true,
+      true,
+      true
+    ],
+    [
+      true,
+      true,
+      true
+    ],
+    [
+      true,
+      true,
+      true
+    ]
+  ],
+  "sg_values_at_t_end": [
+    [
+      1.0022270059839078,
+      0.9065763025429181,
+      7.6453053822211867
+    ],
+    [
+      1.0016700723082252,
+      0.85571185357036528,
+      7.7510813793017572
+    ],
+    [
+      0.9992113123987385,
+      0.41913967535667979,
+      7.8315581843381024
+    ]
+  ],
+  "legacy_es_names_must_be_absent": [
+    "omega_ts_ES1",
+    "omega_ts_ES2",
+    "omega_ts_ES3",
+    "omega_ts_ES4"
+  ],
+  "legacy_present": [
+    false,
+    false,
+    false,
+    false
+  ],
+  "helper_omega": [
+    0.99690506640386334,
+    0.99996996779042657,
+    1.000765472387968,
+    1.0000755915291741
+  ],
+  "helper_Pe": [
+    0.09998291701951742,
+    -0.36763419874743863,
+    -0.067017547562826643,
+    -0.5811172878575207
+  ],
+  "helper_delta_rad": [
+    0.55248095119210183,
+    0.02702861719540231,
+    0.15621292285540608,
+    0.0097313992139262361
+  ],
+  "helper_status_success": true,
+  "gates": {
+    "ess_all_present": true,
+    "ess_all_finite": true,
+    "sg_all_present": true,
+    "sg_all_finite": true,
+    "legacy_absent": true,
+    "helper_round_trip_ok": true,
+    "all_pass": true
+  }
+}

@@ -597,21 +597,44 @@ for s = 1:n_src
     add_line(mdl, ['RI2C_' sname '/1'], [cvs '/1']);
 
     % --- ToWorkspace loggers (bounded to 2 samples) ---
+    %
+    % P3.0b interface fix (2026-04-26): align ESS logger VariableName with the
+    % shared CVS step helper contract. slx_helpers/vsg_bridge/slx_step_and_read_cvs.m
+    % hardcodes simOut.get(sprintf('omega_ts_%d', idx)) for agent_ids 1..n_agents.
+    % The previous v3 build emitted 'omega_ts_ES1..ES4' (string suffix),
+    % which the helper's %d format cannot retrieve, returning empty → bridge
+    % returned zero state. ESS loggers now emit integer suffixes 1..4.
+    %
+    % Block paths (W_omega_<sname>) keep the descriptive suffix for in-model
+    % readability — only the VariableName field (which controls simOut access)
+    % changes. SG / wind loggers keep their string suffix because the helper
+    % does not consume them (they are diagnostic-only).
+    if strcmp(stype, 'ess')
+        ess_idx = sscanf(sname, 'ES%d');
+        var_omega = sprintf('omega_ts_%d', ess_idx);
+        var_delta = sprintf('delta_ts_%d', ess_idx);
+        var_pe    = sprintf('Pe_ts_%d',    ess_idx);
+    else
+        var_omega = sprintf('omega_ts_%s', sname);
+        var_delta = sprintf('delta_ts_%s', sname);
+        var_pe    = sprintf('Pe_ts_%s',    sname);
+    end
+
     add_block('simulink/Sinks/To Workspace', [mdl '/W_omega_' sname], ...
         'Position', [bx-150 cy+45 bx-110 cy+60], ...
-        'VariableName', sprintf('omega_ts_%s', sname), 'SaveFormat', 'Timeseries', ...
+        'VariableName', var_omega, 'SaveFormat', 'Timeseries', ...
         'MaxDataPoints', '2');
     add_line(mdl, [intW '/1'], ['W_omega_' sname '/1']);
 
     add_block('simulink/Sinks/To Workspace', [mdl '/W_delta_' sname], ...
         'Position', [bx-150 cy-45 bx-110 cy-30], ...
-        'VariableName', sprintf('delta_ts_%s', sname), 'SaveFormat', 'Timeseries', ...
+        'VariableName', var_delta, 'SaveFormat', 'Timeseries', ...
         'MaxDataPoints', '2');
     add_line(mdl, [intD '/1'], ['W_delta_' sname '/1']);
 
     add_block('simulink/Sinks/To Workspace', [mdl '/W_Pe_' sname], ...
         'Position', [bx+450 cy+145 bx+490 cy+165], ...
-        'VariableName', sprintf('Pe_ts_%s', sname), 'SaveFormat', 'Timeseries', ...
+        'VariableName', var_pe, 'SaveFormat', 'Timeseries', ...
         'MaxDataPoints', '2');
     add_line(mdl, ['Pe_pu_' sname '/1'], ['W_Pe_' sname '/1']);
 end

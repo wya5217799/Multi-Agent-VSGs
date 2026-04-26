@@ -697,16 +697,34 @@ class KundurSimulinkEnv(_KundurBaseEnv):
         # Pm_step_amp_<i> / Pm_step_t_<i> Constants already wired in
         # build_kundur_cvs.m L257-290.
         if cfg.model_name == 'kundur_cvs':
-            amp_per_vsg_pu = float(magnitude) * 100e6 / cfg.n_agents / cfg.sbase_va
+            # Asymmetric Pm step (2026-04-26 minimal-path change after 50ep
+            # symmetric baseline kundur_simulink_20260426_142847 showed r_f
+            # identically 0): paper r_f = -Σ(Δω_i - local_mean)^2 vanishes
+            # under fully symmetric disturbance + symmetric CVS v2 topology.
+            # Apply the full magnitude to a configurable subset of VSGs
+            # (default DISTURBANCE_VSG_INDICES=(0,) → VSG1 only) so ω_i
+            # diverges across nodes and r_f carries a learning signal.
+            #
+            # Total Pm injection is unchanged vs the previous symmetric path:
+            #   old: 4 × (magnitude/4)  =  magnitude  (spread)
+            #   new: |targets| × (magnitude/|targets|) = magnitude  (focused)
+            target_indices = tuple(getattr(self, 'DISTURBANCE_VSG_INDICES', (0,)))
+            n_tgt = max(len(target_indices), 1)
+            amp_focused_pu = float(magnitude) * 100e6 / n_tgt / cfg.sbase_va
             t_now = float(self.bridge.t_current)
-            for i in range(1, cfg.n_agents + 1):
-                self.bridge.apply_workspace_var(f'Pm_step_t_{i}',   t_now)
-                self.bridge.apply_workspace_var(f'Pm_step_amp_{i}', amp_per_vsg_pu)
+            amps_per_vsg = [0.0] * cfg.n_agents
+            for idx in target_indices:
+                if 0 <= idx < cfg.n_agents:
+                    amps_per_vsg[idx] = amp_focused_pu
+            for i in range(cfg.n_agents):
+                self.bridge.apply_workspace_var(f'Pm_step_t_{i+1}',   t_now)
+                self.bridge.apply_workspace_var(f'Pm_step_amp_{i+1}', amps_per_vsg[i])
             sign = 'increase' if magnitude > 0 else 'decrease'
             print(
-                f"[Kundur-Simulink-CVS] Pm step {sign}: per-VSG amp="
-                f"{amp_per_vsg_pu:+.4f} pu (magnitude={float(magnitude):+.3f}), "
-                f"step_time={t_now:.4f}s"
+                f"[Kundur-Simulink-CVS] Pm step {sign} targets VSG"
+                f"{list(target_indices)}: amp={amp_focused_pu:+.4f} pu "
+                f"(magnitude={float(magnitude):+.3f}), step_time={t_now:.4f}s, "
+                f"per_vsg_amps={[f'{a:+.3f}' for a in amps_per_vsg]}"
             )
             return
 

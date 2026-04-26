@@ -76,6 +76,23 @@ COMM_ADJ = {0: [1, 3], 1: [0, 2], 2: [1, 3], 3: [2, 0]}
 # PHI_F: Paper Table I uses PHI_F=100 for all experiments (φ_f=100, φ_h=1, φ_d=1).
 PHI_F = 100.0
 
+# Kundur-only PHI_H/PHI_D override (2026-04-26 reward-scale gate after asym
+# 50ep observation kundur_simulink_20260426_144431 showed r_f% ≈ 0.0005% with
+# Q7 H/D dimension issue making r_h ~ -300 / r_d ~ -70 dominate. With M0=24
+# D0=4.5 the |ΔH_avg|² and |ΔD_avg|² magnitudes are ~10^4 and ~10^2 larger
+# than what φ_h=φ_d=1 paper baseline assumes (paper does not specify H/D
+# dimensions — see docs/paper/yang2023-fact-base.md §2.1 Q7). Scaling
+# φ_h=φ_d=0.001 brings r_h/r_d into the same order as r_f, restoring the
+# paper's intended reward weighting (r_f leading by PHI_F factor). NE39 is
+# untouched: this override is local to this module.
+# Plan B1 (2026-04-26): PHI_H=PHI_D=0.001 produced r_f% mean 0.47% on the
+# 50ep PHI-gate run kundur_simulink_20260426_150848 — well below the 1% floor.
+# Math: r_f abs_mean ≈ 1.7e-3, r_h ≈ 0.293, r_d ≈ 0.080 → r_f / total ≈ 0.45%.
+# Drop another decade to bring r_f% into the 3%-8% target band:
+#   r_h ≈ 0.029, r_d ≈ 0.008 → predicted r_f% ≈ 1.7e-3/(1.7e-3+0.029+0.008) ≈ 4.4%.
+PHI_H = 0.0001
+PHI_D = 0.0001
+
 # ========== Electrical Network ==========
 # Full 16-bus Modified Kundur topology is in the Simulink model.
 # B_MATRIX below is for the KundurStandaloneEnv (4-bus Kron-reduced ODE).

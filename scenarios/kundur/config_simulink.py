@@ -28,7 +28,7 @@ from pathlib import Path
 from scenarios.kundur.model_profile import load_kundur_model_profile
 
 DEFAULT_KUNDUR_MODEL_PROFILE = (
-    Path(__file__).resolve().parent / "model_profiles" / "kundur_ee_legacy.json"
+    Path(__file__).resolve().parent / "model_profiles" / "kundur_cvs.json"
 )
 
 
@@ -90,6 +90,26 @@ B_MATRIX = np.array([
 _ic = load_kundur_ic()
 VSG_P0_VSG_BASE: np.ndarray = np.asarray(_ic.vsg_p0_vsg_base_pu, dtype=np.float64)  # shape (4,)
 VSG_P0_SBASE: np.ndarray = _ic.to_sbase_pu(vsg_sn_mva=VSG_SN, sbase_mva=SBASE)
+
+# Promotion 2026-04-26 — CVS profile uses self-contained 4-VSG topology
+# (kundur_ic_cvs.json, no INF). Its Pm0 = 0.2 system-pu/VSG (4*0.2 = 0.8 = total
+# load) is incompatible with the legacy kundur_ic.json (Pm0_sys = 0.05 paper
+# baseline absorbed by INF). Override the bridge's pe0_default_vsg source so
+# warmup writes the right Pm into MATLAB Pm_i constants and matches the NR
+# IC's delta0 — otherwise every episode reset starts from a non-equilibrium
+# point with Pm/Pe mismatch. Bridge code is NOT touched; only the value
+# fed into BridgeConfig.pe0_default_vsg (units: system-pu — bridge passes
+# them straight into kundur_cvs_ip.Pm0_pu without rescaling).
+if KUNDUR_MODEL_PROFILE.model_name == 'kundur_cvs':
+    import json as _json
+    _cvs_ic_path = Path(__file__).resolve().parent / 'kundur_ic_cvs.json'
+    with _cvs_ic_path.open(encoding='utf-8') as _f:
+        _cvs_ic_raw = _json.load(_f)
+    VSG_PE0_DEFAULT_SYS = np.asarray(_cvs_ic_raw['vsg_pm0_pu'], dtype=np.float64)
+    VSG_DELTA0_RAD = np.asarray(_cvs_ic_raw['vsg_internal_emf_angle_rad'], dtype=np.float64)
+else:
+    VSG_PE0_DEFAULT_SYS = VSG_P0_SBASE
+    VSG_DELTA0_RAD = np.asarray(_ic.vsg_delta0_deg, dtype=np.float64) * np.pi / 180.0
 
 # Load (original Kundur values, for reference)
 LOAD_BUS7_MW = 967.0
@@ -184,15 +204,21 @@ KUNDUR_BRIDGE_CONFIG = BridgeConfig(
     m_var_template='M_{idx}' if KUNDUR_MODEL_PROFILE.model_name == 'kundur_cvs' else 'M0_val_ES{idx}',
     d_var_template='D_{idx}' if KUNDUR_MODEL_PROFILE.model_name == 'kundur_cvs' else 'D0_val_ES{idx}',
     m0_default=24.0 if KUNDUR_MODEL_PROFILE.model_name == 'kundur_cvs' else 12.0,
-    d0_default=18.0 if KUNDUR_MODEL_PROFILE.model_name == 'kundur_cvs' else 3.0,
+    # Promotion 2026-04-26: CVS d0 lowered 18.0 -> 4.5 to escape over-damping.
+    # Dry-run verdict in results/harness/kundur/cvs_v2_dryrun/verdict.md.
+    # With DD_MIN/DD_MAX = [-1.5, +4.5] this gives D_runtime ∈ [3.0, 9.0],
+    # the H-sensitive band where dry-run probes confirmed RL learnability.
+    d0_default=4.5 if KUNDUR_MODEL_PROFILE.model_name == 'kundur_cvs' else 3.0,
     pe_feedback_signal='PeFb_ES{idx}',   # PeGain_ES{idx} output, VSG-base pu
     # Dynamic Load disturbance: per-phase W stored in base workspace.
     # Bus14: TripLoad1_P = 248/3 MW per phase (nominal load on).
     # Bus15: TripLoad2_P = 0 W (nominal load off; set to 188/3 MW on disturbance).
     tripload1_p_default=248e6 / 3,       # ~82.67 MW per phase
     tripload2_p_default=0.0,             # Bus15 off at episode start
-    pe0_default_vsg=tuple(VSG_P0_VSG_BASE.tolist()),  # per-agent VSG-base pu
-    delta0_deg=tuple(_ic.vsg_delta0_deg),             # rotor angle ICs [deg]; seeds 6-arg warmup
+    # Promotion 2026-04-26: CVS uses kundur_ic_cvs.json system-pu Pm0 (=0.2).
+    # Legacy profiles still use the powerlib kundur_ic.json VSG-base value.
+    pe0_default_vsg=tuple(VSG_PE0_DEFAULT_SYS.tolist()),
+    delta0_deg=tuple((VSG_DELTA0_RAD * 180.0 / np.pi).tolist()),  # rotor angle ICs [deg]
     # absolute_with_loadflow mode: init_phang offsets the post-warmup phAng update.
     # For Kundur SPS the phAng is the rotor angle directly (no bus-angle offset),
     # so init_phang = (0, ...) → formula reduces to ph = delta_clipped.

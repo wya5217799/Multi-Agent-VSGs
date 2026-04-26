@@ -1,18 +1,30 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "source": "compute_kundur_cvs_powerflow",
-  "source_hash": "sha256:c63055590dcaeeeb8c4e8c54440e356edad00d453f88a79e055888688ca2263a",
-  "timestamp": "2026-04-25T22:00:02+08:00",
+  "source_hash": "sha256:278f14277f6654d5b2734c88b052f6a820f140bbadc4c699665a8e2079bf73f6",
+  "timestamp": "2026-04-26T14:20:06+08:00",
+  "topology_variant": "v2_no_inf_bus",
   "powerflow": {
     "converged": true,
-    "max_mismatch_pu": 3.5623194578136988E-15,
-    "iterations": 5
+    "max_mismatch_pu": 3.8540250960179518E-14,
+    "iterations": 4,
+    "closure_ok": true,
+    "closure_residual_pu": 0.00031987251208742684,
+    "closure_tolerance_pu": 0.001,
+    "closure_residual_origin": "const_z_load_v_squared_effect"
+  },
+  "global_balance": {
+    "total_Pm_pu": 0.8,
+    "total_load_pu_at_v1": 0.8,
+    "pre_residual_pu": 0,
+    "actual_load_at_solved_v_pu": 0.79968012748791262,
+    "no_hidden_slack": true
   },
   "vsg_internal_emf_angle_rad": [
-    0.29392178718956424,
-    0.29392178718956424,
-    0.1106660725964049,
-    0.1106660725964049
+    0,
+    3.2000037159588447E-5,
+    8.0033704970699083E-5,
+    8.0033704970699083E-5
   ],
   "vsg_terminal_voltage_mag_pu": [
     1,
@@ -21,58 +33,54 @@
     1
   ],
   "vsg_terminal_voltage_angle_rad": [
-    0.29392178718956424,
-    0.29392178718956424,
-    0.1106660725964049,
-    0.1106660725964049
+    0,
+    3.2000037159588447E-5,
+    8.0033704970699083E-5,
+    8.0033704970699083E-5
   ],
   "vsg_pm0_pu": [
-    0.5,
-    0.5,
-    0.5,
-    0.5
+    0.2,
+    0.2,
+    0.2,
+    0.2
   ],
   "vsg_pe_target_pu": [
-    0.5,
-    0.5,
-    0.5,
-    0.5
+    0.2,
+    0.2,
+    0.2,
+    0.2
   ],
   "bus_voltages": {
     "Bus_V1": {
       "v_mag_pu": 1,
-      "v_ang_rad": 0.29392178718956424
+      "v_ang_rad": 0
     },
     "Bus_V2": {
       "v_mag_pu": 1,
-      "v_ang_rad": 0.29392178718956424
+      "v_ang_rad": 3.2000037159588447E-5
     },
     "Bus_V3": {
       "v_mag_pu": 1,
-      "v_ang_rad": 0.1106660725964049
+      "v_ang_rad": 8.0033704970699083E-5
     },
     "Bus_V4": {
       "v_mag_pu": 1,
-      "v_ang_rad": 0.1106660725964049
+      "v_ang_rad": 8.0033704970699083E-5
     },
     "Bus_A": {
-      "v_mag_pu": 0.9961062321655777,
-      "v_ang_rad": 0.24370523522669624
+      "v_mag_pu": 0.99980017965603318,
+      "v_ang_rad": -0.019973331541674081
     },
     "Bus_B": {
-      "v_mag_pu": 0.99699306079198013,
-      "v_ang_rad": 0.06049422595665209
-    },
-    "Bus_INF": {
-      "v_mag_pu": 1,
-      "v_ang_rad": 0
+      "v_mag_pu": 0.999799939727714,
+      "v_ang_rad": -0.01992530267530955
     }
   },
   "x_v_pu": 0.1,
   "x_tie_pu": 0.3,
-  "x_inf_pu": 0.05,
   "physical_invariants_checked": [
     "p_balance_per_bus",
+    "global_balance_no_hidden_slack",
     "pv_bus_ang_eq_internal_delta"
   ]
 }

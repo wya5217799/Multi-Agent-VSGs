@@ -1,34 +1,41 @@
 function build_kundur_cvs()
-% build_kundur_cvs  Self-contained 4-VSG CVS Phasor topology aligned with
-% Yang TPWRS 2023 Eq.(4) (Kron-reduced N-node swing network with no
-% external grounding).
+% build_kundur_cvs  Stage 2 D2 — full 7-bus Kundur CVS Phasor model
+% with per-VSG swing-equation closure, fed by NR initial condition.
 %
-% Promoted on 2026-04-26 from the v2 dry-run after probes verified
-% physical correctness (see results/harness/kundur/cvs_v2_dryrun/
-% verdict.md). The previous infinite-bus variant is preserved at
-% scenarios/kundur/simulink_models/build_kundur_cvs_v1_legacy.m.
+% Topology (unchanged from D1, see Stage 2 Day 1 verdict):
+%   7 buses : Bus_V1..V4 (driven CVS terminals), Bus_A, Bus_B (junctions
+%             with constant-impedance load), Bus_INF (AC Voltage Source).
+%   Branches : L_v_1..4 (X=0.10 pu), L_tie (0.30 pu), L_inf (0.05 pu).
+%   Loads    : Load_A, Load_B (R-only, Y-shunt model in NR).
 %
-% Differences vs v1_legacy (which had AC_INF + L_inf):
-%   - REMOVED    : AC_INF (AC Voltage Source), GND_INF, L_inf (Series RLC L)
-%   - REMOVED    : the L_tie/RConn1 -> L_inf/LConn1 line
-%   - Pm0 set    : 0.2 pu/VSG (so 4*0.2=0.8 pu = total load; no slack)
-%   - PRESERVED  : 4 CVS clusters, 4 swing-equation closures, L_v_1..4,
-%                  L_tie, Load_A, Load_B, all loggers (omega/delta/Pe ts),
-%                  Pm step disturbance gating, base-ws variable scheme.
+% New in D2 (vs D1 structural-only build):
+%   - Reads kundur_ic_cvs.json (Newton-Raphson initial condition) for
+%     delta0_i / V_mag_i / Pm0_i. Hand-calc is forbidden in P4 by plan §3.
+%   - Adds per-VSG swing equation closure (IntW + IntD + cos/sin + RI2C),
+%     wired to a Pe measurement (V·conj(I)·0.5/Sbase pu) at each terminal.
+%   - To-workspace loggers omega_ts_i / delta_ts_i / Pe_ts_i (Timeseries).
+%   - Per-agent base-ws variables M_i / D_i / Pm_i / delta0_i / Vmag_i
+%     so that downstream resets / D3+ gates can mutate them per episode.
 %
-% Topology (5 buses, 5 lines):
-%   Bus_V1..V4 : driven CVS terminals (PV in NR)
-%   Bus_A      : VSG1+VSG2 junction with Load_A (R-only)
-%   Bus_B      : VSG3+VSG4 junction with Load_B (R-only)
-%   L_v_1..4   : VSG-to-junction reactances (X=0.10 pu)
-%   L_tie      : Bus_A <-> Bus_B reactance (X=0.30 pu)
+% Engineering contracts honored (cvs_design.md):
+%   H1 driven CVS  : Source_Type=DC, Initialize=off, Measurements=None
+%   H2 CVS input   : RI2C(double, double) — uniform across all 4 VSGs
+%   H3 inf-bus     : powerlib AC Voltage Source (no inport)
+%   H4 solver      : powergui Phasor 50 Hz, ode23t variable, MaxStep=0.005
+%   H5 base ws     : every numeric forced to double()
+%   D-CVS-9/10/11  : DC + Initialize=off ; AC src for inf-bus ; double types
+%
+% NOT in scope for D2:
+%   - Disturbance injection (D4/Gate 2)
+%   - 30 s zero-action stability (D3/Gate 1)
+%   - SAC / RL training (Gate 3)
 
 mdl = 'kundur_cvs';
 out_dir   = fileparts(mfilename('fullpath'));
 out_slx   = fullfile(out_dir, [mdl '.slx']);
 ic_path   = fullfile(fileparts(out_dir), 'kundur_ic_cvs.json');
 
-% ---- Read NR initial condition ----
+% ---- Read NR initial condition (plan §3: hand-calc forbidden after D1) ----
 ic_text = fileread(ic_path);
 ic = jsondecode(ic_text);
 delta0_rad = double(ic.vsg_internal_emf_angle_rad(:));
@@ -36,10 +43,6 @@ v_mag_pu   = double(ic.vsg_terminal_voltage_mag_pu(:));
 Pm0_pu     = double(ic.vsg_pm0_pu(:));
 assert(numel(delta0_rad) == 4, 'kundur_ic_cvs.json must have 4 VSG entries');
 assert(ic.powerflow.converged, 'kundur_ic_cvs.json reports NR did not converge');
-assert(ic.powerflow.closure_ok, ...
-    'kundur_ic_cvs.json reports closure check FAILED — refusing to build');
-assert(strcmp(ic.topology_variant, 'v2_no_inf_bus'), ...
-    'IC topology_variant must be "v2_no_inf_bus" — refusing to build legacy INF topology against current build script');
 
 % ---- Physical parameters (force double per H5) ----
 fn       = 50;
@@ -50,64 +53,98 @@ Zbase    = double(Vbase^2 / Sbase);
 
 X_v_pu   = 0.10;
 X_tie_pu = 0.30;
+X_inf_pu = 0.05;
 
 L_v_H    = double(X_v_pu   * Zbase / wn);
 L_tie_H  = double(X_tie_pu * Zbase / wn);
+L_inf_H  = double(X_inf_pu * Zbase / wn);
 
+% ---- Constant-impedance loads (R-only, single-phase phasor) ----
 P_loadA_pu = 0.4;
 P_loadB_pu = 0.4;
-R_loadA = double(Vbase^2 / (P_loadA_pu * Sbase));
-R_loadB = double(Vbase^2 / (P_loadB_pu * Sbase));
+R_loadA = double(Vbase^2 / (P_loadA_pu * Sbase));   % Ohm
+R_loadB = double(Vbase^2 / (P_loadB_pu * Sbase));   % Ohm
 
-% Promotion 2026-04-26: D0 lowered from 18.0 to 4.5 (paper-feasible mid-range
-% damping). Dry-run probes (results/harness/kundur/cvs_v2_dryrun/verdict.md)
-% showed at D=18 the system is fully over-damped (df = ΔP/(N·D) = 0.139 Hz
-% steady-state; H has zero effect on df peak; only ROCOF reflects H). The
-% RL target ranges from config_simulink.py give DD ∈ [-1.5, +4.5]; with
-% D0=4.5 → D ∈ [3.0, 9.0], spanning the dry-run-validated H-sensitive band
-% (D=3 gave H6/H30 df ratio 1.53x and ROCOF ratio 5x). M0=24 retained.
+% ---- VSG defaults ----
+% Project paper-baseline (per D4.2 audit + plan-author decision 2026-04-26):
+%   H_ES0 = 24, D_ES0 = 18  (config.py L32-33; modal calibration target
+%   omega_n ~ 0.6 Hz, zeta ~ 0.048 in the ANDES reduced-network model).
+%   With M = 2*H/omega_s and omega_s = 1 pu, M_pu = 2*H_pu = 48; here we use
+%   M0_default = 24 (i.e. M ~ H in the project's pu convention, matching the
+%   ANDES/ODE/Simulink-fallback path env/simulink/simulink_vsg_env.py L54-55).
+% Note: paper Yang TPWRS 2023 does NOT specify a numeric D0 or H0 baseline.
+%   The 24 / 18 pair is a project-side modal calibration target, not a paper
+%   value. The pre-D4.2 spike artefact (M0=12, D0=3 from build_kundur_cvs_p2.m
+%   / cvs_design.md D-CVS-6) gave zeta ~ 0.0077 — extreme under-damping that
+%   blocked any Gate 2 settle target. See:
+%     quality_reports/gates/2026-04-26_kundur_cvs_p4_d4p2_readonly_audit.md
 M0_default = 24.0;
-D0_default = 4.5;
+D0_default = 18.0;
 
 % ---- Reset model ----
 if bdIsLoaded(mdl), close_system(mdl, 0); end
 new_system(mdl);
 load_system('powerlib');
 
-% ---- powergui Phasor ----
+% ---- powergui Phasor (H4) ----
 add_block('powerlib/powergui', [mdl '/powergui'], 'Position', [20 20 100 60]);
 set_param([mdl '/powergui'], 'SimulationMode', 'Phasor', 'frequency', '50');
 set_param(mdl, 'StopTime', '0.5', 'SolverType', 'Variable-step', ...
     'Solver', 'ode23t', 'MaxStep', '0.005');
 
-% ---- Per-VSG and shared base-ws scalars ----
+% ---- Per-VSG and shared base-ws scalars (H5: every value double) ----
 for i = 1:4
     assignin('base', sprintf('M_%d',      i), double(M0_default));
     assignin('base', sprintf('D_%d',      i), double(D0_default));
     assignin('base', sprintf('Pm_%d',     i), double(Pm0_pu(i)));
     assignin('base', sprintf('delta0_%d', i), double(delta0_rad(i)));
     assignin('base', sprintf('Vmag_%d',   i), double(v_mag_pu(i) * Vbase));
+    % D4 disturbance gating (FR-tunable Constant path; default = no step):
+    %   Pm_step_t_i:   step time (s)        — Constant block driving Relational Operator
+    %   Pm_step_amp_i: step amplitude (pu)  — Constant block multiplied by step indicator
+    % Default amp = 0 → indicator irrelevant, no perturbation; equivalent to D3.
     assignin('base', sprintf('Pm_step_t_%d',   i), double(5.0));
     assignin('base', sprintf('Pm_step_amp_%d', i), double(0.0));
 end
 assignin('base', 'wn_const',    double(wn));
 assignin('base', 'Vbase_const', double(Vbase));
 assignin('base', 'Sbase_const', double(Sbase));
+% Pe_scale: in our pu convention NR computes P_pu = V_pu·conj(I_pu) directly
+% (no 0.5 factor). To match this, sim's Pe formula divides by Sbase only —
+% NOT by 2*Sbase. Verified by analytic NR-IC consistency (D2): with
+% Pe_scale=0.5/Sbase, sim's Pe_t0 = 0.25 pu while NR's P_inj = 0.5 pu (factor
+% 2 off, breaking the IC). With Pe_scale=1.0/Sbase, sim's Pe_t0 matches NR.
+% (P2's `0.5/Sbase` was a separate convention that worked only because the
+% closed swing-eq self-corrected δ to a different equilibrium — it produces
+% larger |δ|max than NR predicts and is not suitable as a verified IC.)
 assignin('base', 'Pe_scale',    double(1.0 / Sbase));
 assignin('base', 'L_v_H',       double(L_v_H));
 assignin('base', 'L_tie_H',     double(L_tie_H));
+assignin('base', 'L_inf_H',     double(L_inf_H));
 assignin('base', 'R_loadA',     double(R_loadA));
 assignin('base', 'R_loadB',     double(R_loadB));
 
-% ---- Inter-area tie ----
+% ---- Inter-area tie + anchor link ----
 add_block('powerlib/Elements/Series RLC Branch', [mdl '/L_tie'], ...
     'Position', [780 360 840 410]);
 set_param([mdl '/L_tie'], 'BranchType', 'L', 'Inductance', 'L_tie_H');
 
-% ---- DELETED in v2: AC_INF, GND_INF, L_inf, and the
-%      L_tie/RConn1 -> L_inf/LConn1 connection. Bus_B (= L_tie/RConn1)
-%      now floats as a self-contained PQ junction connected only to
-%      VSG3/VSG4 via L_v_3/L_v_4 and to Load_B.
+add_block('powerlib/Elements/Series RLC Branch', [mdl '/L_inf'], ...
+    'Position', [900 360 960 410]);
+set_param([mdl '/L_inf'], 'BranchType', 'L', 'Inductance', 'L_inf_H');
+
+% ---- Bus_INF (AC Voltage Source per D-CVS-10) ----
+add_block('powerlib/Electrical Sources/AC Voltage Source', ...
+    [mdl '/AC_INF'], 'Position', [1020 360 1080 410]);
+set_param([mdl '/AC_INF'], 'Amplitude', num2str(Vbase), ...
+    'Phase', '0', 'Frequency', '50');
+add_block('powerlib/Elements/Ground', [mdl '/GND_INF'], ...
+    'Position', [1020 440 1060 470]);
+add_line(mdl, 'AC_INF/RConn1', 'L_inf/RConn1', 'autorouting', 'smart');
+add_line(mdl, 'AC_INF/LConn1', 'GND_INF/LConn1', 'autorouting', 'smart');
+
+% ---- L_tie/RConn1 (= Bus_B node) ↔ L_inf/LConn1 ----
+add_line(mdl, 'L_tie/RConn1', 'L_inf/LConn1', 'autorouting', 'smart');
 
 % ---- Load_A on Bus_A ----
 add_block('powerlib/Elements/Series RLC Branch', [mdl '/Load_A'], ...
@@ -127,11 +164,18 @@ add_block('powerlib/Elements/Ground', [mdl '/GND_LB'], ...
 add_line(mdl, 'Load_B/RConn1', 'GND_LB/LConn1', 'autorouting', 'smart');
 add_line(mdl, 'L_tie/RConn1',  'Load_B/LConn1', 'autorouting', 'smart');
 
-% ---- Global clock for Pm-step disturbance gating ----
+% ---- Global clock for D4 disturbance step indicator (FR-tunable path) ----
+% Plan §2 E5: disturbance via base-ws Constant + comparator, NOT TripLoad.
+% 4 VSGs share one Clock; each VSG owns its (Pm_step_t_i, Pm_step_amp_i) consts.
 add_block('simulink/Sources/Clock', [mdl '/Clock_global'], ...
     'Position', [200 700 230 730], 'DisplayTime', 'off');
 
 % ---- 4 driven CVS clusters with full swing-equation closure ----
+% Layout per VSG:
+%   row i, cy = 80 + (i-1)*180
+%   bx = 1000 (CVS column anchor)
+%   left of bx: swing-eq + cos/sin/RI2C
+%   right of bx: Imeas + L_v + Vmeas + Pe (V*conj(I))
 for i = 1:4
     cy = 80 + (i-1)*180;
     bx = 1000;
@@ -174,14 +218,14 @@ for i = 1:4
     add_line(mdl, [cvs '/RConn1'],            ['Vmeas_' num2str(i) '/LConn1'], 'autorouting', 'smart');
     add_line(mdl, [cvs '/LConn1'],            ['Vmeas_' num2str(i) '/LConn2'], 'autorouting', 'smart');
 
-    % VSG1/VSG2 -> Bus_A; VSG3/VSG4 -> Bus_B
+    % VSG1, VSG2 -> Bus_A; VSG3, VSG4 -> Bus_B
     if i <= 2
         add_line(mdl, [Lv '/RConn1'], 'L_tie/LConn1', 'autorouting', 'smart');
     else
         add_line(mdl, [Lv '/RConn1'], 'L_tie/RConn1', 'autorouting', 'smart');
     end
 
-    % --- Pe = Re(V * conj(I)) / Sbase ---
+    % --- Pe = Re(V * conj(I)) * 0.5 / Sbase  (single-phase peak phasor) ---
     add_block('simulink/Math Operations/Complex to Real-Imag', ...
         [mdl '/V_RI_' num2str(i)], 'Position', [bx+220 cy+110 bx+260 cy+150]);
     set_param([mdl '/V_RI_' num2str(i)], 'Output', 'Real and imag');
@@ -211,7 +255,9 @@ for i = 1:4
         'Position', [bx+400 cy+140 bx+440 cy+170], 'Gain', 'Pe_scale');
     add_line(mdl, ['PSum_' num2str(i) '/1'], ['Pe_pu_' num2str(i) '/1']);
 
-    % --- Pm step gating (FR-tunable; default amp=0 = no perturbation) ---
+    % --- Pm step gating (FR-tunable path; D4 Gate 2 disturbance) ---
+    % step_pulse_i(t) = (t >= Pm_step_t_i ? 1 : 0) * Pm_step_amp_i
+    % Pm_total_i      = Pm_i_c + step_pulse_i
     add_block('simulink/Sources/Constant', [mdl '/Pm_step_t_c_' num2str(i)], ...
         'Position', [bx-560 cy+130 bx-520 cy+150], ...
         'Value', sprintf('Pm_step_t_%d', i));
@@ -299,37 +345,30 @@ for i = 1:4
     add_line(mdl, [ri2c '/1'], [cvs '/1']);
 
     % --- ToWorkspace loggers ---
-    %
-    % Bound buffer at 2 samples (LimitDataPoints='on', MaxDataPoints='2'):
-    % step extraction reads only data(end) and data(end-1) (for rocof
-    % backward difference). Without the cap, Timeseries grow O(t_stop) per
-    % step and the simOut.get() IPC return cost dominates per-step latency
-    % on long episodes. Cap is enforced by build for new .slx; existing
-    % .slx files get patched at runtime by slx_episode_warmup_cvs.m on
-    % do_recompile=true.
     add_block('simulink/Sinks/To Workspace', [mdl '/W_omega_' num2str(i)], ...
         'Position', [bx-150 cy+45 bx-110 cy+60], ...
-        'VariableName', sprintf('omega_ts_%d', i), 'SaveFormat', 'Timeseries', ...
-        'LimitDataPoints', 'on', 'MaxDataPoints', '2');
+        'VariableName', sprintf('omega_ts_%d', i), 'SaveFormat', 'Timeseries');
     add_line(mdl, [intW '/1'], ['W_omega_' num2str(i) '/1']);
 
     add_block('simulink/Sinks/To Workspace', [mdl '/W_delta_' num2str(i)], ...
         'Position', [bx-150 cy-45 bx-110 cy-30], ...
-        'VariableName', sprintf('delta_ts_%d', i), 'SaveFormat', 'Timeseries', ...
-        'LimitDataPoints', 'on', 'MaxDataPoints', '2');
+        'VariableName', sprintf('delta_ts_%d', i), 'SaveFormat', 'Timeseries');
     add_line(mdl, [intD '/1'], ['W_delta_' num2str(i) '/1']);
 
     add_block('simulink/Sinks/To Workspace', [mdl '/W_Pe_' num2str(i)], ...
         'Position', [bx+450 cy+145 bx+490 cy+165], ...
-        'VariableName', sprintf('Pe_ts_%d', i), 'SaveFormat', 'Timeseries', ...
-        'LimitDataPoints', 'on', 'MaxDataPoints', '2');
+        'VariableName', sprintf('Pe_ts_%d', i), 'SaveFormat', 'Timeseries');
     add_line(mdl, ['Pe_pu_' num2str(i) '/1'], ['W_Pe_' num2str(i) '/1']);
 end
 
 % ---- Save ----
 save_system(mdl, out_slx);
 
-% Persist non-tunable runtime constants to sidecar .mat for fast resets.
+% A3 (G3-prep-E-fix): persist non-tunable runtime constants to sidecar .mat.
+% slx_episode_warmup_cvs.m loads this on every reset so a fresh MATLAB session
+% can sim without first running build_kundur_cvs.m. Only build-time scalars
+% are saved here; per-VSG tunables (M_i, D_i, Pm_i, delta0_i, Pm_step_*_i)
+% remain owned by _warmup_cvs and overwritten every episode.
 runtime_consts             = struct();
 runtime_consts.wn_const    = double(wn);
 runtime_consts.Vbase_const = double(Vbase);
@@ -337,6 +376,7 @@ runtime_consts.Sbase_const = double(Sbase);
 runtime_consts.Pe_scale    = double(1.0 / Sbase);
 runtime_consts.L_v_H       = double(L_v_H);
 runtime_consts.L_tie_H     = double(L_tie_H);
+runtime_consts.L_inf_H     = double(L_inf_H);
 runtime_consts.R_loadA     = double(R_loadA);
 runtime_consts.R_loadB     = double(R_loadB);
 for i = 1:4
@@ -346,7 +386,7 @@ runtime_mat = fullfile(out_dir, 'kundur_cvs_runtime.mat');
 save(runtime_mat, '-struct', 'runtime_consts');
 
 fprintf('RESULT: kundur_cvs.slx saved at %s\n', out_slx);
-fprintf('RESULT: 5-bus self-contained topology (no INF) + 4 swing-eq closures\n');
+fprintf('RESULT: 7-bus topology + 4 swing-eq closures (D2)\n');
 fprintf('RESULT: NR IC delta0 (rad) = [%.4f %.4f %.4f %.4f]\n', delta0_rad);
 fprintf('RESULT: NR IC Pm0   (pu)  = [%.4f %.4f %.4f %.4f]\n', Pm0_pu);
 fprintf('RESULT: NR IC Vmag  (pu)  = [%.4f %.4f %.4f %.4f]\n', v_mag_pu);

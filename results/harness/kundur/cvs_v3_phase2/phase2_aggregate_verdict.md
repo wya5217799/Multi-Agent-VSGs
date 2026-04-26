@@ -153,3 +153,17 @@ scenarios/kundur/simulink_models/
 C is acceptable as a "let RL be the judge" stance but loses the chance to catch model issues before training compute is committed.
 
 Halt for user choice.
+
+---
+
+## 9. Addendum 2026-04-26 — P2.5c result (commit `805c6b6`)
+
+Option B was executed. Coordinated all-ESS D sweep (D_1..4 ∈ {1.5, 7.5}) → τ ratio = **1.444** (vs single-source 1.44, improvement 1.00× — **no change**). See [`phase2_p25c_multisource_D_verdict.md`](phase2_p25c_multisource_D_verdict.md).
+
+**P2.5b-L1 single-source-coupling hypothesis falsified.** Corrected explanation: the 3 SG (G1/G2/G3 with D = 5 fixed gen-pu, large M = 12–13 gen-base) provide the dominant modal damping authority. The 4 ESS group, even with coordinated 5× D variation, can only modulate ~25–30 % of total damping. Heuristic mode-shape analysis predicts τ ratio in [1.3, 1.7]; observed 1.444 fits.
+
+**D-axis remains CONDITIONAL PASS** per user policy (τ ratio not in [3, 10]). The CONDITIONAL is now better understood as a **paper-consistent SG-dominated damping property**, not a model defect or single-source coupling artifact. Yang TPWRS 2023 §II explicitly frames VSG ESS as **supplementary** frequency support, with SG providing dominant inertia — v3 reproduces this hierarchy correctly.
+
+**RL-readiness implication (NEW):** H is the primary action lever (P2.5a 4.86×); D is a secondary / marginal lever bounded by the SG damping floor. Phase 4 reward shaping should consider asymmetric `PHI_H > PHI_D` (e.g. PHI_H = 1e-3, PHI_D = 1e-4 starting hypothesis) to reflect the asymmetric authority — current B1 baseline `PHI_H = PHI_D = 1e-4` treats them symmetrically and may be sub-optimal.
+
+**Phase 3 remains allowed.** P2.5c does not block downstream work; it informs reward design.

@@ -1,0 +1,48 @@
+{
+  "probe": "p25c_d_multisource_decay",
+  "model": "kundur_cvs_v3",
+  "controlled_src": "ES1 (Pm step injection)",
+  "observed_src": "ES1 omega trajectory",
+  "t_step_s": 35,
+  "amp_step_sys_pu": 0.2,
+  "M_fixed": 24,
+  "D_sweep_all_ESS": [
+    1.5,
+    7.5
+  ],
+  "tau_per_D_s": [
+    4.2680840225098695,
+    2.9555675454022556
+  ],
+  "tau_R2_per_D": [
+    0.9955249604520594,
+    0.99660462967446428
+  ],
+  "n_peaks_per_D": [
+    30,
+    28
+  ],
+  "first_peak_per_D": [
+    0.0014054565642260819,
+    0.0013611491005198761
+  ],
+  "tau_ratio": 1.4440827208125873,
+  "expected_ratio": 5,
+  "tolerance_band": [
+    3,
+    10
+  ],
+  "prior_single_source_ratio": 1.44,
+  "coordinated_improvement_factor": 1.0028352227865189,
+  "gates": {
+    "tau_ratio_in_band": false,
+    "r2_above_0p7": true,
+    "above_noise_3plus_peaks": true,
+    "all_pass": false
+  },
+  "gate_def": {
+    "metric": "tau via log-linear fit on cycle-peak envelope of |omega_ES1 - 1| post-step",
+    "expected": "all-ESS coordinated D sweep recovers tau ratio closer to simple-oscillator M/D = 5",
+    "tolerance": "[3, 10]"
+  }
+}

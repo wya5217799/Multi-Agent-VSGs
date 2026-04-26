@@ -345,19 +345,30 @@ for i = 1:4
     add_line(mdl, [ri2c '/1'], [cvs '/1']);
 
     % --- ToWorkspace loggers ---
+    %
+    % Bound buffer at 2 samples (LimitDataPoints='on', MaxDataPoints='2'):
+    % step extraction reads only data(end) and data(end-1) (for rocof
+    % backward difference). Without the cap, Timeseries grow O(t_stop) per
+    % step and the simOut.get() IPC return cost dominates per-step latency
+    % on long episodes. Cap is enforced by build for new .slx; existing
+    % .slx files get patched at runtime by slx_episode_warmup_cvs.m on
+    % do_recompile=true.
     add_block('simulink/Sinks/To Workspace', [mdl '/W_omega_' num2str(i)], ...
         'Position', [bx-150 cy+45 bx-110 cy+60], ...
-        'VariableName', sprintf('omega_ts_%d', i), 'SaveFormat', 'Timeseries');
+        'VariableName', sprintf('omega_ts_%d', i), 'SaveFormat', 'Timeseries', ...
+        'LimitDataPoints', 'on', 'MaxDataPoints', '2');
     add_line(mdl, [intW '/1'], ['W_omega_' num2str(i) '/1']);
 
     add_block('simulink/Sinks/To Workspace', [mdl '/W_delta_' num2str(i)], ...
         'Position', [bx-150 cy-45 bx-110 cy-30], ...
-        'VariableName', sprintf('delta_ts_%d', i), 'SaveFormat', 'Timeseries');
+        'VariableName', sprintf('delta_ts_%d', i), 'SaveFormat', 'Timeseries', ...
+        'LimitDataPoints', 'on', 'MaxDataPoints', '2');
     add_line(mdl, [intD '/1'], ['W_delta_' num2str(i) '/1']);
 
     add_block('simulink/Sinks/To Workspace', [mdl '/W_Pe_' num2str(i)], ...
         'Position', [bx+450 cy+145 bx+490 cy+165], ...
-        'VariableName', sprintf('Pe_ts_%d', i), 'SaveFormat', 'Timeseries');
+        'VariableName', sprintf('Pe_ts_%d', i), 'SaveFormat', 'Timeseries', ...
+        'LimitDataPoints', 'on', 'MaxDataPoints', '2');
     add_line(mdl, ['Pe_pu_' num2str(i) '/1'], ['W_Pe_' num2str(i) '/1']);
 end
 

@@ -101,11 +101,19 @@ def parse_args():
     parser.add_argument(
         "--independent-learners",
         action="store_true",
-        help="G6 closure: use 4 independent SACAgent instances per paper "
-             "Algorithm 1, instead of the project's shared-weights SACAgent. "
-             "Each agent has its own actor/critic/alpha/buffer. Checkpoint "
-             "format is a multi-agent bundle and is NOT compatible with "
-             "shared-weights checkpoints.",
+        help="(no-op since G6 default flip 2026-04-27) accepted for backward "
+             "compatibility; v3 default is now 4 independent SACAgents per "
+             "paper Algorithm 1.",
+    )
+    parser.add_argument(
+        "--shared-weights",
+        action="store_true",
+        help="LEGACY FALLBACK: use single shared-weights SACAgent across all "
+             "4 ESS agents instead of the v3 default of 4 independent agents. "
+             "Paper Sec.III-A explicitly specifies independent learners; "
+             "shared-weights is a paper-deviating training trick that v3 used "
+             "until G6 closure proved independent learners give a real "
+             "paper-direction-correct improvement on test manifest.",
     )
     args = parser.parse_args()
     checkpoint_was_default = args.checkpoint_dir is None
@@ -258,7 +266,12 @@ def train(args):
         run_dir = Path(args.checkpoint_dir)
 
     env = make_env(args)
-    if getattr(args, "independent_learners", False):
+    # G6 default flip (2026-04-27): paper Algorithm 1 specifies independent
+    # learners. v3 default is 4 independent SACAgents; legacy shared-weights
+    # is a fallback via --shared-weights. The --independent-learners flag is
+    # accepted as a no-op for backward compat with pre-flip runners.
+    use_shared = bool(getattr(args, "shared_weights", False))
+    if not use_shared:
         from agents.multi_agent_sac_manager import MultiAgentSACManager
         agent = MultiAgentSACManager(
             n_agents=N_AGENTS,
@@ -276,7 +289,7 @@ def train(args):
             alpha_min=0.05,
         )
         print(
-            f"[train] G6 active: 4 independent SACAgent instances "
+            f"[train] G6 active (default): 4 independent SACAgent instances "
             f"(per-agent buffer={BUFFER_SIZE//N_AGENTS}, warmup={WARMUP_STEPS//N_AGENTS})"
         )
     else:
@@ -293,6 +306,10 @@ def train(args):
             reward_scale=1e-3,
             alpha_max=5.0,
             alpha_min=0.05,   # 防止 alpha 过低导致 ep350 后策略退化
+        )
+        print(
+            "[train] LEGACY FALLBACK: shared-weights SACAgent "
+            "(--shared-weights specified; paper-deviating)"
         )
 
     start_episode = 0

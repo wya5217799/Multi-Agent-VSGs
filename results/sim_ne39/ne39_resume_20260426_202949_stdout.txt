@@ -1,0 +1,270 @@
+[SAC] Checkpoint loaded: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260417_062136\checkpoints\ep150.pt (steps=60000)
+Resumed from C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260417_062136\checkpoints\ep150.pt (starting at episode 150)
+[train] run_id=ne39_simulink_20260426_202950, output=C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950
+
+============================================================
+Training MARL-VSG on Modified NE 39-Bus System
+Mode: simulink | Episodes: 500 | Seed: 42
+============================================================
+
+[NE39-Simulink] Gen trip: Pe_ES7 -> 0 (simulates GENROU_7 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES4 -> 0 (simulates GENROU_4 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES5 -> 0 (simulates GENROU_5 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES7 -> 0 (simulates GENROU_7 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES3 -> 0 (simulates GENROU_3 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES8 -> 0 (simulates GENROU_8 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES5 -> 0 (simulates GENROU_5 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES5 -> 0 (simulates GENROU_5 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES7 -> 0 (simulates GENROU_7 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES2 -> 0 (simulates GENROU_2 trip)
+[Monitor] Ep 159 | Reward: -363.3 (r_f: 0.4%, r_h: 35.0%, r_d: 64.6%)
+          Actions mu: [-0.12, -0.00, -0.04, -0.57, 0.03, 0.03, -0.06, -0.00]  std: [0.37, 0.41, 0.39, 0.33, 0.60, 0.45, 0.46, 0.40]
+          TDS fails: 0/10 (0.0%) | Freq peak: 6.56 Hz
+          Per-agent rewards: [a0: -362.2, a1: -362.1, a2: -362.1, a3: -362.7, a4: -367.2, a5: -362.3, a6: -364.3, a7: -363.7]
+          SAC: mean critic_loss: 0.628, mean alpha: 0.012
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES3 -> 0 (simulates GENROU_3 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES7 -> 0 (simulates GENROU_7 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES3 -> 0 (simulates GENROU_3 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES3 -> 0 (simulates GENROU_3 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES8 -> 0 (simulates GENROU_8 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES5 -> 0 (simulates GENROU_5 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES4 -> 0 (simulates GENROU_4 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES8 -> 0 (simulates GENROU_8 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES8 -> 0 (simulates GENROU_8 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES3 -> 0 (simulates GENROU_3 trip)
+[Monitor] Calibration complete (20 episodes).
+          Reward baseline: mu=-446.5, std=125.9 -> magnitude range: [-824, -69]
+          Action std baseline: 0.42 -> collapse threshold: 0.042
+          TDS failure baseline: 0.0% -> alert threshold: 30.0%
+[Monitor] Ep 169 | Reward: -372.0 (r_f: 0.5%, r_h: 52.7%, r_d: 46.9%)
+          Actions mu: [-0.14, -0.09, -0.11, -0.55, 0.08, 0.32, -0.09, -0.12]  std: [0.31, 0.38, 0.38, 0.37, 0.47, 0.46, 0.44, 0.39]
+          TDS fails: 0/10 (0.0%) | Freq peak: 13.96 Hz
+          Per-agent rewards: [a0: -370.5, a1: -370.7, a2: -371.6, a3: -372.9, a4: -374.5, a5: -370.9, a6: -372.4, a7: -372.5]
+          SAC: mean critic_loss: 0.492, mean alpha: 0.011
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 169
+  'r_f' is only 0.5% of total reward (threshold: 50%). Breakdown: r_f: 0.5%, r_h: 52.7%, r_d: 46.9%
+
+[!] [Monitor] WARNING: freq_out_of_range @ Ep 169
+  Frequency exceeded +/-2.0 Hz in 10/10 recent episodes (threshold: 3 episodes).
+  VSG parameters may be causing system instability.
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES6 -> 0 (simulates GENROU_6 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES5 -> 0 (simulates GENROU_5 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES2 -> 0 (simulates GENROU_2 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES8 -> 0 (simulates GENROU_8 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES4 -> 0 (simulates GENROU_4 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES6 -> 0 (simulates GENROU_6 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES6 -> 0 (simulates GENROU_6 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES2 -> 0 (simulates GENROU_2 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES8 -> 0 (simulates GENROU_8 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES4 -> 0 (simulates GENROU_4 trip)
+[Monitor] Ep 179 | Reward: -386.4 (r_f: 0.5%, r_h: 60.3%, r_d: 39.2%)
+          Actions mu: [-0.22, -0.09, 0.12, -0.67, 0.18, 0.15, -0.20, -0.18]  std: [0.36, 0.51, 0.46, 0.47, 0.50, 0.49, 0.49, 0.34]
+          TDS fails: 0/10 (0.0%) | Freq peak: 7.88 Hz
+          Per-agent rewards: [a0: -385.2, a1: -385.0, a2: -385.3, a3: -387.2, a4: -389.2, a5: -385.8, a6: -387.2, a7: -386.6]
+          SAC: mean critic_loss: 0.290, mean alpha: 0.009
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES5 -> 0 (simulates GENROU_5 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES1 -> 0 (simulates GENROU_1 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES4 -> 0 (simulates GENROU_4 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES2 -> 0 (simulates GENROU_2 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES6 -> 0 (simulates GENROU_6 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES5 -> 0 (simulates GENROU_5 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES4 -> 0 (simulates GENROU_4 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES1 -> 0 (simulates GENROU_1 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES1 -> 0 (simulates GENROU_1 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES3 -> 0 (simulates GENROU_3 trip)
+[Monitor] Ep 189 | Reward: -337.2 (r_f: 0.5%, r_h: 72.7%, r_d: 26.8%)
+          Actions mu: [-0.17, 0.01, -0.31, -0.60, 0.15, 0.18, -0.10, -0.29]  std: [0.41, 0.20, 0.37, 0.42, 0.54, 0.44, 0.47, 0.40]
+          TDS fails: 0/10 (0.0%) | Freq peak: 10.55 Hz
+          Per-agent rewards: [a0: -335.8, a1: -335.5, a2: -337.5, a3: -337.3, a4: -340.4, a5: -336.7, a6: -337.8, a7: -336.6]
+          SAC: mean critic_loss: 0.142, mean alpha: 0.007
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES3 -> 0 (simulates GENROU_3 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES7 -> 0 (simulates GENROU_7 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES2 -> 0 (simulates GENROU_2 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES8 -> 0 (simulates GENROU_8 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES4 -> 0 (simulates GENROU_4 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES4 -> 0 (simulates GENROU_4 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES8 -> 0 (simulates GENROU_8 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES7 -> 0 (simulates GENROU_7 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES6 -> 0 (simulates GENROU_6 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES6 -> 0 (simulates GENROU_6 trip)
+[Monitor] Ep 199 | Reward: -293.5 (r_f: 1.2%, r_h: 67.9%, r_d: 30.8%)
+          Actions mu: [-0.18, -0.14, -0.10, -0.70, -0.02, 0.03, -0.15, -0.11]  std: [0.36, 0.43, 0.39, 0.44, 0.64, 0.55, 0.51, 0.34]
+          TDS fails: 0/10 (0.0%) | Freq peak: 12.94 Hz
+          Per-agent rewards: [a0: -290.6, a1: -290.8, a2: -289.9, a3: -297.7, a4: -300.1, a5: -294.5, a6: -293.9, a7: -290.4]
+          SAC: mean critic_loss: 0.055, mean alpha: 0.005
+
+[!] [Monitor] WARNING: agent_reward_disparity @ Ep 199
+  Agent 4 mean reward = -362.2 over last 50 episodes.
+  Cross-agent mean = -359.3, std = 1.4.
+  Agent is >2.0 std devs below mean.
+[NE39-Simulink] Gen trip: Pe_ES2 -> 0 (simulates GENROU_2 trip)
+[NE39-Simulink] Gen trip: Pe_ES2 -> 0 (simulates GENROU_2 trip)
+[NE39-Simulink] Gen trip: Pe_ES2 -> 0 (simulates GENROU_2 trip)
+  >>> Eval reward: -261.15
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\best.pt
+  >>> New best! Saved to C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints/best.pt
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\ep200.pt
+[NE39-Simulink] Gen trip: Pe_ES7 -> 0 (simulates GENROU_7 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES6 -> 0 (simulates GENROU_6 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES3 -> 0 (simulates GENROU_3 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES4 -> 0 (simulates GENROU_4 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES7 -> 0 (simulates GENROU_7 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES4 -> 0 (simulates GENROU_4 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES8 -> 0 (simulates GENROU_8 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES1 -> 0 (simulates GENROU_1 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES3 -> 0 (simulates GENROU_3 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES5 -> 0 (simulates GENROU_5 trip)
+[Monitor] Ep 209 | Reward: -174.6 (r_f: 2.4%, r_h: 64.2%, r_d: 33.5%)
+          Actions mu: [-0.20, -0.22, -0.42, -0.61, -0.30, 0.14, -0.12, -0.25]  std: [0.35, 0.41, 0.29, 0.41, 0.55, 0.57, 0.50, 0.36]
+          TDS fails: 0/10 (0.0%) | Freq peak: 11.73 Hz
+          Per-agent rewards: [a0: -170.7, a1: -171.0, a2: -173.2, a3: -179.2, a4: -179.2, a5: -175.0, a6: -174.6, a7: -173.6]
+          SAC: mean critic_loss: 0.025, mean alpha: 0.005
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES3 -> 0 (simulates GENROU_3 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES7 -> 0 (simulates GENROU_7 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES5 -> 0 (simulates GENROU_5 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES1 -> 0 (simulates GENROU_1 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES7 -> 0 (simulates GENROU_7 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES2 -> 0 (simulates GENROU_2 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES4 -> 0 (simulates GENROU_4 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES1 -> 0 (simulates GENROU_1 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES4 -> 0 (simulates GENROU_4 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES6 -> 0 (simulates GENROU_6 trip)
+[Monitor] Ep 219 | Reward: -216.3 (r_f: 1.2%, r_h: 35.7%, r_d: 63.0%)
+          Actions mu: [-0.26, -0.21, -0.26, -0.68, 0.11, 0.02, -0.16, -0.28]  std: [0.39, 0.42, 0.42, 0.45, 0.56, 0.47, 0.52, 0.38]
+          TDS fails: 1/10 (10.0%) | Freq peak: 16.14 Hz
+          Per-agent rewards: [a0: -214.7, a1: -214.9, a2: -215.7, a3: -217.1, a4: -220.2, a5: -215.8, a6: -216.9, a7: -215.5]
+          SAC: mean critic_loss: 0.016, mean alpha: 0.005
+
+[!] [Monitor] WARNING: reward_component_ratio @ Ep 219
+  'r_f' is only 1.2% of total reward (threshold: 50%). Breakdown: r_f: 1.2%, r_h: 35.7%, r_d: 63.0%
+
+[!] [Monitor] WARNING: freq_out_of_range @ Ep 219
+  Frequency exceeded +/-2.0 Hz in 10/10 recent episodes (threshold: 3 episodes).
+  VSG parameters may be causing system instability.
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES2 -> 0 (simulates GENROU_2 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES2 -> 0 (simulates GENROU_2 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES1 -> 0 (simulates GENROU_1 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES2 -> 0 (simulates GENROU_2 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES5 -> 0 (simulates GENROU_5 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES2 -> 0 (simulates GENROU_2 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES4 -> 0 (simulates GENROU_4 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES4 -> 0 (simulates GENROU_4 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES7 -> 0 (simulates GENROU_7 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES4 -> 0 (simulates GENROU_4 trip)
+[Monitor] Ep 229 | Reward: -210.6 (r_f: 3.5%, r_h: 61.4%, r_d: 35.2%)
+          Actions mu: [-0.21, -0.26, -0.07, -0.59, -0.20, -0.09, -0.18, -0.26]  std: [0.39, 0.44, 0.34, 0.49, 0.64, 0.60, 0.56, 0.44]
+          TDS fails: 1/10 (10.0%) | Freq peak: 15.43 Hz
+          Per-agent rewards: [a0: -203.9, a1: -204.2, a2: -204.8, a3: -214.1, a4: -222.5, a5: -213.3, a6: -214.4, a7: -207.3]
+          SAC: mean critic_loss: 0.012, mean alpha: 0.005
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES7 -> 0 (simulates GENROU_7 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES4 -> 0 (simulates GENROU_4 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES5 -> 0 (simulates GENROU_5 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES8 -> 0 (simulates GENROU_8 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES7 -> 0 (simulates GENROU_7 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES3 -> 0 (simulates GENROU_3 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES6 -> 0 (simulates GENROU_6 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES1 -> 0 (simulates GENROU_1 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES4 -> 0 (simulates GENROU_4 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES2 -> 0 (simulates GENROU_2 trip)
+[Monitor] Ep 239 | Reward: -195.0 (r_f: 2.4%, r_h: 41.1%, r_d: 56.5%)
+          Actions mu: [-0.23, -0.19, -0.18, -0.64, -0.08, -0.05, -0.18, -0.22]  std: [0.42, 0.44, 0.38, 0.44, 0.66, 0.61, 0.51, 0.49]
+          TDS fails: 1/10 (10.0%) | Freq peak: 15.10 Hz
+          Per-agent rewards: [a0: -191.1, a1: -191.0, a2: -190.7, a3: -197.1, a4: -204.2, a5: -194.6, a6: -198.7, a7: -192.9]
+          SAC: mean critic_loss: 0.011, mean alpha: 0.005
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES8 -> 0 (simulates GENROU_8 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES4 -> 0 (simulates GENROU_4 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt
+[NE39-Simulink] Gen trip: Pe_ES2 -> 0 (simulates GENROU_2 trip)
+[SAC] Checkpoint saved: C:\Users\27443\Desktop\Multi-Agent  VSGs\results\sim_ne39\runs\ne39_simulink_20260426_202950\checkpoints\latest.pt

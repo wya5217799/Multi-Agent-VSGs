@@ -278,7 +278,12 @@ TRIPLOAD2_P_MAX_W = 188e6 / 3.0  # per-phase cap for the Bus15 disturbance bank
 # BATCH_SIZE: Kundur fills buffer slower (4 agents × 25 steps/ep vs NE39 8×50).
 # 256 gives good sample utilization at warmup completion.
 BATCH_SIZE = 256
-BUFFER_SIZE = 100000
+# G5 (2026-04-27, paper-explicit closure): paper Table I specifies replay
+# buffer = 10000. Project previously used 100000 (10× larger) "Kundur fills
+# buffer slower" override, but P4.2-overnight evidence (ep 50→670 plateau)
+# suggests buffer was over-large and stale experience pulled policy toward
+# inertia. Reverting to paper-faithful 10000.
+BUFFER_SIZE = 10000
 # WARMUP_STEPS: 4-agent Kundur needs more warmup to fill buffer adequately.
 WARMUP_STEPS = 2000
 

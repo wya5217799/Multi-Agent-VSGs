@@ -191,11 +191,22 @@ def evaluate_policy(
     dist_min: float,
     dist_max: float,
     bus_choices: tuple[int, ...] = (7, 9),
+    scenarios_override: Optional[list[dict]] = None,
 ) -> EvalResult:
-    """Run `n_scenarios` deterministic episodes; collect per-ep + cumulative metrics."""
-    scenarios = generate_scenarios(
-        n_scenarios, seed_base, dist_min, dist_max, bus_choices=bus_choices
-    )
+    """Run `n_scenarios` deterministic episodes; collect per-ep + cumulative metrics.
+
+    If `scenarios_override` is provided, it is used as the scenario list directly
+    (G3 / Phase 4.3: load from JSON manifest instead of inline generator).
+    Each entry must have keys {scenario_idx, bus, magnitude_sys_pu}; bus ∈
+    {7, 9, 1, 2, 3} per the disturbance dispatch translation.
+    """
+    if scenarios_override is not None:
+        scenarios = scenarios_override
+        n_scenarios = len(scenarios)
+    else:
+        scenarios = generate_scenarios(
+            n_scenarios, seed_base, dist_min, dist_max, bus_choices=bus_choices
+        )
 
     per_ep: list[PerEpisodeMetrics] = []
     sum_global_unnorm = 0.0
@@ -447,6 +458,22 @@ def _build_arg_parser() -> argparse.ArgumentParser:
         help="bus = ESS-side Pm-step proxy at bus 7/9 (P4.1 default); "
              "gen = SG-side Pm-step proxy at G1/G2/G3 (Z1).",
     )
+    p.add_argument(
+        "--scenario-set",
+        choices=["none", "train", "test"],
+        default="none",
+        help="Phase 4.3 / G3: load fixed scenarios from JSON manifest. "
+             "'none' (default) uses inline deterministic generator. "
+             "'train' uses scenario_sets/v3_paper_train_100.json. "
+             "'test' uses scenario_sets/v3_paper_test_50.json. "
+             "When set, --n-scenarios is overridden by the manifest length.",
+    )
+    p.add_argument(
+        "--scenario-set-path",
+        type=str,
+        default=None,
+        help="Override default manifest path for --scenario-set.",
+    )
     return p
 
 
@@ -479,17 +506,37 @@ def main() -> int:
         if not ckpt_path.exists():
             print(f"[paper_eval] ERROR: checkpoint not found: {ckpt_path}")
             return 1
-        agent = SACAgent(
-            obs_dim=int(OBS_DIM),
-            act_dim=int(ACT_DIM),
-            hidden_sizes=tuple(HIDDEN_SIZES),
-            alpha_min=0.05,  # match train_simulink.py:249
-            device="cpu",
-        )
-        agent.load(str(ckpt_path))
+        # Auto-detect: peek at the checkpoint bundle to see if it's a
+        # multi-agent G6 bundle or a shared-weights SACAgent checkpoint.
+        import torch
+        _peek = torch.load(str(ckpt_path), map_location="cpu", weights_only=False)
+        is_multi_agent = bool(_peek.get("multi_agent", False))
+        del _peek
+        if is_multi_agent:
+            from agents.multi_agent_sac_manager import MultiAgentSACManager
+            agent = MultiAgentSACManager(
+                n_agents=int(env.N_ESS),
+                obs_dim=int(OBS_DIM),
+                act_dim=int(ACT_DIM),
+                hidden_sizes=tuple(HIDDEN_SIZES),
+                alpha_min=0.05,
+                device="cpu",
+            )
+            agent.load(str(ckpt_path))
+            print(f"[paper_eval] loaded MULTI-AGENT checkpoint {ckpt_path}")
+        else:
+            agent = SACAgent(
+                obs_dim=int(OBS_DIM),
+                act_dim=int(ACT_DIM),
+                hidden_sizes=tuple(HIDDEN_SIZES),
+                alpha_min=0.05,  # match train_simulink.py:249
+                device="cpu",
+            )
+            agent.load(str(ckpt_path))
+            print(f"[paper_eval] loaded SHARED-WEIGHTS checkpoint {ckpt_path}")
         select_fn = make_policy_selector(agent)
         label = args.policy_label or ckpt_path.stem
-        print(f"[paper_eval] loaded checkpoint {ckpt_path} as policy '{label}'")
+        print(f"[paper_eval] policy_label='{label}' (multi_agent={is_multi_agent})")
     else:
         select_fn = make_zero_action_selector(env.N_ESS, int(ACT_DIM))
         label = args.policy_label or "zero_action_no_control"
@@ -497,11 +544,35 @@ def main() -> int:
         print(f"[paper_eval] running zero-action baseline as '{label}'")
 
     bus_choices = (7, 9) if args.disturbance_mode == "bus" else (1, 2, 3)
+
+    scenarios_override: Optional[list[dict]] = None
+    if args.scenario_set != "none":
+        from scenarios.kundur.scenario_loader import load_manifest
+        default_paths = {
+            "train": REPO_ROOT / "scenarios" / "kundur" / "scenario_sets" / "v3_paper_train_100.json",
+            "test": REPO_ROOT / "scenarios" / "kundur" / "scenario_sets" / "v3_paper_test_50.json",
+        }
+        manifest_path = Path(args.scenario_set_path or default_paths[args.scenario_set])
+        manifest = load_manifest(manifest_path)
+        scenarios_override = [
+            {
+                "scenario_idx": s.scenario_idx,
+                "bus": s.target,  # 7/9 for bus mode, 1/2/3 for gen mode
+                "magnitude_sys_pu": s.magnitude_sys_pu,
+            }
+            for s in manifest.scenarios
+        ]
+        print(
+            f"[paper_eval] loaded manifest {manifest_path.name}: "
+            f"{manifest.n_scenarios} scenarios, mode={manifest.disturbance_mode}"
+        )
+
     print(
         f"[paper_eval] running {args.n_scenarios} deterministic scenarios "
         f"(mode={args.disturbance_mode}, bus_choices={bus_choices}, "
         f"seed_base={args.seed_base}, fnom={fnom} Hz, dt={dt_s} s, "
-        f"DIST=[{DIST_MIN:.2f}, {DIST_MAX:.2f}] sys-pu) ..."
+        f"DIST=[{DIST_MIN:.2f}, {DIST_MAX:.2f}] sys-pu, "
+        f"scenario_set={args.scenario_set}) ..."
     )
 
     result = evaluate_policy(
@@ -516,6 +587,7 @@ def main() -> int:
         dist_min=DIST_MIN,
         dist_max=DIST_MAX,
         bus_choices=bus_choices,
+        scenarios_override=scenarios_override,
     )
 
     out_path = Path(args.output_json)

@@ -82,6 +82,31 @@ def parse_args():
         "--log-file", default=None,
         help="Training log JSON path (default: results/sim_kundur/runs/<run_id>/logs/training_log.json)"
     )
+    parser.add_argument(
+        "--scenario-set",
+        choices=["none", "train", "test"],
+        default="none",
+        help="Phase 4.3 / G3: load fixed disturbance scenarios from JSON manifest. "
+             "'none' (default) keeps the random per-episode draw. "
+             "'train' uses scenario_sets/v3_paper_train_100.json. "
+             "'test' uses scenario_sets/v3_paper_test_50.json. "
+             "When set, episode k cycles through scenario k mod n_scenarios.",
+    )
+    parser.add_argument(
+        "--scenario-set-path",
+        type=str,
+        default=None,
+        help="Override default manifest path for --scenario-set.",
+    )
+    parser.add_argument(
+        "--independent-learners",
+        action="store_true",
+        help="G6 closure: use 4 independent SACAgent instances per paper "
+             "Algorithm 1, instead of the project's shared-weights SACAgent. "
+             "Each agent has its own actor/critic/alpha/buffer. Checkpoint "
+             "format is a multi-agent bundle and is NOT compatible with "
+             "shared-weights checkpoints.",
+    )
     args = parser.parse_args()
     checkpoint_was_default = args.checkpoint_dir is None
     log_was_default = args.log_file is None
@@ -233,20 +258,42 @@ def train(args):
         run_dir = Path(args.checkpoint_dir)
 
     env = make_env(args)
-    agent = SACAgent(
-        obs_dim=OBS_DIM,
-        act_dim=ACT_DIM,
-        hidden_sizes=HIDDEN_SIZES,
-        lr=LR,
-        gamma=GAMMA,
-        tau=TAU_SOFT,
-        buffer_size=BUFFER_SIZE,
-        batch_size=BATCH_SIZE,
-        warmup_steps=WARMUP_STEPS,
-        reward_scale=1e-3,
-        alpha_max=5.0,
-        alpha_min=0.05,   # 防止 alpha 过低导致 ep350 后策略退化
-    )
+    if getattr(args, "independent_learners", False):
+        from agents.multi_agent_sac_manager import MultiAgentSACManager
+        agent = MultiAgentSACManager(
+            n_agents=N_AGENTS,
+            obs_dim=OBS_DIM,
+            act_dim=ACT_DIM,
+            hidden_sizes=HIDDEN_SIZES,
+            lr=LR,
+            gamma=GAMMA,
+            tau=TAU_SOFT,
+            buffer_size=BUFFER_SIZE,
+            batch_size=BATCH_SIZE,
+            warmup_steps=WARMUP_STEPS,
+            reward_scale=1e-3,
+            alpha_max=5.0,
+            alpha_min=0.05,
+        )
+        print(
+            f"[train] G6 active: 4 independent SACAgent instances "
+            f"(per-agent buffer={BUFFER_SIZE//N_AGENTS}, warmup={WARMUP_STEPS//N_AGENTS})"
+        )
+    else:
+        agent = SACAgent(
+            obs_dim=OBS_DIM,
+            act_dim=ACT_DIM,
+            hidden_sizes=HIDDEN_SIZES,
+            lr=LR,
+            gamma=GAMMA,
+            tau=TAU_SOFT,
+            buffer_size=BUFFER_SIZE,
+            batch_size=BATCH_SIZE,
+            warmup_steps=WARMUP_STEPS,
+            reward_scale=1e-3,
+            alpha_max=5.0,
+            alpha_min=0.05,   # 防止 alpha 过低导致 ep350 后策略退化
+        )
 
     start_episode = 0
     # Normalise --resume: the string literal "none" means "force fresh start".
@@ -283,12 +330,47 @@ def train(args):
         start_episode = meta.get("start_episode", 0)
         print(f"Resumed from {resume_path} (starting at episode {start_episode})")
 
+    # ── Phase 4.3 / G3 — fixed scenario set ────────────────────────────────────
+    SCENARIO_SET = None
+    SCENARIO_SET_NAME = "none"
+    if getattr(args, "scenario_set", "none") != "none":
+        from scenarios.kundur.scenario_loader import (
+            load_manifest, scenario_to_disturbance_type,
+        )
+        from pathlib import Path as _P
+        _repo = _P(__file__).resolve().parents[2]
+        _default_paths = {
+            "train": _repo / "scenarios" / "kundur" / "scenario_sets" / "v3_paper_train_100.json",
+            "test":  _repo / "scenarios" / "kundur" / "scenario_sets" / "v3_paper_test_50.json",
+        }
+        _path = _P(args.scenario_set_path or _default_paths[args.scenario_set])
+        SCENARIO_SET = load_manifest(_path)
+        SCENARIO_SET_NAME = args.scenario_set
+        print(
+            f"[train] scenario_set={SCENARIO_SET_NAME} loaded from {_path.name}: "
+            f"{SCENARIO_SET.n_scenarios} scenarios, mode={SCENARIO_SET.disturbance_mode}"
+        )
+
+    def _ep_disturbance(ep_idx: int) -> tuple[float, str | None]:
+        """Resolve (magnitude_sys_pu, _disturbance_type override) for a given ep.
+
+        Returns (None for type) when no scenario set is active → keep current
+        env._disturbance_type (set by KUNDUR_DISTURBANCE_TYPE env var or kwarg).
+        """
+        if SCENARIO_SET is None:
+            mag = float(np.random.uniform(env.DIST_MIN, env.DIST_MAX))
+            if np.random.random() > 0.5:
+                mag = -mag
+            return mag, None
+        sc = SCENARIO_SET.scenarios[ep_idx % SCENARIO_SET.n_scenarios]
+        return float(sc.magnitude_sys_pu), scenario_to_disturbance_type(sc)
+
     # ── Phase B: Bootstrap backend ─────────────────────────────────────────────
     # First env.reset() triggers MATLAB startup / load_model / warmup.
     # If this fails, raise immediately; run_dir not yet created, no orphaned files.
-    dist_mag = np.random.uniform(env.DIST_MIN, env.DIST_MAX)
-    if np.random.random() > 0.5:
-        dist_mag = -dist_mag
+    dist_mag, _dtype_override = _ep_disturbance(start_episode)
+    if _dtype_override is not None:
+        env._disturbance_type = _dtype_override
     obs, _ = env.reset(options={"disturbance_magnitude": dist_mag})
 
     # ── Phase C: Commit outputs (only after backend is ready) ──────────────────
@@ -385,9 +467,9 @@ def train(args):
     for ep in _pbar:
         # Phase B already reset episode start_episode; subsequent episodes reset here.
         if ep > start_episode:
-            dist_mag = np.random.uniform(env.DIST_MIN, env.DIST_MAX)
-            if np.random.random() > 0.5:
-                dist_mag = -dist_mag
+            dist_mag, _dtype_override = _ep_disturbance(ep)
+            if _dtype_override is not None:
+                env._disturbance_type = _dtype_override
             obs, _ = env.reset(options={"disturbance_magnitude": dist_mag})
         ep_reward = np.zeros(env.N_ESS)
         ep_losses = {"critic": [], "policy": [], "alpha": []}

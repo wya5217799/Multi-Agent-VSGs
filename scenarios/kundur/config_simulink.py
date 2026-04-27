@@ -90,7 +90,9 @@ COMM_ADJ = {0: [1, 3], 1: [0, 2], 2: [1, 3], 3: [2, 0]}
 
 # ========== Reward (Kundur-specific) ==========
 # PHI_F: Paper Table I uses PHI_F=100 for all experiments (φ_f=100, φ_h=1, φ_d=1).
-PHI_F = 100.0
+# R2 (2026-04-27): allow per-run env-var override to widen the PHI sweep without
+# editing this file between candidates. Default 100.0 = paper-faithful.
+PHI_F = float(_os.getenv("KUNDUR_PHI_F", "100.0"))
 
 # Kundur-only PHI_H/PHI_D override (2026-04-26 reward-scale gate after asym
 # 50ep observation kundur_simulink_20260426_144431 showed r_f% ≈ 0.0005% with
@@ -231,6 +233,16 @@ KUNDUR_DISTURBANCE_TYPES_VALID = (
     "pm_step_proxy_bus7",
     "pm_step_proxy_bus9",
     "pm_step_proxy_random_bus",
+    # Z1 (2026-04-27): SG-side Pm-step proxy. Routes the disturbance into the
+    # synchronous-generator sources (G1/G2/G3) via PmgStep_amp_<g> workspace
+    # vars. Paper-form-correct topology: disturbance enters at a non-ESS source
+    # and propagates through the network to the ESS, where H/D adjustments now
+    # have system-level leverage (vs ESS-side proxy which lacks leverage —
+    # see phase5_r2_phi_sweep_verdict.md §2 root cause analysis).
+    "pm_step_proxy_g1",
+    "pm_step_proxy_g2",
+    "pm_step_proxy_g3",
+    "pm_step_proxy_random_gen",
 )
 KUNDUR_DISTURBANCE_TYPE = _os.getenv(
     "KUNDUR_DISTURBANCE_TYPE", "pm_step_single_vsg"

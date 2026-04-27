@@ -1,0 +1,366 @@
+{
+  "schema_version": 1,
+  "name": "v3_paper_test_50",
+  "n_scenarios": 50,
+  "seed_base": 43,
+  "disturbance_mode": "gen",
+  "dist_min_sys_pu": 0.1,
+  "dist_max_sys_pu": 0.5,
+  "bus_choices": [
+    1,
+    2,
+    3
+  ],
+  "scenarios": [
+    {
+      "scenario_idx": 0,
+      "disturbance_kind": "gen",
+      "target": 2,
+      "magnitude_sys_pu": 0.10801183474968674,
+      "comm_failed_links": []
+    },
+    {
+      "scenario_idx": 1,
+      "disturbance_kind": "gen",
+      "target": 2,
+      "magnitude_sys_pu": -0.33485721903522336,
+      "comm_failed_links": []
+    },
+    {
+      "scenario_idx": 2,
+      "disturbance_kind": "gen",
+      "target": 3,
+      "magnitude_sys_pu": -0.2054768789913499,
+      "comm_failed_links": []
+    },
+    {
+      "scenario_idx": 3,
+      "disturbance_kind": "gen",
+      "target": 1,
+      "magnitude_sys_pu": 0.2804125548004436,
+      "comm_failed_links": []
+    },
+    {
+      "scenario_idx": 4,
+      "disturbance_kind": "gen",
+      "target": 1,
+      "magnitude_sys_pu": -0.21145321020757743,
+      "comm_failed_links": []
+    },
+    {
+      "scenario_idx": 5,
+      "disturbance_kind": "gen",
+      "target": 3,
+      "magnitude_sys_pu": 0.26879982993890517,
+      "comm_failed_links": []
+    },
+    {
+      "scenario_idx": 6,
+      "disturbance_kind": "gen",
+      "target": 2,
+      "magnitude_sys_pu": 0.4807016065854458,
+      "comm_failed_links": []
+    },
+    {
+      "scenario_idx": 7,
+      "disturbance_kind": "gen",
+      "target": 1,
+      "magnitude_sys_pu": -0.3140513028390416,
+      "comm_failed_links": []
+    },
+    {
+      "scenario_idx": 8,
+      "disturbance_kind": "gen",
+      "target": 2,
+      "magnitude_sys_pu": -0.3372696749856655,
+      "comm_failed_links": []
+    },
+    {
+      "scenario_idx": 9,
+      "disturbance_kind": "gen",
+      "target": 2,
+      "magnitude_sys_pu": -0.4991526977096482,
+      "comm_failed_links": []
+    },
+    {
+      "scenario_idx": 10,
+      "disturbance_kind": "gen",
+      "target": 1,
+      "magnitude_sys_pu": 0.40447953519073887,
+      "comm_failed_links": []
+    },
+    {
+      "scenario_idx": 11,
+      "disturbance_kind": "gen",
+      "target": 1,
+      "magnitude_sys_pu": 0.236737142047426,
+      "comm_failed_links": []
+    },
+    {
+      "scenario_idx": 12,
+      "disturbance_kind": "gen",
+      "target": 3,
+      "magnitude_sys_pu": -0.12024790491937472,
+      "comm_failed_links": []
+    },
+    {
+      "scenario_idx": 13,
+      "disturbance_kind": "gen",
+      "target": 1,
+      "magnitude_sys_pu": 0.32216662486452885,
+      "comm_failed_links": []
+    },
+    {
+      "scenario_idx": 14,
+      "disturbance_kind": "gen",
+      "target": 2,
+      "magnitude_sys_pu": 0.301820699661259,
+      "comm_failed_links": []
+    },
+    {
+      "scenario_idx": 15,
+      "disturbance_kind": "gen",
+      "target": 1,
+      "magnitude_sys_pu": 0.26713453406125126,
+      "comm_failed_links": []
+    },
+    {
+      "scenario_idx": 16,
+      "disturbance_kind": "gen",
+      "target": 1,
+      "magnitude_sys_pu": 0.33519856023572725,
+      "comm_failed_links": []
+    },
+    {
+      "scenario_idx": 17,
+      "disturbance_kind": "gen",
+      "target": 2,
+      "magnitude_sys_pu": 0.33220777275691216,
+      "comm_failed_links": []
+    },
+    {
+      "scenario_idx": 18,
+      "disturbance_kind": "gen",
+      "target": 3,
+      "magnitude_sys_pu": -0.4403075931716628,
+      "comm_failed_links": []
+    },
+    {
+      "scenario_idx": 19,
+      "disturbance_kind": "gen",
+      "target": 1,
+      "magnitude_sys_pu": 0.1330979426753729,
+      "comm_failed_links": []
+    },
+    {
+      "scenario_idx": 20,
+      "disturbance_kind": "gen",
+      "target": 1,
+      "magnitude_sys_pu": 0.3448662426919188,
+      "comm_failed_links": []
+    },
+    {
+      "scenario_idx": 21,
+      "disturbance_kind": "gen",
+      "target": 1,
+      "magnitude_sys_pu": 0.10158454548944756,
+      "comm_failed_links": []
+    },
+    {
+      "scenario_idx": 22,
+      "disturbance_kind": "gen",
+      "target": 1,
+      "magnitude_sys_pu": 0.3294522435284849,
+      "comm_failed_links": []
+    },
+    {
+      "scenario_idx": 23,
+      "disturbance_kind": "gen",
+      "target": 3,
+      "magnitude_sys_pu": -0.4052988151700687,
+      "comm_failed_links": []
+    },
+    {
+      "scenario_idx": 24,
+      "disturbance_kind": "gen",
+      "target": 1,
+      "magnitude_sys_pu": 0.17751782137573838,
+      "comm_failed_links": []
+    },
+    {
+      "scenario_idx": 25,
+      "disturbance_kind": "gen",
+      "target": 3,
+      "magnitude_sys_pu": 0.2584228204822454,
+      "comm_failed_links": []
+    },
+    {
+      "scenario_idx": 26,
+      "disturbance_kind": "gen",
+      "target": 3,
+      "magnitude_sys_pu": -0.4515264876932559,
+      "comm_failed_links": []
+    },
+    {
+      "scenario_idx": 27,
+      "disturbance_kind": "gen",
+      "target": 2,
+      "magnitude_sys_pu": -0.29861411579831804,
+      "comm_failed_links": []
+    },
+    {
+      "scenario_idx": 28,
+      "disturbance_kind": "gen",
+      "target": 1,
+      "magnitude_sys_pu": -0.4677944356398729,
+      "comm_failed_links": []
+    },
+    {
+      "scenario_idx": 29,
+      "disturbance_kind": "gen",
+      "target": 1,
+      "magnitude_sys_pu": -0.36963023732255884,
+      "comm_failed_links": []
+    },
+    {
+      "scenario_idx": 30,
+      "disturbance_kind": "gen",
+      "target": 2,
+      "magnitude_sys_pu": -0.37481536426991036,
+      "comm_failed_links": []
+    },
+    {
+      "scenario_idx": 31,
+      "disturbance_kind": "gen",
+      "target": 2,
+      "magnitude_sys_pu": -0.26070463603042726,
+      "comm_failed_links": []
+    },
+    {
+      "scenario_idx": 32,
+      "disturbance_kind": "gen",
+      "target": 3,
+      "magnitude_sys_pu": 0.4526919595786528,
+      "comm_failed_links": []
+    },
+    {
+      "scenario_idx": 33,
+      "disturbance_kind": "gen",
+      "target": 2,
+      "magnitude_sys_pu": -0.4301859761541573,
+      "comm_failed_links": []
+    },
+    {
+      "scenario_idx": 34,
+      "disturbance_kind": "gen",
+      "target": 2,
+      "magnitude_sys_pu": -0.3795171821994746,
+      "comm_failed_links": []
+    },
+    {
+      "scenario_idx": 35,
+      "disturbance_kind": "gen",
+      "target": 2,
+      "magnitude_sys_pu": -0.1877893828324665,
+      "comm_failed_links": []
+    },
+    {
+      "scenario_idx": 36,
+      "disturbance_kind": "gen",
+      "target": 1,
+      "magnitude_sys_pu": 0.36326971560324894,
+      "comm_failed_links": []
+    },
+    {
+      "scenario_idx": 37,
+      "disturbance_kind": "gen",
+      "target": 3,
+      "magnitude_sys_pu": 0.2126005277693792,
+      "comm_failed_links": []
+    },
+    {
+      "scenario_idx": 38,
+      "disturbance_kind": "gen",
+      "target": 3,
+      "magnitude_sys_pu": -0.21334371991039378,
+      "comm_failed_links": []
+    },
+    {
+      "scenario_idx": 39,
+      "disturbance_kind": "gen",
+      "target": 3,
+      "magnitude_sys_pu": -0.4010604175280975,
+      "comm_failed_links": []
+    },
+    {
+      "scenario_idx": 40,
+      "disturbance_kind": "gen",
+      "target": 3,
+      "magnitude_sys_pu": -0.48779405241765617,
+      "comm_failed_links": []
+    },
+    {
+      "scenario_idx": 41,
+      "disturbance_kind": "gen",
+      "target": 2,
+      "magnitude_sys_pu": 0.3922754872189408,
+      "comm_failed_links": []
+    },
+    {
+      "scenario_idx": 42,
+      "disturbance_kind": "gen",
+      "target": 2,
+      "magnitude_sys_pu": 0.4090579743466539,
+      "comm_failed_links": []
+    },
+    {
+      "scenario_idx": 43,
+      "disturbance_kind": "gen",
+      "target": 1,
+      "magnitude_sys_pu": -0.29838830175989917,
+      "comm_failed_links": []
+    },
+    {
+      "scenario_idx": 44,
+      "disturbance_kind": "gen",
+      "target": 2,
+      "magnitude_sys_pu": 0.2815169700143936,
+      "comm_failed_links": []
+    },
+    {
+      "scenario_idx": 45,
+      "disturbance_kind": "gen",
+      "target": 1,
+      "magnitude_sys_pu": -0.46759582796603716,
+      "comm_failed_links": []
+    },
+    {
+      "scenario_idx": 46,
+      "disturbance_kind": "gen",
+      "target": 1,
+      "magnitude_sys_pu": -0.40353411675862516,
+      "comm_failed_links": []
+    },
+    {
+      "scenario_idx": 47,
+      "disturbance_kind": "gen",
+      "target": 3,
+      "magnitude_sys_pu": 0.4813812085517384,
+      "comm_failed_links": []
+    },
+    {
+      "scenario_idx": 48,
+      "disturbance_kind": "gen",
+      "target": 2,
+      "magnitude_sys_pu": 0.3714390637392041,
+      "comm_failed_links": []
+    },
+    {
+      "scenario_idx": 49,
+      "disturbance_kind": "gen",
+      "target": 2,
+      "magnitude_sys_pu": -0.32853817042700995,
+      "comm_failed_links": []
+    }
+  ]
+}

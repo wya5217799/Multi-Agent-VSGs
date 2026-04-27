@@ -738,6 +738,52 @@ class KundurSimulinkEnv(_KundurBaseEnv):
             #   pm_step_proxy_random_bus  -> per-call 50/50 pick of (0,) or (3,)
             #   pm_step_single_vsg        -> legacy: honors class attr DISTURBANCE_VSG_INDICES
             dtype = getattr(self, '_disturbance_type', 'pm_step_single_vsg')
+
+            # Z1 SG-side dispatch (2026-04-27) — route to PmgStep_<g> for g=1..3.
+            # Disturbance enters at G1/G2/G3 (synchronous-gen sources at buses
+            # 1/2/3), propagates through the network to the ESS. ESS H/D
+            # adjustments then have system-level leverage on freq response
+            # (vs ESS-side Pm-step proxy which directly perturbs the ESS's
+            # own swing equation and gives no leverage to its own H/D).
+            sg_target_idx: int | None = None  # 1, 2, or 3 if SG dispatch
+            if dtype == 'pm_step_proxy_g1':
+                sg_target_idx = 1
+            elif dtype == 'pm_step_proxy_g2':
+                sg_target_idx = 2
+            elif dtype == 'pm_step_proxy_g3':
+                sg_target_idx = 3
+            elif dtype == 'pm_step_proxy_random_gen':
+                # Uniform random pick of 1..3.
+                sg_target_idx = int(self.np_random.integers(1, 4))
+
+            if sg_target_idx is not None:
+                # SG-side Pm-step proxy. Same magnitude formula as ESS path:
+                # Pmg vars are in sys-pu (build_kundur_cvs_v3.m:173 stores Pmg_g
+                # = sg_Pm0_sys, sys-pu); PmgStep_amp_<g> default 0.0 (sys-pu);
+                # we push the same sys-pu magnitude.
+                amp_focused_pu = float(magnitude) * 100e6 / 1.0 / cfg.sbase_va
+                t_now = float(self.bridge.t_current)
+                # Zero all SG step amps first (silence non-target G).
+                for g in range(1, 4):
+                    self.bridge.apply_workspace_var(f'PmgStep_t_{g}',   t_now)
+                    self.bridge.apply_workspace_var(f'PmgStep_amp_{g}', 0.0)
+                # Set the target G amp.
+                self.bridge.apply_workspace_var(
+                    f'PmgStep_amp_{sg_target_idx}', amp_focused_pu
+                )
+                # Also zero ESS Pm-step amps so they don't leak from a prior reset.
+                for i in range(cfg.n_agents):
+                    self.bridge.apply_workspace_var(f'Pm_step_t_{i+1}',   t_now)
+                    self.bridge.apply_workspace_var(f'Pm_step_amp_{i+1}', 0.0)
+                sign = 'increase' if magnitude > 0 else 'decrease'
+                print(
+                    f"[Kundur-Simulink-CVS] Pmg step {sign} targets SG[{sg_target_idx}] "
+                    f"(proxy_g{sg_target_idx}): amp={amp_focused_pu:+.4f} pu "
+                    f"(magnitude={float(magnitude):+.3f}), step_time={t_now:.4f}s"
+                )
+                return
+
+            # ESS-side Pm-step proxy (existing P4.1 path).
             if dtype == 'pm_step_proxy_bus7':
                 target_indices = (0,)
                 proxy_bus = 7
@@ -766,6 +812,10 @@ class KundurSimulinkEnv(_KundurBaseEnv):
             for i in range(cfg.n_agents):
                 self.bridge.apply_workspace_var(f'Pm_step_t_{i+1}',   t_now)
                 self.bridge.apply_workspace_var(f'Pm_step_amp_{i+1}', amps_per_vsg[i])
+            # Also zero SG Pm-step amps for symmetry / clean state.
+            for g in range(1, 4):
+                self.bridge.apply_workspace_var(f'PmgStep_t_{g}',   t_now)
+                self.bridge.apply_workspace_var(f'PmgStep_amp_{g}', 0.0)
             sign = 'increase' if magnitude > 0 else 'decrease'
             proxy_tag = f"proxy_bus{proxy_bus}" if proxy_bus is not None else dtype
             print(

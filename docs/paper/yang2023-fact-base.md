@@ -317,7 +317,7 @@ $r^f = 0$ 的条件是各节点频率相同，**而不是**频率偏差为零。
 | Q4 | 弱网实验的系统参数来源 | 引用了 [22]，未在论文中列出 | Sec.IV-F |
 | Q5 | Kundur 系统中 4 台储能的具体连接位置（哪几个母线） | 原文"separately connected to different areas"，未给出母线编号，参见 Fig.3 | Sec.IV-A |
 | Q6 | 每 episode 执行多少次梯度更新（gradient steps）| Table I 和 Algorithm 1 均未指定该数值 | Table I / Algorithm 1 |
-| Q7 | $H_{es,i}$ 的量纲与传统同步机 H（秒）的关系 | **原文未给量纲**（2026-04-21 核查 `high_accuracy_transcription_cn.md`）。Eq.(1) 无 `2`、无 `ω_s` 系数，属控制派集总形式。项目工作假设 $H_{paper}=2·H_{code}$ 为**推断**，非论文事实。详见 §2.1 Q7 段 | Sec.II-A Eq.1；Sec.IV-B |
+| Q7 | $H_{es,i}$ 的量纲与传统同步机 H（秒）的关系 | **原文未给量纲**（2026-04-21 核查 `high_accuracy_transcription_cn.md`）。Eq.(1) 无 `2`、无 `ω_s` 系数，属控制派集总形式。项目工作假设 $H_{paper}=2·H_{code}$ 为**推断**，非论文事实。详见 §2.1 Q7 段。**2026-04-28 update (Task 3):** 完整 deviation 分析及处置决策见 `docs/paper/action-range-mapping-deviation.md`；当前 v3 保持 ΔM=[−6,+18]/ΔD=[−1.5,+4.5]，在 Q7 解决前不机械采纳 paper-literal [−100,+300]/[−200,+600]。 | Sec.II-A Eq.1；Sec.IV-B |
 | Q8 | 测试集评价公式的归一化系数（是否含 1/M 或 1/N） | 原文该段 OCR 损坏，无法从转录稿核实 | Sec.IV-C |
 
 ---
@@ -358,7 +358,7 @@ $r^f = 0$ 的条件是各节点频率相同，**而不是**频率偏差为零。
 | Buffer 清空策略 | Algorithm 1：每 episode 清空 | 不清空（Table I 依据） | `2026-04-10-paper-baseline-contract.md` §Q3 |
 | SAC 实例化（Simulink 路径）| 独立参数 per agent | 参数共享（CTDE） | `2026-04-10-paper-baseline-contract.md` §Q4 |
 | ANDES 路径 r_f | 相对同步（同论文）| 相对同步 + PHI_ABS=50 绝对项（扩展） | `2026-04-10-paper-baseline-contract.md` §Q2 |
-| 动作范围 | $\Delta H \in [-100,300]$，$\Delta D \in [-200,600]$ | $\Delta M \in [-6,18]$（M=2H），$\Delta D \in [-1.5,4.5]$ | 不同的基值（H₀/D₀ scale 不同） |
+| 动作范围 | $\Delta H \in [-100,300]$，$\Delta D \in [-200,600]$ | $\Delta M \in [-6,18]$（M=2H），$\Delta D \in [-1.5,4.5]$ | 不同的基值（H₀/D₀ scale 不同）；**完整 documented deviation: `docs/paper/action-range-mapping-deviation.md`** (Task 3 2026-04-28) |
 | Buffer 大小 | 10000 | 50 000 ~ 100 000 | 工程扩展，不影响方法正确性 |
 | 奖励频率单位 | Δω（单位不明，见 Q7） | Hz（Δω_pu × F_NOM） | Q7 待核实；若论文用 p.u. 则 r_f 差 F_NOM²=2500× |
 | 默认训练 episodes | 2000 | 500（MAX_EPISODES=2000） | 工程效率；复现论文需用 --episodes 2000 |

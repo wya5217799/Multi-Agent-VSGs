@@ -58,9 +58,11 @@ R_short = 0.01;      L_short = 0.5e-3;   C_short = 0.009e-6;
 BUS1_ABS_DEG = 20.0;
 
 %% ===== Bus inventory: 15 active buses, ID list skips 13 =====
-bus_ids   = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 15, 16]';
+% Task 1 (2026-04-28): Bus 11 removed; W2 moved to Bus 8 directly per
+% paper line 894. System reduced from 15 active buses to 14.
+bus_ids   = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 14, 15, 16]';
 bus_lbl   = {'Bus1_G1','Bus2_G2','Bus3_G3','Bus4_W1','Bus5','Bus6', ...
-             'Bus7_load','Bus8','Bus9_load','Bus10','Bus11_W2', ...
+             'Bus7_load','Bus8_W2','Bus9_load','Bus10', ...
              'Bus12_ES1','Bus14_ES3','Bus15_ES4','Bus16_ES2'}';
 n_bus     = numel(bus_ids);
 id2idx    = zeros(1, max(bus_ids));
@@ -92,7 +94,6 @@ line_defs = {
     8, 16,    1, R_short, L_short, C_short;
    10, 14,    1, R_short, L_short, C_short;
     9, 15,    1, R_short, L_short, C_short;
-    8, 11,    1, R_short, L_short, C_short;
 };
 
 %% ===== Y-bus (Π model) =====
@@ -145,9 +146,15 @@ end
 % Bus 9: load 1767 MW + 100 Mvar; shunt cap 350 Mvar
 %        Q_net = 100 − 350 = −250 Mvar cap → P_sch = −17.67, Q_sch = +2.5
 
+% Task 2 (2026-04-28, paper line 993): Bus 14 has 248 MW pre-engaged load
+% (LS1 disturbance is the "sudden reduction" of this load mid-episode).
+% P_LS1_LOAD enters as a fixed PQ load offset on Bus 14; net injection at
+% Bus 14 = P_ES_each (ES3 generation) − P_LS1_LOAD (pre-engaged load).
+P_LS1_LOAD = 2.48;   % 248 MW = 2.48 sys-pu
+
 % Initial ESS group dispatch — lossless guess; corrected by outer loop
-P_ES_each_init = -((7.00 + 7.00 + 7.19) + (7.00 + 1.00) - (9.67 + 17.67)) / 4;
-% = -(21.19 + 8.00 - 27.34)/4 = -1.85/4 = -0.4625 sys-pu
+P_ES_each_init = -((7.00 + 7.00 + 7.19) + (7.00 + 1.00) - (9.67 + 17.67 + P_LS1_LOAD)) / 4;
+% = -(21.19 + 8.00 - 29.82)/4 = +0.6300/4 = +0.1575 sys-pu (Task 2: ESS sign flip absorb→generate)
 
 V_BUS_DEFAULT = 1.00;
 
@@ -160,12 +167,11 @@ bus_data(id2idx(4),  :) = [PV,    1.00, 7.00,                    0  ];   % W1 70
 bus_data(id2idx(5),  :) = [PQ,    V_BUS_DEFAULT, 0,              0  ];   % junction
 bus_data(id2idx(6),  :) = [PQ,    V_BUS_DEFAULT, 0,              0  ];   % junction
 bus_data(id2idx(7),  :) = [PQ,    V_BUS_DEFAULT, -9.67,         +1.0];   % load+shunt
-bus_data(id2idx(8),  :) = [PQ,    V_BUS_DEFAULT, 0,              0  ];   % junction
+bus_data(id2idx(8),  :) = [PV,    1.00, 1.00,                    0  ];   % W2 100 MW const-P (Task 1: moved from Bus 11)
 bus_data(id2idx(9),  :) = [PQ,    V_BUS_DEFAULT, -17.67,        +2.5];   % load+shunt
 bus_data(id2idx(10), :) = [PQ,    V_BUS_DEFAULT, 0,              0  ];   % junction
-bus_data(id2idx(11), :) = [PV,    1.00, 1.00,                    0  ];   % W2 100 MW const-P
 bus_data(id2idx(12), :) = [PV,    1.00, P_ES_each_init,          0  ];   % ES1
-bus_data(id2idx(14), :) = [PV,    1.00, P_ES_each_init,          0  ];   % ES3
+bus_data(id2idx(14), :) = [PV,    1.00, P_ES_each_init - P_LS1_LOAD, 0];   % ES3 + 248 MW LS1 pre-engaged load (Task 2)
 bus_data(id2idx(15), :) = [PV,    1.00, P_ES_each_init,          0  ];   % ES4
 bus_data(id2idx(16), :) = [PV,    1.00, P_ES_each_init,          0  ];   % ES2
 
@@ -182,6 +188,10 @@ non_slack = [pv_idx; pq_idx];
 
 ess_bus_ids = [12, 16, 14, 15];
 ess_idx     = arrayfun(@(b) id2idx(b), ess_bus_ids);   % rows in bus arrays
+% Task 2: Bus 14 (ES3) has the 248 MW LS1 pre-engaged load. The outer-loop
+% updates bus 14's P_sch with offset = (P_ES_each − P_LS1_LOAD); other ESS
+% buses keep P_sch = P_ES_each.
+ess_load_offset = double(ess_bus_ids == 14)' * P_LS1_LOAD;   % column: [0; 0; 2.48; 0]
 
 %% ===== Outer iteration: G1 actual P-injection → 7.00 sys-pu =====
 P_G1_paper = 7.00;
@@ -204,7 +214,7 @@ S_final        = [];
 
 for outer = 1:outer_max
     outer_iter = outer;
-    P_sch(ess_idx) = P_ES_each;
+    P_sch(ess_idx) = P_ES_each - ess_load_offset;   % Task 2: bus 14 net = P_ES_each - P_LS1_LOAD
 
     % --- Inner Newton-Raphson (G1 = slack) ---
     theta = zeros(n_bus, 1);
@@ -317,17 +327,21 @@ for li = 1:n_lines
 end
 
 %% ===== Closure: aggregate balance + per-source schedule check =====
-% Real loads (Bus 7 and Bus 9 only). Filtering by `P_sch < 0` would also
-% pick up the negative ESS Pm0 since ESS sit on PV buses with P_sch = P_ES_each.
-load_bus_idx = [id2idx(7), id2idx(9)];
-P_load_total = sum(P_sch(load_bus_idx));   % negative = consumption
+% Real loads (Bus 7, Bus 9, and Task 2 Bus 14 LS1 pre-engaged 248 MW).
+% Bus 14 LS1 load is bundled into P_sch[bus14] = (P_ES_each − P_LS1_LOAD);
+% report it as a separate explicit load entry for physical clarity.
+P_load_total = sum(P_sch([id2idx(7), id2idx(9)])) + (-P_LS1_LOAD);   % negative = consumption
 P_gen_paper  = P_G1_paper + 7.00 + 7.19;   % 21.19 sys-pu (3 SG only)
 P_wind_paper = 7.00 + 1.00;                % 8.00 sys-pu (W1 + W2)
-P_ess_total  = sum(real(S_final(ess_idx)));
+% P_ess_total here = ESS group GENERATION (sum of P_ES_each over 4 ESS),
+% NOT the bus-net at ESS buses. Bus net at bus 14 = P_ES_each − P_LS1_LOAD
+% (the LS1 load is already reported in P_load_total to avoid double counting).
+P_ess_total  = 4 * P_ES_each;
 
-% Verify each ESS injection equals the scheduled P_ES_each within inner_tol
+% Verify each ESS injection equals scheduled P_sch (per-bus, with offset for
+% Task 2 Bus 14 LS1 load).
 ess_per_bus_inj = real(S_final(ess_idx));
-ess_sched_dev   = max(abs(ess_per_bus_inj - P_ES_each));
+ess_sched_dev   = max(abs(ess_per_bus_inj - (P_ES_each - ess_load_offset)));
 
 % Hidden-slack check: G1 actual must equal paper 7.00 within outer_tol
 G1_residual = abs(real(S_final(slack_idx)) - P_G1_paper);
@@ -360,8 +374,16 @@ for s = 1:n_dyn
     bi = id2idx(dynamic_src_buses(s));
     th_abs_rad = theta_final(bi) + BUS1_ABS_DEG * pi / 180;
     Vt = Vmag_final(bi) * exp(1j * th_abs_rad);
-    Si = S_final(bi);                               % Pf-relative (= Pf-absolute since modulus invariant)
-    Ii = conj(Si / (Vmag_final(bi) * exp(1j * theta_final(bi))));
+    % Task 2 (paper line 993): bus 14 has 248 MW pre-engaged load (LS1).
+    % S_final at bus 14 is the BUS NET = ES3 gen − P_LS1_LOAD. To get the
+    % ES3 source's own gen + V_emf, undo the local load offset.
+    if dynamic_src_buses(s) == 14
+        P_local_load = P_LS1_LOAD;
+    else
+        P_local_load = 0.0;
+    end
+    Si_gen = (real(S_final(bi)) + P_local_load) + 1j * imag(S_final(bi));
+    Ii = conj(Si_gen / (Vmag_final(bi) * exp(1j * theta_final(bi))));
     Z  = dynamic_src_R(s) + 1j * dynamic_src_X(s);
     V_emf = Vt + Z * Ii;
 
@@ -369,12 +391,12 @@ for s = 1:n_dyn
     dyn_term_a_rad(s) = th_abs_rad;
     dyn_emf_v_pu(s)   = abs(V_emf);
     dyn_emf_a_rad(s)  = angle(V_emf);
-    dyn_pinj_sys(s)   = real(Si);
-    dyn_qinj_sys(s)   = imag(Si);
+    dyn_pinj_sys(s)   = real(Si_gen);
+    dyn_qinj_sys(s)   = imag(Si_gen);
 end
 
 % Wind farm terminal info
-wind_buses = [4, 11];
+wind_buses = [4, 8];   % Task 1 (2026-04-28): W2 moved Bus 11 → Bus 8
 wind_names = {'W1', 'W2'};
 n_wind = numel(wind_buses);
 wind_term_v_pu  = zeros(n_wind, 1);
@@ -434,7 +456,7 @@ ic.source                  = mfilename();
 ic.source_hash             = ['sha256:' src_hash];
 ic.timestamp               = char(datetime('now', 'Format', ...
     'yyyy-MM-dd''T''HH:mm:ssXXX', 'TimeZone', 'local'));
-ic.topology_variant        = 'v3_paper_kundur_16bus';
+ic.topology_variant        = 'v3_paper_kundur_15bus_w2_at_bus8_ls1_preengaged';
 ic.decisions               = struct( ...
     'q1_ess_dispatch',  '(a) preserve paper dispatch; ESS group absorbs surplus', ...
     'q2_wind_model',    '(a) const-power PVS; no Type-3/4');

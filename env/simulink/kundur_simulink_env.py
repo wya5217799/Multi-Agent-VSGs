@@ -27,12 +27,15 @@ Yang et al., IEEE TPWRS 2023 — Multi-Agent SAC for Distributed VSG Control.
 
 from __future__ import annotations
 
+import logging
 import os
 import warnings
 from dataclasses import replace
 from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
+
+logger = logging.getLogger(__name__)
 from utils.gym_compat import gym, spaces
 from env.simulink._base import _SimVsgBase
 from scenarios.contract import KUNDUR as _CONTRACT
@@ -261,10 +264,12 @@ class _KundurBaseEnv(_SimVsgBase):
         try:
             self._step_backend(M_target, D_target)
             self._read_measurements()
-        except Exception as exc:
-            print(
-                f"[KundurEnv] Simulation step failed at t={self._sim_time:.2f}: "
-                f"{exc}"
+        except Exception:
+            # logger.exception captures the full traceback so dev errors
+            # (AttributeError, NameError) surface in logs instead of being
+            # silently absorbed by sim_ok=False -> tds_failed reward.
+            logger.exception(
+                "[KundurEnv] Simulation step failed at t=%.2f", self._sim_time
             )
             sim_ok = False
 
@@ -615,6 +620,41 @@ class KundurSimulinkEnv(_KundurBaseEnv):
         )
         self._runtime_profile = load_kundur_model_profile(selected_path)
 
+        # Task 2 hard guard (2026-04-27 freeze blockers): if user explicitly
+        # passes model_name, it MUST agree with the resolved profile's
+        # model_name. Refuse to silently fall back to v2 when v3 was
+        # requested (or vice versa). Catches the failure mode where
+        # KUNDUR_MODEL_PROFILE env-var is unset (defaults to v2 .json) but
+        # caller passes model_name='kundur_cvs_v3' expecting v3 behavior —
+        # without this guard, the BridgeConfig would silently load v2 IC.
+        if (
+            model_name is not None
+            and model_name != self._runtime_profile.model_name
+        ):
+            raise ValueError(
+                f"model_name override {model_name!r} conflicts with "
+                f"resolved profile {self._runtime_profile.model_name!r} "
+                f"(loaded from {selected_path!r}). To select a different "
+                f"model use KUNDUR_MODEL_PROFILE env-var or the "
+                f"model_profile_path= constructor arg; do NOT override "
+                f"model_name independently — it would desync the IC."
+            )
+
+        # v3 explicit-target guard: if the active profile is v3 it MUST be
+        # the canonical v3 profile (model_name=='kundur_cvs_v3' AND profile
+        # file basename contains 'v3'). Catches a hand-edited or renamed
+        # profile JSON that claims model_name='kundur_cvs_v3' but ships
+        # with v2 IC contents.
+        if self._runtime_profile.model_name == 'kundur_cvs_v3':
+            if 'kundur_cvs_v3' not in os.path.basename(str(selected_path)):
+                raise ValueError(
+                    f"profile model_name='kundur_cvs_v3' but profile JSON "
+                    f"path {selected_path!r} does not look like the "
+                    f"canonical kundur_cvs_v3.json. Refusing to launch v3 "
+                    f"with a non-canonical profile file (silent v2 IC "
+                    f"fallback risk)."
+                )
+
         # Phase 4 Gap 1 Path (C): resolve disturbance_type from explicit
         # constructor arg, env-var-driven config default, or legacy fallback.
         # Class attribute DISTURBANCE_VSG_INDICES still honored for legacy
@@ -633,17 +673,21 @@ class KundurSimulinkEnv(_KundurBaseEnv):
             training=training,
         )
         from engine.simulink_bridge import SimulinkBridge
+        from scenarios.kundur.config_simulink import make_bridge_config
 
-        resolved_model_name = model_name if model_name is not None else self._runtime_profile.model_name
         resolved_dir = model_dir or os.path.join(
             os.path.dirname(os.path.abspath(__file__)),
             '..', '..', 'scenarios', 'kundur', 'simulink_models'
         )
-        cfg = replace(
-            KUNDUR_BRIDGE_CONFIG,
-            model_name=resolved_model_name,
-            model_dir=resolved_dir,
-        )
+        # C2 fix: build BridgeConfig from the runtime profile end-to-end via
+        # the factory, so pe0_default_vsg / delta0_deg / step_strategy /
+        # m_var_template / m0_default all match the active profile. Avoids
+        # the old `replace(KUNDUR_BRIDGE_CONFIG, ...)` footgun where only
+        # model_name/model_dir got patched while every other field stayed
+        # frozen from the import-time KUNDUR_MODEL_PROFILE env-var.
+        # model_name is now guaranteed to equal self._runtime_profile.model_name
+        # (or be None); guard above blocks any divergence. No replace() needed.
+        cfg = make_bridge_config(self._runtime_profile, model_dir=resolved_dir)
         self.bridge = SimulinkBridge(cfg)
 
     # ------------------------------------------------------------------
@@ -659,13 +703,21 @@ class KundurSimulinkEnv(_KundurBaseEnv):
             # Restore nominal load state: Bus14 load on, Bus15 load off.
             # Disturbance is applied mid-episode via apply_disturbance_load()
             # (no topology change — Dynamic Load PS signal, FastRestart-safe).
+            #
+            # Task 3 (2026-04-27 freeze blockers): v3 build_kundur_cvs_v3.m
+            # has no Three-Phase Dynamic Load block consuming TripLoad1_P /
+            # TripLoad2_P (LoadStep R-only branches hardcode Resistance='1e9'
+            # — Phase 4.0 audit §R2-Blocker1). Skip the writes under v3 to
+            # avoid silent dead workspace assignments. v2 (kundur_cvs) and
+            # legacy SPS paths unchanged.
             cfg = self.bridge.cfg
-            self.bridge.set_disturbance_load(
-                cfg.tripload1_p_var, cfg.tripload1_p_default
-            )
-            self.bridge.set_disturbance_load(
-                cfg.tripload2_p_var, cfg.tripload2_p_default
-            )
+            if cfg.model_name != 'kundur_cvs_v3':
+                self.bridge.set_disturbance_load(
+                    cfg.tripload1_p_var, cfg.tripload1_p_default
+                )
+                self.bridge.set_disturbance_load(
+                    cfg.tripload2_p_var, cfg.tripload2_p_default
+                )
 
             self.bridge.warmup(T_WARMUP)
             self._sim_time = self.bridge.t_current
@@ -739,6 +791,108 @@ class KundurSimulinkEnv(_KundurBaseEnv):
             #   pm_step_single_vsg        -> legacy: honors class attr DISTURBANCE_VSG_INDICES
             dtype = getattr(self, '_disturbance_type', 'pm_step_single_vsg')
 
+            # Phase A LoadStep dispatch (2026-04-27, updated by Task 2 2026-04-28).
+            #
+            # Task 2 paper-aligned semantics (paper line 993-994):
+            #   `loadstep_paper_bus14`  → LS1 = "sudden load reduction of 248 MW
+            #     at bus 14" = R disengage. Bus 14 IC has 248 MW pre-engaged
+            #     (build_kundur_cvs_v3 sets LoadStep_amp_bus14 default = 248e6).
+            #     env writes LoadStep_amp_bus14 = 0 ⇒ R jumps to 1e9 ⇒ load
+            #     drops out ⇒ freq UP. `magnitude` arg IGNORED for LS1 (always
+            #     full 248 MW trip).
+            #   `loadstep_paper_bus15`  → LS2 = "sudden load increase of 188 MW
+            #     at bus 15" = R engage. Bus 15 IC = 0 MW. env writes
+            #     LoadStep_amp_bus15 = |magnitude|·Sbase ⇒ load engages ⇒
+            #     freq DOWN. magnitude scales LS2 amplitude.
+            #   `loadstep_paper_random_bus` → 50/50 LS1 vs LS2 (= true paper
+            #     random disturbance per Sec.IV-A).
+            #   `loadstep_paper_trip_bus14/15` (Phase A++ alternate) → CCS
+            #     injection path (negative-load injection mode, retained as
+            #     alternate test mode; not in paper main line). magnitude
+            #     scales injection.
+            ls_bus_label: str | None = None
+            ls_action: str | None = None  # 'trip' (LS1, R disengage) or 'engage' (LS2, R engage) or 'cc_inject' (Phase A++)
+            if dtype == 'loadstep_paper_bus14':
+                ls_bus_label, ls_action = 'bus14', 'trip'
+            elif dtype == 'loadstep_paper_bus15':
+                ls_bus_label, ls_action = 'bus15', 'engage'
+            elif dtype == 'loadstep_paper_random_bus':
+                if float(self.np_random.random()) < 0.5:
+                    ls_bus_label, ls_action = 'bus14', 'trip'
+                else:
+                    ls_bus_label, ls_action = 'bus15', 'engage'
+            elif dtype == 'loadstep_paper_trip_bus14':
+                ls_bus_label, ls_action = 'bus14', 'cc_inject'
+            elif dtype == 'loadstep_paper_trip_bus15':
+                ls_bus_label, ls_action = 'bus15', 'cc_inject'
+            elif dtype == 'loadstep_paper_trip_random_bus':
+                ls_bus_label = (
+                    'bus14' if float(self.np_random.random()) < 0.5 else 'bus15'
+                )
+                ls_action = 'cc_inject'
+
+            if ls_bus_label is not None and ls_action is not None:
+                # Convert sys-pu magnitude to watts (used by 'engage' / 'cc_inject').
+                amp_w = abs(float(magnitude)) * cfg.sbase_va
+                t_now = float(self.bridge.t_current)
+                other_label = 'bus15' if ls_bus_label == 'bus14' else 'bus14'
+
+                if ls_action == 'trip':
+                    # Task 2: LS1 = R disengage (paper line 993 "sudden load
+                    # reduction of 248 MW"). Bus 14 IC has 248 MW pre-engaged;
+                    # env writes 0 ⇒ R jumps to 1e9 ⇒ load drops out ⇒ freq UP.
+                    # `magnitude` arg IGNORED (always full 248 MW trip).
+                    self.bridge.apply_workspace_var(
+                        f'LoadStep_amp_{ls_bus_label}', 0.0
+                    )
+                    # Other bus stays at its IC default (LS2 bus15 IC = 0).
+                    # Don't touch the other bus's R amp here — leave at IC.
+                    # Trip path (CCS) silent on both.
+                    self.bridge.apply_workspace_var(
+                        f'LoadStep_trip_amp_{ls_bus_label}', 0.0
+                    )
+                    self.bridge.apply_workspace_var(
+                        f'LoadStep_trip_amp_{other_label}', 0.0
+                    )
+                elif ls_action == 'engage':
+                    # Task 2: LS2 = R engage (paper line 994 "sudden load
+                    # increase of 188 MW"). Bus 15 IC = 0; env writes amp_w
+                    # ⇒ R = V²/amp_w ⇒ load engages ⇒ freq DOWN.
+                    self.bridge.apply_workspace_var(
+                        f'LoadStep_amp_{ls_bus_label}', amp_w
+                    )
+                    # Other bus (bus14) stays at IC = 248 MW pre-engaged.
+                    # Trip path silent.
+                    self.bridge.apply_workspace_var(
+                        f'LoadStep_trip_amp_{ls_bus_label}', 0.0
+                    )
+                    self.bridge.apply_workspace_var(
+                        f'LoadStep_trip_amp_{other_label}', 0.0
+                    )
+                else:  # 'cc_inject' (Phase A++ alternate, retained for diagnostics)
+                    self.bridge.apply_workspace_var(
+                        f'LoadStep_trip_amp_{ls_bus_label}', amp_w
+                    )
+                    self.bridge.apply_workspace_var(
+                        f'LoadStep_trip_amp_{other_label}', 0.0
+                    )
+                    # Don't touch R-amp side — stays at IC.
+
+                # Zero Pm-step proxies so dispatch types don't compound.
+                for i in range(cfg.n_agents):
+                    self.bridge.apply_workspace_var(f'Pm_step_t_{i+1}',   t_now)
+                    self.bridge.apply_workspace_var(f'Pm_step_amp_{i+1}', 0.0)
+                for g in range(1, 4):
+                    self.bridge.apply_workspace_var(f'PmgStep_t_{g}',   t_now)
+                    self.bridge.apply_workspace_var(f'PmgStep_amp_{g}', 0.0)
+                logger.info(
+                    "[Kundur-Simulink-CVS] LoadStep %s at %s: "
+                    "amp=%.2f MW (magnitude=%+.3f sys-pu), step_time=%.4fs",
+                    ls_action, ls_bus_label, amp_w / 1e6,
+                    float(magnitude), t_now,
+                )
+                return
+
             # Z1 SG-side dispatch (2026-04-27) — route to PmgStep_<g> for g=1..3.
             # Disturbance enters at G1/G2/G3 (synchronous-gen sources at buses
             # 1/2/3), propagates through the network to the ESS. ESS H/D
@@ -757,11 +911,13 @@ class KundurSimulinkEnv(_KundurBaseEnv):
                 sg_target_idx = int(self.np_random.integers(1, 4))
 
             if sg_target_idx is not None:
-                # SG-side Pm-step proxy. Same magnitude formula as ESS path:
-                # Pmg vars are in sys-pu (build_kundur_cvs_v3.m:173 stores Pmg_g
-                # = sg_Pm0_sys, sys-pu); PmgStep_amp_<g> default 0.0 (sys-pu);
-                # we push the same sys-pu magnitude.
-                amp_focused_pu = float(magnitude) * 100e6 / 1.0 / cfg.sbase_va
+                # SG-side Pm-step proxy. Pmg vars are in sys-pu
+                # (build_kundur_cvs_v3.m:173 stores Pmg_g = sg_Pm0_sys);
+                # PmgStep_amp_<g> default 0.0 sys-pu; magnitude is already
+                # sys-pu so push verbatim. (M2 fix: previous expression
+                # `magnitude * 100e6 / 1.0 / cfg.sbase_va` was an identity
+                # rescale brittle to sbase_va changes.)
+                amp_focused_pu = float(magnitude)
                 t_now = float(self.bridge.t_current)
                 # Zero all SG step amps first (silence non-target G).
                 for g in range(1, 4):
@@ -803,7 +959,10 @@ class KundurSimulinkEnv(_KundurBaseEnv):
                 )
                 proxy_bus = None
             n_tgt = max(len(target_indices), 1)
-            amp_focused_pu = float(magnitude) * 100e6 / n_tgt / cfg.sbase_va
+            # M2 fix: magnitude is already sys-pu; Pm_step_amp_<i> is sys-pu.
+            # Previous `magnitude * 100e6 / n_tgt / cfg.sbase_va` evaluated
+            # to magnitude/n_tgt only because sbase_va == 100e6 — brittle.
+            amp_focused_pu = float(magnitude) / n_tgt
             t_now = float(self.bridge.t_current)
             amps_per_vsg = [0.0] * cfg.n_agents
             for idx in target_indices:

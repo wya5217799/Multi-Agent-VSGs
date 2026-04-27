@@ -36,8 +36,8 @@ runtime_mat = fullfile(out_dir, [mdl '_runtime.mat']);
 ic = jsondecode(fileread(ic_path));
 assert(isfield(ic, 'schema_version') && ic.schema_version == 3, ...
     'kundur_ic_cvs_v3.json: schema_version must be 3 (got %d)', ic.schema_version);
-assert(strcmp(ic.topology_variant, 'v3_paper_kundur_16bus'), ...
-    'IC topology_variant must be "v3_paper_kundur_16bus" — refusing to build v3 against non-v3 IC');
+assert(strcmp(ic.topology_variant, 'v3_paper_kundur_15bus_w2_at_bus8_ls1_preengaged'), ...
+    'IC topology_variant must be "v3_paper_kundur_15bus_w2_at_bus8_ls1_preengaged" — refusing to build v3 against non-v3 IC (Task 1: W2 → Bus 8; Task 2: Bus 14 LS1 248 MW pre-engaged)');
 assert(ic.powerflow.converged && ic.powerflow.closure_ok, ...
     'IC reports NR did not converge OR closure_ok=false — refusing to build');
 
@@ -56,7 +56,10 @@ sg_Pm0_sys    = double(ic.sg_pm0_sys_pu(:));
 assert(numel(sg_delta0_rad) == 3 && numel(sg_Vemf_pu) == 3 && numel(sg_Pm0_sys) == 3, ...
     'IC SG arrays must be length 3');
 
-% Wind (2): bus 4 (W1), bus 11 (W2). const-power PVS.
+% Wind (2): bus 4 (W1), bus 8 (W2). const-power PVS.
+%   Task 1 (2026-04-28): W2 moved from bus 11 to bus 8 directly per
+%   paper line 894 ("100 MW wind farm is connected to bus 8"). bus 11
+%   intermediary node + L_8_W2 short Pi-line removed.
 wind_term_a_rad = double(ic.wind_terminal_voltage_angle_rad(:));
 wind_term_v_pu  = double(ic.wind_terminal_voltage_mag_pu(:));
 wind_Pref_sys   = double(ic.wind_pref_sys_pu(:));
@@ -115,7 +118,6 @@ line_defs = {
     'L_8_16',   8, 16,    1, R_short, L_short, C_short;
     'L_10_14', 10, 14,    1, R_short, L_short, C_short;
     'L_9_15',   9, 15,    1, R_short, L_short, C_short;
-    'L_8_W2',   8, 11,    1, R_short, L_short, C_short;
 };
 
 %% ===== Loads + shunt caps (constant Z) =====
@@ -130,21 +132,28 @@ shunt_defs = {
     'Shunt9', 9, 350e6;
 };
 
-% LoadStep R-only branches (workspace-controlled conductance)
-%   G_perturb_k(t) = LoadStep_amp_k(t) · (Sbase / Vbase²)
-% Implemented as Constant block driving Series RLC R-only Resistance via runtime
-% workspace var — but since 'Resistance' must be positive scalar, we instead
-% gate a parallel R load whose value is computed at build time and modulated
-% via a Pm-step-style amplitude scalar. Simplest FastRestart-safe design:
-%   pre-instantiate a fixed-size R load (R = Vbase²/(Sbase × LoadStepAmpMax_pu));
-%   use a `Three-Phase Series RLC Load` would be too heavy — instead use single-
-%   phase R via Constant-driven Controlled Voltage / Current — but this gets
-%   complex. For Phase 1.3 minimum scope, use a parallel R element on each
-%   load bus whose conductance equals a workspace scalar G_perturb_k_S, with
-%   default 0 (= disabled). Phase 3 env will set G_perturb mid-episode.
+% LoadStep — Variable Resistor wired to bus 14 / bus 15 (paper-aligned).
+%
+% Phase A (2026-04-27): replace v3-Phase1.3 dead `Resistance='1e9'` Series RLC
+% pattern with a `powerlib/Elements/Variable Resistor` whose R is driven by
+% a Constant block reading workspace var `LoadStep_amp_<bus_label>`:
+%
+%     R(t) = Vbase_const^2 / max(LoadStep_amp_<lb>, 1e-3)
+%
+% Default amp=0 ⇒ R = 230kV² / 1e-3 ≈ 5.29e13 Ω ≈ open. With amp=X W and V=230kV,
+% the absorbed power = V²/R = X W, so amp directly = active-power demand.
+%
+% Tunability: Constant.Value re-evaluates per sim() chunk (env writes amp BEFORE
+% the chunk that crosses t_step). Default amp=0 keeps NR powerflow unchanged
+% (load is electrically absent at IC), so kundur_ic_cvs_v3.json / runtime.mat
+% are NOT regenerated for this wiring change.
+%
+% Direction: step-on semantics (engage R load mid-episode). Frequency drops on
+% activation. Paper LoadStep 1 (Bus 14 *trip* = freq rises) requires either
+% pre-engaged load + NR re-derive, or controlled current source — deferred.
 loadstep_defs = {
-    'LoadStep7', 7;
-    'LoadStep9', 9;
+    'LoadStep_bus14', 14, 'bus14';   % paper Bus 14 ≈ v3 ESS bus 14 (near ES3)
+    'LoadStep_bus15', 15, 'bus15';   % paper Bus 15 ≈ v3 ESS bus 15 (near ES4)
 };
 
 %% ===== Reset model =====
@@ -197,11 +206,23 @@ for w = 1:2
     assignin('base', sprintf('WVmag_%d',    w), double(wind_term_v_pu(w) * Vbase));
 end
 
-% --- LoadStep workspace conductances (S = siemens) ---
-for k = 1:2
-    assignin('base', sprintf('G_perturb_%d_S', k), double(0.0));   % disabled
-    assignin('base', sprintf('LoadStep_t_%d',  k), double(5.0));
-    assignin('base', sprintf('LoadStep_amp_%d', k), double(0.0));
+% --- LoadStep workspace amplitudes (W = watts of absorbed active power) ---
+% Phase A: paper-aligned naming `LoadStep_amp_bus14 / LoadStep_amp_bus15`.
+% Task 2 (2026-04-28, paper line 993): Bus 14 LS1 load is pre-engaged at IC
+% = 248e6 W; LS1 trigger = env writes 0 ⇒ R disengage ⇒ load drops out ⇒
+% freq UP ("sudden load reduction" paper-faithful).
+% Bus 15 LS2 default 0; LS2 trigger = env writes 188e6 ⇒ load engages ⇒
+% freq DOWN ("sudden load increase" paper-aligned).
+% Phase A++ CCS injection path retained (LoadStep_trip_amp_bus*) as alternate.
+for k = 1:size(loadstep_defs, 1)
+    lb = loadstep_defs{k, 3};
+    if strcmp(lb, 'bus14')
+        amp_default = double(248e6);   % Task 2: LS1 pre-engaged
+    else
+        amp_default = double(0.0);     % LS2 not engaged at IC
+    end
+    assignin('base', sprintf('LoadStep_amp_%s', lb), amp_default);
+    assignin('base', sprintf('LoadStep_t_%s',   lb), double(5.0));   % s (informational)
 end
 
 %% ===== Build line branches (Π-line: series R+L + shunt C/2 each end) =====
@@ -313,26 +334,94 @@ for sh = 1:n_shunts
         'UserData', struct('bus', bus));
 end
 
-% LoadStep R-only branches (per-bus parallel R, default open via large R)
-% For Phase 1.3, instantiate placeholder R = 1e9 Ω (= ~0 conductance).
-% Phase 3 env will modulate via runtime workspace `G_perturb_k_S`.
-for k = 1:2
-    name  = loadstep_defs{k, 1};
-    bus   = loadstep_defs{k, 2};
+% LoadStep — Series RLC R-only with workspace-expression Resistance.
+% Phase A (2026-04-27): replaces v3-Phase1.3 dead `Resistance='1e9'`. The
+% Resistance param is set to a string expression
+%     'Vbase_const^2 / max(LoadStep_amp_<lb>, 1e-3)'
+% which MATLAB re-evaluates from the base workspace at each sim() call.
+% Verified Phasor-tunable in tmp_R_tune_test on 2026-04-27 (Variable Resistor
+% requires Discrete solver and was rejected). env writes `LoadStep_amp_<lb>`
+% mid-episode (W); amp=0 ⇒ R≈5e13 Ω (open); amp=X ⇒ R=V²/X draws X W at V≈Vbase.
+% NR/IC unaffected by default amp=0 (load electrically absent at IC).
+for k = 1:size(loadstep_defs, 1)
+    name      = loadstep_defs{k, 1};
+    bus       = loadstep_defs{k, 2};
+    bus_label = loadstep_defs{k, 3};
 
     yposLS = 200 + (k - 1) * 100;
     add_block('powerlib/Elements/Series RLC Branch', [mdl '/' name], ...
         'Position', [1100 yposLS 1160 yposLS+60]);
-    % Default disabled (very large R = open circuit equivalent)
     set_param([mdl '/' name], 'BranchType', 'R', ...
-        'Resistance', '1e9');
+        'Resistance', sprintf('Vbase_const^2 / max(LoadStep_amp_%s, 1e-3)', bus_label));
 
     add_block('powerlib/Elements/Ground', [mdl '/GND_' name], ...
         'Position', [1100 yposLS+90 1140 yposLS+120]);
     add_line(mdl, [name '/RConn1'], ['GND_' name '/LConn1'], 'autorouting', 'smart');
 
     set_param([mdl '/' name], 'UserDataPersistent', 'on', ...
-        'UserData', struct('bus', bus));
+        'UserData', struct('bus', bus, 'bus_label', bus_label));
+end
+
+% LoadStep TRIP direction (Phase A++ 2026-04-27) — Controlled Current Source
+% per bus, in parallel with the Series RLC R load. Drives the trip-direction
+% disturbance (freq UP) which a passive R cannot do. CCS is single-phase and
+% Phasor-compatible (verified in library lookup).
+%
+% Wiring: LConn = ground, RConn = bus. Per powerlib convention current flows
+% L → external → R, so positive Constant input ⇒ I from GND → bus =
+% INJECTION (= "negative load" = generator-like = freq UP).
+%
+% Magnitude: Constant outputs complex current via Real-Imag-to-Complex
+%     I_phasor = (LoadStep_trip_amp_<lb> / Vbase_const) + 0j  (A, peak)
+% At bus voltage V ≈ Vbase∠δ_bus with small δ, real(V·conj(I)) ≈
+% Vbase · I_real · cos(δ) ≈ amp_W active power injected. Direction is purely
+% real (in phase with reference), close-to-active for small bus angles.
+%
+% Default amp_W = 0 ⇒ I_phasor = 0+0j ⇒ source electrically absent ⇒ NR / IC
+% unaffected. env writes LoadStep_trip_amp_<lb> mid-episode.
+for k = 1:size(loadstep_defs, 1)
+    bus       = loadstep_defs{k, 2};
+    bus_label = loadstep_defs{k, 3};
+
+    trip_name   = sprintf('LoadStepTrip_%s', bus_label);
+    re_name     = sprintf('ITripRe_%s',     bus_label);
+    im_name     = sprintf('ITripIm_%s',     bus_label);
+    ri2c_name   = sprintf('ITripRI2C_%s',   bus_label);
+    gnd_name    = sprintf('GND_%s',         trip_name);
+
+    yposLT = 600 + (k - 1) * 110;
+    bxLT   = 1100;
+
+    % Real component: amp_W / Vbase_const   (A, peak)
+    add_block('simulink/Sources/Constant', [mdl '/' re_name], ...
+        'Position', [bxLT-160 yposLT bxLT-100 yposLT+20], ...
+        'Value', sprintf('LoadStep_trip_amp_%s / Vbase_const', bus_label));
+
+    % Imag component: 0 (purely active injection at reference angle)
+    add_block('simulink/Sources/Constant', [mdl '/' im_name], ...
+        'Position', [bxLT-160 yposLT+30 bxLT-100 yposLT+50], 'Value', '0');
+
+    % Real-Imag → Complex (Phasor signal type for the CCS input)
+    add_block('simulink/Math Operations/Real-Imag to Complex', [mdl '/' ri2c_name], ...
+        'Position', [bxLT-80 yposLT bxLT-40 yposLT+40]);
+    add_line(mdl, [re_name '/1'], [ri2c_name '/1'], 'autorouting', 'smart');
+    add_line(mdl, [im_name '/1'], [ri2c_name '/2'], 'autorouting', 'smart');
+
+    % Controlled Current Source: LConn=GND, RConn=bus → +I = INJECTION
+    add_block('powerlib/Electrical Sources/Controlled Current Source', ...
+        [mdl '/' trip_name], 'Position', [bxLT yposLT bxLT+60 yposLT+50]);
+    set_param([mdl '/' trip_name], 'Initialize', 'off', 'Measurements', 'None');
+    add_line(mdl, [ri2c_name '/1'], [trip_name '/1'], 'autorouting', 'smart');
+
+    % Ground at LConn (current source from ground side)
+    add_block('powerlib/Elements/Ground', [mdl '/' gnd_name], ...
+        'Position', [bxLT-50 yposLT+70 bxLT-10 yposLT+90]);
+    add_line(mdl, [trip_name '/LConn1'], [gnd_name '/LConn1'], ...
+        'autorouting', 'smart');
+
+    set_param([mdl '/' trip_name], 'UserDataPersistent', 'on', ...
+        'UserData', struct('bus', bus, 'bus_label', bus_label, ...
+                           'mode', 'trip_inject'));
 end
 
 %% ===== Build dynamic sources (3 SG + 4 ESS) with full swing-eq closure =====
@@ -646,8 +735,8 @@ end
 % doesn't have a phasor-domain Programmable Voltage Source; the AC source's
 % Amplitude can be set to a workspace-evaluated expression.
 wind_meta = {
-    'W1', 4,  'WindAmp_1', 'Wphase_1', 'WVmag_1';
-    'W2', 11, 'WindAmp_2', 'Wphase_2', 'WVmag_2';
+    'W1', 4, 'WindAmp_1', 'Wphase_1', 'WVmag_1';
+    'W2', 8, 'WindAmp_2', 'Wphase_2', 'WVmag_2';
 };
 for w = 1:size(wind_meta, 1)
     wname = wind_meta{w, 1};
@@ -726,6 +815,15 @@ for k = 1:2
     register(bus, [name '/LConn1']);
 end
 
+% Phase A++ trip CCS: register RConn at bus (current INJECTION side; LConn
+% is at ground per build above).
+for k = 1:size(loadstep_defs, 1)
+    bus       = loadstep_defs{k, 2};
+    bus_label = loadstep_defs{k, 3};
+    trip_name = sprintf('LoadStepTrip_%s', bus_label);
+    register(bus, [trip_name '/RConn1']);
+end
+
 % Source internal-X downstream port → bus
 for s = 1:n_src
     sname = src_meta{s, 1};
@@ -802,6 +900,28 @@ for w = 1:2
     % default at L195). v3 supports W1/W2 partial trip via
     % `apply_workspace_var('WindAmp_<w>', <0..1>)` at runtime. P4.1a (2026-04-27).
     runtime_consts.(sprintf('WindAmp_%d', w)) = double(1.0);
+end
+% Phase A (2026-04-27): LoadStep amp/t defaults referenced by Constants.
+% Cold-start MATLAB needs these in runtime.mat.
+% Task 2 (2026-04-28): Bus 14 LS1 default = 248e6 W (pre-engaged per paper
+% line 993 "sudden load reduction"); Bus 15 LS2 default = 0 W (LS2 = step-on
+% direction per paper line 994).
+for k = 1:size(loadstep_defs, 1)
+    lb = loadstep_defs{k, 3};
+    if strcmp(lb, 'bus14')
+        rt_amp_default = double(248e6);   % Task 2: LS1 pre-engaged
+    else
+        rt_amp_default = double(0.0);     % LS2 default off
+    end
+    runtime_consts.(sprintf('LoadStep_amp_%s', lb)) = rt_amp_default;
+    runtime_consts.(sprintf('LoadStep_t_%s',   lb)) = double(5.0);
+end
+% Phase A++ (2026-04-27): trip-direction current source amp defaults
+% referenced by Constants ITripRe_<lb>. amp=0 ⇒ I_phasor = 0+0j ⇒ source
+% electrically absent ⇒ NR / IC unaffected. env writes mid-episode.
+for k = 1:size(loadstep_defs, 1)
+    lb = loadstep_defs{k, 3};
+    runtime_consts.(sprintf('LoadStep_trip_amp_%s', lb)) = double(0.0);
 end
 save(runtime_mat, '-struct', 'runtime_consts');
 

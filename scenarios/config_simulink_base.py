@@ -34,6 +34,14 @@ N_SUBSTEPS = 5       # parameter interpolation substeps
 T_WARMUP = 0.5       # warmup before disturbance (s)
 
 # ========== Action Space (both scenarios use same M/D range) ==========
+# DOCUMENTED DEVIATION from Yang 2023 paper line 938-939
+# (paper: ΔH=[-100,+300], ΔD=[-200,+600]). Current ranges below are
+# 33×/133× narrower than paper-literal.
+# Rationale: paper Eq.1 H unit ambiguous (Q7 unresolved in fact-base §8);
+# Phase C empirically shows wider ladders hit physical floor (M_FLOOR=1,
+# D_FLOOR=0.5) — paper-literal range produces 87% floor-clipped action
+# space, untrainable for SAC.
+# Full analysis: docs/paper/action-range-mapping-deviation.md (Task 3 2026-04-28)
 DM_MIN, DM_MAX = -6.0, 18.0    # M range: [M0+DM_MIN, M0+DM_MAX]
 DD_MIN, DD_MAX = -1.5, 4.5     # D range: [D0+DD_MIN, D0+DD_MAX]
 

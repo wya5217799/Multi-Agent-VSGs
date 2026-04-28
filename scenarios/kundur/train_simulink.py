@@ -115,6 +115,23 @@ def parse_args():
              "until G6 closure proved independent learners give a real "
              "paper-direction-correct improvement on test manifest.",
     )
+    parser.add_argument(
+        "--per-agent-buffer-size",
+        type=int,
+        default=None,
+        help="G6 buffer-isolation knob (independent learners only): override "
+             "per-agent replay buffer capacity. Default: BUFFER_SIZE / N (= "
+             "10000 / 4 = 2500). Set to 10000 to give each agent its own full "
+             "paper Table I capacity (total 40k buffer across 4 agents). Used "
+             "to test whether long-train degradation is driven by early "
+             "buffer eviction.",
+    )
+    parser.add_argument(
+        "--per-agent-warmup-steps",
+        type=int,
+        default=None,
+        help="G6 warmup override: per-agent warmup_steps (default: WARMUP_STEPS / N).",
+    )
     args = parser.parse_args()
     checkpoint_was_default = args.checkpoint_dir is None
     log_was_default = args.log_file is None
@@ -287,10 +304,13 @@ def train(args):
             reward_scale=1e-3,
             alpha_max=5.0,
             alpha_min=0.05,
+            per_agent_buffer_size=getattr(args, "per_agent_buffer_size", None),
+            per_agent_warmup_steps=getattr(args, "per_agent_warmup_steps", None),
         )
         print(
             f"[train] G6 active (default): 4 independent SACAgent instances "
-            f"(per-agent buffer={BUFFER_SIZE//N_AGENTS}, warmup={WARMUP_STEPS//N_AGENTS})"
+            f"(per-agent buffer={agent.per_agent_buffer_size}, "
+            f"warmup={agent.per_agent_warmup_steps})"
         )
     else:
         agent = SACAgent(

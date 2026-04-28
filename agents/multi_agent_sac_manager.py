@@ -71,6 +71,8 @@ class MultiAgentSACManager:
         alpha_max: float = 5.0,
         alpha_min: float = 0.05,
         device: str | None = None,
+        per_agent_buffer_size: int | None = None,
+        per_agent_warmup_steps: int | None = None,
     ):
         self.n_agents = int(n_agents)
         self.obs_dim = int(obs_dim)
@@ -79,15 +81,26 @@ class MultiAgentSACManager:
         self.batch_size = int(batch_size)
 
         # Construct N independent agents — each owns full SAC state.
-        # Per-agent warmup_steps divides evenly: every transition stored in
-        # an individual buffer counts as 1 transition for THAT agent. With
-        # 50 steps/ep × 4 agents shared into ONE buffer = 200 trans/ep
-        # vs independent buffers = 50 trans/ep per agent. Therefore the
-        # effective per-agent warmup must be 1/N of the shared warmup if we
-        # want SAC to start updating at the same wall-clock time. To keep
-        # train_simulink.py's warmup-progress monitor sensible, divide.
-        per_agent_warmup = max(int(round(warmup_steps / n_agents)), 1)
-        per_agent_buffer = max(int(round(buffer_size / n_agents)), self.batch_size + 1)
+        #
+        # Default split: per_agent_warmup = warmup_steps / N, per_agent_buffer
+        # = buffer_size / N. This matches "total buffer = paper Table I 10000"
+        # interpretation. But G6 500-ep extension showed ckpt-trajectory
+        # severe degradation past ep 50 — diagnosis: per-agent buffer of 2500
+        # caps too early (50 ep × 50 step/agent/ep = 2500). Eviction kicks in
+        # exactly at ep 50, after which only the most-recent 50 ep are
+        # represented per agent. Independent-buffer experiment (2026-04-27)
+        # tests `per_agent_buffer_size=10000` so each agent has its own full
+        # 10k capacity (total 40k), delaying eviction to ep ~200.
+        if per_agent_warmup_steps is not None:
+            per_agent_warmup = max(int(per_agent_warmup_steps), 1)
+        else:
+            per_agent_warmup = max(int(round(warmup_steps / n_agents)), 1)
+        if per_agent_buffer_size is not None:
+            per_agent_buffer = max(int(per_agent_buffer_size), self.batch_size + 1)
+        else:
+            per_agent_buffer = max(int(round(buffer_size / n_agents)), self.batch_size + 1)
+        self.per_agent_buffer_size = per_agent_buffer
+        self.per_agent_warmup_steps = per_agent_warmup
 
         self.agents: list[SACAgent] = []
         for _ in range(self.n_agents):

@@ -584,34 +584,35 @@ class SimulinkBridge:
     def _warmup_cvs(self, duration: float) -> None:
         """G3-prep-C: CVS-only warmup path. NE39 / legacy paths are NOT touched.
 
-        Reads NR initial condition (delta0_rad, Pm0_pu) from the on-disk
-        ``kundur_ic_cvs.json`` and feeds an init_params struct to
-        ``slx_episode_warmup_cvs.m``. Vmag is NOT pushed (build-time values
-        in the .slx remain authoritative — see _cvs.m header note).
+        Reads NR initial condition (delta0_rad, Pm0_pu) from
+        ``cfg.pe0_default_vsg`` and ``cfg.delta0_deg``, which the active
+        model profile populates at ``scenarios/kundur/config_simulink.py``
+        from the profile-matching IC JSON (``kundur_ic_cvs.json`` for v2,
+        ``kundur_ic_cvs_v3.json`` for v3 — see the if/elif/else block at
+        lines 145-177 of that file). Profile dispatch is the single
+        source-of-truth; this method MUST NOT re-read any IC JSON. Vmag
+        is NOT pushed (build-time values in the .slx remain authoritative
+        — see _cvs.m header note).
 
         Only invoked when ``cfg.step_strategy == "cvs_signal"``.
         """
-        import json
-        from pathlib import Path
-
-        ic_path = Path(self.cfg.model_dir).resolve().parent / "kundur_ic_cvs.json"
-        if not ic_path.exists():
+        if not self.cfg.pe0_default_vsg or not self.cfg.delta0_deg:
             raise SimulinkError(
-                f"CVS warmup requires NR IC at {ic_path}; not found"
+                "CVS warmup requires cfg.pe0_default_vsg and cfg.delta0_deg "
+                "to be populated by the active model profile "
+                "(see scenarios/kundur/config_simulink.py)"
             )
-        ic = json.loads(ic_path.read_text(encoding="utf-8"))
-        if not ic.get("powerflow", {}).get("converged", False):
+        if (
+            len(self.cfg.pe0_default_vsg) != self.cfg.n_agents
+            or len(self.cfg.delta0_deg) != self.cfg.n_agents
+        ):
             raise SimulinkError(
-                f"CVS warmup IC at {ic_path} reports NR did not converge"
-            )
-
-        delta0_rad = ic["vsg_internal_emf_angle_rad"]
-        pm0_pu     = ic["vsg_pm0_pu"]
-        if len(delta0_rad) != self.cfg.n_agents or len(pm0_pu) != self.cfg.n_agents:
-            raise SimulinkError(
-                f"CVS IC has {len(delta0_rad)} agents; bridge expects "
+                f"CVS IC has Pm0={len(self.cfg.pe0_default_vsg)} agents, "
+                f"delta0={len(self.cfg.delta0_deg)} agents; bridge expects "
                 f"{self.cfg.n_agents}"
             )
+        pm0_pu     = list(self.cfg.pe0_default_vsg)
+        delta0_rad = [float(d) * np.pi / 180.0 for d in self.cfg.delta0_deg]
 
         mdbl = self._matlab_double
         agent_ids = mdbl(list(range(1, self.cfg.n_agents + 1)))
@@ -666,7 +667,18 @@ class SimulinkBridge:
             if pe_arr.size == self.cfg.n_agents:
                 self._Pe_prev = pe_arr
         if self._Pe_prev is None:
-            self._Pe_prev = np.asarray(pm0_pu, dtype=np.float64)
+            # M1 fix: Pm0 can be negative for absorbing-mode profiles
+            # (v3 ESS group absorbs +185 MW surplus). _Pe_prev contract
+            # is non-negative pu; clip to [0, 5] and warn if any entry
+            # was negative so a contract violation surfaces rather than
+            # silently propagating into downstream callers.
+            pm0_arr = np.asarray(pm0_pu, dtype=np.float64)
+            if np.any(pm0_arr < 0.0):
+                logger.warning(
+                    "_Pe_prev fallback: clipping negative Pm0 entries to 0 "
+                    "(raw=%s)", pm0_arr.tolist()
+                )
+            self._Pe_prev = np.clip(pm0_arr, 0.0, 5.0)
 
         logger.debug(
             "CVS warmup complete: t=%.4f s (recompile=%s, Pe=%s, delta_deg=%s)",

@@ -108,3 +108,36 @@ reward alignment is validated.
 |------|------|--------|
 | 2026-04-10 | `kundur_simulink_env.py` | r_f: absolute → relative sync; r_h/r_d: mean(a²) → (mean(ΔH̄))² |
 | 2026-04-10 | `ne39_simulink_env.py` | same as above |
+
+---
+
+## 2026-04-28 Credibility Close — HPO 前接口层锁定
+
+**Scope:** Kundur Simulink 路径接口层 5 项裁决（不动物理层、bridge/helper、SAC、reward 公式结构、NE39）。
+**Verdict:** `results/harness/kundur/cvs_v3_credibility_close/credibility_close_verdict.md`
+
+### 裁决表
+
+| # | 项 | 裁决 | 理由 |
+|---|---|---|---|
+| 1 | 动作范围 ΔM∈[-6,18]/ΔD∈[-1.5,4.5] | **保留** | Phase C 实证：paper-literal L3 范围 M=1 corner ROCOF=9.8 Hz/s 危险；当前 L0 范围全 corner 稳定，且 Phase D 已验证 18× tau 杠杆。Q7 量纲未解前不机械采纳论文字面值。详见 `docs/paper/action-range-mapping-deviation.md` |
+| 2 | 奖励权重 PHI_H/PHI_D | **锁定 0.0001 + 删 env-var override** | env-var 是 sweep 用的，HPO 必须搜固定 reward。0.0001 由 Q7 量纲映射推出（ΔM 比论文 ΔH 小 33×，ΔM² 小 ~1100×）；ablation 改常量 |
+| 3 | 训练扰动幅度 DIST_MAX | **0.5 → 1.0 sys-pu** | paper_eval no-control = -6.11 vs 论文 -15.20，gap 与扰动量级高度相关；DIST_MAX=0.5 可能显著 under-excite system，因此提升训练扰动上限到 1.0 sys-pu，并用 no-control paper_eval 复测校准。**不声称已完全证明 2.5× 缺口只由 DIST_MAX 解释。** |
+| 4 | Buffer 不清空 | **保留** | off-policy SAC 标准做法；论文 Algorithm 1 与 Table I 内部矛盾（M=50 步 vs batch=256），项目以 Table I 为准。已在 §Q3 备案 |
+| 5 | T_WARMUP=10s | **保留** + 注释升级 | post_task_mini 实证 t=10 s 残差 < 0.5 mHz；旧注释 "smoke-stage" 改为 "production locked" |
+
+### 同步修改
+
+- `scenarios/kundur/config_simulink.py`：
+  - `DEFAULT_KUNDUR_MODEL_PROFILE` → `kundur_cvs_v3.json`（v2 5-bus 不再是 paper-aligned 默认）
+  - `PHI_H = PHI_D = 0.0001`（删除 `KUNDUR_PHI_H` / `KUNDUR_PHI_D` env-var override）
+  - `DIST_MAX = 1.0`（保留 `DIST_MIN = 0.1`）
+  - `KUNDUR_DISTURBANCE_TYPE` 默认 `loadstep_paper_random_bus`（保留 env-var override）
+  - `T_WARMUP = 10.0` 注释升级为 production locked
+- `docs/paper/yang2023-fact-base.md` §10 表新增 5 行
+- `scenarios/kundur/NOTES.md` 顶部加 credibility-close 标记
+- `results/harness/kundur/cvs_v3_credibility_close/credibility_close_verdict.md` 新增/更新
+
+### 未触动
+
+物理层（拓扑/IC/.slx/runtime.mat/NR 脚本）、bridge/helper、SAC 架构、reward 公式结构、NE39 任何文件。

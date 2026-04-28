@@ -4,6 +4,22 @@
 > "已知事实"失效直接删。"试过没用的"不要删——防重试记忆。
 > 改完顺手更新这份笔记。
 
+## 2026-04-28 Credibility Close（接口层锁定，HPO 前置）
+
+物理层 v3 paper-aligned 实证完成（4/4 PASS）：paper_eval no-control + Phase B/C/D。
+HPO 前接口层 5 项已锁定（不动物理层、bridge/helper、SAC 架构、reward 公式结构、NE39）：
+
+- `DEFAULT_KUNDUR_MODEL_PROFILE` → `kundur_cvs_v3.json`（v2 仅遗留回归）
+- `PHI_H = PHI_D = 0.0001` 锁定，删 `KUNDUR_PHI_H` / `KUNDUR_PHI_D` env-var override
+- `DIST_MAX` 0.5 → 1.0 sys-pu（用 no-control paper_eval 复测校准）
+- `KUNDUR_DISTURBANCE_TYPE` 默认 `loadstep_paper_random_bus`（保留 env-var override）
+- `T_WARMUP = 10.0` 注释升级为 production locked
+
+完整 verdict + 裁决依据：
+- `results/harness/kundur/cvs_v3_credibility_close/credibility_close_verdict.md`
+- `docs/decisions/2026-04-10-paper-baseline-contract.md`（§2026-04-28 Credibility Close 段）
+- `docs/paper/yang2023-fact-base.md` §10 表
+
 ## 现在在修
 Pe 幅值根因 Batch 7 完成（verdict=RC-A）：解析证明电流异常（1456 A vs 预期 71 A）不可能由 ESS 阻抗+角度差解释。  
 电压测量正常（187.6 kV），电流测量异常大（ratio_I=14–21x）→ 测量块拓扑位置错误（RC-A首要候选）。  

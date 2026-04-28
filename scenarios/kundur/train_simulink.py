@@ -42,6 +42,89 @@ from utils.run_protocol import (
 from utils.training_log import load_or_create_log
 from utils.notifier import notify
 import scenarios.kundur.config_simulink as _cfg_module
+
+
+def _kundur_runtime_facts() -> dict:
+    """P1 pre-flight: collect profile/disturbance/IC facts for banner + run_meta.
+
+    Resolves the active model profile, reads the matching IC JSON, and
+    computes its SHA256 so HPO trials cannot silently run against a stale
+    or wrong-profile IC. Also enforces a v3 fail-fast guard: if the active
+    profile is not kundur_cvs_v3 and the operator has not explicitly opted
+    into legacy by setting KUNDUR_ALLOW_LEGACY_PROFILE=1, raise rather
+    than fall back.
+    """
+    import hashlib
+    from pathlib import Path as _Path
+    profile = _cfg_module.KUNDUR_MODEL_PROFILE
+    profile_path = os.environ.get(
+        "KUNDUR_MODEL_PROFILE", str(_cfg_module.DEFAULT_KUNDUR_MODEL_PROFILE)
+    )
+    cfg = _cfg_module.KUNDUR_BRIDGE_CONFIG
+    scenario_dir = _Path(__file__).resolve().parent
+    if profile.model_name == "kundur_cvs_v3":
+        ic_path = scenario_dir / "kundur_ic_cvs_v3.json"
+    elif profile.model_name == "kundur_cvs":
+        ic_path = scenario_dir / "kundur_ic_cvs.json"
+    else:
+        ic_path = scenario_dir / "kundur_ic.json"
+    ic_sha256 = "<missing>"
+    if ic_path.exists():
+        ic_sha256 = "sha256:" + hashlib.sha256(
+            ic_path.read_bytes()
+        ).hexdigest()
+
+    legacy_ok = os.environ.get("KUNDUR_ALLOW_LEGACY_PROFILE", "0") == "1"
+    if profile.model_name != "kundur_cvs_v3" and not legacy_ok:
+        raise RuntimeError(
+            f"Refusing to train against non-v3 profile {profile.model_name!r} "
+            f"(path={profile_path}). v3 is the paper-aligned default since "
+            f"commit a9ad2ea (2026-04-28). To run a legacy profile, set "
+            f"KUNDUR_ALLOW_LEGACY_PROFILE=1 explicitly."
+        )
+
+    return {
+        "kundur_model_profile_path": profile_path,
+        "kundur_model_profile_id": profile.profile_id,
+        "kundur_model_name": profile.model_name,
+        "kundur_step_strategy": cfg.step_strategy,
+        "kundur_pe_measurement": cfg.pe_measurement,
+        "kundur_phase_command_mode": cfg.phase_command_mode,
+        "kundur_disturbance_type": _cfg_module.KUNDUR_DISTURBANCE_TYPE,
+        "kundur_dist_min": _cfg_module.DIST_MIN,
+        "kundur_dist_max": _cfg_module.DIST_MAX,
+        "kundur_phi_f": _cfg_module.PHI_F,
+        "kundur_phi_h": _cfg_module.PHI_H,
+        "kundur_phi_d": _cfg_module.PHI_D,
+        "kundur_t_warmup": _cfg_module.T_WARMUP,
+        "kundur_ic_path": str(ic_path),
+        "kundur_ic_sha256": ic_sha256,
+        "kundur_legacy_profile_allowed": legacy_ok,
+    }
+
+
+def _print_kundur_runtime_banner(facts: dict) -> None:
+    """P1 pre-flight startup banner. Prints to stdout; does NOT log."""
+    print()
+    print("=" * 72)
+    print("Kundur runtime pre-flight (P1) — profile / disturbance / IC")
+    print("=" * 72)
+    print(f"  profile_path     : {facts['kundur_model_profile_path']}")
+    print(f"  profile_id       : {facts['kundur_model_profile_id']}")
+    print(f"  model_name       : {facts['kundur_model_name']}")
+    print(f"  step_strategy    : {facts['kundur_step_strategy']}")
+    print(f"  pe_measurement   : {facts['kundur_pe_measurement']}")
+    print(f"  disturbance_type : {facts['kundur_disturbance_type']}")
+    print(f"  dist_range       : [{facts['kundur_dist_min']}, "
+          f"{facts['kundur_dist_max']}] sys-pu")
+    print(f"  phi_f/h/d        : {facts['kundur_phi_f']} / "
+          f"{facts['kundur_phi_h']} / {facts['kundur_phi_d']}")
+    print(f"  t_warmup         : {facts['kundur_t_warmup']} s")
+    print(f"  ic_path          : {facts['kundur_ic_path']}")
+    print(f"  ic_sha256        : {facts['kundur_ic_sha256']}")
+    print(f"  legacy_allowed   : {facts['kundur_legacy_profile_allowed']}")
+    print("=" * 72)
+    print()
 from scenarios.kundur.config_simulink import (
     N_AGENTS, OBS_DIM, ACT_DIM, HIDDEN_SIZES,
     LR, GAMMA, TAU_SOFT, BUFFER_SIZE, BATCH_SIZE, WARMUP_STEPS,
@@ -451,6 +534,13 @@ def train(args):
 
     meta_dir = getattr(args, "run_dir", args.checkpoint_dir)
     save_run_meta(meta_dir, args, _cfg_module)
+
+    # P1 pre-flight: assemble Kundur runtime facts (profile / disturbance /
+    # IC sha256 + v3 fail-fast guard), print banner, persist into run_meta
+    # so any later HPO trial can verify it ran the correct profile.
+    _kd_facts = _kundur_runtime_facts()
+    _print_kundur_runtime_banner(_kd_facts)
+    update_run_meta(meta_dir, {"kundur_runtime_facts": _kd_facts})
 
     # Plan X / X2 (2026-04-26): override two statistical-heuristic stop
     # checks to "warn" (Kundur only). Both are heuristics that misfire on

@@ -686,9 +686,9 @@ class KundurStandaloneEnv(_KundurBaseEnv):
 
         # Convert magnitude from system base to VSG base
         self._P_mech[bus_idx] += magnitude * (SBASE / VSG_SN)
-        print(
-            f"[Standalone] Disturbance at ES{bus_idx + 1}: "
-            f"{magnitude:+.2f} p.u. (sys base)"
+        logger.info(
+            "[Standalone] Disturbance at ES%d: %+.2f p.u. (sys base)",
+            bus_idx + 1, magnitude,
         )
 
     def _close_backend(self) -> None:
@@ -877,8 +877,8 @@ class KundurSimulinkEnv(_KundurBaseEnv):
 
             self.bridge.warmup(T_WARMUP)
             self._sim_time = self.bridge.t_current
-        except Exception as exc:
-            print(f"[Kundur-Simulink] Reset failed: {exc}")
+        except Exception:
+            logger.exception("[Kundur-Simulink] Reset failed")
             raise
 
     def _step_backend(
@@ -943,9 +943,10 @@ class KundurSimulinkEnv(_KundurBaseEnv):
             tripload1_w = max(0.0, cfg.tripload1_p_default - delta_per_phase_w)
             self.bridge.apply_disturbance_load(cfg.tripload1_p_var, tripload1_w)
             total_mw = tripload1_w * 3.0 / 1e6
-            print(
-                f"[Kundur-Simulink] Load reduction: {cfg.tripload1_p_var}="
-                f"{total_mw:.2f}MW total (Bus14 remaining load)"
+            logger.info(
+                "[Kundur-Simulink] Load reduction: %s=%.2fMW total "
+                "(Bus14 remaining load)",
+                cfg.tripload1_p_var, total_mw,
             )
         else:
             tripload2_w = min(
@@ -954,9 +955,10 @@ class KundurSimulinkEnv(_KundurBaseEnv):
             )
             self.bridge.apply_disturbance_load(cfg.tripload2_p_var, tripload2_w)
             total_mw = tripload2_w * 3.0 / 1e6
-            print(
-                f"[Kundur-Simulink] Load increase: {cfg.tripload2_p_var}="
-                f"{total_mw:.2f}MW total (Bus15 applied load)"
+            logger.info(
+                "[Kundur-Simulink] Load increase: %s=%.2fMW total "
+                "(Bus15 applied load)",
+                cfg.tripload2_p_var, total_mw,
             )
 
     def _close_backend(self) -> None:

@@ -240,7 +240,7 @@ class EssPmStepProxy:
             else "single_vsg"
         )
         target_descriptor = f"VSG{list(targets)}/{proxy_tag}"
-        logger.info(
+        logger.debug(
             "[EssPmStepProxy] %s targets %s: amp=%+.4f pu (mag=%+.3f), t=%.4fs",
             sign, target_descriptor, amp_focused_pu,
             float(magnitude_sys_pu), t_now,
@@ -344,7 +344,7 @@ class SgPmgStepProxy:
 
         sign = "increase" if magnitude_sys_pu > 0 else "decrease"
         target_descriptor = f"SG[{target_g}]/proxy_g{target_g}"
-        logger.info(
+        logger.debug(
             "[SgPmgStepProxy] %s targets %s: amp=%+.4f pu (mag=%+.3f), t=%.4fs",
             sign, target_descriptor, amp_focused_pu,
             float(magnitude_sys_pu), t_now,
@@ -482,7 +482,7 @@ class LoadStepRBranch:
         values.extend(vg)
 
         target_descriptor = f"bus{ls_bus_int}:{ls_action}"
-        logger.info(
+        logger.debug(
             "[LoadStepRBranch] %s at %s: amp=%.2f MW (mag=%+.3f sys-pu), t=%.4fs",
             ls_action, f"bus{ls_bus_int}", amp_w / 1e6,
             float(magnitude_sys_pu), t_now,
@@ -587,7 +587,7 @@ class LoadStepCcsInjection:
         values.extend(vg)
 
         target_descriptor = f"bus{ls_bus_int}:cc_inject"
-        logger.info(
+        logger.debug(
             "[LoadStepCcsInjection] cc_inject at %s: amp=%.2f MW "
             "(mag=%+.3f sys-pu), t=%.4fs",
             f"bus{ls_bus_int}", amp_w / 1e6,

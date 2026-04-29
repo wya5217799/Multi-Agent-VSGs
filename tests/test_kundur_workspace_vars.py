@@ -16,6 +16,7 @@ from scenarios.kundur.workspace_vars import (
     PROFILE_CVS_V3,
     IndexFamily,
     WorkspaceVarError,
+    WorkspaceVarSpec,
     keys,
     resolve,
     spec_for,
@@ -202,3 +203,256 @@ class TestFixtureCrossCheck:
         # fixture only catalogs M_1 / D_1 — sufficient for the LIVE check.
         assert v3[resolve("M_PER_AGENT", profile=PROFILE_CVS_V3, i=1)]["verdict"] == "LIVE"
         assert v3[resolve("D_PER_AGENT", profile=PROFILE_CVS_V3, i=1)]["verdict"] == "LIVE"
+
+
+# ===========================================================================
+# C3c: effectiveness layer (name-valid vs physically-effective)
+# ===========================================================================
+
+
+# ---------------------------------------------------------------------------
+# Field invariants on WorkspaceVarSpec.
+# ---------------------------------------------------------------------------
+
+
+class TestEffectivenessFieldInvariants:
+    """Schema-wide invariants on the new effective_in_profile / inactive_reason
+    fields (C3b/C3c)."""
+
+    def test_effective_subset_of_profiles_for_all_keys(self) -> None:
+        for k in keys():
+            spec = spec_for(k)
+            assert spec.effective_in_profile.issubset(spec.profiles), (
+                f"{k}: effective_in_profile {sorted(spec.effective_in_profile)} "
+                f"not subset of profiles {sorted(spec.profiles)}"
+            )
+
+    def test_inactive_reason_keys_are_name_valid_but_not_effective(self) -> None:
+        for k in keys():
+            spec = spec_for(k)
+            allowed = spec.profiles - spec.effective_in_profile
+            assert set(spec.inactive_reason).issubset(allowed), (
+                f"{k}: inactive_reason has keys outside "
+                f"profiles - effective_in_profile"
+            )
+
+    def test_post_init_rejects_effective_outside_profiles(self) -> None:
+        # effective_in_profile contains a profile not in profiles → reject.
+        with pytest.raises(ValueError, match="not in profiles"):
+            WorkspaceVarSpec(
+                template="X_{i}",
+                family=IndexFamily.PER_AGENT,
+                profiles=frozenset({"a"}),
+                description="bad",
+                effective_in_profile=frozenset({"a", "b"}),
+            )
+
+    def test_post_init_rejects_orphan_inactive_reason(self) -> None:
+        # inactive_reason key is in effective_in_profile (not allowed —
+        # only name-valid-but-not-effective profiles may carry a reason).
+        with pytest.raises(ValueError, match="inactive_reason keys"):
+            WorkspaceVarSpec(
+                template="X_{i}",
+                family=IndexFamily.PER_AGENT,
+                profiles=frozenset({"a"}),
+                description="bad",
+                effective_in_profile=frozenset({"a"}),
+                inactive_reason={"a": "bogus"},
+            )
+
+    def test_post_init_rejects_inactive_reason_for_unknown_profile(self) -> None:
+        # inactive_reason key is not in profiles at all.
+        with pytest.raises(ValueError, match="inactive_reason keys"):
+            WorkspaceVarSpec(
+                template="X_{i}",
+                family=IndexFamily.PER_AGENT,
+                profiles=frozenset({"a"}),
+                description="bad",
+                effective_in_profile=frozenset(),
+                inactive_reason={"zzz": "ghost"},
+            )
+
+    def test_default_effective_equals_profiles(self) -> None:
+        # When effective_in_profile is omitted at construction, it defaults
+        # to profiles itself (back-compat, "assume effective until demoted").
+        spec = WorkspaceVarSpec(
+            template="X_{i}",
+            family=IndexFamily.PER_AGENT,
+            profiles=frozenset({"a", "b"}),
+            description="default",
+        )
+        assert spec.effective_in_profile == frozenset({"a", "b"})
+
+
+# ---------------------------------------------------------------------------
+# Default behavior (require_effective=False) — C3a back-compat.
+# ---------------------------------------------------------------------------
+
+
+class TestRequireEffectiveDefaultUnchanged:
+    """C3c MUST NOT change behavior when require_effective is omitted."""
+
+    def test_load_step_amp_v3_default_returns_name(self) -> None:
+        # No raise; name resolves verbatim — IC seeding path relies on this.
+        assert resolve(
+            "LOAD_STEP_AMP", profile=PROFILE_CVS_V3, bus=14
+        ) == "LoadStep_amp_bus14"
+
+    def test_load_step_trip_amp_v3_default_returns_name(self) -> None:
+        assert resolve(
+            "LOAD_STEP_TRIP_AMP", profile=PROFILE_CVS_V3, bus=15
+        ) == "LoadStep_trip_amp_bus15"
+
+    def test_explicit_false_is_explicit_default(self) -> None:
+        # require_effective=False is identical to omitting it.
+        assert resolve(
+            "LOAD_STEP_AMP", profile=PROFILE_CVS_V3, bus=14,
+            require_effective=False,
+        ) == "LoadStep_amp_bus14"
+
+
+# ---------------------------------------------------------------------------
+# require_effective=True — must reject the name-valid-but-not-effective set
+# in v3, must pass everything else.
+# ---------------------------------------------------------------------------
+
+
+class TestRequireEffectiveStrict:
+
+    def test_load_step_amp_v3_rejected(self) -> None:
+        with pytest.raises(WorkspaceVarError, match="not effective"):
+            resolve(
+                "LOAD_STEP_AMP", profile=PROFILE_CVS_V3, bus=14,
+                require_effective=True,
+            )
+
+    def test_load_step_amp_v3_message_cites_compile_freeze(self) -> None:
+        with pytest.raises(WorkspaceVarError) as exc:
+            resolve(
+                "LOAD_STEP_AMP", profile=PROFILE_CVS_V3, bus=14,
+                require_effective=True,
+            )
+        msg = str(exc.value)
+        assert "compile-frozen" in msg
+        assert "NOTES.md" in msg
+
+    def test_load_step_trip_amp_v3_rejected(self) -> None:
+        with pytest.raises(WorkspaceVarError, match="not effective"):
+            resolve(
+                "LOAD_STEP_TRIP_AMP", profile=PROFILE_CVS_V3, bus=14,
+                require_effective=True,
+            )
+
+    def test_load_step_trip_amp_v3_message_cites_weak_signal(self) -> None:
+        with pytest.raises(WorkspaceVarError) as exc:
+            resolve(
+                "LOAD_STEP_TRIP_AMP", profile=PROFILE_CVS_V3, bus=15,
+                require_effective=True,
+            )
+        msg = str(exc.value)
+        assert "0.01 Hz" in msg
+        assert "NOTES.md" in msg
+
+    def test_message_mentions_escape_hatch(self) -> None:
+        with pytest.raises(WorkspaceVarError) as exc:
+            resolve(
+                "LOAD_STEP_AMP", profile=PROFILE_CVS_V3, bus=14,
+                require_effective=True,
+            )
+        assert "require_effective=False" in str(exc.value)
+
+    def test_pm_step_amp_v3_passes(self) -> None:
+        assert resolve(
+            "PM_STEP_AMP", profile=PROFILE_CVS_V3, i=1,
+            require_effective=True,
+        ) == "Pm_step_amp_1"
+
+    def test_pmg_step_amp_v3_passes(self) -> None:
+        assert resolve(
+            "PMG_STEP_AMP", profile=PROFILE_CVS_V3, g=2,
+            require_effective=True,
+        ) == "PmgStep_amp_2"
+
+    def test_M_per_agent_v3_passes(self) -> None:
+        assert resolve(
+            "M_PER_AGENT", profile=PROFILE_CVS_V3, i=4,
+            require_effective=True,
+        ) == "M_4"
+
+    def test_D_per_agent_v2_passes(self) -> None:
+        # v2 effective set inherits default (== profiles), so v2 passes.
+        assert resolve(
+            "D_PER_AGENT", profile=PROFILE_CVS_V2, i=2,
+            require_effective=True,
+        ) == "D_2"
+
+
+# ---------------------------------------------------------------------------
+# Validation order — effectiveness must not swallow earlier checks.
+# ---------------------------------------------------------------------------
+
+
+class TestRequireEffectivePreservesOtherChecks:
+
+    def test_unknown_key_still_raises_unknown_under_strict(self) -> None:
+        with pytest.raises(WorkspaceVarError, match="Unknown workspace var key"):
+            resolve("NOT_A_KEY", profile=PROFILE_CVS_V3, require_effective=True)
+
+    def test_unknown_profile_raises_name_error_not_effective_error(self) -> None:
+        # Profile not in spec.profiles → name-validity error wins; we never
+        # reach the effectiveness check.
+        with pytest.raises(WorkspaceVarError, match="not declared for profile"):
+            resolve(
+                "LOAD_STEP_AMP", profile="kundur_vsg", bus=14,
+                require_effective=True,
+            )
+
+    def test_index_bounds_still_raise_under_strict_for_effective_var(self) -> None:
+        # PM_STEP_AMP is effective, so we proceed past the strict gate and
+        # then trip on the index bound.
+        with pytest.raises(WorkspaceVarError, match=r"i in \[1, 4\]"):
+            resolve(
+                "PM_STEP_AMP", profile=PROFILE_CVS_V3, i=99,
+                require_effective=True,
+            )
+
+    def test_strict_check_precedes_index_for_not_effective_var(self) -> None:
+        # LOAD_STEP_AMP is not effective in v3. Even with a bogus bus value
+        # we expect the not-effective error first (validation order:
+        # name → effective → bounds).
+        with pytest.raises(WorkspaceVarError, match="not effective"):
+            resolve(
+                "LOAD_STEP_AMP", profile=PROFILE_CVS_V3, bus=7,
+                require_effective=True,
+            )
+
+
+# ---------------------------------------------------------------------------
+# Introspection — schema readers can see effectiveness state.
+# ---------------------------------------------------------------------------
+
+
+class TestEffectivenessIntrospection:
+
+    def test_load_step_amp_v3_marked_not_effective(self) -> None:
+        spec = spec_for("LOAD_STEP_AMP")
+        assert PROFILE_CVS_V3 in spec.profiles
+        assert PROFILE_CVS_V3 not in spec.effective_in_profile
+        assert PROFILE_CVS_V3 in spec.inactive_reason
+        assert "compile-frozen" in spec.inactive_reason[PROFILE_CVS_V3]
+
+    def test_load_step_trip_amp_v3_marked_not_effective(self) -> None:
+        spec = spec_for("LOAD_STEP_TRIP_AMP")
+        assert PROFILE_CVS_V3 in spec.profiles
+        assert PROFILE_CVS_V3 not in spec.effective_in_profile
+        assert "0.01 Hz" in spec.inactive_reason[PROFILE_CVS_V3]
+
+    def test_pm_step_amp_effective_everywhere_name_valid(self) -> None:
+        spec = spec_for("PM_STEP_AMP")
+        assert spec.effective_in_profile == spec.profiles
+        assert spec.inactive_reason == {}
+
+    def test_pmg_step_amp_v3_effective(self) -> None:
+        spec = spec_for("PMG_STEP_AMP")
+        assert PROFILE_CVS_V3 in spec.effective_in_profile
+        assert spec.inactive_reason == {}

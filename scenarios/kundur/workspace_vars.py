@@ -32,20 +32,35 @@ Does NOT cover:
 
 The schema is read-only; adding a new var is a one-line edit here.
 
-NOTES
------
-LoadStep R-path vars (``LoadStep_amp_busXX``) are declared LIVE in v3 in
-the sense that the MATLAB Constant references the workspace var, but the
-v3 Series RLC R block compile-freezes its Resistance string at warmup,
-making the writes weak under FastRestart (see
-``scenarios/kundur/NOTES.md`` §"2026-04-29 Eval 协议偏差"). The schema
-still surfaces these names so the symbol set is centrally documented;
-"weak signal" is a physics-side concern not enforced here.
+NAME-VALID  vs  PHYSICALLY-EFFECTIVE  (C3b/C3c, 2026-04-29)
+-----------------------------------------------------------
+A var name being "name-valid" in a profile (``profile in spec.profiles``)
+means the MATLAB Constant block references that workspace name —
+``apply_workspace_var`` will not produce a dangling base-ws entry, and
+typos are caught.
+
+A var name being "physically effective" in a profile
+(``profile in spec.effective_in_profile``) is a STRONGER claim: writes
+to that name produce a paper-grade physical disturbance under the
+profile's solver / FastRestart contract.
+
+Default ``resolve(...)`` enforces only name-validity (back-compat with
+C3a). Pass ``require_effective=True`` to also reject name-valid but
+not-effective combinations (e.g. v3 LoadStep R-block, v3 CCS trip
+injection — see ``scenarios/kundur/NOTES.md`` §"2026-04-29 Eval 协议
+偏差").
+
+The schema is a CONTRACT layer, not a physical-channel verifier:
+``effective_in_profile`` is a hand-curated snapshot of post-physics-fix
+state. When the physics layer is repaired (e.g. R-block edited so the
+Resistance is re-evaluated under FastRestart), the matching schema
+entry must be hand-promoted into ``effective_in_profile``. There is no
+auto-detection.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
@@ -67,12 +82,51 @@ class IndexFamily(Enum):
     PER_BUS = "per_bus"      # bus in {14, 15}
 
 
+# Sentinel: "effective_in_profile defaults to == profiles when not set".
+# We cannot put ``profiles`` itself as a default (forward-ref to another
+# field), so we use a unique sentinel object detected in ``__post_init__``.
+_EFFECTIVE_DEFAULT: frozenset = frozenset({"__effective_default__"})
+
+
 @dataclass(frozen=True)
 class WorkspaceVarSpec:
     template: str
     family: IndexFamily
     profiles: frozenset
     description: str
+    # C3b/C3c: profiles in which writes to this var produce a paper-grade
+    # physical disturbance (subset of ``profiles``). When omitted, defaults
+    # to ``profiles`` itself (back-compat: assume effective everywhere it is
+    # name-valid, until proven otherwise by NOTES + manual demotion here).
+    effective_in_profile: frozenset = _EFFECTIVE_DEFAULT
+    # C3b/C3c: short reason string per (name-valid but not-effective) profile,
+    # surfaced in the WorkspaceVarError message under require_effective=True.
+    # Keys MUST be a subset of ``profiles - effective_in_profile``.
+    inactive_reason: dict = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        # Resolve the default-sentinel to the concrete `profiles` set.
+        if self.effective_in_profile is _EFFECTIVE_DEFAULT:
+            object.__setattr__(self, "effective_in_profile", self.profiles)
+        # Invariant 1: effective_in_profile must be a subset of profiles.
+        if not self.effective_in_profile.issubset(self.profiles):
+            extra = sorted(self.effective_in_profile - self.profiles)
+            raise ValueError(
+                f"WorkspaceVarSpec({self.template!r}): "
+                f"effective_in_profile contains profile(s) {extra} not in "
+                f"profiles {sorted(self.profiles)}"
+            )
+        # Invariant 2: inactive_reason keys must be in name-valid-but-not-
+        # effective set (no orphan reasons, no reason for an effective profile).
+        allowed_reason_keys = self.profiles - self.effective_in_profile
+        bad = set(self.inactive_reason) - allowed_reason_keys
+        if bad:
+            raise ValueError(
+                f"WorkspaceVarSpec({self.template!r}): "
+                f"inactive_reason keys {sorted(bad)} are not in "
+                f"profiles - effective_in_profile = "
+                f"{sorted(allowed_reason_keys)}"
+            )
 
 
 _V3_BUSES = frozenset({14, 15})
@@ -126,18 +180,40 @@ _SCHEMA: dict[str, WorkspaceVarSpec] = {
         description="SG g Pm-step amplitude (sys-pu).",
     ),
     # Paper LoadStep — bus-suffixed Series RLC R-block amplitude (Phase A).
+    # Name-valid in v3 (Constant block reads it) but NOT physically effective:
+    # the R block compile-freezes its Resistance string at FastRestart, so
+    # subsequent writes do not produce a load step.
     "LOAD_STEP_AMP": WorkspaceVarSpec(
         template="LoadStep_amp_bus{bus}",
         family=IndexFamily.PER_BUS,
         profiles=frozenset({PROFILE_CVS_V3}),
         description="Series RLC R-block load amplitude (W) at bus 14 or 15.",
+        effective_in_profile=frozenset(),
+        inactive_reason={
+            PROFILE_CVS_V3: (
+                "Series RLC R Resistance string compile-frozen at FastRestart; "
+                "writes do not re-evaluate the R-block. "
+                "See scenarios/kundur/NOTES.md §'2026-04-29 Eval 协议偏差'."
+            ),
+        },
     ),
     # Phase A++ Controlled Current Source trip injection.
+    # Name-valid in v3 (CCS Constant block reads it) but NOT physically
+    # effective: measured signal at Bus 14/15 ESS terminals is ~0.01 Hz
+    # (electrically distant from load center), well below paper-grade.
     "LOAD_STEP_TRIP_AMP": WorkspaceVarSpec(
         template="LoadStep_trip_amp_bus{bus}",
         family=IndexFamily.PER_BUS,
         profiles=frozenset({PROFILE_CVS_V3}),
         description="CCS trip-injection amplitude (W) at bus 14 or 15.",
+        effective_in_profile=frozenset(),
+        inactive_reason={
+            PROFILE_CVS_V3: (
+                "CCS injection path live but signal ~0.01 Hz on Bus 14/15 "
+                "ESS terminals (electrically distant from load center). "
+                "See scenarios/kundur/NOTES.md §'2026-04-29 Eval 协议偏差'."
+            ),
+        },
     ),
 }
 
@@ -151,21 +227,37 @@ def resolve(
     *,
     profile: str,
     n_agents: int = 4,
+    require_effective: bool = False,
     **idx: Any,
 ) -> str:
     """Resolve a symbolic schema key to its MATLAB workspace var name.
 
     Parameters
     ----------
-    key      : schema entry name (e.g. ``"PM_STEP_AMP"``).
-    profile  : ``KundurModelProfile.model_name`` (e.g. ``"kundur_cvs_v3"``).
-    n_agents : ESS count for PER_AGENT bounds (default 4 for Kundur).
-    idx      : index family kwargs — ``i``, ``g``, or ``bus`` depending on
-               the entry's family.
+    key                : schema entry name (e.g. ``"PM_STEP_AMP"``).
+    profile            : ``KundurModelProfile.model_name``
+                         (e.g. ``"kundur_cvs_v3"``).
+    n_agents           : ESS count for PER_AGENT bounds (default 4 for Kundur).
+    require_effective  : if True (default False), additionally reject
+                         name-valid combinations whose physical channel is
+                         not effective in this profile (e.g. v3 LoadStep R
+                         compile-freeze, v3 CCS weak signal). Default keeps
+                         C3a back-compat: name-validity only.
+    idx                : index family kwargs — ``i``, ``g``, or ``bus``
+                         depending on the entry's family.
 
     Raises
     ------
-    WorkspaceVarError on unknown key, unsupported profile, or out-of-range idx.
+    WorkspaceVarError on
+      * unknown key,
+      * unsupported profile (name not declared),
+      * (require_effective=True only) name-valid but physically not-effective
+        profile,
+      * out-of-range / missing / wrong-type idx.
+
+    Validation order: unknown-key → unsupported-profile → not-effective →
+    index-bounds. Effectiveness is checked BEFORE index bounds so a
+    not-effective name fails fast even if the index would also be invalid.
     """
     spec = _SCHEMA.get(key)
     if spec is None:
@@ -177,6 +269,17 @@ def resolve(
         raise WorkspaceVarError(
             f"Workspace var {key!r} not declared for profile {profile!r}; "
             f"declared in {sorted(spec.profiles)}"
+        )
+    if require_effective and profile not in spec.effective_in_profile:
+        reason = spec.inactive_reason.get(
+            profile, "no reason recorded in schema"
+        )
+        raise WorkspaceVarError(
+            f"Workspace var {key!r} is name-valid for profile {profile!r} "
+            f"but its physical channel is not effective: {reason} "
+            f"Pass require_effective=False if you intend to write the name "
+            f"without expecting a physical disturbance "
+            f"(IC seeding, smoke probes)."
         )
     if spec.family is IndexFamily.SCALAR:
         if idx:

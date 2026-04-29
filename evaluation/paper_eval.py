@@ -208,6 +208,29 @@ def evaluate_policy(
             n_scenarios, seed_base, dist_min, dist_max, bus_choices=bus_choices
         )
 
+    # Post-review H3 (2026-04-29): validate bus values at manifest load
+    # rather than inside the per-episode loop. Catches manifests that
+    # reference bus 14 / 15 (LoadStep paper buses) on the non-LoadStep
+    # dispatch path, which would otherwise raise mid-loop after partial
+    # work, aborting the eval. Buses 7/9 are ESS-side proxies; 1/2/3 are
+    # SG-side proxies — exhaustive set per `scenario_to_disturbance_type`.
+    _allowed_buses = {7, 9, 1, 2, 3}
+    _preferred_type = os.environ.get("KUNDUR_DISTURBANCE_TYPE", "")
+    if not _preferred_type.startswith("loadstep_paper_"):
+        _bad = [
+            (s.get("scenario_idx"), s.get("bus")) for s in scenarios
+            if s.get("bus") not in _allowed_buses
+        ]
+        if _bad:
+            raise ValueError(
+                f"paper_eval: scenarios contain bus values outside "
+                f"{sorted(_allowed_buses)} on the non-LoadStep dispatch "
+                f"path; offending (scenario_idx, bus) pairs: {_bad}. "
+                f"Either set KUNDUR_DISTURBANCE_TYPE=loadstep_paper_* "
+                f"to use the network-side LoadStep dispatch (where bus "
+                f"is informational), or filter the manifest."
+            )
+
     per_ep: list[PerEpisodeMetrics] = []
     sum_global_unnorm = 0.0
     sum_total_steps = 0

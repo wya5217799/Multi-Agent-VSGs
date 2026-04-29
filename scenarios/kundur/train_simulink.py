@@ -494,12 +494,17 @@ def train(args):
           - SCENARIO_SET None (random path) → return
             ``{'options': {'disturbance_magnitude': mag}}``; env keeps
             ``_disturbance_type`` from constructor / env-var and arms the
-            trigger. Random RNG order matches legacy (np.random.uniform
-            still drives magnitude).
+            trigger.
+
+        Post-review fix (2026-04-29): magnitude RNG uses ``env.np_random``
+        (gym Env standard) rather than module-level ``np.random``, so
+        replay reproducibility is isolated to the env's seeded state and
+        not fragile against any third-party library that touches the
+        global ``numpy.random`` state between episodes.
         """
         if SCENARIO_SET is None:
-            mag = float(np.random.uniform(env.DIST_MIN, env.DIST_MAX))
-            if np.random.random() > 0.5:
+            mag = float(env.np_random.uniform(env.DIST_MIN, env.DIST_MAX))
+            if env.np_random.random() > 0.5:
                 mag = -mag
             return {"options": {"disturbance_magnitude": mag}}
         sc = SCENARIO_SET.scenarios[ep_idx % SCENARIO_SET.n_scenarios]

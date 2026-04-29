@@ -134,6 +134,11 @@ def _silence_pmg(
 # ---------------------------------------------------------------------------
 
 
+_ESS_PM_STEP_SENTINELS = frozenset({"random_bus"})
+_SG_PMG_STEP_SENTINELS = frozenset({"random_gen"})
+_LOAD_STEP_SENTINELS = frozenset({"random_bus"})
+
+
 @dataclass(frozen=True)
 class EssPmStepProxy:
     """ESS-side Pm-step proxy.
@@ -154,6 +159,24 @@ class EssPmStepProxy:
 
     target_indices: tuple[int, ...] | str
     proxy_bus: int | None = None
+
+    def __post_init__(self) -> None:
+        if isinstance(self.target_indices, str):
+            if self.target_indices not in _ESS_PM_STEP_SENTINELS:
+                raise ValueError(
+                    f"EssPmStepProxy: target_indices string must be one "
+                    f"of {sorted(_ESS_PM_STEP_SENTINELS)}, got "
+                    f"{self.target_indices!r}"
+                )
+        elif not (
+            isinstance(self.target_indices, tuple)
+            and all(isinstance(i, int) for i in self.target_indices)
+        ):
+            raise ValueError(
+                f"EssPmStepProxy: target_indices must be a tuple of "
+                f"int or a sentinel string, got "
+                f"{type(self.target_indices).__name__}={self.target_indices!r}"
+            )
 
     def apply(
         self,
@@ -257,6 +280,21 @@ class SgPmgStepProxy:
 
     target_g: int | str
 
+    def __post_init__(self) -> None:
+        if isinstance(self.target_g, str):
+            if self.target_g not in _SG_PMG_STEP_SENTINELS:
+                raise ValueError(
+                    f"SgPmgStepProxy: target_g string must be one of "
+                    f"{sorted(_SG_PMG_STEP_SENTINELS)}, got "
+                    f"{self.target_g!r}"
+                )
+        elif not (isinstance(self.target_g, int) and self.target_g in (1, 2, 3)):
+            raise ValueError(
+                f"SgPmgStepProxy: target_g must be 1/2/3 or a sentinel "
+                f"string, got {type(self.target_g).__name__}="
+                f"{self.target_g!r}"
+            )
+
     def apply(
         self,
         bridge: Any,
@@ -353,6 +391,19 @@ class LoadStepRBranch:
     """
 
     ls_bus: int | str
+
+    def __post_init__(self) -> None:
+        if isinstance(self.ls_bus, str):
+            if self.ls_bus not in _LOAD_STEP_SENTINELS:
+                raise ValueError(
+                    f"LoadStepRBranch: ls_bus string must be one of "
+                    f"{sorted(_LOAD_STEP_SENTINELS)}, got {self.ls_bus!r}"
+                )
+        elif not (isinstance(self.ls_bus, int) and self.ls_bus in (14, 15)):
+            raise ValueError(
+                f"LoadStepRBranch: ls_bus must be 14/15 or a sentinel "
+                f"string, got {type(self.ls_bus).__name__}={self.ls_bus!r}"
+            )
 
     def apply(
         self,
@@ -469,6 +520,19 @@ class LoadStepCcsInjection:
     """
 
     ls_bus: int | str
+
+    def __post_init__(self) -> None:
+        if isinstance(self.ls_bus, str):
+            if self.ls_bus not in _LOAD_STEP_SENTINELS:
+                raise ValueError(
+                    f"LoadStepCcsInjection: ls_bus string must be one of "
+                    f"{sorted(_LOAD_STEP_SENTINELS)}, got {self.ls_bus!r}"
+                )
+        elif not (isinstance(self.ls_bus, int) and self.ls_bus in (14, 15)):
+            raise ValueError(
+                f"LoadStepCcsInjection: ls_bus must be 14/15 or a sentinel "
+                f"string, got {type(self.ls_bus).__name__}={self.ls_bus!r}"
+            )
 
     def apply(
         self,

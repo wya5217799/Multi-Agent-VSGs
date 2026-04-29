@@ -657,3 +657,49 @@ class TestAdapterEquality:
             EssPmStepProxy(target_indices=(0,))
             != EssPmStepProxy(target_indices=(3,))
         )
+
+
+# ---------------------------------------------------------------------------
+# Post-review M2: sentinel validation at construction time
+# ---------------------------------------------------------------------------
+
+
+class TestSentinelValidationAtConstruction:
+    def test_ess_pm_step_typo_sentinel_raises(self) -> None:
+        with pytest.raises(ValueError, match="random_bus"):
+            EssPmStepProxy(target_indices="random_buss")
+
+    def test_ess_pm_step_wrong_target_type_raises(self) -> None:
+        with pytest.raises(ValueError, match="tuple of int"):
+            EssPmStepProxy(target_indices=[0, 1])  # list, not tuple
+
+    def test_ess_pm_step_valid_sentinel_succeeds(self) -> None:
+        EssPmStepProxy(target_indices="random_bus")
+
+    def test_sg_pmg_step_typo_sentinel_raises(self) -> None:
+        with pytest.raises(ValueError, match="random_gen"):
+            SgPmgStepProxy(target_g="random_genn")
+
+    def test_sg_pmg_step_invalid_int_raises(self) -> None:
+        with pytest.raises(ValueError, match="1/2/3"):
+            SgPmgStepProxy(target_g=4)
+
+    def test_sg_pmg_step_valid_succeeds(self) -> None:
+        SgPmgStepProxy(target_g="random_gen")
+        SgPmgStepProxy(target_g=2)
+
+    def test_load_step_r_invalid_bus_raises(self) -> None:
+        with pytest.raises(ValueError, match="14/15"):
+            LoadStepRBranch(ls_bus=16)
+
+    def test_load_step_r_typo_sentinel_raises(self) -> None:
+        with pytest.raises(ValueError, match="random_bus"):
+            LoadStepRBranch(ls_bus="random_buss")
+
+    def test_load_step_ccs_invalid_bus_raises(self) -> None:
+        with pytest.raises(ValueError, match="14/15"):
+            LoadStepCcsInjection(ls_bus=7)
+
+    def test_load_step_ccs_typo_sentinel_raises(self) -> None:
+        with pytest.raises(ValueError, match="random_bus"):
+            LoadStepCcsInjection(ls_bus="random_buss")

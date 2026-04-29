@@ -256,7 +256,16 @@ def evaluate(env, agent, n_eval=3, return_details=False):
 
     Using a deterministic disturbance ensures best_eval_reward tracks policy
     quality rather than disturbance luck.
+
+    C4 (2026-04-29): keeps the legacy ``apply_disturbance(bus_idx=0, ...)``
+    call path because it preserves bus_idx=0 deterministic targeting on
+    the standalone backend (Simulink ignores bus_idx). Equivalent C4
+    pattern would be ``env.reset(scenario=Scenario(...), options={
+    'trigger_at_step': 0})`` — left unchanged here because the evaluator
+    is a research artifact, not a paper_eval critical path.
+    DeprecationWarning suppressed to keep eval logs clean.
     """
+    import warnings as _warnings
     env.training = False
     try:
         total_rewards = []
@@ -273,7 +282,11 @@ def evaluate(env, agent, n_eval=3, return_details=False):
             ep_P_es_min = np.full(env.N_ESS, np.inf)
             ep_P_es_max = np.full(env.N_ESS, -np.inf)
 
-            env.apply_disturbance(bus_idx=0, magnitude=_EVAL_DISTURBANCE_MAGNITUDE)
+            with _warnings.catch_warnings():
+                _warnings.simplefilter("ignore", DeprecationWarning)
+                env.apply_disturbance(
+                    bus_idx=0, magnitude=_EVAL_DISTURBANCE_MAGNITUDE,
+                )
 
             for step in range(int(env.T_EPISODE / env.DT)):
                 actions = agent.select_actions_multi(obs, deterministic=True)
@@ -454,9 +467,7 @@ def train(args):
     SCENARIO_SET = None
     SCENARIO_SET_NAME = "none"
     if getattr(args, "scenario_set", "none") != "none":
-        from scenarios.kundur.scenario_loader import (
-            load_manifest, scenario_to_disturbance_type,
-        )
+        from scenarios.kundur.scenario_loader import load_manifest
         from pathlib import Path as _P
         _repo = _P(__file__).resolve().parents[2]
         _default_paths = {
@@ -471,27 +482,33 @@ def train(args):
             f"{SCENARIO_SET.n_scenarios} scenarios, mode={SCENARIO_SET.disturbance_mode}"
         )
 
-    def _ep_disturbance(ep_idx: int) -> tuple[float, str | None]:
-        """Resolve (magnitude_sys_pu, _disturbance_type override) for a given ep.
+    def _episode_reset_kwargs(ep_idx: int) -> dict:
+        """Build kwargs for env.reset() for episode ``ep_idx``.
 
-        Returns (None for type) when no scenario set is active → keep current
-        env._disturbance_type (set by KUNDUR_DISTURBANCE_TYPE env var or kwarg).
+        C4 (2026-04-29): replaces the legacy ``_ep_disturbance`` closure
+        + ``env._disturbance_type =`` write + step-loop ``apply_disturbance``
+        triplet. Two modes:
+          - SCENARIO_SET active → return ``{'scenario': Scenario(...)}``;
+            env resolves disturbance_type internally and arms the
+            internal trigger.
+          - SCENARIO_SET None (random path) → return
+            ``{'options': {'disturbance_magnitude': mag}}``; env keeps
+            ``_disturbance_type`` from constructor / env-var and arms the
+            trigger. Random RNG order matches legacy (np.random.uniform
+            still drives magnitude).
         """
         if SCENARIO_SET is None:
             mag = float(np.random.uniform(env.DIST_MIN, env.DIST_MAX))
             if np.random.random() > 0.5:
                 mag = -mag
-            return mag, None
+            return {"options": {"disturbance_magnitude": mag}}
         sc = SCENARIO_SET.scenarios[ep_idx % SCENARIO_SET.n_scenarios]
-        return float(sc.magnitude_sys_pu), scenario_to_disturbance_type(sc)
+        return {"scenario": sc}
 
     # ── Phase B: Bootstrap backend ─────────────────────────────────────────────
     # First env.reset() triggers MATLAB startup / load_model / warmup.
     # If this fails, raise immediately; run_dir not yet created, no orphaned files.
-    dist_mag, _dtype_override = _ep_disturbance(start_episode)
-    if _dtype_override is not None:
-        env._disturbance_type = _dtype_override
-    obs, _ = env.reset(options={"disturbance_magnitude": dist_mag})
+    obs, _info0 = env.reset(**_episode_reset_kwargs(start_episode))
 
     # ── Phase C: Commit outputs (only after backend is ready) ──────────────────
     if hasattr(args, "run_dir"):
@@ -594,10 +611,7 @@ def train(args):
     for ep in _pbar:
         # Phase B already reset episode start_episode; subsequent episodes reset here.
         if ep > start_episode:
-            dist_mag, _dtype_override = _ep_disturbance(ep)
-            if _dtype_override is not None:
-                env._disturbance_type = _dtype_override
-            obs, _ = env.reset(options={"disturbance_magnitude": dist_mag})
+            obs, _info_reset = env.reset(**_episode_reset_kwargs(ep))
         ep_reward = np.zeros(env.N_ESS)
         ep_losses = {"critic": [], "policy": [], "alpha": []}
         actions_history = []
@@ -616,10 +630,8 @@ def train(args):
         ep_omega_trace: list[list[float]] = []
 
         for step in range(int(env.T_EPISODE / env.DT)):
-            # Apply disturbance after warmup (t=0.5s)
-            if step == int(0.5 / env.DT):
-                env.apply_disturbance(magnitude=dist_mag)
-
+            # C4 (2026-04-29): disturbance trigger is internal to env.step()
+            # at step == int(0.5/DT). No external apply_disturbance call.
             actions = agent.select_actions_multi(obs, deterministic=False)
             next_obs, rewards, terminated, truncated, info = env.step(actions)
 
@@ -750,6 +762,11 @@ def train(args):
             "omega_max_per_agent":       _omega_max,
             "omega_tail_mean_per_agent": _omega_tail,
             "omega_trace": ep_omega_trace,
+            # C4 (2026-04-29) §1.5b: resolved disturbance type + magnitude
+            "resolved_disturbance_type":
+                last_info.get("resolved_disturbance_type"),
+            "episode_magnitude_sys_pu":
+                last_info.get("episode_magnitude_sys_pu"),
         })
         if ep_losses["critic"]:
             log["critic_losses"].append(

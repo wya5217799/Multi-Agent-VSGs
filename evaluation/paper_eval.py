@@ -219,45 +219,56 @@ def evaluate_policy(
         bus = sc["bus"]
         mag = sc["magnitude_sys_pu"]
 
-        # Per-episode disturbance dispatch.
+        # Per-episode disturbance dispatch (C4, 2026-04-29).
         #
-        # Default: ESS-side / SG-side Pm-step proxy — the scenario's `bus`
-        # field directly maps to a `_disturbance_type` value
-        # (pm_step_proxy_bus7/9/g1/g2/g3) so each test episode hits exactly
-        # the bus the scenario manifest names. This is the original
-        # behavior and is preserved when the operator did not set
-        # KUNDUR_DISTURBANCE_TYPE to a LoadStep-paper variant.
+        # Two paths, mirroring the legacy semantics:
         #
-        # When the operator exports KUNDUR_DISTURBANCE_TYPE=loadstep_paper_*
-        # (e.g. loadstep_paper_random_bus), they want paper-faithful
-        # network-side LoadStep dispatch. In that case `_disturbance_type`
-        # was already set at env-construction time from the env-var; the
-        # scenario `bus` field becomes informational — the env decides
-        # LS1/LS2 (and which paper bus 14/15) by its own internal logic
-        # (`loadstep_paper_random_bus` randomises 50/50; the explicit
-        # `loadstep_paper_bus14` / `loadstep_paper_bus15` variants are
-        # also respected). 移除原来的 hard-override 让 env-var 真正生效。
+        # 1. Operator exported KUNDUR_DISTURBANCE_TYPE=loadstep_paper_* →
+        #    paper-faithful LoadStep dispatch. The env-var-set
+        #    _disturbance_type is preserved at env construction; we
+        #    push only magnitude here. The scenario `bus` field becomes
+        #    informational under loadstep_paper_random_bus (env randomises
+        #    LS1/LS2 internally per call).
+        #
+        # 2. Default: ESS-side / SG-side Pm-step proxy — build a typed
+        #    Scenario from the manifest's bus/magnitude and let the env
+        #    resolve the disturbance_type via
+        #    scenario_to_disturbance_type.
+        #
+        # Both paths use options['trigger_at_step']=0 so the trigger
+        # fires before step 0's bridge.sim() advance — byte-equivalent
+        # to the legacy paper_eval pattern that called apply_disturbance
+        # right after reset and before the step loop.
+        from scenarios.kundur.scenario_loader import Scenario as _KdScenario
         preferred_type = os.environ.get("KUNDUR_DISTURBANCE_TYPE", "")
         if preferred_type.startswith("loadstep_paper_"):
-            # Defer to env-var-set type; do not override per-episode.
-            pass
+            obs, _info0 = env.reset(
+                seed=seed_base + 1009 * sc_idx,
+                options={
+                    "disturbance_magnitude": mag,
+                    "trigger_at_step": 0,
+                },
+            )
         else:
             if bus == 7:
-                env._disturbance_type = "pm_step_proxy_bus7"
+                _kind, _target = "bus", 7
             elif bus == 9:
-                env._disturbance_type = "pm_step_proxy_bus9"
-            elif bus == 1:
-                env._disturbance_type = "pm_step_proxy_g1"
-            elif bus == 2:
-                env._disturbance_type = "pm_step_proxy_g2"
-            elif bus == 3:
-                env._disturbance_type = "pm_step_proxy_g3"
+                _kind, _target = "bus", 9
+            elif bus in (1, 2, 3):
+                _kind, _target = "gen", int(bus)
             else:
                 raise ValueError(f"Unsupported bus/gen index {bus}")
-
-        # Reset env with deterministic seed per scenario.
-        obs, _ = env.reset(seed=seed_base + 1009 * sc_idx)
-        env.apply_disturbance(magnitude=mag)
+            _scenario = _KdScenario(
+                scenario_idx=int(sc_idx),
+                disturbance_kind=_kind,
+                target=_target,
+                magnitude_sys_pu=float(mag),
+            )
+            obs, _info0 = env.reset(
+                seed=seed_base + 1009 * sc_idx,
+                scenario=_scenario,
+                options={"trigger_at_step": 0},
+            )
 
         omega_steps: list[list[float]] = []
         rew_local_rf = 0.0

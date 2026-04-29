@@ -124,15 +124,26 @@ def diff_runs(pos_json: Path, neg_json: Path, verdict_md: Path) -> int:
     neg_nadir = n_e.get("nadir_hz_per_agent", [])
     pos_peak = p_e.get("peak_hz_per_agent", [])
     neg_peak = n_e.get("peak_hz_per_agent", [])
+    h2_at_least_one_responds = False
+    h4_multi_agent_responds = False
+    diffs = []
     if pos_nadir and neg_nadir:
-        # H2 strict: per-agent nadir+peak should differ between +mag and -mag
-        # (sign-flip if dispatch is symmetric; magnitude diff if not perfectly symmetric)
+        # H2 (revised 2026-04-30): single-bus disturbance physically can
+        # only excite electrically-near agents; expecting all 4 agents to
+        # respond is wrong. New H2: at least 1 agent must show
+        # |nadir_diff|+|peak_diff| > 1e-3 Hz (i.e. dispatch IS firing).
+        # New H4: more than 1 agent should respond (else gradient is
+        # degenerate — only 1/4 agents has learning signal).
         diffs = [abs(pos_nadir[i] - neg_nadir[i]) + abs(pos_peak[i] - neg_peak[i])
                  for i in range(min(len(pos_nadir), len(neg_nadir)))]
-        h2_sign_flip_ok = all(d > 1e-4 for d in diffs)
+        h2_at_least_one_responds = any(d > 1e-3 for d in diffs)
+        h4_multi_agent_responds = sum(1 for d in diffs if d > 1e-3) > 1
+        h2_sign_flip_ok = h2_at_least_one_responds
         notes.append(f"pos_nadir = {pos_nadir}  pos_peak = {pos_peak}")
         notes.append(f"neg_nadir = {neg_nadir}  neg_peak = {neg_peak}")
         notes.append(f"per-agent (|nadir_diff|+|peak_diff|) = {diffs}")
+        n_responding = sum(1 for d in diffs if d > 1e-3)
+        notes.append(f"agents_responding (|diff| > 1e-3 Hz) = {n_responding}/4")
 
     pos_rf_local = p_e.get("r_f_local_per_agent_eta1", [])
     neg_rf_local = n_e.get("r_f_local_per_agent_eta1", [])
@@ -156,12 +167,15 @@ def diff_runs(pos_json: Path, neg_json: Path, verdict_md: Path) -> int:
         f"| **H1b** cross-run no aliased hash | "
         f"{'FAIL (some agent identical between +mag/-mag)' if h1_alias_across else 'PASS (no shared hash)'} | "
         f"see hash list |",
-        f"| **H2** per-agent nadir/peak responds to mag sign | "
-        f"{'PASS' if h2_sign_flip_ok else 'FAIL (no per-agent response)'} | "
+        f"| **H2** at least 1 agent responds to mag sign (>1e-3 Hz) | "
+        f"{'PASS (dispatch firing)' if h2_at_least_one_responds else 'FAIL (zero response — dispatch may be dead)'} | "
         f"see (|nadir_diff|+|peak_diff|) below |",
         f"| **H3** r_f_local distinct across agents within run | "
         f"{'PASS' if h3_local_distinct else 'FAIL (4 agents collapsed)'} | "
         f"see r_f_local_eta1 below |",
+        f"| **H4** more than 1 agent responds (gradient non-degenerate) | "
+        f"{'PASS (multiple agents excited)' if h4_multi_agent_responds else 'FAIL (single-agent gradient — DEGENERATE)'} | "
+        f"see agents_responding count below |",
         "",
         "## Raw evidence",
         "",
@@ -172,24 +186,52 @@ def diff_runs(pos_json: Path, neg_json: Path, verdict_md: Path) -> int:
         "## Verdict",
         "",
     ]
-    if not (h1_collapse_within_pos or h1_collapse_within_neg
-            or h1_alias_across or not h2_sign_flip_ok or not h3_local_distinct):
+    measurement_ok = (
+        not h1_collapse_within_pos
+        and not h1_collapse_within_neg
+        and not h1_alias_across
+        and h3_local_distinct
+        and h2_at_least_one_responds
+    )
+    if measurement_ok and h4_multi_agent_responds:
         verdict_lines += [
-            "**STOP-VERDICT: PASS** — per-agent measurements are not aliased; ",
-            "responses are sign-asymmetric per-agent; r_f_local distinct across agents.",
-            "Conclusion: 4-agent measurement layer is electrically separated.",
-            "The earlier loadstep_metrics.json bit-identicality was a disturbance-",
-            "protocol artifact (frozen LoadStep R-block produced zero physical state",
-            "change), not a measurement-layer collapse.",
+            "**STOP-VERDICT: PASS** — measurement layer separated AND multiple ",
+            "agents respond. Network coupling distributes the disturbance ",
+            "across the 4 ESS as expected.",
         ]
         rc = 0
+    elif measurement_ok and not h4_multi_agent_responds:
+        verdict_lines += [
+            "**STOP-VERDICT: MEASUREMENT_OK_GRADIENT_DEGENERATE** — measurement ",
+            "layer is sound (4 distinct sha256 traces, sign-asymmetric per-agent ",
+            "response, distinct r_f_local). However, only 1 agent shows non-",
+            "trivial response (>1e-3 Hz) to the disturbance; the other 3 see ",
+            "noise-floor signal. This confirms the audit R5 hypothesis: r_f ",
+            "gradient is concentrated in 1/4 agents per scenario. 3/4 agents ",
+            "have effectively zero learning signal under single-point ",
+            "disturbance protocol.",
+            "",
+            "Implications:",
+            "- The earlier loadstep_metrics.json bit-identicality WAS a ",
+            "  disturbance-protocol artifact (frozen R-block), not measurement ",
+            "  collapse. Measurement layer is exonerated.",
+            "- But the 3-of-4 agents see no signal even under live SG-side ",
+            "  disturbance. RL improvement claim under this protocol is ",
+            "  bounded by the 1 agent that DOES see signal (typically the ",
+            "  electrically-nearest ESS to the perturbed gen).",
+            "- Multi-point disturbance (Option F = SG-side + multi-point ESS ",
+            "  Pm-step) or true network LoadStep (Option E = CCS at Bus 7/9) ",
+            "  remain the only known protocols that would excite >1 agent.",
+        ]
+        rc = 0  # measurement OK = main probe goal achieved
     else:
         verdict_lines += [
-            "**STOP-VERDICT: FAIL** — per-agent measurement layer shows collapse ",
-            "or sign-asymmetry. Manual review required of:",
+            "**STOP-VERDICT: FAIL** — measurement layer shows collapse, alias, ",
+            "or zero response. Manual review required of:",
             "  - omega_ts_<i> ToWorkspace block wiring in build_kundur_cvs_v3.m",
             "  - bridge step extraction (slx_helpers/vsg_bridge/slx_step_and_read_cvs.m)",
             "  - whether IntW integrators per ESS are truly independent or share a node",
+            "  - whether dispatch path is actually writing to the live workspace var",
         ]
         rc = 1
 

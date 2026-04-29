@@ -47,6 +47,29 @@ PAPER_NO_CONTROL_UNNORMALIZED = -15.20
 SETTLE_TOL_HZ = 0.005
 SETTLE_WINDOW_S = 1.0
 
+# 2026-04-30 Probe B metadata: kundur_cvs_v3 omega measurement source paths.
+# Hardcoded from build_kundur_cvs_v3.m::src_meta (lines 439-442) — IntW
+# integrator output → ToWorkspace block W_omega_<sname> → MATLAB workspace
+# Timeseries omega_ts_<idx>. Used to verify per-agent omega traces are
+# pulled from electrically distinct sources (vs aliased to a single signal).
+KUNDUR_CVS_V3_OMEGA_SOURCES: list[dict] = [
+    {"agent_idx": 0, "sname": "ES1", "bus": 12,
+     "ts_var": "omega_ts_1", "tw_block": "W_omega_ES1",
+     "input_block": "IntW_ES1"},
+    {"agent_idx": 1, "sname": "ES2", "bus": 16,
+     "ts_var": "omega_ts_2", "tw_block": "W_omega_ES2",
+     "input_block": "IntW_ES2"},
+    {"agent_idx": 2, "sname": "ES3", "bus": 14,
+     "ts_var": "omega_ts_3", "tw_block": "W_omega_ES3",
+     "input_block": "IntW_ES3"},
+    {"agent_idx": 3, "sname": "ES4", "bus": 15,
+     "ts_var": "omega_ts_4", "tw_block": "W_omega_ES4",
+     "input_block": "IntW_ES4"},
+]
+KUNDUR_CVS_V3_COMM_ADJ: dict[int, list[int]] = {
+    0: [1, 3], 1: [0, 2], 2: [1, 3], 3: [2, 0],  # ring topology
+}
+
 
 # ---------------------------------------------------------------------------
 # Result dataclasses
@@ -74,6 +97,11 @@ class PerEpisodeMetrics:
     # 2026-04-30 Probe B: per-agent decomposition for 4-agent collapse falsification
     r_f_global_per_agent: list[float] = field(default_factory=list)
     max_abs_df_hz_per_agent: list[float] = field(default_factory=list)
+    # 2026-04-30 Probe B extension (user request): full per-agent diagnostics
+    nadir_hz_per_agent: list[float] = field(default_factory=list)
+    peak_hz_per_agent: list[float] = field(default_factory=list)
+    omega_trace_summary_per_agent: list[dict] = field(default_factory=list)
+    r_f_local_per_agent_eta1: list[float] = field(default_factory=list)
 
 
 @dataclass
@@ -87,6 +115,8 @@ class EvalResult:
     per_episode_metrics: list[PerEpisodeMetrics]
     summary: dict
     figures: list[str] = field(default_factory=list)
+    # 2026-04-30 Probe B: omega-source metadata (cvs_v3-specific)
+    omega_source_paths: list[dict] = field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------
@@ -176,6 +206,88 @@ def _compute_per_agent_max_abs_df(
     delta_f_abs = np.abs((omega_trace - 1.0) * f_nom)  # (T, N)
     per_agent = delta_f_abs.max(axis=0)  # (N,)
     return [float(x) for x in per_agent]
+
+
+def _compute_per_agent_nadir_peak(
+    omega_trace: np.ndarray, f_nom: float,
+) -> tuple[list[float], list[float]]:
+    """Per-agent nadir (most-negative Δf) and peak (most-positive Δf) in Hz.
+
+    2026-04-30 Probe B: a +0.5 / -0.5 magnitude pair must produce
+    sign-asymmetric per-agent nadir/peak. If both magnitudes give same
+    sign across all 4 agents → dispatch sign convention is broken; if
+    all 4 agents show identical nadir → measurement collapse.
+    """
+    if omega_trace.size == 0:
+        return [0.0], [0.0]
+    delta_f = (omega_trace - 1.0) * f_nom  # (T, N)
+    nadir = delta_f.min(axis=0)  # (N,)
+    peak = delta_f.max(axis=0)  # (N,)
+    return [float(x) for x in nadir], [float(x) for x in peak]
+
+
+def _compute_per_agent_omega_summary(
+    omega_trace: np.ndarray,
+) -> list[dict]:
+    """Per-agent omega trace fingerprint for byte-equality detection.
+
+    2026-04-30 Probe B: returns mean / std / first / last / sha256 of
+    each agent's full omega trajectory. Two agents with byte-identical
+    sha256 are demonstrably aliased to the same MATLAB signal. Different
+    sha256 with similar nadir/peak are physically coupled (legitimate)
+    rather than aliased (broken).
+    """
+    if omega_trace.size == 0:
+        return []
+    out = []
+    T, N = omega_trace.shape
+    for i in range(N):
+        col = omega_trace[:, i]
+        h = hashlib.sha256(col.tobytes()).hexdigest()[:16]
+        out.append({
+            "agent_idx": i,
+            "n_samples": int(T),
+            "mean": float(col.mean()),
+            "std": float(col.std()),
+            "first": float(col[0]),
+            "last": float(col[-1]),
+            "sha256_16": h,
+        })
+    return out
+
+
+def _compute_r_f_local_per_agent_eta1(
+    omega_trace: np.ndarray, f_nom: float,
+    comm_adj: dict[int, list[int]],
+) -> list[float]:
+    """Per-agent local r_f under η=1 (no comm failure) upper bound.
+
+    Mirror of _base.py reward formula r_f_i (Eq.15-16) recomputed from
+    omega trace alone — assumes all comm links active. Cannot match
+    online r_f exactly (comm fail samples differ per step), but
+    differential between two scenarios is meaningful for collapse
+    detection. Sum across agents == _compute_global_rf only if
+    comm_adj fully connected (it isn't here — ring topology).
+    """
+    if omega_trace.size == 0:
+        return [0.0]
+    delta_f = (omega_trace - 1.0) * f_nom  # (T, N) Hz
+    delta_w_pu = delta_f / f_nom  # back to pu (paper Eq.15-16 in pu)
+    T, N = delta_w_pu.shape
+    out = [0.0] * N
+    for i in range(N):
+        nbrs = comm_adj.get(i, [])
+        # local mean: agent + neighbors (η=1)
+        local_idxs = [i] + list(nbrs)
+        omega_bar = delta_w_pu[:, local_idxs].mean(axis=1)  # (T,)
+        # r_f_i = -(dw_i - omega_bar)^2 - sum_j (dw_j - omega_bar)^2 (η=1)
+        own = -((delta_w_pu[:, i] - omega_bar) ** 2)
+        nb_sum = sum(
+            -((delta_w_pu[:, j] - omega_bar) ** 2) for j in nbrs
+        )
+        r_f_i_per_step = own + (nb_sum if nbrs else 0.0)
+        out[i] = float(r_f_i_per_step.sum())
+    return out
 
 
 def _rocof_max(omega_trace: np.ndarray, dt_s: float, f_nom: float) -> float:
@@ -377,6 +489,13 @@ def evaluate_policy(
             )
             r_f_per_agent = _compute_global_rf_per_agent(omega_trace, fnom)
             max_df_per_agent = _compute_per_agent_max_abs_df(omega_trace, fnom)
+            nadir_per_agent, peak_per_agent = _compute_per_agent_nadir_peak(
+                omega_trace, fnom
+            )
+            omega_summary_per_agent = _compute_per_agent_omega_summary(omega_trace)
+            r_f_local_per_agent = _compute_r_f_local_per_agent_eta1(
+                omega_trace, fnom, KUNDUR_CVS_V3_COMM_ADJ
+            )
         else:
             r_f_global = 0.0
             max_dev = 0.0
@@ -386,6 +505,10 @@ def evaluate_policy(
             sett = None
             r_f_per_agent = []
             max_df_per_agent = []
+            nadir_per_agent = []
+            peak_per_agent = []
+            omega_summary_per_agent = []
+            r_f_local_per_agent = []
 
         per_ep.append(PerEpisodeMetrics(
             scenario_idx=sc_idx,
@@ -406,6 +529,10 @@ def evaluate_policy(
             tds_failed=tds_failed,
             r_f_global_per_agent=r_f_per_agent,
             max_abs_df_hz_per_agent=max_df_per_agent,
+            nadir_hz_per_agent=nadir_per_agent,
+            peak_hz_per_agent=peak_per_agent,
+            omega_trace_summary_per_agent=omega_summary_per_agent,
+            r_f_local_per_agent_eta1=r_f_local_per_agent,
         ))
         print(
             f"  scenario {sc_idx:3d}  bus={bus}  mag={mag:+.3f}  "
@@ -473,6 +600,7 @@ def evaluate_policy(
         cumulative_reward_global_rf=cumulative,
         per_episode_metrics=per_ep,
         summary=summary,
+        omega_source_paths=KUNDUR_CVS_V3_OMEGA_SOURCES,  # 2026-04-30 Probe B
     )
 
 
@@ -531,10 +659,15 @@ def result_to_dict(result: EvalResult) -> dict:
                 "tds_failed": p.tds_failed,
                 "r_f_global_per_agent": p.r_f_global_per_agent,
                 "max_abs_df_hz_per_agent": p.max_abs_df_hz_per_agent,
+                "nadir_hz_per_agent": p.nadir_hz_per_agent,
+                "peak_hz_per_agent": p.peak_hz_per_agent,
+                "omega_trace_summary_per_agent": p.omega_trace_summary_per_agent,
+                "r_f_local_per_agent_eta1": p.r_f_local_per_agent_eta1,
             }
             for p in result.per_episode_metrics
         ],
         "figures": result.figures,
+        "omega_source_paths": result.omega_source_paths,  # 2026-04-30 Probe B
     }
 
 

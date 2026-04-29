@@ -161,27 +161,86 @@ sys-pu, and assuming approximate linearization (small-signal regime):
 
 ### Single-target reference (measured 2026-04-30, mag=±0.5)
 
-| target | ES1 |Δf| | ES2 |Δf| | ES3 |Δf| | ES4 |Δf| |
+`|nadir_diff| + |peak_diff|` per agent in Hz. Source:
+`results/harness/kundur/cvs_v3_probe_b{,_ess}/`. ~0 = below 1e-3 Hz noise floor.
+
+| target | ES1 | ES2 | ES3 | ES4 |
 |---|---:|---:|---:|---:|
-| G1 | 0.062 | ~0 | ~0 | ~0 |
-| G2 | 0.097 | ~0 | ~0 | ~0 |
-| G3 | ~0 | ~0 | 0.021 | 0.017 |
-| ES1 (direct) | TBD Probe B-ESS | — | — | — |
-| ES2 (direct) | — | TBD Probe B-ESS | — | — |
-| ES3 (direct) | — | — | TBD Probe B-ESS | — |
-| ES4 (direct) | — | — | — | TBD Probe B-ESS |
+| G1 (Bus 1)        | **0.062** | ~0     | ~0     | ~0     |
+| G2 (Bus 2)        | **0.097** | ~0     | ~0     | ~0     |
+| G3 (Bus 3)        | ~0        | ~0     | **0.021** | **0.017** |
+| ES1 (direct)      | **0.113** | 0.000  | 0.000  | 0.000  |
+| ES2 (direct)      | 0.000     | **0.038** | 0.000  | 0.000  |
+| ES3 (direct)      | 0.000     | 0.000  | **0.043** | 0.002  |
+| ES4 (direct)      | 0.000     | 0.000  | 0.006  | **0.038** |
 
-### Predicted F1 response (linear superposition, mag=±0.5 split 4 ways)
+**Topology takeaway:** ES1 and ES2 are *both* electrical islands at
+the ESS layer — direct injection at one does not propagate to the
+other. ES3 and ES4 are weakly coupled (~5-15 % cross-leak).
+**ES2 has zero coupling to anything except itself.** Any Option F
+candidate that does not write `PM_STEP_AMP[2]` directly cannot give
+ES2 a learning signal.
 
-(filled once Probe B-ESS data is in)
+### Predicted F1 response (all-4 equal split, mag=±0.5 split 4 ways → 0.125 each)
 
-### Predicted F3 ("random_2_of_4") response (per-scenario random pair)
+Linear superposition: each ES{i} sees its `direct(0.125)` ≈
+`direct(0.5) × 0.25` = direct response ÷ 4. Cross-agent leakage is
+small enough to ignore.
 
-(filled once Probe B-ESS data is in)
+| Candidate F1 prediction | ES1 | ES2 | ES3 | ES4 |
+|---|---:|---:|---:|---:|
+| direct (mag=0.125) ≈ direct(0.5)/4 | 0.028 | 0.0094 | 0.011 | 0.0096 |
+| F1 expected (incl. weak ES3↔ES4 leak) | 0.028 | 0.0094 | 0.011 | 0.0096 |
+
+**All 4 above 1e-3 threshold ✓**, but ES2/ES3/ES4 are within an order
+of magnitude of the 1e-3 cutoff. Suggest using **mag = 1.0 sys-pu**
+for F1 (each ES gets 0.25 amp) → all per-agent diffs ~ 2×, comfortably
+above noise.
+
+**Critical caveat:** F1 is in-phase (all 4 agents fire same direction
+same time). The reward `r_f_i = -(Δω_i - mean_j Δω_j)²` *vanishes* when
+all agents have identical Δω. F1 may produce **near-zero r_f gradient
+despite per-agent response > 0** because the differential vanishes.
+This must be verified by sign-pair Probe before any training under F1.
+
+### Predicted F3 ("random_2_of_4") response (per-scenario)
+
+Each call selects 2 random ES, magnitude split 50/50. Per scenario:
+2 of 4 agents respond at ~direct(0.25) ≈ direct(0.5)/2 ≈ 0.057-0.022 Hz.
+
+| F3 ES coverage over 50 scenarios | ES1 | ES2 | ES3 | ES4 |
+|---|---:|---:|---:|---:|
+| Probability of being target | 50% | 50% | 50% | 50% |
+| Expected per-scenario diff when targeted | ~0.057 | ~0.019 | ~0.022 | ~0.019 |
+| Expected mean per-agent diff over 50 ep | ~0.029 | ~0.0095 | ~0.011 | ~0.0095 |
+
+Compared to F1: same per-agent average gradient magnitude, but **per
+scenario only 2 ES respond** → r_f_i ≠ 0 for those 2 (they differ from
+the 2 silent ES). Differential signal preserved. **Recommended over F1.**
 
 ### Predicted F4 (G_random + ES_compensate) response
 
-(filled once Probe B-ESS data is in)
+Per scenario: pick random G ∈ {G1, G2, G3}, fire at 0.7 × magnitude;
+simultaneously fire ES_NOT_excited at 0.3 × magnitude.
+
+For random G1 (only ES1 in network response), compensate via ES2/3/4:
+- ES1: 0.062 × (0.7/0.5) = 0.087 (network from G1)
+- ES2: direct(0.3 × 1/3) = 0.038 × (0.1/0.5) = 0.0076 (direct from compensate)
+- ES3: direct(0.1/0.5) = 0.0086
+- ES4: direct(0.1/0.5) = 0.0077
+
+For random G3 (ES3+ES4 in network response), compensate via ES1+ES2:
+- ES1: direct(0.15/0.5) = 0.034
+- ES2: direct(0.15/0.5) = 0.011
+- ES3: 0.021 × (0.7/0.5) = 0.029
+- ES4: 0.017 × (0.7/0.5) = 0.024
+
+**All 4 above 1e-3 in both branches ✓**, mode-shape pattern preserved
+(network-side does not produce in-phase response). F4 is most
+paper-faithful and most robust to ES2 isolation.
+
+**Recommended for actual training:** F4 (or F3 + ES2-bias if F4 design
+proves too complex).
 
 ---
 
@@ -340,10 +399,19 @@ if scenario.disturbance_kind == "multi":
 
 ## 10. Status
 
-- **Probe B-ESS:** in flight (~25 min wall, job `bt20qzjxa`)
-- **This document:** stable framework; per-candidate predicted
-  responses pending Probe B-ESS data
-- **Decision pending:** which candidate (F1 / F2 / F3 / F4) to
-  implement, conditional on Probe B-ESS Branch A vs Branch B verdict
-- **No code change in this iteration.** Plan is design-only per
-  user direction (2026-04-30).
+- **Probe B-ESS:** ✅ COMPLETED 2026-04-30 03:00 (job `blixryfo7` rerun
+  after `args.disturbance_mode` NameError fix)
+- **Branch decision:** ✅ Branch A locked (all 4 ES swing-eq LIVE)
+- **Candidate ranking:** F4 > F3 > F2 > F1 (F1 rejected for in-phase
+  collapse risk)
+- **Surprise finding:** ES1 and ES2 are ESS-layer electrical islands;
+  any Option F variant must write `PM_STEP_AMP[2]` directly to give
+  ES2 a learning signal. No network-mediated path reaches ES2.
+- **Recommended next step (NOT executed in this iteration):** if user
+  approves F4 (or F3) implementation, the implementation outline in §7
+  applies. Sign-pair Probe under the chosen candidate is the gate
+  before any training.
+- **This document:** complete; ready for user decision on which
+  candidate to actually implement, or to defer Option F entirely in
+  favor of Option E (CCS at Bus 7/9, breaks credibility close lock,
+  more paper-faithful).

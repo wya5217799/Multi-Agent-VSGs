@@ -789,263 +789,40 @@ class KundurSimulinkEnv(_KundurBaseEnv):
     def _apply_disturbance_backend(
         self, bus_idx: Optional[int], magnitude: float
     ) -> None:
-        """Apply load disturbance mid-episode via Dynamic Load PS signal.
+        """Apply load disturbance mid-episode.
 
-        Sets a workspace variable that the Simulink Constant block reads on the
-        next FastRestart sim() call.  No topology change — no Simscape re-solve.
+        CVS profiles (``kundur_cvs`` / ``kundur_cvs_v3``) delegate to the
+        :mod:`scenarios.kundur.disturbance_protocols` adapter layer
+        (P2 of the algorithm-layer refactor, 2026-04-29). Adapter
+        selection is keyed by ``self._disturbance_type``; legacy
+        ``pm_step_single_vsg`` honors the class-level
+        ``DISTURBANCE_VSG_INDICES`` attribute.
 
-        magnitude is in system-base p.u. (100 MW per +1.0). The backend keeps
-        the paper's sign convention while making the magnitude observable:
-
-        magnitude < 0: reduce Bus14 TripLoad1 by |magnitude| * 100 MW
-        magnitude > 0: add    Bus15 TripLoad2 by  magnitude  * 100 MW
+        SPS legacy (``kundur_vsg_sps``) keeps the inline dispatch via
+        :class:`engine.simulink_bridge.SimulinkBridge.apply_disturbance_load`.
+        ``magnitude`` is in system-base p.u. (100 MW per +1.0); the
+        SPS path treats negative magnitudes as Bus14 reduction and
+        positive as Bus15 addition.
         """
         cfg = self.bridge.cfg
-        # G3-prep-F OD-F-3 FIX: CVS-only path — Pm_step source-side disturbance.
-        # See 2026-04-26_kundur_cvs_g3prep_F_OD3_FIX_design_note.md.
-        # Legacy SPS TripLoad?_P path is a NO-OP for kundur_cvs.slx (verified
-        # in OD-F-3 verdict, commit a62c1e9). Re-route to the per-VSG
-        # Pm_step_amp_<i> / Pm_step_t_<i> Constants already wired in
-        # build_kundur_cvs.m L257-290.
-        # P3.3 (2026-04-26): v3 build_kundur_cvs_v3.m wires the same per-ESS
-        # Pm_step_t_<i> / Pm_step_amp_<i> workspace-variable gating cluster,
-        # so the CVS Pm-step routing applies verbatim to kundur_cvs_v3.
-        # Magnitude / sign / timing / strategy unchanged from the v2 CVS path.
         if cfg.model_name in ('kundur_cvs', 'kundur_cvs_v3'):
-            # Asymmetric Pm step (2026-04-26 minimal-path change after 50ep
-            # symmetric baseline kundur_simulink_20260426_142847 showed r_f
-            # identically 0): paper r_f = -Σ(Δω_i - local_mean)^2 vanishes
-            # under fully symmetric disturbance + symmetric CVS v2 topology.
-            # Apply the full magnitude to a configurable subset of VSGs
-            # so ω_i diverges across nodes and r_f carries a learning signal.
-            #
-            # Total Pm injection is unchanged vs the previous symmetric path:
-            #   old: 4 × (magnitude/4)  =  magnitude  (spread)
-            #   new: |targets| × (magnitude/|targets|) = magnitude  (focused)
-            #
-            # Phase 4 Gap 1 Path (C) — Pm-step proxy dispatch.
-            # See plan §Gap 1 + audit §R2-Blocker1 (LoadStep workspace path
-            # is provably DEAD; build_kundur_cvs_v3.m hardcodes 'Resistance'
-            # at lines 316-336). Map disturbance_type -> target_indices:
-            #   pm_step_proxy_bus7        -> (0,)  ES1, electrically nearest Bus 7 (P2.3-L1)
-            #   pm_step_proxy_bus9        -> (3,)  ES4, electrically nearest Bus 9 (P2.3-L1)
-            #   pm_step_proxy_random_bus  -> per-call 50/50 pick of (0,) or (3,)
-            #   pm_step_single_vsg        -> legacy: honors class attr DISTURBANCE_VSG_INDICES
-            dtype = getattr(self, '_disturbance_type', 'pm_step_single_vsg')
-
-            # Phase A LoadStep dispatch (2026-04-27, updated by Task 2 2026-04-28).
-            #
-            # Task 2 paper-aligned semantics (paper line 993-994):
-            #   `loadstep_paper_bus14`  → LS1 = "sudden load reduction of 248 MW
-            #     at bus 14" = R disengage. Bus 14 IC has 248 MW pre-engaged
-            #     (build_kundur_cvs_v3 sets LoadStep_amp_bus14 default = 248e6).
-            #     env writes LoadStep_amp_bus14 = 0 ⇒ R jumps to 1e9 ⇒ load
-            #     drops out ⇒ freq UP. `magnitude` arg IGNORED for LS1 (always
-            #     full 248 MW trip).
-            #   `loadstep_paper_bus15`  → LS2 = "sudden load increase of 188 MW
-            #     at bus 15" = R engage. Bus 15 IC = 0 MW. env writes
-            #     LoadStep_amp_bus15 = |magnitude|·Sbase ⇒ load engages ⇒
-            #     freq DOWN. magnitude scales LS2 amplitude.
-            #   `loadstep_paper_random_bus` → 50/50 LS1 vs LS2 (= true paper
-            #     random disturbance per Sec.IV-A).
-            #   `loadstep_paper_trip_bus14/15` (Phase A++ alternate) → CCS
-            #     injection path (negative-load injection mode, retained as
-            #     alternate test mode; not in paper main line). magnitude
-            #     scales injection.
-            ls_bus_label: str | None = None
-            ls_action: str | None = None  # 'trip' (LS1, R disengage) or 'engage' (LS2, R engage) or 'cc_inject' (Phase A++)
-            if dtype == 'loadstep_paper_bus14':
-                ls_bus_label, ls_action = 'bus14', 'trip'
-            elif dtype == 'loadstep_paper_bus15':
-                ls_bus_label, ls_action = 'bus15', 'engage'
-            elif dtype == 'loadstep_paper_random_bus':
-                if float(self.np_random.random()) < 0.5:
-                    ls_bus_label, ls_action = 'bus14', 'trip'
-                else:
-                    ls_bus_label, ls_action = 'bus15', 'engage'
-            elif dtype == 'loadstep_paper_trip_bus14':
-                ls_bus_label, ls_action = 'bus14', 'cc_inject'
-            elif dtype == 'loadstep_paper_trip_bus15':
-                ls_bus_label, ls_action = 'bus15', 'cc_inject'
-            elif dtype == 'loadstep_paper_trip_random_bus':
-                ls_bus_label = (
-                    'bus14' if float(self.np_random.random()) < 0.5 else 'bus15'
-                )
-                ls_action = 'cc_inject'
-
-            if ls_bus_label is not None and ls_action is not None:
-                # Convert sys-pu magnitude to watts (used by 'engage' / 'cc_inject').
-                amp_w = abs(float(magnitude)) * cfg.sbase_va
-                t_now = float(self.bridge.t_current)
-                other_label = 'bus15' if ls_bus_label == 'bus14' else 'bus14'
-                ls_bus_int = int(ls_bus_label[3:])     # 'bus14' -> 14
-                other_bus_int = int(other_label[3:])
-
-                # C3d (2026-04-29): require_effective=True on every LoadStep
-                # family write. Under v3, LOAD_STEP_AMP and LOAD_STEP_TRIP_AMP
-                # are name-valid but the physical channel is dead/weak (R
-                # compile-freeze, CCS ~0.01 Hz — see NOTES.md §"2026-04-29
-                # Eval 协议偏差"). The first resolve below will raise
-                # WorkspaceVarError before any MATLAB write, surfacing the
-                # contract violation instead of silently injecting nothing.
-                # IC seeding in _reset_backend keeps require_effective=False.
-                if ls_action == 'trip':
-                    # Task 2: LS1 = R disengage (paper line 993 "sudden load
-                    # reduction of 248 MW"). Bus 14 IC has 248 MW pre-engaged;
-                    # env writes 0 ⇒ R jumps to 1e9 ⇒ load drops out ⇒ freq UP.
-                    # `magnitude` arg IGNORED (always full 248 MW trip).
-                    self.bridge.apply_workspace_var(
-                        self._ws('LOAD_STEP_AMP', bus=ls_bus_int,
-                                 require_effective=True), 0.0
-                    )
-                    # Other bus stays at its IC default (LS2 bus15 IC = 0).
-                    # Don't touch the other bus's R amp here — leave at IC.
-                    # Trip path (CCS) silent on both.
-                    self.bridge.apply_workspace_var(
-                        self._ws('LOAD_STEP_TRIP_AMP', bus=ls_bus_int,
-                                 require_effective=True), 0.0
-                    )
-                    self.bridge.apply_workspace_var(
-                        self._ws('LOAD_STEP_TRIP_AMP', bus=other_bus_int,
-                                 require_effective=True), 0.0
-                    )
-                elif ls_action == 'engage':
-                    # Task 2: LS2 = R engage (paper line 994 "sudden load
-                    # increase of 188 MW"). Bus 15 IC = 0; env writes amp_w
-                    # ⇒ R = V²/amp_w ⇒ load engages ⇒ freq DOWN.
-                    self.bridge.apply_workspace_var(
-                        self._ws('LOAD_STEP_AMP', bus=ls_bus_int,
-                                 require_effective=True), amp_w
-                    )
-                    # Other bus (bus14) stays at IC = 248 MW pre-engaged.
-                    # Trip path silent.
-                    self.bridge.apply_workspace_var(
-                        self._ws('LOAD_STEP_TRIP_AMP', bus=ls_bus_int,
-                                 require_effective=True), 0.0
-                    )
-                    self.bridge.apply_workspace_var(
-                        self._ws('LOAD_STEP_TRIP_AMP', bus=other_bus_int,
-                                 require_effective=True), 0.0
-                    )
-                else:  # 'cc_inject' (Phase A++ alternate, retained for diagnostics)
-                    self.bridge.apply_workspace_var(
-                        self._ws('LOAD_STEP_TRIP_AMP', bus=ls_bus_int,
-                                 require_effective=True), amp_w
-                    )
-                    self.bridge.apply_workspace_var(
-                        self._ws('LOAD_STEP_TRIP_AMP', bus=other_bus_int,
-                                 require_effective=True), 0.0
-                    )
-                    # Don't touch R-amp side — stays at IC.
-
-                # Zero Pm-step proxies so dispatch types don't compound.
-                for i in range(1, cfg.n_agents + 1):
-                    self.bridge.apply_workspace_var(self._ws('PM_STEP_T',   i=i), t_now)
-                    self.bridge.apply_workspace_var(self._ws('PM_STEP_AMP', i=i), 0.0)
-                for g in range(1, 4):
-                    self.bridge.apply_workspace_var(self._ws('PMG_STEP_T',   g=g), t_now)
-                    self.bridge.apply_workspace_var(self._ws('PMG_STEP_AMP', g=g), 0.0)
-                logger.info(
-                    "[Kundur-Simulink-CVS] LoadStep %s at %s: "
-                    "amp=%.2f MW (magnitude=%+.3f sys-pu), step_time=%.4fs",
-                    ls_action, ls_bus_label, amp_w / 1e6,
-                    float(magnitude), t_now,
-                )
-                return
-
-            # Z1 SG-side dispatch (2026-04-27) — route to PmgStep_<g> for g=1..3.
-            # Disturbance enters at G1/G2/G3 (synchronous-gen sources at buses
-            # 1/2/3), propagates through the network to the ESS. ESS H/D
-            # adjustments then have system-level leverage on freq response
-            # (vs ESS-side Pm-step proxy which directly perturbs the ESS's
-            # own swing equation and gives no leverage to its own H/D).
-            sg_target_idx: int | None = None  # 1, 2, or 3 if SG dispatch
-            if dtype == 'pm_step_proxy_g1':
-                sg_target_idx = 1
-            elif dtype == 'pm_step_proxy_g2':
-                sg_target_idx = 2
-            elif dtype == 'pm_step_proxy_g3':
-                sg_target_idx = 3
-            elif dtype == 'pm_step_proxy_random_gen':
-                # Uniform random pick of 1..3.
-                sg_target_idx = int(self.np_random.integers(1, 4))
-
-            if sg_target_idx is not None:
-                # SG-side Pm-step proxy. Pmg vars are in sys-pu
-                # (build_kundur_cvs_v3.m:173 stores Pmg_g = sg_Pm0_sys);
-                # PmgStep_amp_<g> default 0.0 sys-pu; magnitude is already
-                # sys-pu so push verbatim. (M2 fix: previous expression
-                # `magnitude * 100e6 / 1.0 / cfg.sbase_va` was an identity
-                # rescale brittle to sbase_va changes.)
-                amp_focused_pu = float(magnitude)
-                t_now = float(self.bridge.t_current)
-                # Zero all SG step amps first (silence non-target G).
-                for g in range(1, 4):
-                    self.bridge.apply_workspace_var(self._ws('PMG_STEP_T',   g=g), t_now)
-                    self.bridge.apply_workspace_var(self._ws('PMG_STEP_AMP', g=g), 0.0)
-                # Set the target G amp.
-                self.bridge.apply_workspace_var(
-                    self._ws('PMG_STEP_AMP', g=sg_target_idx), amp_focused_pu
-                )
-                # Also zero ESS Pm-step amps so they don't leak from a prior reset.
-                for i in range(1, cfg.n_agents + 1):
-                    self.bridge.apply_workspace_var(self._ws('PM_STEP_T',   i=i), t_now)
-                    self.bridge.apply_workspace_var(self._ws('PM_STEP_AMP', i=i), 0.0)
-                sign = 'increase' if magnitude > 0 else 'decrease'
-                print(
-                    f"[Kundur-Simulink-CVS] Pmg step {sign} targets SG[{sg_target_idx}] "
-                    f"(proxy_g{sg_target_idx}): amp={amp_focused_pu:+.4f} pu "
-                    f"(magnitude={float(magnitude):+.3f}), step_time={t_now:.4f}s"
-                )
-                return
-
-            # ESS-side Pm-step proxy (existing P4.1 path).
-            if dtype == 'pm_step_proxy_bus7':
-                target_indices = (0,)
-                proxy_bus = 7
-            elif dtype == 'pm_step_proxy_bus9':
-                target_indices = (3,)
-                proxy_bus = 9
-            elif dtype == 'pm_step_proxy_random_bus':
-                if float(self.np_random.random()) < 0.5:
-                    target_indices = (0,)
-                    proxy_bus = 7
-                else:
-                    target_indices = (3,)
-                    proxy_bus = 9
-            else:  # pm_step_single_vsg (legacy default)
-                target_indices = tuple(
-                    getattr(self, 'DISTURBANCE_VSG_INDICES', (0,))
-                )
-                proxy_bus = None
-            n_tgt = max(len(target_indices), 1)
-            # M2 fix: magnitude is already sys-pu; Pm_step_amp_<i> is sys-pu.
-            # Previous `magnitude * 100e6 / n_tgt / cfg.sbase_va` evaluated
-            # to magnitude/n_tgt only because sbase_va == 100e6 — brittle.
-            amp_focused_pu = float(magnitude) / n_tgt
-            t_now = float(self.bridge.t_current)
-            amps_per_vsg = [0.0] * cfg.n_agents
-            for idx in target_indices:
-                if 0 <= idx < cfg.n_agents:
-                    amps_per_vsg[idx] = amp_focused_pu
-            for i in range(1, cfg.n_agents + 1):
-                self.bridge.apply_workspace_var(self._ws('PM_STEP_T',   i=i), t_now)
-                self.bridge.apply_workspace_var(
-                    self._ws('PM_STEP_AMP', i=i), amps_per_vsg[i - 1]
-                )
-            # Also zero SG Pm-step amps for symmetry / clean state.
-            for g in range(1, 4):
-                self.bridge.apply_workspace_var(self._ws('PMG_STEP_T',   g=g), t_now)
-                self.bridge.apply_workspace_var(self._ws('PMG_STEP_AMP', g=g), 0.0)
-            sign = 'increase' if magnitude > 0 else 'decrease'
-            proxy_tag = f"proxy_bus{proxy_bus}" if proxy_bus is not None else dtype
-            print(
-                f"[Kundur-Simulink-CVS] Pm step {sign} targets VSG"
-                f"{list(target_indices)} ({proxy_tag}): amp={amp_focused_pu:+.4f} pu "
-                f"(magnitude={float(magnitude):+.3f}), step_time={t_now:.4f}s, "
-                f"per_vsg_amps={[f'{a:+.3f}' for a in amps_per_vsg]}"
+            from scenarios.kundur.disturbance_protocols import (
+                resolve_disturbance,
+            )
+            protocol = resolve_disturbance(
+                getattr(self, '_disturbance_type', 'pm_step_single_vsg'),
+                vsg_indices=getattr(self, 'DISTURBANCE_VSG_INDICES', None),
+            )
+            protocol.apply(
+                bridge=self.bridge,
+                magnitude_sys_pu=float(magnitude),
+                rng=self.np_random,
+                t_now=float(self.bridge.t_current),
+                cfg=cfg,
             )
             return
+        # SPS legacy fall-through (kundur_vsg_sps profile only).
+        # CVS profiles already returned above via the protocol layer.
 
         delta_per_phase_w = abs(float(magnitude)) * cfg.sbase_va / 3.0
         if magnitude < 0:

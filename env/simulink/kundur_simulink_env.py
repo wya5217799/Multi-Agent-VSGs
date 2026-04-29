@@ -881,44 +881,60 @@ class KundurSimulinkEnv(_KundurBaseEnv):
                 ls_bus_int = int(ls_bus_label[3:])     # 'bus14' -> 14
                 other_bus_int = int(other_label[3:])
 
+                # C3d (2026-04-29): require_effective=True on every LoadStep
+                # family write. Under v3, LOAD_STEP_AMP and LOAD_STEP_TRIP_AMP
+                # are name-valid but the physical channel is dead/weak (R
+                # compile-freeze, CCS ~0.01 Hz — see NOTES.md §"2026-04-29
+                # Eval 协议偏差"). The first resolve below will raise
+                # WorkspaceVarError before any MATLAB write, surfacing the
+                # contract violation instead of silently injecting nothing.
+                # IC seeding in _reset_backend keeps require_effective=False.
                 if ls_action == 'trip':
                     # Task 2: LS1 = R disengage (paper line 993 "sudden load
                     # reduction of 248 MW"). Bus 14 IC has 248 MW pre-engaged;
                     # env writes 0 ⇒ R jumps to 1e9 ⇒ load drops out ⇒ freq UP.
                     # `magnitude` arg IGNORED (always full 248 MW trip).
                     self.bridge.apply_workspace_var(
-                        self._ws('LOAD_STEP_AMP', bus=ls_bus_int), 0.0
+                        self._ws('LOAD_STEP_AMP', bus=ls_bus_int,
+                                 require_effective=True), 0.0
                     )
                     # Other bus stays at its IC default (LS2 bus15 IC = 0).
                     # Don't touch the other bus's R amp here — leave at IC.
                     # Trip path (CCS) silent on both.
                     self.bridge.apply_workspace_var(
-                        self._ws('LOAD_STEP_TRIP_AMP', bus=ls_bus_int), 0.0
+                        self._ws('LOAD_STEP_TRIP_AMP', bus=ls_bus_int,
+                                 require_effective=True), 0.0
                     )
                     self.bridge.apply_workspace_var(
-                        self._ws('LOAD_STEP_TRIP_AMP', bus=other_bus_int), 0.0
+                        self._ws('LOAD_STEP_TRIP_AMP', bus=other_bus_int,
+                                 require_effective=True), 0.0
                     )
                 elif ls_action == 'engage':
                     # Task 2: LS2 = R engage (paper line 994 "sudden load
                     # increase of 188 MW"). Bus 15 IC = 0; env writes amp_w
                     # ⇒ R = V²/amp_w ⇒ load engages ⇒ freq DOWN.
                     self.bridge.apply_workspace_var(
-                        self._ws('LOAD_STEP_AMP', bus=ls_bus_int), amp_w
+                        self._ws('LOAD_STEP_AMP', bus=ls_bus_int,
+                                 require_effective=True), amp_w
                     )
                     # Other bus (bus14) stays at IC = 248 MW pre-engaged.
                     # Trip path silent.
                     self.bridge.apply_workspace_var(
-                        self._ws('LOAD_STEP_TRIP_AMP', bus=ls_bus_int), 0.0
+                        self._ws('LOAD_STEP_TRIP_AMP', bus=ls_bus_int,
+                                 require_effective=True), 0.0
                     )
                     self.bridge.apply_workspace_var(
-                        self._ws('LOAD_STEP_TRIP_AMP', bus=other_bus_int), 0.0
+                        self._ws('LOAD_STEP_TRIP_AMP', bus=other_bus_int,
+                                 require_effective=True), 0.0
                     )
                 else:  # 'cc_inject' (Phase A++ alternate, retained for diagnostics)
                     self.bridge.apply_workspace_var(
-                        self._ws('LOAD_STEP_TRIP_AMP', bus=ls_bus_int), amp_w
+                        self._ws('LOAD_STEP_TRIP_AMP', bus=ls_bus_int,
+                                 require_effective=True), amp_w
                     )
                     self.bridge.apply_workspace_var(
-                        self._ws('LOAD_STEP_TRIP_AMP', bus=other_bus_int), 0.0
+                        self._ws('LOAD_STEP_TRIP_AMP', bus=other_bus_int,
+                                 require_effective=True), 0.0
                     )
                     # Don't touch R-amp side — stays at IC.
 

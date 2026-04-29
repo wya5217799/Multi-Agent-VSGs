@@ -456,3 +456,63 @@ class TestEffectivenessIntrospection:
         spec = spec_for("PMG_STEP_AMP")
         assert PROFILE_CVS_V3 in spec.effective_in_profile
         assert spec.inactive_reason == {}
+
+
+# ===========================================================================
+# C3d: env-level wiring smoke — verify the env's _ws() helper propagates
+# require_effective into resolve(), without touching MATLAB.
+# ===========================================================================
+
+
+class _FakeBridgeCfg:
+    """Stand-in for BridgeConfig with the only two fields env._ws reads."""
+    def __init__(self, model_name: str, n_agents: int = 4) -> None:
+        self.model_name = model_name
+        self.n_agents = n_agents
+
+
+class _FakeBridge:
+    def __init__(self, cfg: _FakeBridgeCfg) -> None:
+        self.cfg = cfg
+
+
+class TestEnvWsHelperPropagatesRequireEffective:
+    """env._ws is a thin wrapper around resolve(...) — these tests verify
+    require_effective is plumbed through correctly without instantiating
+    the real env (which would try to import matlab.engine)."""
+
+    def _make_env_shell(self, model_name: str):
+        # Build the absolute minimum object that exercises the _ws method.
+        # We don't call __init__ — the only thing _ws touches is self.bridge.cfg.
+        from env.simulink.kundur_simulink_env import KundurSimulinkEnv
+        env = KundurSimulinkEnv.__new__(KundurSimulinkEnv)
+        env.bridge = _FakeBridge(_FakeBridgeCfg(model_name=model_name))
+        return env
+
+    def test_ws_default_lets_load_step_amp_through_v3(self) -> None:
+        env = self._make_env_shell(PROFILE_CVS_V3)
+        # No require_effective kwarg → C3a back-compat → returns the name.
+        assert env._ws("LOAD_STEP_AMP", bus=14) == "LoadStep_amp_bus14"
+
+    def test_ws_strict_rejects_load_step_amp_v3(self) -> None:
+        env = self._make_env_shell(PROFILE_CVS_V3)
+        with pytest.raises(WorkspaceVarError, match="not effective"):
+            env._ws("LOAD_STEP_AMP", bus=14, require_effective=True)
+
+    def test_ws_strict_rejects_load_step_trip_amp_v3(self) -> None:
+        env = self._make_env_shell(PROFILE_CVS_V3)
+        with pytest.raises(WorkspaceVarError, match="not effective"):
+            env._ws("LOAD_STEP_TRIP_AMP", bus=15, require_effective=True)
+
+    def test_ws_strict_passes_pm_step_amp_v3(self) -> None:
+        env = self._make_env_shell(PROFILE_CVS_V3)
+        # Effective in v3 → strict gate is a no-op.
+        assert env._ws("PM_STEP_AMP", i=2, require_effective=True) == "Pm_step_amp_2"
+
+    def test_ws_strict_passes_pmg_step_amp_v3(self) -> None:
+        env = self._make_env_shell(PROFILE_CVS_V3)
+        assert env._ws("PMG_STEP_AMP", g=3, require_effective=True) == "PmgStep_amp_3"
+
+    def test_ws_strict_passes_M_per_agent_v3(self) -> None:
+        env = self._make_env_shell(PROFILE_CVS_V3)
+        assert env._ws("M_PER_AGENT", i=4, require_effective=True) == "M_4"

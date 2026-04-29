@@ -93,6 +93,9 @@ Simulink 建模规则见 `docs/knowledge/simulink_rules.md`。
 | Simulink 奖励 | `env/simulink/kundur_simulink_env.py` 或 `env/simulink/ne39_simulink_env.py` |
 | Simulink step 批量逻辑 | `slx_helpers/slx_step_and_read.m` |
 | Simulink 模型构建 | `scenarios/kundur/simulink_models/build_powerlib_kundur.m` |
+| Kundur CVS 扰动 dispatch | `scenarios/kundur/disturbance_protocols.py`（4 adapter，C1 2026-04-29）；env 中 `_apply_disturbance_backend` CVS 分支只剩 `resolve_disturbance(...)` + `protocol.apply(...)` |
+| Kundur 扰动 workspace var schema | `scenarios/kundur/workspace_vars.py::resolve(...)`（C3）；name-valid vs `require_effective` 二层校验，effective 集合靠物理修复推进 |
+| Kundur Scenario VO 入口 | `scenarios/kundur/scenario_loader.py::Scenario` + `env.reset(scenario=Scenario(...))`（C4 2026-04-29）；`options['trigger_at_step']` 控触发时机；§1.5b：`info['resolved_disturbance_type']` 是 audit 单一真值 |
 | 单模型诊断探针 | `probes/kundur/`（5 个回归门）+ `probes/ne39/`；`probes/kundur/gates/` 为 CVS 开发流水线门控 |
 | MATLAB 引擎配置 | `engine/matlab_session.py` (重连、路径) |
 | Simulink 桥接配置 | `scenarios/kundur/config_simulink.py::KUNDUR_BRIDGE_CONFIG` |

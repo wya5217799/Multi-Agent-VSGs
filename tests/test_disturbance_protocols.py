@@ -28,7 +28,15 @@ from scenarios.kundur.disturbance_protocols import (
     resolve_disturbance,
 )
 from scenarios.kundur.workspace_vars import WorkspaceVarError
-from tests._disturbance_backend_legacy import legacy_apply_disturbance_cvs
+
+# Y1 (2026-04-29): the legacy god-method oracle (
+# ``tests/_disturbance_backend_legacy.py``) was used during P2 for
+# byte-level regression vs the pre-C1 dispatch. After P4 / C4 was
+# exercised on the full smoke matrix (3 smokes PASS, see
+# ``quality_reports/verdicts/2026-04-29_p4_smoke_results.md``), the
+# oracle was deleted in P5. The byte-level regression test below was
+# also removed; per-adapter behavior is now covered by the R-A..R-J
+# unit tests below.
 
 
 # ---------------------------------------------------------------------------
@@ -98,157 +106,6 @@ def loadstep_effective_v3(monkeypatch):
         )
         monkeypatch.setitem(workspace_vars._SCHEMA, key, promoted)
     yield
-
-
-# ---------------------------------------------------------------------------
-# Byte-level regression — every type × multiple inputs vs oracle
-# ---------------------------------------------------------------------------
-
-
-# (disturbance_type, magnitude, vsg_indices_for_single_vsg, rng_seed)
-# Coverage rationale:
-#   - all 14 types
-#   - ± sign on each (where sign is meaningful)
-#   - LS1 IGNORE-magnitude tested with multiple magnitudes (R-A)
-#   - random_* types tested with multiple seeds → both branches
-#   - pm_step_single_vsg with multiple VSG_INDICES tuples (R-D, R-J)
-
-_BYTE_LEVEL_CASES = [
-    # ESS Pm-step proxy (R-D, R-H)
-    ("pm_step_proxy_bus7", +0.5, None, 0),
-    ("pm_step_proxy_bus7", -0.5, None, 0),
-    ("pm_step_proxy_bus9", +1.0, None, 0),
-    ("pm_step_proxy_bus9", -1.0, None, 0),
-    ("pm_step_proxy_random_bus", +0.7, None, 0),
-    ("pm_step_proxy_random_bus", +0.7, None, 1),
-    ("pm_step_proxy_random_bus", +0.7, None, 2),
-    ("pm_step_proxy_random_bus", -0.3, None, 3),
-    ("pm_step_single_vsg", +1.0, (0,), 0),
-    ("pm_step_single_vsg", -1.0, (0,), 0),
-    ("pm_step_single_vsg", +4.0, (0, 1, 2, 3), 0),  # R-D divide
-    ("pm_step_single_vsg", +2.0, (0, 3), 0),
-
-    # SG Pmg-step proxy (R-D, R-C)
-    ("pm_step_proxy_g1", +0.5, None, 0),
-    ("pm_step_proxy_g1", -0.5, None, 0),
-    ("pm_step_proxy_g2", +1.0, None, 0),
-    ("pm_step_proxy_g3", +0.7, None, 0),
-    ("pm_step_proxy_g3", -0.7, None, 0),
-    ("pm_step_proxy_random_gen", +0.5, None, 0),
-    ("pm_step_proxy_random_gen", +0.5, None, 1),
-    ("pm_step_proxy_random_gen", -0.5, None, 2),
-
-    # LoadStep R-branch (R-A IGNORE mag, R-B abs())
-    ("loadstep_paper_bus14", +5.0, None, 0),    # R-A: magnitude IGNORED
-    ("loadstep_paper_bus14", -5.0, None, 0),
-    ("loadstep_paper_bus15", +1.88, None, 0),
-    ("loadstep_paper_bus15", -1.88, None, 0),   # R-B: abs() applied
-    ("loadstep_paper_random_bus", +0.5, None, 0),
-    ("loadstep_paper_random_bus", +0.5, None, 1),
-    ("loadstep_paper_random_bus", -0.5, None, 2),
-
-    # LoadStep CCS injection
-    ("loadstep_paper_trip_bus14", +0.5, None, 0),
-    ("loadstep_paper_trip_bus14", -0.5, None, 0),
-    ("loadstep_paper_trip_bus15", +0.3, None, 0),
-    ("loadstep_paper_trip_random_bus", +0.5, None, 0),
-    ("loadstep_paper_trip_random_bus", +0.5, None, 1),
-]
-
-
-def _run_with_capture(
-    fn, **kwargs
-) -> tuple[list[tuple[str, float]], BaseException | None]:
-    """Run fn(**kwargs); return (bridge.calls, raised_exception_or_None).
-
-    fn must accept ``bridge`` kwarg pointing to the FakeBridge whose
-    .calls list is returned. Any exception is captured and returned as
-    the second tuple element so byte-level regression can assert that
-    both legacy and new paths raise identically.
-    """
-    bridge = kwargs["bridge"]
-    try:
-        fn(**kwargs)
-        return bridge.calls, None
-    except BaseException as exc:  # noqa: BLE001 — intentional broad catch
-        return bridge.calls, exc
-
-
-@pytest.mark.parametrize(
-    "disturbance_type,magnitude,vsg_indices,rng_seed", _BYTE_LEVEL_CASES
-)
-def test_byte_level_regression_vs_legacy(
-    disturbance_type: str,
-    magnitude: float,
-    vsg_indices: tuple[int, ...] | None,
-    rng_seed: int,
-) -> None:
-    """Adapter must produce byte-identical write log to the legacy god
-    method for each (type, magnitude, vsg_indices, rng_seed) tuple.
-
-    LoadStep families raise WorkspaceVarError under production schema
-    (C3d wiring — physical channel not effective in v3). Both paths
-    must raise the SAME exception type with the SAME message and
-    record the SAME prefix of writes (both should be empty).
-    """
-    cfg = FakeCfg(model_name="kundur_cvs_v3", n_agents=4, sbase_va=100e6)
-    t_now = 1.5
-
-    # Legacy oracle
-    rng_legacy = np.random.default_rng(rng_seed)
-    bridge_legacy = FakeBridge(cfg)
-    legacy_kwargs = {
-        "bridge": bridge_legacy,
-        "disturbance_type": disturbance_type,
-        "magnitude": magnitude,
-        "rng": rng_legacy,
-        "t_now": t_now,
-        "cfg": cfg,
-    }
-    if vsg_indices is not None:
-        legacy_kwargs["vsg_indices"] = vsg_indices
-    legacy_calls, legacy_exc = _run_with_capture(
-        legacy_apply_disturbance_cvs, **legacy_kwargs
-    )
-
-    # New adapter
-    rng_new = np.random.default_rng(rng_seed)
-    bridge_new = FakeBridge(cfg)
-    protocol = resolve_disturbance(
-        disturbance_type, vsg_indices=vsg_indices
-    )
-    new_calls, new_exc = _run_with_capture(
-        protocol.apply,
-        bridge=bridge_new,
-        magnitude_sys_pu=magnitude,
-        rng=rng_new,
-        t_now=t_now,
-        cfg=cfg,
-    )
-
-    # Both must succeed or both must raise the same exception
-    assert (legacy_exc is None) == (new_exc is None), (
-        f"Raise-parity FAIL for {disturbance_type!r}: "
-        f"legacy_exc={legacy_exc!r}, new_exc={new_exc!r}"
-    )
-    if legacy_exc is not None:
-        assert type(legacy_exc) == type(new_exc), (
-            f"Exception type mismatch: legacy={type(legacy_exc).__name__}, "
-            f"new={type(new_exc).__name__}"
-        )
-        assert str(legacy_exc) == str(new_exc), (
-            f"Exception message mismatch:\n"
-            f"  legacy: {legacy_exc!r}\n"
-            f"  new:    {new_exc!r}"
-        )
-
-    assert legacy_calls == new_calls, (
-        f"Byte-level regression FAIL for "
-        f"{disturbance_type!r}, mag={magnitude}, vsg={vsg_indices}, "
-        f"seed={rng_seed}\n"
-        f"legacy: {legacy_calls!r}\n"
-        f"new:    {new_calls!r}"
-    )
 
 
 # ---------------------------------------------------------------------------

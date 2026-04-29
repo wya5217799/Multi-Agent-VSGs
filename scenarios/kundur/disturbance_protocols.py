@@ -708,6 +708,14 @@ class HybridSgEssMultiPoint:
 
     sg_share: float = 0.7
     target_g: int | str = "random_gen"
+    # 2026-04-30 post-50sc-eval finding: with compensate_sign_flip=False,
+    # 4 agents respond IN-PHASE (SG pushes excited ES one way, compensate
+    # pushes silent ES same way) → r_f = -(Δω_i - mean)² differential
+    # collapses (F1-style collapse, weakened). per_M = -0.09 vs paper
+    # -15.20 (168x weak). With sign-flip: SG pushes excited ES one way,
+    # compensate pushes silent ES OPPOSITE way → 4 agents split mode-shape
+    # → r_f differential preserved.
+    compensate_sign_flip: bool = True
 
     def __post_init__(self) -> None:
         if not (0.0 < self.sg_share < 1.0):
@@ -747,7 +755,10 @@ class HybridSgEssMultiPoint:
         compensate = tuple(sorted(set(range(cfg.n_agents)) - excited))
 
         sg_amp = float(magnitude_sys_pu) * self.sg_share
-        compensate_total = float(magnitude_sys_pu) * (1.0 - self.sg_share)
+        # compensate_sign_flip: opposite sign vs SG pushes 4-agent into
+        # split mode-shape, preserves r_f differential
+        sign_factor = -1.0 if self.compensate_sign_flip else +1.0
+        compensate_total = float(magnitude_sys_pu) * (1.0 - self.sg_share) * sign_factor
         n_comp = max(len(compensate), 1)
         compensate_amp_per_es = compensate_total / n_comp
 

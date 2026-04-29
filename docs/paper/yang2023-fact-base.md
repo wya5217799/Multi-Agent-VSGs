@@ -379,8 +379,12 @@ $r^f = 0$ 的条件是各节点频率相同，**而不是**频率偏差为零。
 | `DEFAULT_KUNDUR_MODEL_PROFILE` | `kundur_cvs.json`（v2 5-bus 简化）| `kundur_cvs_v3.json`（paper-faithful 16-bus） | Phase B/C/D + post_task_mini 全 PASS；v2 不再是物理层 paper-aligned |
 | `PHI_H` / `PHI_D` | env-var override `KUNDUR_PHI_H` / `KUNDUR_PHI_D`（默认 1e-4） | 锁定 1e-4，删除 env-var override | HPO 必须搜固定 reward；ablation 改常量 |
 | `DIST_MAX` | 0.5 sys-pu (~50 MW) | 1.0 sys-pu (~100 MW) | paper_eval no-control = -6.11 vs paper -15.20，gap 与扰动量级高度相关；提升后用 no-control paper_eval 复测校准 |
-| `KUNDUR_DISTURBANCE_TYPE` 默认 | `pm_step_single_vsg` | `loadstep_paper_random_bus`（保留 env-var override 用于 ablation）| 匹配论文 Sec.IV-A 测试场景分布；Phase B 验证两方向稳定 |
+| `KUNDUR_DISTURBANCE_TYPE` 默认 (训练) | `pm_step_single_vsg` | `loadstep_paper_random_bus`（保留 env-var override 用于 ablation）| 匹配论文 Sec.IV-A 测试场景分布；Phase B 验证两方向稳定 |
 | `T_WARMUP` | 10.0 s（注释 "smoke-stage"）| 10.0 s（注释升级为 "production locked"） | post_task_mini 实证 t=10 s 残差 < 0.5 mHz |
+
+**2026-04-29 eval 协议偏差备案 (Pm-step proxy as de facto)：**
+
+`evaluation/paper_eval.py` 不能在 v3 架构下使用 `loadstep_paper_*` 协议产生有效扰动信号。Series RLC R 块的 Resistance 在 .slx 编译时冻结，FastRestart 下运行时 workspace var 改不生效。CCS path 信号也仅 ~0.01 Hz 量级。**eval 默认协议为 `pm_step_proxy_random_bus`** —— 接受论文 cum_unnorm (-8.04 / -15.20) 数值不可直接对账；trained vs no_control 在项目内部协议下比较仍然有效。完整 deviation: [`docs/paper/eval-disturbance-protocol-deviation.md`](eval-disturbance-protocol-deviation.md)。
 
 完整 verdict 见 `results/harness/kundur/cvs_v3_credibility_close/credibility_close_verdict.md`。
 未触动：物理层（拓扑/IC/.slx/runtime.mat）、bridge/helper、SAC 架构、reward 公式结构、NE39。

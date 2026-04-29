@@ -141,3 +141,46 @@ reward alignment is validated.
 ### 未触动
 
 物理层（拓扑/IC/.slx/runtime.mat/NR 脚本）、bridge/helper、SAC 架构、reward 公式结构、NE39 任何文件。
+
+---
+
+## 2026-04-29 Eval 协议偏差备案 — 方案 B
+
+**Scope:** Kundur paper_eval 协议选择（不动物理层 / build / .slx / NE39 / SAC 架构）。
+**完整 deviation：** `docs/paper/eval-disturbance-protocol-deviation.md`
+
+### 上下文
+
+paper_eval 默认协议从 commit `a9ad2ea` 锁定为 `loadstep_paper_random_bus`（训练）/ `pm_step_proxy_random_bus`（eval, paper_eval.py:488 setdefault）。后续 commit `32c7511` 让 paper_eval 真正受 `KUNDUR_DISTURBANCE_TYPE` env-var 控制；commit `4902caf` 在 env._reset_backend v3 路径恢复 LoadStep IC。
+
+### 实测发现
+
+5-scenario smoke (DIST=[0.1,1.0] sys-pu, M=24, D=4.5, zero-action)：
+
+| 协议 | max\|Δf\| (5 scenarios) | cum_unnorm |
+|---|---|---:|
+| `pm_step_proxy_random_bus` (default) | [0.08, 0.41] Hz varied | -2.67 |
+| `loadstep_paper_random_bus` (R-mode, pre-fix) | 0.0091 × 5 bit-identical | -0.0038 |
+| `loadstep_paper_random_bus` (R-mode, post 4902caf) | 0.0091 × 5 bit-identical | -0.0038 |
+| `loadstep_paper_trip_random_bus` (CCS-mode) | [0.0093, 0.0098] | -0.0041 |
+
+LoadStep R-mode 与 CCS-mode 都不能产生有效扰动信号。R-mode 因 Series RLC R 块 Resistance 在 .slx 编译时冻结；CCS-mode 因 Bus 14/15 ESS 端电气距离离 load center 远（推测）。
+
+### 裁决
+
+**方案 B**：接受 `pm_step_proxy_random_bus` 为 v3 paper_eval 的 de facto 协议。
+
+- 论文 cum_unnorm (-8.04 / -15.20) 不可直接对账（协议不同）
+- trained vs no_control 在项目内部协议下比较仍有效（这是 RL 是否工作的内部判定）
+- 未来若需论文真值对账：方案 A（重做物理层 LoadStep 块）或方案 B（重审 v3 拓扑），均破 credibility close 锁定
+
+### 同步修改
+
+- `docs/paper/eval-disturbance-protocol-deviation.md`（NEW，主备案）
+- `docs/paper/yang2023-fact-base.md` §10 表新增一行
+- `scenarios/kundur/NOTES.md` 顶部加 2026-04-29 段
+- `docs/decisions/2026-04-10-paper-baseline-contract.md` 末尾追加（本段）
+
+### 未触动
+
+物理层、bridge / helper、SAC 架构、reward 公式结构、NE39、build / .slx / runtime.mat / IC。

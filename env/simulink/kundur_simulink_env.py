@@ -718,6 +718,33 @@ class KundurSimulinkEnv(_KundurBaseEnv):
                 self.bridge.set_disturbance_load(
                     cfg.tripload2_p_var, cfg.tripload2_p_default
                 )
+            else:
+                # v3 LoadStep IC restoration (2026-04-29 fix to paper_eval
+                # weak-signal observation): build_kundur_cvs_v3.m defaults
+                # have Bus 14 LS1 pre-engaged at 248e6 W (paper line 993)
+                # and Bus 15 LS2 = 0 (paper line 994). After
+                # apply_disturbance_backend writes mid-episode (e.g. LS1
+                # trip writes LoadStep_amp_bus14=0), those workspace vars
+                # PERSIST across env.reset() under FastRestart — the next
+                # episode's apply_disturbance_backend may write 0 again
+                # (if random pick is LS1 trip), producing zero transient
+                # because the var was already 0. Restoring the IC every
+                # reset ensures every episode starts from the paper-IC
+                # condition: Bus 14 carries 248 MW, Bus 15 is open.
+                # Also zeros the Phase A++ CCS trip injection amps so a
+                # prior cc_inject dispatch does not leak.
+                self.bridge.apply_workspace_var(
+                    'LoadStep_amp_bus14', 248e6
+                )
+                self.bridge.apply_workspace_var(
+                    'LoadStep_amp_bus15', 0.0
+                )
+                self.bridge.apply_workspace_var(
+                    'LoadStep_trip_amp_bus14', 0.0
+                )
+                self.bridge.apply_workspace_var(
+                    'LoadStep_trip_amp_bus15', 0.0
+                )
 
             self.bridge.warmup(T_WARMUP)
             self._sim_time = self.bridge.t_current

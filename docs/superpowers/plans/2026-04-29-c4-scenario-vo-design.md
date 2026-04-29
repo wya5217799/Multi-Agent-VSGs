@@ -112,7 +112,70 @@ def apply_disturbance(self, bus_idx=None, magnitude=None):
     self._disturbance_triggered = True
 ```
 
-### 1.5 `_disturbance_type` policy
+### 1.5b Constraint: Scenario is NOT a complete execution protocol
+
+**`Scenario` is a high-level intent input, not the full execution
+contract.** The same `Scenario` can resolve to different concrete
+`disturbance_type` strings depending on:
+
+- env constructor `_disturbance_type` argument
+- `KUNDUR_DISTURBANCE_TYPE` env-var at env-construction time
+- `options['disturbance_magnitude']` short-circuit (bypasses Scenario kind/target translation)
+- Future schema changes to `scenario_to_disturbance_type(...)`
+- Future LoadStep variants if added to the translator
+
+Therefore the **resolved** `disturbance_type` (the actual string passed
+to the protocol layer) MUST be recorded per-episode for audit and
+reproducibility. Scenario fields alone are insufficient — a run replay
+needs the resolved string.
+
+**Implementation requirement (P4, commit 4a)**:
+
+1. Env stores the resolved type at reset:
+   ```python
+   self._episode_resolved_disturbance_type: str | None = None
+   ```
+
+2. `reset()` populates it after resolution:
+   ```python
+   if scenario is not None:
+       self._episode_resolved_disturbance_type = scenario_to_disturbance_type(scenario)
+       self._episode_magnitude = scenario.magnitude_sys_pu
+       self._disturbance_type = self._episode_resolved_disturbance_type
+       self._disturbance_triggered = False
+   elif options and "disturbance_magnitude" in options:
+       self._episode_resolved_disturbance_type = self._disturbance_type  # constructor / env-var default
+       self._episode_magnitude = float(options["disturbance_magnitude"])
+       self._disturbance_triggered = False
+   else:
+       self._episode_resolved_disturbance_type = None  # legacy probe path; resolved at apply time
+   ```
+
+3. `info` dict returned by `step()` includes the resolved type when the
+   trigger fires (one of the post-trigger steps OR the trigger step
+   itself):
+   ```python
+   info["resolved_disturbance_type"] = self._episode_resolved_disturbance_type
+   info["episode_magnitude_sys_pu"] = self._episode_magnitude
+   ```
+
+4. Caller persists it. Two persistence paths in P4 commit 4b:
+   - `train_simulink.py`: append `resolved_disturbance_type` to
+     `physics_summary[ep]` dict in training_log.json (where
+     `r_f`/`r_h`/`r_d`/`omega_trace` already live).
+   - `paper_eval.py`: include in per-episode metrics row (next to
+     `magnitude_sys_pu`).
+
+**Anti-pattern to avoid**: relying on caller to derive the type from
+Scenario fields after the fact. The translator may change; the recorded
+field is the single source of truth.
+
+**Spec impact**: M3/M4 ban the **mutation** `env._disturbance_type =` at
+the call site. They do NOT ban reading `env._disturbance_type` or
+`info['resolved_disturbance_type']`. Both are explicit reads of resolved
+state, not control-flow inputs.
+
+### 1.5c `_disturbance_type` policy
 
 | Caller pattern | Allowed? | Notes |
 |---|---|---|
@@ -267,7 +330,7 @@ Per spec §3.1 P4: 2 commits.
 
 ## 9. 进入 P4 的核心要求
 
-P4 必须做到的 7 个事实：
+P4 必须做到的 8 个事实：
 
 1. `env.reset(scenario=Scenario(...))` 工作端到端：scenario → `_disturbance_type` + `_episode_magnitude` → step 内部 trigger
 2. `env.reset(options={'disturbance_magnitude': mag, 'trigger_at_step': 0})` 工作（paper_eval 路径）
@@ -276,5 +339,6 @@ P4 必须做到的 7 个事实：
 5. R-1 到 R-6 测试覆盖
 6. 5-ep cold smoke ×2 + paper_eval 1-ep smoke 通过 §4.6 deterministic oracle 验收
 7. M3/M4/M5 grep 验证全 0 hits
+8. **§1.5b 约束履行**：env 记录 `_episode_resolved_disturbance_type`，trigger 时 info dict 暴露 `resolved_disturbance_type` + `episode_magnitude_sys_pu`，train/paper_eval 各自持久化到 log（physics_summary / metrics row）
 
 P3 doc 完成。等待用户 review 后进入 P4 实现（commit 4a + 4b）。

@@ -71,6 +71,9 @@ class PerEpisodeMetrics:
     total_reward: float
     nan_inf_seen: bool
     tds_failed: bool
+    # 2026-04-30 Probe B: per-agent decomposition for 4-agent collapse falsification
+    r_f_global_per_agent: list[float] = field(default_factory=list)
+    max_abs_df_hz_per_agent: list[float] = field(default_factory=list)
 
 
 @dataclass
@@ -135,6 +138,44 @@ def _compute_global_rf_unnorm(
     mean_t = delta_f.mean(axis=1, keepdims=True)  # (T, 1)
     centered = delta_f - mean_t  # (T, N)
     return float(-(centered ** 2).sum())
+
+
+def _compute_global_rf_per_agent(
+    omega_trace: np.ndarray,  # shape (T, N_agents)
+    f_nom: float,
+) -> list[float]:
+    """Per-agent contribution to r_f_global: -Σ_t (Δf_i,t - mean_j Δf_j,t)².
+
+    2026-04-30 (Probe B for fresh-context falsification audit): per-agent
+    decomposition is needed to falsify the "4-agent measurement collapse"
+    hypothesis surfaced by the 2026-04-30 audit (5 scenarios bit-identical
+    in cvs_v3_eval_fix_smoke/loadstep_metrics.json suggested per-agent
+    omega traces may not be electrically separated). If max - min over
+    the returned list is ~ 0 across all scenarios, the 4 agents are
+    receiving collapsed measurements — broken mode-shape distribution.
+    """
+    if omega_trace.size == 0:
+        return [0.0]
+    delta_f = (omega_trace - 1.0) * f_nom  # (T, N)
+    mean_t = delta_f.mean(axis=1, keepdims=True)  # (T, 1)
+    centered = delta_f - mean_t  # (T, N)
+    per_agent = -(centered ** 2).sum(axis=0)  # (N,)
+    return [float(x) for x in per_agent]
+
+
+def _compute_per_agent_max_abs_df(
+    omega_trace: np.ndarray,  # shape (T, N_agents)
+    f_nom: float,
+) -> list[float]:
+    """Per-agent max|Δf| in Hz. 2026-04-30 Probe B companion: smoking-gun
+    test for 4-agent measurement collapse. If all N entries are bit-equal
+    across scenarios, omega_ts_i may be wired to a single shared signal.
+    """
+    if omega_trace.size == 0:
+        return [0.0]
+    delta_f_abs = np.abs((omega_trace - 1.0) * f_nom)  # (T, N)
+    per_agent = delta_f_abs.max(axis=0)  # (N,)
+    return [float(x) for x in per_agent]
 
 
 def _rocof_max(omega_trace: np.ndarray, dt_s: float, f_nom: float) -> float:
@@ -334,6 +375,8 @@ def evaluate_policy(
             sett = _settling_time_s(
                 omega_trace, dt_s, fnom, SETTLE_TOL_HZ, SETTLE_WINDOW_S
             )
+            r_f_per_agent = _compute_global_rf_per_agent(omega_trace, fnom)
+            max_df_per_agent = _compute_per_agent_max_abs_df(omega_trace, fnom)
         else:
             r_f_global = 0.0
             max_dev = 0.0
@@ -341,6 +384,8 @@ def evaluate_policy(
             peak_hz = 0.0
             rocof = 0.0
             sett = None
+            r_f_per_agent = []
+            max_df_per_agent = []
 
         per_ep.append(PerEpisodeMetrics(
             scenario_idx=sc_idx,
@@ -359,6 +404,8 @@ def evaluate_policy(
             total_reward=rew_total,
             nan_inf_seen=nan_inf,
             tds_failed=tds_failed,
+            r_f_global_per_agent=r_f_per_agent,
+            max_abs_df_hz_per_agent=max_df_per_agent,
         ))
         print(
             f"  scenario {sc_idx:3d}  bus={bus}  mag={mag:+.3f}  "
@@ -482,6 +529,8 @@ def result_to_dict(result: EvalResult) -> dict:
                 "total_reward": p.total_reward,
                 "nan_inf_seen": p.nan_inf_seen,
                 "tds_failed": p.tds_failed,
+                "r_f_global_per_agent": p.r_f_global_per_agent,
+                "max_abs_df_hz_per_agent": p.max_abs_df_hz_per_agent,
             }
             for p in result.per_episode_metrics
         ],

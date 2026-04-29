@@ -233,6 +233,11 @@ def scenario_to_disturbance_type(scenario: Scenario) -> str:
         raise ValueError(
             f"unsupported vsg target {scenario.target}; must be 1/2/3/4"
         )
+    if scenario.disturbance_kind == "hybrid":
+        # 2026-04-30 Option F4: hybrid SG + ESS-compensate dispatch.
+        # target field is informational (random_gen sentinel resolved at apply
+        # time); we accept any target value to keep manifest schema simple.
+        return "pm_step_hybrid_sg_es"
     raise ValueError(f"unsupported disturbance_kind {scenario.disturbance_kind}")
 
 

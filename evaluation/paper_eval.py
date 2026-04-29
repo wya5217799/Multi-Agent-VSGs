@@ -370,8 +370,8 @@ def evaluate_policy(
     # dispatch path, which would otherwise raise mid-loop after partial
     # work, aborting the eval. Buses 7/9 are ESS-side proxies; 1/2/3 are
     # SG-side proxies — exhaustive set per `scenario_to_disturbance_type`.
-    # 2026-04-30: extended allowed set with 1-4 for vsg mode (single-ESS direct).
-    _allowed_buses = {7, 9, 1, 2, 3, 4}
+    # 2026-04-30: extended allowed set with 1-4 for vsg mode + 0 for hybrid F4.
+    _allowed_buses = {0, 7, 9, 1, 2, 3, 4}
     _preferred_type = os.environ.get("KUNDUR_DISTURBANCE_TYPE", "")
     if not _preferred_type.startswith("loadstep_paper_"):
         _bad = [
@@ -439,6 +439,10 @@ def evaluate_policy(
             elif bus in (1, 2, 3, 4) and disturbance_mode == "vsg":
                 # 2026-04-30 Probe B-ESS: single-ESS direct Pm injection
                 _kind, _target = "vsg", int(bus)
+            elif disturbance_mode == "hybrid":
+                # 2026-04-30 Option F4: bus field is informational; dispatch
+                # picks random G internally
+                _kind, _target = "hybrid", int(bus)
             elif bus in (1, 2, 3):  # default: gen if mode unset
                 _kind, _target = "gen", int(bus)
             else:
@@ -713,12 +717,14 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     p.add_argument("--output-json", type=str, required=True)
     p.add_argument(
         "--disturbance-mode",
-        choices=["bus", "gen", "vsg"],
+        choices=["bus", "gen", "vsg", "hybrid"],
         default="bus",
         help="bus = ESS-side Pm-step proxy at bus 7/9 (P4.1 default); "
              "gen = SG-side Pm-step proxy at G1/G2/G3 (Z1); "
              "vsg = single-ESS direct Pm injection at ES1/2/3/4 "
-             "(2026-04-30 Probe B-ESS prereq for Option F).",
+             "(2026-04-30 Probe B-ESS prereq for Option F); "
+             "hybrid = Option F4 SG-random + ESS-compensate, all 4 ES "
+             "agents above 1e-3 Hz per scenario (2026-04-30 design final).",
     )
     p.add_argument(
         "--scenario-set",
@@ -817,6 +823,10 @@ def main() -> int:
         bus_choices = (1, 2, 3)
     elif args.disturbance_mode == "vsg":
         bus_choices = (1, 2, 3, 4)  # 1-indexed ES{i}
+    elif args.disturbance_mode == "hybrid":
+        # 2026-04-30 Option F4: target field is informational only;
+        # HybridSgEssMultiPoint resolves random_gen at apply time.
+        bus_choices = (0,)  # placeholder; manifest scenarios all set target=0
     else:
         bus_choices = (7, 9)
 

@@ -269,6 +269,8 @@ KUNDUR_DISTURBANCE_TYPES_VALID = (
     "pm_step_single_es2",
     "pm_step_single_es3",
     "pm_step_single_es4",
+    # 2026-04-30 Option F4: hybrid SG + ESS-compensate dispatch
+    "pm_step_hybrid_sg_es",
     # Phase A (2026-04-27): real LoadStep wiring at v3 Bus 14 / Bus 15 via
     # workspace-tunable Series RLC R (Resistance = Vbase^2/max(amp,1e-3)).
     # amp pushed in W; magnitude (sys-pu) -> W via cfg.sbase_va. Step-on

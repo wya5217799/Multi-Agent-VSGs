@@ -138,6 +138,17 @@ _ESS_PM_STEP_SENTINELS = frozenset({"random_bus"})
 _SG_PMG_STEP_SENTINELS = frozenset({"random_gen"})
 _LOAD_STEP_SENTINELS = frozenset({"random_bus"})
 
+# 2026-04-30 Option F4 (HybridSgEssMultiPoint): topology coupling map
+# from Probe B G1/G2/G3 sign-pair empirical measurement.  G index (1-based)
+# -> 0-indexed ES set that responds non-trivially to that G's Pm step.
+# Source: results/harness/kundur/cvs_v3_probe_b/probe_b_pos_gen_b{1,2,3}.json
+# Used only by HybridSgEssMultiPoint to compute the compensate-ES set.
+_F4_SG_TO_EXCITED_ES: dict[int, frozenset[int]] = {
+    1: frozenset({0}),         # G1 -> ES1 (0.062 Hz at mag=0.5)
+    2: frozenset({0}),         # G2 -> ES1 (0.097 Hz at mag=0.5)
+    3: frozenset({2, 3}),      # G3 -> ES3 + ES4 (0.021 + 0.017 Hz at mag=0.5)
+}
+
 
 @dataclass(frozen=True)
 class EssPmStepProxy:
@@ -650,7 +661,142 @@ _DISPATCH_TABLE: dict[str, Callable[[], DisturbanceProtocol]] = {
         lambda: LoadStepCcsInjection(ls_bus=15),
     "loadstep_paper_trip_random_bus":
         lambda: LoadStepCcsInjection(ls_bus="random_bus"),
+    # 2026-04-30 Option F4: hybrid SG + ESS-compensate. sg_share=0.7,
+    # target_g="random_gen". See HybridSgEssMultiPoint docstring + Option F
+    # design doc (docs/superpowers/plans/2026-04-30-option-f-design.md).
+    "pm_step_hybrid_sg_es":
+        lambda: HybridSgEssMultiPoint(),
 }
+
+
+# ---------------------------------------------------------------------------
+# Family E — HybridSgEssMultiPoint (Option F4)
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class HybridSgEssMultiPoint:
+    """Option F4 dispatch: SG-side primary + ESS-direct compensate.
+
+    Per call:
+      1. Pick a random SG target g ∈ {1,2,3} (or honor explicit ``target_g``).
+      2. Write ``PMG_STEP_AMP[g] = magnitude * sg_share`` (default 70%).
+      3. Look up which ES are excited by that g via _F4_SG_TO_EXCITED_ES.
+         Compensate set = all 4 agents minus the excited set.
+      4. Distribute remaining ``magnitude * (1 - sg_share)`` equally across
+         the compensate set, written to ``PM_STEP_AMP[i]`` for i in
+         compensate set; same sign as ``magnitude``.
+      5. Silence all other PM/PMG entries.
+
+    Empirical guarantee (per 2026-04-30 Probe B + Probe B-ESS):
+      - For g=1 or g=2: ES1 sees ~70%-magnitude SG-mediated kick; ES2/ES3/ES4
+        each see ~10%-magnitude direct kick.
+      - For g=3: ES3+ES4 see ~70%-magnitude SG-mediated kick (split between
+        them); ES1+ES2 each see ~15%-magnitude direct kick.
+      - **All 4 ES respond above 1e-3 Hz threshold in every scenario.**
+      - **ES2 always receives non-zero r_f gradient** (D-T6 broken).
+
+    Reward landscape: SG-side network propagation preserves mode-shape
+    differential (r_f_i ≠ 0 across agents), unlike F1's in-phase split
+    which collapses the differential. ES-side compensate adds direct
+    learning signal for the otherwise-silent agents.
+
+    Magnitude semantic: ``magnitude_sys_pu`` is the *total* disturbance
+    budget; sum of |PMG_STEP_AMP[g]| + Σ |PM_STEP_AMP[i]| over compensate
+    set equals ``|magnitude_sys_pu|``.
+    """
+
+    sg_share: float = 0.7
+    target_g: int | str = "random_gen"
+
+    def __post_init__(self) -> None:
+        if not (0.0 < self.sg_share < 1.0):
+            raise ValueError(
+                f"HybridSgEssMultiPoint: sg_share must be in (0,1), "
+                f"got {self.sg_share}"
+            )
+        if isinstance(self.target_g, str):
+            if self.target_g not in _SG_PMG_STEP_SENTINELS:
+                raise ValueError(
+                    f"HybridSgEssMultiPoint: target_g string must be one of "
+                    f"{sorted(_SG_PMG_STEP_SENTINELS)}, got {self.target_g!r}"
+                )
+        elif not (isinstance(self.target_g, int) and self.target_g in (1, 2, 3)):
+            raise ValueError(
+                f"HybridSgEssMultiPoint: target_g must be 1/2/3 or sentinel, "
+                f"got {self.target_g!r}"
+            )
+
+    def apply(
+        self,
+        bridge: Any,
+        magnitude_sys_pu: float,
+        rng: np.random.Generator,
+        t_now: float,
+        cfg: Any,
+    ) -> DisturbanceTrace:
+        ws = _make_ws(cfg.model_name, cfg.n_agents)
+
+        # Resolve G target
+        if isinstance(self.target_g, str):
+            target_g = int(rng.integers(1, 4))  # uniform 1, 2, 3
+        else:
+            target_g = int(self.target_g)
+
+        excited = _F4_SG_TO_EXCITED_ES.get(target_g, frozenset())
+        compensate = tuple(sorted(set(range(cfg.n_agents)) - excited))
+
+        sg_amp = float(magnitude_sys_pu) * self.sg_share
+        compensate_total = float(magnitude_sys_pu) * (1.0 - self.sg_share)
+        n_comp = max(len(compensate), 1)
+        compensate_amp_per_es = compensate_total / n_comp
+
+        keys: list[str] = []
+        values: list[float] = []
+
+        # 1. Silence everything first (ESS PM + SG PMG)
+        kp, vp = _silence_pm(bridge, ws, t_now, cfg.n_agents)
+        keys.extend(kp); values.extend(vp)
+        kg, vg = _silence_pmg(bridge, ws, t_now)
+        keys.extend(kg); values.extend(vg)
+
+        # 2. Set SG target Pmg amp (overwrites silence)
+        ksg = ws("PMG_STEP_AMP", g=target_g)
+        bridge.apply_workspace_var(ksg, sg_amp)
+        keys.append(ksg); values.append(sg_amp)
+
+        # 3. Set ES compensate amps (overwrites silence for each)
+        comp_amps_per_vsg = [0.0] * cfg.n_agents
+        for es_idx in compensate:
+            comp_amps_per_vsg[es_idx] = compensate_amp_per_es
+            ka = ws("PM_STEP_AMP", i=es_idx + 1)  # 1-indexed in schema
+            bridge.apply_workspace_var(ka, compensate_amp_per_es)
+            keys.append(ka); values.append(compensate_amp_per_es)
+
+        sign = "increase" if magnitude_sys_pu > 0 else "decrease"
+        target_descriptor = (
+            f"hybrid_g{target_g}+es{list(compensate)}/"
+            f"sg_share={self.sg_share:.2f}"
+        )
+        logger.debug(
+            "[HybridSgEssMultiPoint] %s targets %s: sg_amp=%+.4f, "
+            "es_amp_each=%+.4f (mag=%+.3f), t=%.4fs",
+            sign, target_descriptor, sg_amp, compensate_amp_per_es,
+            float(magnitude_sys_pu), t_now,
+        )
+
+        return DisturbanceTrace(
+            family="hybrid_sg_ess",
+            target_descriptor=target_descriptor,
+            written_keys=tuple(keys),
+            written_values=tuple(values),
+            magnitude_sys_pu=float(magnitude_sys_pu),
+        )
+
+
+# ---------------------------------------------------------------------------
+# Resolver factory
+# ---------------------------------------------------------------------------
 
 
 def known_disturbance_types() -> tuple[str, ...]:

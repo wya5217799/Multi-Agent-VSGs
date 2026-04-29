@@ -43,6 +43,10 @@ from scenarios.config_simulink_base import (
     VSG_M0, VSG_D0, VSG_SN,
     DM_MIN, DM_MAX, DD_MIN, DD_MAX,
 )
+from scenarios.kundur.scenario_loader import (
+    Scenario,
+    scenario_to_disturbance_type,
+)
 from scenarios.kundur.config_simulink import (
     KUNDUR_BRIDGE_CONFIG,
     T_WARMUP, PHI_F, PHI_H, PHI_D,
@@ -191,6 +195,19 @@ class _KundurBaseEnv(_SimVsgBase):
         self._M: np.ndarray = np.full(N_AGENTS, VSG_M0)
         self._D: np.ndarray = np.full(N_AGENTS, VSG_D0)
 
+        # C4 (2026-04-29): per-episode disturbance state. See
+        # docs/superpowers/plans/2026-04-29-c4-scenario-vo-design.md.
+        # Default: trigger DISARMED (legacy probe path drives via
+        # apply_disturbance(...)). reset(scenario=...) or
+        # reset(options={'disturbance_magnitude': ...}) ARMS the trigger.
+        self._episode_scenario: Optional[Scenario] = None
+        self._episode_magnitude: Optional[float] = None
+        self._trigger_at_step: int = int(0.5 / DT) if DT > 0 else 0
+        self._disturbance_triggered: bool = True
+        # §1.5b: resolved disturbance_type recorded per episode for audit.
+        # Set at reset(); exposed via info dict in step().
+        self._episode_resolved_disturbance_type: Optional[str] = None
+
         # Communication delay buffers
         self._comm_buffer: Dict[Tuple[int, int], Dict[str, list]] = {}
         for i in range(N_AGENTS):
@@ -213,7 +230,26 @@ class _KundurBaseEnv(_SimVsgBase):
         self,
         seed: Optional[int] = None,
         options: Optional[dict] = None,
+        *,
+        scenario: Optional[Scenario] = None,
     ) -> Tuple[np.ndarray, dict]:
+        """Reset env with optional Scenario VO and/or options dict.
+
+        Disturbance source priority (C4):
+          1. ``scenario`` — typed Scenario; resolves to
+             ``_disturbance_type`` via
+             ``scenarios.kundur.scenario_loader.scenario_to_disturbance_type``;
+             magnitude from ``scenario.magnitude_sys_pu``.
+          2. ``options['disturbance_magnitude']`` — magnitude only;
+             ``_disturbance_type`` stays at constructor / env-var default.
+          3. Neither — internal trigger DISARMED; legacy
+             ``apply_disturbance(...)`` drives dispatch (probes).
+
+        ``options`` may also carry:
+          - ``trigger_at_step`` (int): step index at which the trigger
+            fires; default ``int(0.5/DT)`` (= 2 for DT=0.2s). paper_eval
+            uses 0 for immediate post-warmup dispatch.
+        """
         super().reset(seed=seed)
 
         self._step_count = 0
@@ -236,16 +272,71 @@ class _KundurBaseEnv(_SimVsgBase):
             self._comm_buffer[key]["omega"] = [0.0] * (self.comm_delay_steps + 1)
             self._comm_buffer[key]["rocof"] = [0.0] * (self.comm_delay_steps + 1)
 
+        # ---- C4 disturbance resolution (§1.5b: record resolved type) ----
+        opts = options or {}
+        self._trigger_at_step = int(
+            opts.get("trigger_at_step", int(0.5 / DT) if DT > 0 else 0)
+        )
+        self._episode_scenario = None
+        self._episode_magnitude = None
+        self._episode_resolved_disturbance_type = None
+
+        if scenario is not None:
+            self._episode_scenario = scenario
+            self._episode_resolved_disturbance_type = (
+                scenario_to_disturbance_type(scenario)
+            )
+            # Update _disturbance_type so the protocol layer reads the
+            # resolved string at trigger time. (Legacy attribute kept as
+            # regular instance var per P3 design §1.5c.)
+            if hasattr(self, "_disturbance_type"):
+                self._disturbance_type = (
+                    self._episode_resolved_disturbance_type
+                )
+            self._episode_magnitude = float(scenario.magnitude_sys_pu)
+            self._disturbance_triggered = False
+        elif "disturbance_magnitude" in opts:
+            # Magnitude-only path: type stays at constructor default.
+            self._episode_resolved_disturbance_type = getattr(
+                self, "_disturbance_type", None
+            )
+            self._episode_magnitude = float(opts["disturbance_magnitude"])
+            self._disturbance_triggered = False
+        else:
+            # Legacy / probe path: internal trigger disarmed.
+            self._disturbance_triggered = True
+
         self._reset_backend(options=options)
 
         obs = self._build_obs()
-        info: Dict[str, Any] = {"sim_time": self._sim_time}
+        info: Dict[str, Any] = {
+            "sim_time": self._sim_time,
+            "resolved_disturbance_type":
+                self._episode_resolved_disturbance_type,
+            "episode_magnitude_sys_pu": self._episode_magnitude,
+        }
         return obs, info
 
     def step(
         self, action: np.ndarray
     ) -> Tuple[np.ndarray, np.ndarray, bool, bool, dict]:
         action = np.clip(np.asarray(action, dtype=np.float32), -1.0, 1.0)
+
+        # C4 internal disturbance trigger: fires once at step ==
+        # _trigger_at_step (set by reset()). Default = int(0.5/DT) = 2
+        # (matches legacy train-loop timing). Skipped when
+        # _disturbance_triggered is already True (probe legacy path or
+        # apply_disturbance(...) was already called).
+        if (
+            not self._disturbance_triggered
+            and self._step_count == self._trigger_at_step
+            and self._episode_magnitude is not None
+        ):
+            self._apply_disturbance_backend(
+                bus_idx=None,
+                magnitude=float(self._episode_magnitude),
+            )
+            self._disturbance_triggered = True
 
         # Preserve zero action as the nominal M0/D0 operating point.
         delta_M = _map_zero_centered_action(action[:, 0], DM_MIN, DM_MAX)
@@ -308,6 +399,10 @@ class _KundurBaseEnv(_SimVsgBase):
             "omega_saturated": _omega_saturated,
             "hit_freq_clip": _omega_saturated,
             "reward_components": components,
+            # §1.5b: resolved per-episode disturbance state for audit.
+            "resolved_disturbance_type":
+                self._episode_resolved_disturbance_type,
+            "episode_magnitude_sys_pu": self._episode_magnitude,
         }
 
         return obs, reward, terminated, truncated, info
@@ -321,11 +416,30 @@ class _KundurBaseEnv(_SimVsgBase):
         bus_idx: Optional[int] = None,
         magnitude: Optional[float] = None,
     ) -> None:
+        """Legacy disturbance entry — deprecated (C4, 2026-04-29).
+
+        Prefer ``env.reset(scenario=Scenario(...))`` or
+        ``env.reset(options={'disturbance_magnitude': mag})``. External
+        callers (probes / scripts / tests) continue to work; calls
+        bypass the internal step==trigger_at_step trigger and dispatch
+        immediately to the disturbance protocol layer.
+        """
+        warnings.warn(
+            "env.apply_disturbance() is deprecated; pass a Scenario via "
+            "env.reset(scenario=...) or magnitude via "
+            "env.reset(options={'disturbance_magnitude': ...}). "
+            "External calls bypass the internal step trigger.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         if magnitude is None:
             magnitude = float(self.np_random.uniform(DIST_MIN, DIST_MAX))
             if self.np_random.random() > 0.5:
                 magnitude = -magnitude
         self._apply_disturbance_backend(bus_idx, magnitude)
+        # Mark triggered so internal trigger doesn't double-fire if a
+        # caller mixes new + legacy patterns in the same episode.
+        self._disturbance_triggered = True
 
     # ------------------------------------------------------------------
     # Cleanup

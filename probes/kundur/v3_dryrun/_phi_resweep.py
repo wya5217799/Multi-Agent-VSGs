@@ -73,8 +73,9 @@ from scenarios.kundur.config_simulink import (
     LR, GAMMA, TAU_SOFT, BATCH_SIZE,
     BUFFER_SIZE, WARMUP_STEPS, N_AGENTS,
     PHI_F, PHI_H as LOCKED_PHI_H, PHI_D as LOCKED_PHI_D,
-    STEPS_PER_EPISODE,
+    STEPS_PER_EPISODE, DIST_MIN, DIST_MAX,
 )
+from scenarios.kundur.scenario_loader import Scenario
 
 # ---------------------------------------------------------------------------
 # Sweep configuration
@@ -130,9 +131,31 @@ def run_cell(env, phi: float, cell_idx: int, total_cells: int) -> dict:
 
     cell_records = []
     global_step = 0
+    # Per-cell scenario RNG so cells with same SEED_BASE yield same disturbance
+    # sequence per episode index (env.np_random is reseeded by reset(seed=...)
+    # but we draw scenario fields BEFORE reset; use a separate dedicated RNG).
+    scenario_rng = np.random.default_rng(SEED_BASE + cell_idx * 10000)
     for ep in range(EPISODES_PER_CELL):
-        obs, _ = env.reset(seed=SEED_BASE + cell_idx * 10000 + ep)
-        env.apply_disturbance()  # default random magnitude in [DIST_MIN, DIST_MAX]
+        # C4 Scenario VO path: build a typed Scenario record for this episode
+        # and pass it to env.reset(); env's internal trigger then fires the
+        # disturbance at trigger_at_step (default int(0.5/DT)=2). This
+        # replaces the old monkey-patch of env._disturbance_type plus the
+        # explicit apply_disturbance() call. Resolved disturbance_type is
+        # auto-recorded per episode via env metadata (commit c89c59d §1.5b).
+        target_bus = int(scenario_rng.choice([7, 9]))
+        magnitude = float(scenario_rng.uniform(DIST_MIN, DIST_MAX))
+        if scenario_rng.random() > 0.5:
+            magnitude = -magnitude
+        scenario = Scenario(
+            scenario_idx=ep,
+            disturbance_kind="bus",
+            target=target_bus,
+            magnitude_sys_pu=magnitude,
+        )
+        obs, _ = env.reset(
+            seed=SEED_BASE + cell_idx * 10000 + ep,
+            scenario=scenario,
+        )
         ep_total = 0.0
         ep_rf, ep_rh, ep_rd = 0.0, 0.0, 0.0
         max_df = 0.0

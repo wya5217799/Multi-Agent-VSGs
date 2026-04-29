@@ -264,6 +264,11 @@ KUNDUR_DISTURBANCE_TYPES_VALID = (
     "pm_step_proxy_g2",
     "pm_step_proxy_g3",
     "pm_step_proxy_random_gen",
+    # 2026-04-30 Probe B-ESS: single-ESS direct Pm injection
+    "pm_step_single_es1",
+    "pm_step_single_es2",
+    "pm_step_single_es3",
+    "pm_step_single_es4",
     # Phase A (2026-04-27): real LoadStep wiring at v3 Bus 14 / Bus 15 via
     # workspace-tunable Series RLC R (Resistance = Vbase^2/max(amp,1e-3)).
     # amp pushed in W; magnitude (sys-pu) -> W via cfg.sbase_va. Step-on

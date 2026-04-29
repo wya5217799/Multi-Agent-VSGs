@@ -345,13 +345,16 @@ def evaluate_policy(
     dist_max: float,
     bus_choices: tuple[int, ...] = (7, 9),
     scenarios_override: Optional[list[dict]] = None,
+    disturbance_mode: str = "bus",
 ) -> EvalResult:
     """Run `n_scenarios` deterministic episodes; collect per-ep + cumulative metrics.
 
     If `scenarios_override` is provided, it is used as the scenario list directly
     (G3 / Phase 4.3: load from JSON manifest instead of inline generator).
     Each entry must have keys {scenario_idx, bus, magnitude_sys_pu}; bus ∈
-    {7, 9, 1, 2, 3} per the disturbance dispatch translation.
+    {7, 9, 1, 2, 3, 4} per the disturbance dispatch translation. The
+    ``disturbance_mode`` argument disambiguates bus values 1/2/3 between
+    SG-side ('gen') and ESS-side direct ('vsg', extends to bus=4).
     """
     if scenarios_override is not None:
         scenarios = scenarios_override
@@ -367,7 +370,8 @@ def evaluate_policy(
     # dispatch path, which would otherwise raise mid-loop after partial
     # work, aborting the eval. Buses 7/9 are ESS-side proxies; 1/2/3 are
     # SG-side proxies — exhaustive set per `scenario_to_disturbance_type`.
-    _allowed_buses = {7, 9, 1, 2, 3}
+    # 2026-04-30: extended allowed set with 1-4 for vsg mode (single-ESS direct).
+    _allowed_buses = {7, 9, 1, 2, 3, 4}
     _preferred_type = os.environ.get("KUNDUR_DISTURBANCE_TYPE", "")
     if not _preferred_type.startswith("loadstep_paper_"):
         _bad = [
@@ -430,10 +434,15 @@ def evaluate_policy(
                 _kind, _target = "bus", 7
             elif bus == 9:
                 _kind, _target = "bus", 9
-            elif bus in (1, 2, 3):
+            elif bus in (1, 2, 3) and disturbance_mode == "gen":
+                _kind, _target = "gen", int(bus)
+            elif bus in (1, 2, 3, 4) and disturbance_mode == "vsg":
+                # 2026-04-30 Probe B-ESS: single-ESS direct Pm injection
+                _kind, _target = "vsg", int(bus)
+            elif bus in (1, 2, 3):  # default: gen if mode unset
                 _kind, _target = "gen", int(bus)
             else:
-                raise ValueError(f"Unsupported bus/gen index {bus}")
+                raise ValueError(f"Unsupported bus/gen/vsg index {bus} for mode {disturbance_mode}")
             _scenario = _KdScenario(
                 scenario_idx=int(sc_idx),
                 disturbance_kind=_kind,
@@ -631,8 +640,22 @@ def make_policy_selector(agent):
 
 
 def result_to_dict(result: EvalResult) -> dict:
+    # 2026-04-30 PAPER-ANCHOR LOCK: hardcoded False until Signal/Measurement/
+    # Causality 三层反证 gate (G1-G6) 全部 PASS 且 verdict 文件存在于
+    # quality_reports/paper_compliance/three_layer_signoff/ 且 < 7 天。
+    # 详见 docs/paper/yang2023-fact-base.md §10 PAPER-ANCHOR LOCK
+    # 与 docs/paper/disturbance-protocol-mismatch-fix-report.md。
+    # 任何 cum_unnorm 与 PAPER_DDIC_UNNORMALIZED / PAPER_NO_CONTROL_UNNORMALIZED
+    # 的对账在此字段为 False 时均视为 INVALID。
     return {
         "schema_version": result.schema_version,
+        "paper_comparison_enabled": False,
+        "paper_comparison_lock_reason": (
+            "INCONCLUSIVE_STOP_REQUIRED (2026-04-30 STOP verdict): "
+            "Signal layer LoadStep dead; Measurement layer Probe B verdict "
+            "not delivered; Causality layer +10% improvement attributed to "
+            "action regularization. cum_unnorm vs paper -8.04 / -15.20 INVALID."
+        ),
         "checkpoint_path": result.checkpoint_path,
         "policy_label": result.policy_label,
         "n_scenarios": result.n_scenarios,
@@ -690,10 +713,12 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     p.add_argument("--output-json", type=str, required=True)
     p.add_argument(
         "--disturbance-mode",
-        choices=["bus", "gen"],
+        choices=["bus", "gen", "vsg"],
         default="bus",
         help="bus = ESS-side Pm-step proxy at bus 7/9 (P4.1 default); "
-             "gen = SG-side Pm-step proxy at G1/G2/G3 (Z1).",
+             "gen = SG-side Pm-step proxy at G1/G2/G3 (Z1); "
+             "vsg = single-ESS direct Pm injection at ES1/2/3/4 "
+             "(2026-04-30 Probe B-ESS prereq for Option F).",
     )
     p.add_argument(
         "--scenario-set",
@@ -786,7 +811,14 @@ def main() -> int:
         ckpt_path = None
         print(f"[paper_eval] running zero-action baseline as '{label}'")
 
-    bus_choices = (7, 9) if args.disturbance_mode == "bus" else (1, 2, 3)
+    if args.disturbance_mode == "bus":
+        bus_choices = (7, 9)
+    elif args.disturbance_mode == "gen":
+        bus_choices = (1, 2, 3)
+    elif args.disturbance_mode == "vsg":
+        bus_choices = (1, 2, 3, 4)  # 1-indexed ES{i}
+    else:
+        bus_choices = (7, 9)
 
     scenarios_override: Optional[list[dict]] = None
     if args.scenario_set != "none":
@@ -831,6 +863,7 @@ def main() -> int:
         dist_max=DIST_MAX,
         bus_choices=bus_choices,
         scenarios_override=scenarios_override,
+        disturbance_mode=args.disturbance_mode,
     )
 
     out_path = Path(args.output_json)

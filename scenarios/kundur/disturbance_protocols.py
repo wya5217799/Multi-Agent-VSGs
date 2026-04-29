@@ -623,6 +623,21 @@ _DISPATCH_TABLE: dict[str, Callable[[], DisturbanceProtocol]] = {
         lambda: SgPmgStepProxy(target_g=3),
     "pm_step_proxy_random_gen":
         lambda: SgPmgStepProxy(target_g="random_gen"),
+    # 2026-04-30 Probe B-ESS (Option F prerequisite): direct ESS Pm-step
+    # injection at a single ES{i}. Bypasses network-mode-shape coupling so
+    # we can verify whether ES2 swing-eq Pm channel responds at all (D-T6
+    # ES2-dead-agent finding from Probe B G1/G2/G3 shows ES2 is silent
+    # under any SG-side disturbance — but is that because ES2's swing-eq
+    # is broken, or because ES2 is electrically isolated from G1/G2/G3?).
+    # ES{i} index is 1-based (ES1 = target_indices=(0,), ES4 = (3,)).
+    "pm_step_single_es1":
+        lambda: EssPmStepProxy(target_indices=(0,), proxy_bus=None),
+    "pm_step_single_es2":
+        lambda: EssPmStepProxy(target_indices=(1,), proxy_bus=None),
+    "pm_step_single_es3":
+        lambda: EssPmStepProxy(target_indices=(2,), proxy_bus=None),
+    "pm_step_single_es4":
+        lambda: EssPmStepProxy(target_indices=(3,), proxy_bus=None),
     "loadstep_paper_bus14":
         lambda: LoadStepRBranch(ls_bus=14),
     "loadstep_paper_bus15":

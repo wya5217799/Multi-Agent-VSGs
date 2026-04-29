@@ -225,6 +225,14 @@ def scenario_to_disturbance_type(scenario: Scenario) -> str:
         if scenario.target == 9:
             return "pm_step_proxy_bus9"
         raise ValueError(f"unsupported bus target {scenario.target}")
+    if scenario.disturbance_kind == "vsg":
+        # 2026-04-30 Probe B-ESS: single-ESS direct Pm injection.
+        # target ∈ {1, 2, 3, 4} (1-indexed ES{i}).
+        if scenario.target in (1, 2, 3, 4):
+            return f"pm_step_single_es{scenario.target}"
+        raise ValueError(
+            f"unsupported vsg target {scenario.target}; must be 1/2/3/4"
+        )
     raise ValueError(f"unsupported disturbance_kind {scenario.disturbance_kind}")
 
 

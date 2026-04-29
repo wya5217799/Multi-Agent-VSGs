@@ -219,20 +219,41 @@ def evaluate_policy(
         bus = sc["bus"]
         mag = sc["magnitude_sys_pu"]
 
-        # Force the per-episode disturbance target by overriding _disturbance_type.
-        # ESS-side proxy uses bus 7 / 9; SG-side proxy uses gen 1 / 2 / 3.
-        if bus == 7:
-            env._disturbance_type = "pm_step_proxy_bus7"
-        elif bus == 9:
-            env._disturbance_type = "pm_step_proxy_bus9"
-        elif bus == 1:
-            env._disturbance_type = "pm_step_proxy_g1"
-        elif bus == 2:
-            env._disturbance_type = "pm_step_proxy_g2"
-        elif bus == 3:
-            env._disturbance_type = "pm_step_proxy_g3"
+        # Per-episode disturbance dispatch.
+        #
+        # Default: ESS-side / SG-side Pm-step proxy — the scenario's `bus`
+        # field directly maps to a `_disturbance_type` value
+        # (pm_step_proxy_bus7/9/g1/g2/g3) so each test episode hits exactly
+        # the bus the scenario manifest names. This is the original
+        # behavior and is preserved when the operator did not set
+        # KUNDUR_DISTURBANCE_TYPE to a LoadStep-paper variant.
+        #
+        # When the operator exports KUNDUR_DISTURBANCE_TYPE=loadstep_paper_*
+        # (e.g. loadstep_paper_random_bus), they want paper-faithful
+        # network-side LoadStep dispatch. In that case `_disturbance_type`
+        # was already set at env-construction time from the env-var; the
+        # scenario `bus` field becomes informational — the env decides
+        # LS1/LS2 (and which paper bus 14/15) by its own internal logic
+        # (`loadstep_paper_random_bus` randomises 50/50; the explicit
+        # `loadstep_paper_bus14` / `loadstep_paper_bus15` variants are
+        # also respected). 移除原来的 hard-override 让 env-var 真正生效。
+        preferred_type = os.environ.get("KUNDUR_DISTURBANCE_TYPE", "")
+        if preferred_type.startswith("loadstep_paper_"):
+            # Defer to env-var-set type; do not override per-episode.
+            pass
         else:
-            raise ValueError(f"Unsupported bus/gen index {bus}")
+            if bus == 7:
+                env._disturbance_type = "pm_step_proxy_bus7"
+            elif bus == 9:
+                env._disturbance_type = "pm_step_proxy_bus9"
+            elif bus == 1:
+                env._disturbance_type = "pm_step_proxy_g1"
+            elif bus == 2:
+                env._disturbance_type = "pm_step_proxy_g2"
+            elif bus == 3:
+                env._disturbance_type = "pm_step_proxy_g3"
+            else:
+                raise ValueError(f"Unsupported bus/gen index {bus}")
 
         # Reset env with deterministic seed per scenario.
         obs, _ = env.reset(seed=seed_base + 1009 * sc_idx)

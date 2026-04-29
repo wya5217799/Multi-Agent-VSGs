@@ -52,6 +52,7 @@ from scenarios.kundur.config_simulink import (
     TRIPLOAD2_P_MAX_W,
     VSG_P0_SBASE,
 )
+from scenarios.kundur.workspace_vars import resolve as _ws_resolve
 
 warnings.filterwarnings("ignore", category=UserWarning, module="matlab")
 
@@ -694,6 +695,20 @@ class KundurSimulinkEnv(_KundurBaseEnv):
     # Backend hooks
     # ------------------------------------------------------------------
 
+    def _ws(self, key: str, **idx: Any) -> str:
+        """Resolve a Kundur CVS workspace var name via the typed schema.
+
+        Thin wrapper around ``scenarios.kundur.workspace_vars.resolve``;
+        fixes ``profile`` to the active model_name and ``n_agents`` to the
+        bridge config. Raises ``WorkspaceVarError`` on profile/index mismatch
+        — this is the only intended raise path from this method, so callers
+        do not need to handle it.
+        """
+        cfg = self.bridge.cfg
+        return _ws_resolve(
+            key, profile=cfg.model_name, n_agents=cfg.n_agents, **idx
+        )
+
     def _reset_backend(self, options: Optional[dict] = None) -> None:
         try:
             self.bridge.load_model()
@@ -734,16 +749,16 @@ class KundurSimulinkEnv(_KundurBaseEnv):
                 # Also zeros the Phase A++ CCS trip injection amps so a
                 # prior cc_inject dispatch does not leak.
                 self.bridge.apply_workspace_var(
-                    'LoadStep_amp_bus14', 248e6
+                    self._ws('LOAD_STEP_AMP', bus=14), 248e6
                 )
                 self.bridge.apply_workspace_var(
-                    'LoadStep_amp_bus15', 0.0
+                    self._ws('LOAD_STEP_AMP', bus=15), 0.0
                 )
                 self.bridge.apply_workspace_var(
-                    'LoadStep_trip_amp_bus14', 0.0
+                    self._ws('LOAD_STEP_TRIP_AMP', bus=14), 0.0
                 )
                 self.bridge.apply_workspace_var(
-                    'LoadStep_trip_amp_bus15', 0.0
+                    self._ws('LOAD_STEP_TRIP_AMP', bus=15), 0.0
                 )
 
             self.bridge.warmup(T_WARMUP)
@@ -863,6 +878,8 @@ class KundurSimulinkEnv(_KundurBaseEnv):
                 amp_w = abs(float(magnitude)) * cfg.sbase_va
                 t_now = float(self.bridge.t_current)
                 other_label = 'bus15' if ls_bus_label == 'bus14' else 'bus14'
+                ls_bus_int = int(ls_bus_label[3:])     # 'bus14' -> 14
+                other_bus_int = int(other_label[3:])
 
                 if ls_action == 'trip':
                     # Task 2: LS1 = R disengage (paper line 993 "sudden load
@@ -870,48 +887,48 @@ class KundurSimulinkEnv(_KundurBaseEnv):
                     # env writes 0 ⇒ R jumps to 1e9 ⇒ load drops out ⇒ freq UP.
                     # `magnitude` arg IGNORED (always full 248 MW trip).
                     self.bridge.apply_workspace_var(
-                        f'LoadStep_amp_{ls_bus_label}', 0.0
+                        self._ws('LOAD_STEP_AMP', bus=ls_bus_int), 0.0
                     )
                     # Other bus stays at its IC default (LS2 bus15 IC = 0).
                     # Don't touch the other bus's R amp here — leave at IC.
                     # Trip path (CCS) silent on both.
                     self.bridge.apply_workspace_var(
-                        f'LoadStep_trip_amp_{ls_bus_label}', 0.0
+                        self._ws('LOAD_STEP_TRIP_AMP', bus=ls_bus_int), 0.0
                     )
                     self.bridge.apply_workspace_var(
-                        f'LoadStep_trip_amp_{other_label}', 0.0
+                        self._ws('LOAD_STEP_TRIP_AMP', bus=other_bus_int), 0.0
                     )
                 elif ls_action == 'engage':
                     # Task 2: LS2 = R engage (paper line 994 "sudden load
                     # increase of 188 MW"). Bus 15 IC = 0; env writes amp_w
                     # ⇒ R = V²/amp_w ⇒ load engages ⇒ freq DOWN.
                     self.bridge.apply_workspace_var(
-                        f'LoadStep_amp_{ls_bus_label}', amp_w
+                        self._ws('LOAD_STEP_AMP', bus=ls_bus_int), amp_w
                     )
                     # Other bus (bus14) stays at IC = 248 MW pre-engaged.
                     # Trip path silent.
                     self.bridge.apply_workspace_var(
-                        f'LoadStep_trip_amp_{ls_bus_label}', 0.0
+                        self._ws('LOAD_STEP_TRIP_AMP', bus=ls_bus_int), 0.0
                     )
                     self.bridge.apply_workspace_var(
-                        f'LoadStep_trip_amp_{other_label}', 0.0
+                        self._ws('LOAD_STEP_TRIP_AMP', bus=other_bus_int), 0.0
                     )
                 else:  # 'cc_inject' (Phase A++ alternate, retained for diagnostics)
                     self.bridge.apply_workspace_var(
-                        f'LoadStep_trip_amp_{ls_bus_label}', amp_w
+                        self._ws('LOAD_STEP_TRIP_AMP', bus=ls_bus_int), amp_w
                     )
                     self.bridge.apply_workspace_var(
-                        f'LoadStep_trip_amp_{other_label}', 0.0
+                        self._ws('LOAD_STEP_TRIP_AMP', bus=other_bus_int), 0.0
                     )
                     # Don't touch R-amp side — stays at IC.
 
                 # Zero Pm-step proxies so dispatch types don't compound.
-                for i in range(cfg.n_agents):
-                    self.bridge.apply_workspace_var(f'Pm_step_t_{i+1}',   t_now)
-                    self.bridge.apply_workspace_var(f'Pm_step_amp_{i+1}', 0.0)
+                for i in range(1, cfg.n_agents + 1):
+                    self.bridge.apply_workspace_var(self._ws('PM_STEP_T',   i=i), t_now)
+                    self.bridge.apply_workspace_var(self._ws('PM_STEP_AMP', i=i), 0.0)
                 for g in range(1, 4):
-                    self.bridge.apply_workspace_var(f'PmgStep_t_{g}',   t_now)
-                    self.bridge.apply_workspace_var(f'PmgStep_amp_{g}', 0.0)
+                    self.bridge.apply_workspace_var(self._ws('PMG_STEP_T',   g=g), t_now)
+                    self.bridge.apply_workspace_var(self._ws('PMG_STEP_AMP', g=g), 0.0)
                 logger.info(
                     "[Kundur-Simulink-CVS] LoadStep %s at %s: "
                     "amp=%.2f MW (magnitude=%+.3f sys-pu), step_time=%.4fs",
@@ -948,16 +965,16 @@ class KundurSimulinkEnv(_KundurBaseEnv):
                 t_now = float(self.bridge.t_current)
                 # Zero all SG step amps first (silence non-target G).
                 for g in range(1, 4):
-                    self.bridge.apply_workspace_var(f'PmgStep_t_{g}',   t_now)
-                    self.bridge.apply_workspace_var(f'PmgStep_amp_{g}', 0.0)
+                    self.bridge.apply_workspace_var(self._ws('PMG_STEP_T',   g=g), t_now)
+                    self.bridge.apply_workspace_var(self._ws('PMG_STEP_AMP', g=g), 0.0)
                 # Set the target G amp.
                 self.bridge.apply_workspace_var(
-                    f'PmgStep_amp_{sg_target_idx}', amp_focused_pu
+                    self._ws('PMG_STEP_AMP', g=sg_target_idx), amp_focused_pu
                 )
                 # Also zero ESS Pm-step amps so they don't leak from a prior reset.
-                for i in range(cfg.n_agents):
-                    self.bridge.apply_workspace_var(f'Pm_step_t_{i+1}',   t_now)
-                    self.bridge.apply_workspace_var(f'Pm_step_amp_{i+1}', 0.0)
+                for i in range(1, cfg.n_agents + 1):
+                    self.bridge.apply_workspace_var(self._ws('PM_STEP_T',   i=i), t_now)
+                    self.bridge.apply_workspace_var(self._ws('PM_STEP_AMP', i=i), 0.0)
                 sign = 'increase' if magnitude > 0 else 'decrease'
                 print(
                     f"[Kundur-Simulink-CVS] Pmg step {sign} targets SG[{sg_target_idx}] "
@@ -995,13 +1012,15 @@ class KundurSimulinkEnv(_KundurBaseEnv):
             for idx in target_indices:
                 if 0 <= idx < cfg.n_agents:
                     amps_per_vsg[idx] = amp_focused_pu
-            for i in range(cfg.n_agents):
-                self.bridge.apply_workspace_var(f'Pm_step_t_{i+1}',   t_now)
-                self.bridge.apply_workspace_var(f'Pm_step_amp_{i+1}', amps_per_vsg[i])
+            for i in range(1, cfg.n_agents + 1):
+                self.bridge.apply_workspace_var(self._ws('PM_STEP_T',   i=i), t_now)
+                self.bridge.apply_workspace_var(
+                    self._ws('PM_STEP_AMP', i=i), amps_per_vsg[i - 1]
+                )
             # Also zero SG Pm-step amps for symmetry / clean state.
             for g in range(1, 4):
-                self.bridge.apply_workspace_var(f'PmgStep_t_{g}',   t_now)
-                self.bridge.apply_workspace_var(f'PmgStep_amp_{g}', 0.0)
+                self.bridge.apply_workspace_var(self._ws('PMG_STEP_T',   g=g), t_now)
+                self.bridge.apply_workspace_var(self._ws('PMG_STEP_AMP', g=g), 0.0)
             sign = 'increase' if magnitude > 0 else 'decrease'
             proxy_tag = f"proxy_bus{proxy_bus}" if proxy_bus is not None else dtype
             print(

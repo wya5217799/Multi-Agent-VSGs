@@ -86,19 +86,25 @@ COMM_ADJ = {0: [1, 3], 1: [0, 2], 2: [1, 3], 3: [2, 0]}
 # editing this file between candidates. Default 100.0 = paper-faithful.
 PHI_F = float(_os.getenv("KUNDUR_PHI_F", "100.0"))
 
-# PHI_H / PHI_D locked at 0.0001 post-credibility-close 2026-04-28.
-# Derivation: project ΔM range is ~33× narrower than paper ΔH range (Q7
-# dimension ambiguity unresolved — see docs/paper/yang2023-fact-base.md §2.1
-# Q7 + docs/paper/action-range-mapping-deviation.md). Therefore (ΔM_avg)² is
-# ~1100× smaller than paper's (ΔH_avg)². To preserve paper's intended weight
-# ratio r_f : r_h : r_d ≈ φ_f : φ_h : φ_d, rescale φ_h = φ_d ≈ 1/1100 ≈ 1e-3;
-# the current 1e-4 leaves one decade margin. Empirical evidence:
-#   - kundur_simulink_20260426_150848 (50ep, PHI_H=PHI_D=1e-3): r_f% ≈ 0.47%
-#   - target band: 3-8% — 1e-4 brings the predicted r_f% to ~4.4%.
-# Env-var override removed: HPO must search a fixed reward; ablation runs
-# that need to vary PHI should edit this constant explicitly.
-PHI_H = 0.0001
-PHI_D = 0.0001
+# PHI_H / PHI_D locked at 5e-4 post phi_resweep_v2 (2026-04-29).
+# Original locked baseline 1e-4 was set under loadstep_paper_random_bus
+# (weak-signal protocol, commit 97f6d3a) where r_f% empirical was 0.2%.
+# Under the de facto pm_step_proxy_random_bus eval protocol, the proper
+# target-band [3, 8] PHI was sub-swept (results/harness/kundur/
+# cvs_v3_phi_resweep_v2/) yielding the relation r_f% × PHI ≈ 2.7e-3:
+#   PHI=1e-2 → r_f%=0.22 (measured)
+#   PHI=5e-3 → r_f%=0.56 (measured)
+#   PHI=3e-3 → r_f%=1.00 (measured)
+#   PHI=1e-3 → r_f%=2.65 (measured)
+#   PHI=5e-4 → r_f%≈5    (extrapolated, target band middle) ← THIS LOCK
+#   PHI=3e-4 → r_f%≈7    (extrapolated, target band upper)
+#   PHI=1e-4 → r_f%≈19   (extrapolated, above target band)
+# 5e-4 puts r_f at ~5% of total reward, satisfying paper's intended
+# r_f : r_h : r_d weight ratio without over-suppressing r_h regularization.
+# Env-var override remains absent: HPO must search a fixed reward; ablation
+# runs that need to vary PHI should edit this constant explicitly.
+PHI_H = 5e-4
+PHI_D = 5e-4
 
 # ========== Electrical Network ==========
 # Full 16-bus Modified Kundur topology is in the Simulink model.

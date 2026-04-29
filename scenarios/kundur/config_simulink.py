@@ -101,10 +101,14 @@ PHI_F = float(_os.getenv("KUNDUR_PHI_F", "100.0"))
 #   PHI=1e-4 → r_f%≈19   (extrapolated, above target band)
 # 5e-4 puts r_f at ~5% of total reward, satisfying paper's intended
 # r_f : r_h : r_d weight ratio without over-suppressing r_h regularization.
-# Env-var override remains absent: HPO must search a fixed reward; ablation
-# runs that need to vary PHI should edit this constant explicitly.
-PHI_H = 5e-4
-PHI_D = 5e-4
+# 2026-04-30: re-enabled env-var override for KUNDUR_PHI_H / KUNDUR_PHI_D
+# to support E1 PHI=0 ablation (read-only audit R3: verify whether the
+# +10-12% RL improvement is from r_f gradient or from r_h/r_d action
+# regularization side-effect). Lock removal scope: ablation runs only.
+# HPO trials should NOT vary PHI — pin them to the locked default below
+# by NOT exporting these env-vars.
+PHI_H = float(_os.getenv("KUNDUR_PHI_H", "5e-4"))
+PHI_D = float(_os.getenv("KUNDUR_PHI_D", "5e-4"))
 
 # ========== Electrical Network ==========
 # Full 16-bus Modified Kundur topology is in the Simulink model.
@@ -214,7 +218,14 @@ NORM_FREQ = 8.0
 # 507/510 episodes (run kundur_simulink_20260414_211958); 1.0 stays clear of
 # that ceiling on the M=24/D=4.5 baseline.
 DIST_MIN = 0.1   # 10 MW minimum disturbance
-DIST_MAX = 1.0   # 100 MW maximum disturbance (post-credibility-close 2026-04-28)
+# DIST_MAX history: 0.5 -> 1.0 (2026-04-28 credibility close) -> env-var
+# overridable (2026-04-30 Option B+ pivot). SG-side P1b pilot showed per_M
+# = -16.14 (matches paper no_control -15.20) at DIST_MAX=3.0 with 6/50
+# saturated outliers; DIST_MAX=2.5 estimated to halve saturation tail
+# while keeping magnitude band. Operators running SG-side training should
+# export KUNDUR_DIST_MAX=2.5 (or 3.0 for paper-magnitude eval). No env-var
+# override = uses 1.0 default (legacy ESS-side / Phase 4 baseline).
+DIST_MAX = float(_os.getenv("KUNDUR_DIST_MAX", "1.0"))   # sys-pu, env-var overridable 2026-04-30
 
 # ========== Disturbance Type (Phase 4 Gap 1 — Path C Pm-step proxy) ==========
 # Plan: quality_reports/plans/2026-04-26_kundur_cvs_v3_phase4_phase5_roadmap.md
@@ -270,14 +281,23 @@ KUNDUR_DISTURBANCE_TYPES_VALID = (
     "loadstep_paper_trip_bus15",
     "loadstep_paper_trip_random_bus",
 )
-# Default disturbance type locked post-credibility-close 2026-04-28.
-# `loadstep_paper_random_bus` = per-episode 50/50 LS1 (Bus 14 trip 248 MW) vs
-# LS2 (Bus 15 engage 188 MW), matches paper Sec.IV-A test-scenario distribution.
-# Phase B verified both directions stable on M=24/D=4.5 baseline.
-# Env-var override retained for ablation runs (legacy proxy types, SG-side
-# routing, single-bus targeting).
+# Default disturbance type — history:
+#   2026-04-28: locked to "loadstep_paper_random_bus" (paper-faithful intent)
+#   2026-04-29: NOTES.md flagged the default as DEAD: LoadStep R-block is
+#               compile-frozen under FastRestart, the C3d
+#               `require_effective=True` lock raises every call. Operator
+#               had to env-var override to survive. R2 silent-drift risk.
+#   2026-04-30: pivoted to "pm_step_proxy_random_gen" (SG-side Pm-step proxy
+#               at G1/G2/G3). P1b pilot proved per_M = -16.14 ≈ paper
+#               no_control -15.20 at DIST_MAX=3.0. Network-side electrical
+#               LoadStep (Option E, CCS@Bus 7/9) is the more paper-faithful
+#               alternative but requires 1-2 day physical-layer rebuild;
+#               held in reserve until this protocol's RL ceiling is measured.
+# Operators wanting paper-faithful LoadStep can still env-var override
+# (e.g. for legacy regression replay), but it WILL raise without an Option E
+# physical fix.
 KUNDUR_DISTURBANCE_TYPE = _os.getenv(
-    "KUNDUR_DISTURBANCE_TYPE", "loadstep_paper_random_bus"
+    "KUNDUR_DISTURBANCE_TYPE", "pm_step_proxy_random_gen"
 )
 if KUNDUR_DISTURBANCE_TYPE not in KUNDUR_DISTURBANCE_TYPES_VALID:
     raise ValueError(

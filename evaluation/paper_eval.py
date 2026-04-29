@@ -540,7 +540,13 @@ def main() -> int:
     os.environ["KUNDUR_MODEL_PROFILE"] = str(
         REPO_ROOT / "scenarios" / "kundur" / "model_profiles" / "kundur_cvs_v3.json"
     )
-    os.environ.setdefault("KUNDUR_DISTURBANCE_TYPE", "pm_step_proxy_random_bus")
+    # 2026-04-30: changed default from "pm_step_proxy_random_bus" (ESS-side,
+    # P0' v2 anchor protocol) to "pm_step_proxy_random_gen" (SG-side, P1b
+    # validated per_M=-16.14 ≈ paper no_control -15.20). Aligns paper_eval
+    # default with config_simulink.py default — eliminates train/eval drift
+    # surfaced in 2026-04-30 read-only audit (R2). Operators wanting the
+    # legacy ESS-side protocol can still env-var override.
+    os.environ.setdefault("KUNDUR_DISTURBANCE_TYPE", "pm_step_proxy_random_gen")
 
     from env.simulink.kundur_simulink_env import KundurSimulinkEnv
     from env.simulink.sac_agent_standalone import SACAgent

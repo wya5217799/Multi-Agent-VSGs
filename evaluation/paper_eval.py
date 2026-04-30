@@ -430,7 +430,12 @@ def evaluate_policy(
                 },
             )
         else:
-            if bus == 7:
+            if bus in (7, 9) and disturbance_mode == "ccs_load":
+                # 2026-04-30 Option E: CCS at paper Fig.3 load centers Bus 7/9
+                # (must precede the unconditional bus==7/9 -> kind="bus" branch
+                # which routes to ESS-side pm_step_proxy_busN).
+                _kind, _target = "ccs_load", int(bus)
+            elif bus == 7:
                 _kind, _target = "bus", 7
             elif bus == 9:
                 _kind, _target = "bus", 9
@@ -717,7 +722,7 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     p.add_argument("--output-json", type=str, required=True)
     p.add_argument(
         "--disturbance-mode",
-        choices=["bus", "gen", "vsg", "hybrid"],
+        choices=["bus", "gen", "vsg", "hybrid", "ccs_load"],
         default="bus",
         help="bus = ESS-side Pm-step proxy at bus 7/9 (P4.1 default); "
              "gen = SG-side Pm-step proxy at G1/G2/G3 (Z1); "
@@ -852,6 +857,9 @@ def main() -> int:
         bus_choices = (1, 2, 3)
     elif args.disturbance_mode == "vsg":
         bus_choices = (1, 2, 3, 4)  # 1-indexed ES{i}
+    elif args.disturbance_mode == "ccs_load":
+        # 2026-04-30 Option E: CCS at paper Fig.3 load centers Bus 7 / Bus 9.
+        bus_choices = (7, 9)
     elif args.disturbance_mode == "hybrid":
         # 2026-04-30 Option F4: target field is informational only;
         # HybridSgEssMultiPoint resolves random_gen at apply time.

@@ -103,6 +103,10 @@ class WorkspaceVarSpec:
     # surfaced in the WorkspaceVarError message under require_effective=True.
     # Keys MUST be a subset of ``profiles - effective_in_profile``.
     inactive_reason: dict = field(default_factory=dict)
+    # Option E (2026-04-30): PER_BUS specs can override the default valid bus
+    # set (``_V3_ESS_BUSES = {14, 15}``). For CCS load-center disturbance the
+    # valid buses are {7, 9}. None means "use family default".
+    valid_buses: frozenset | None = None
 
     def __post_init__(self) -> None:
         # Resolve the default-sentinel to the concrete `profiles` set.
@@ -127,9 +131,17 @@ class WorkspaceVarSpec:
                 f"profiles - effective_in_profile = "
                 f"{sorted(allowed_reason_keys)}"
             )
+        # Invariant 3: valid_buses only meaningful for PER_BUS family.
+        if self.valid_buses is not None and self.family is not IndexFamily.PER_BUS:
+            raise ValueError(
+                f"WorkspaceVarSpec({self.template!r}): "
+                f"valid_buses set on non-PER_BUS family {self.family!r}"
+            )
 
 
-_V3_BUSES = frozenset({14, 15})
+_V3_ESS_BUSES = frozenset({14, 15})  # ESS terminal buses (default PER_BUS set)
+_V3_LOAD_BUSES = frozenset({7, 9})   # Paper Fig.3 load centers (Option E)
+_V3_BUSES = _V3_ESS_BUSES            # Back-compat alias for legacy callers
 _SG_INDICES = frozenset({1, 2, 3})
 
 
@@ -214,6 +226,52 @@ _SCHEMA: dict[str, WorkspaceVarSpec] = {
                 "See scenarios/kundur/NOTES.md §'2026-04-29 Eval 协议偏差'."
             ),
         },
+    ),
+    # Option E (2026-04-30): Controlled Current Source at Bus 7/9 load
+    # centers (paper Fig.3 load buses, 967 MW + 1767 MW). Targets the true
+    # paper-LoadStep electrical site rather than ESS terminals.
+    # Convention: positive amp = current INJECTION GND→bus = generator-like
+    # = freq UP (paper LoadStep trip). Negative amp = current bus→GND =
+    # additional load = freq DOWN (paper LoadStep engage).
+    # Starts name-valid only; promote to effective_in_profile after
+    # Probe E sign-pair smoke validates the per-agent signal.
+    # Option E (2026-04-30): CCS at Bus 7/9 load centers — Phase A++ pattern
+    # ported to paper Fig.3 load centers. ABORT'd at Probe E sign-pair smoke:
+    # max sign-pair diff was 0.0007 Hz at Bus 7 / 0.0013 Hz at Bus 9 (acceptance
+    # threshold 0.05 Hz). Direct CCS sweep on the model showed even 1 GW
+    # injection produces only ~0.008 Hz omega excursion at ESS terminals —
+    # the Phasor solver attenuates CCS injection to two orders of magnitude
+    # below paper-grade, regardless of bus location (Bus 14/15 ESS-terminal
+    # CCS gives ~0.019 Hz at 1 GW; Bus 9 load-center CCS gives ~0.008 Hz).
+    # See results/harness/kundur/cvs_v3_option_e_smoke/OPTION_E_ABORT_VERDICT.md.
+    "CCS_LOAD_AMP": WorkspaceVarSpec(
+        template="CCS_Load_amp_bus{bus}",
+        family=IndexFamily.PER_BUS,
+        profiles=frozenset({PROFILE_CVS_V3}),
+        description=(
+            "CCS load-center current source amp at Bus 7/9 (W, system "
+            "base). Option E (2026-04-30): true network LoadStep at "
+            "paper Fig.3 load centers (Bus 7 = 967 MW, Bus 9 = 1767 MW). "
+            "Sign convention: +amp = current INJECTION GND→bus = freq UP "
+            "(paper LoadStep trip); -amp = current draw bus→GND = freq "
+            "DOWN (paper LoadStep engage). Name-valid (Constant block "
+            "reads it, NR/IC unaffected at amp=0) but NOT physically "
+            "effective: Phasor solver attenuates injection. See "
+            "OPTION_E_ABORT_VERDICT.md."
+        ),
+        effective_in_profile=frozenset(),
+        inactive_reason={
+            PROFILE_CVS_V3: (
+                "Option E ABORT'd 2026-04-30 at Probe E sign-pair smoke: "
+                "max per-agent (|nadir_diff|+|peak_diff|) was 0.0007 Hz "
+                "at Bus 7 / 0.0013 Hz at Bus 9 (threshold 0.05 Hz). "
+                "Phasor solver attenuates CCS injection to ~0.008 Hz at "
+                "ESS terminals even with 1 GW amp. See "
+                "results/harness/kundur/cvs_v3_option_e_smoke/"
+                "OPTION_E_ABORT_VERDICT.md."
+            ),
+        },
+        valid_buses=_V3_LOAD_BUSES,
     ),
 }
 
@@ -303,9 +361,10 @@ def resolve(
         return spec.template.format(g=g)
     if spec.family is IndexFamily.PER_BUS:
         bus = idx.get("bus")
-        if not (isinstance(bus, int) and bus in _V3_BUSES):
+        valid_buses = spec.valid_buses if spec.valid_buses is not None else _V3_ESS_BUSES
+        if not (isinstance(bus, int) and bus in valid_buses):
             raise WorkspaceVarError(
-                f"{key}: expected bus in {sorted(_V3_BUSES)}, got bus={bus!r}"
+                f"{key}: expected bus in {sorted(valid_buses)}, got bus={bus!r}"
             )
         return spec.template.format(bus=bus)
     raise WorkspaceVarError(f"unhandled family {spec.family!r} for key {key!r}")

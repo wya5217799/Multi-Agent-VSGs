@@ -287,6 +287,14 @@ KUNDUR_DISTURBANCE_TYPES_VALID = (
     "loadstep_paper_trip_bus14",
     "loadstep_paper_trip_bus15",
     "loadstep_paper_trip_random_bus",
+    # Option E (2026-04-30): CCS at paper Fig.3 load centers (Bus 7 / Bus 9).
+    # Bidirectional (sign preserved): +mag = injection (freq up, paper LoadStep
+    # trip), -mag = draw (freq down, paper LoadStep engage). Targets the true
+    # paper-LoadStep electrical site (vs Bus 14/15 ESS-terminal CCS Trip which
+    # gave only ~0.01 Hz signal due to electrical distance from load center).
+    "loadstep_paper_ccs_bus7",
+    "loadstep_paper_ccs_bus9",
+    "loadstep_paper_ccs_random_load",
 )
 # Default disturbance type — history:
 #   2026-04-28: locked to "loadstep_paper_random_bus" (paper-faithful intent)

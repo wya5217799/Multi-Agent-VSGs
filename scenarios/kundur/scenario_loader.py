@@ -238,6 +238,14 @@ def scenario_to_disturbance_type(scenario: Scenario) -> str:
         # target field is informational (random_gen sentinel resolved at apply
         # time); we accept any target value to keep manifest schema simple.
         return "pm_step_hybrid_sg_es"
+    if scenario.disturbance_kind == "ccs_load":
+        # 2026-04-30 Option E: CCS at paper Fig.3 load buses 7 / 9.
+        # target ∈ {7, 9} explicit; sign of magnitude_sys_pu drives direction.
+        if scenario.target in (7, 9):
+            return f"loadstep_paper_ccs_bus{scenario.target}"
+        raise ValueError(
+            f"unsupported ccs_load target {scenario.target}; must be 7 or 9"
+        )
     raise ValueError(f"unsupported disturbance_kind {scenario.disturbance_kind}")
 
 

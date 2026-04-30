@@ -137,6 +137,10 @@ def _silence_pmg(
 _ESS_PM_STEP_SENTINELS = frozenset({"random_bus"})
 _SG_PMG_STEP_SENTINELS = frozenset({"random_gen"})
 _LOAD_STEP_SENTINELS = frozenset({"random_bus"})
+# Option E (2026-04-30): CCS at Bus 7/9 load centers uses its own sentinel
+# namespace so the resolver does not collide with bus 14/15 LoadStep CCS.
+_LOAD_STEP_CCS_LOAD_SENTINELS = frozenset({"random_load"})
+_CCS_LOAD_BUSES = frozenset({7, 9})
 
 # 2026-04-30 Option F4 (HybridSgEssMultiPoint): topology coupling map
 # from Probe B G1/G2/G3 sign-pair empirical measurement.  G index (1-based)
@@ -615,6 +619,132 @@ class LoadStepCcsInjection:
 
 
 # ---------------------------------------------------------------------------
+# Family F — LoadStepCcsLoadCenter (Option E, 2026-04-30)
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class LoadStepCcsLoadCenter:
+    """Option E CCS dispatch at the paper-Fig.3 load centers (Bus 7 / 9).
+
+    Writes ``CCS_LOAD_AMP[ls_bus] := magnitude_sys_pu * cfg.sbase_va`` and
+    zeros the other load-center bus's CCS register. Does NOT touch the
+    ESS-terminal CCS (``LOAD_STEP_TRIP_AMP`` at Bus 14/15) or the R-block
+    side.
+
+    Sign convention (matches schema docstring):
+      - **Positive ``magnitude_sys_pu``** → current INJECTION GND→bus
+        (generator-like) → freq UP (paper LoadStep trip behavior, like
+        LS1 net export).
+      - **Negative ``magnitude_sys_pu``** → current bus→GND (additional
+        load) → freq DOWN (paper LoadStep engage, like LS2 net import).
+
+    Sign is preserved (no ``abs()``) because the load-center CCS is a
+    bidirectional disturbance, unlike ``LoadStepCcsInjection`` (Bus 14/15
+    trip) which is monotonic.
+
+    All writes use ``require_effective=True``: under v3 the CCS load-
+    center channel starts NOT effective in the schema (Probe E sign-pair
+    smoke not yet run). The schema is hand-promoted to
+    ``effective_in_profile = frozenset({PROFILE_CVS_V3})`` after smoke
+    validates the per-agent signal.
+
+    ``ls_bus`` may be:
+      - 7 or 9 (explicit);
+      - sentinel ``"random_load"`` → 50/50 pick of 7 vs 9.
+    """
+
+    ls_bus: int | str
+
+    def __post_init__(self) -> None:
+        if isinstance(self.ls_bus, str):
+            if self.ls_bus not in _LOAD_STEP_CCS_LOAD_SENTINELS:
+                raise ValueError(
+                    f"LoadStepCcsLoadCenter: ls_bus string must be one of "
+                    f"{sorted(_LOAD_STEP_CCS_LOAD_SENTINELS)}, got "
+                    f"{self.ls_bus!r}"
+                )
+        elif not (
+            isinstance(self.ls_bus, int) and self.ls_bus in _CCS_LOAD_BUSES
+        ):
+            raise ValueError(
+                f"LoadStepCcsLoadCenter: ls_bus must be in "
+                f"{sorted(_CCS_LOAD_BUSES)} or a sentinel string, got "
+                f"{type(self.ls_bus).__name__}={self.ls_bus!r}"
+            )
+
+    def apply(
+        self,
+        bridge: Any,
+        magnitude_sys_pu: float,
+        rng: np.random.Generator,
+        t_now: float,
+        cfg: Any,
+    ) -> DisturbanceTrace:
+        ws = _make_ws(cfg.model_name, cfg.n_agents)
+
+        if isinstance(self.ls_bus, str):
+            if self.ls_bus == "random_load":
+                ls_bus_int = (
+                    7 if float(rng.random()) < 0.5 else 9
+                )
+            else:
+                raise ValueError(
+                    f"LoadStepCcsLoadCenter: unknown sentinel "
+                    f"{self.ls_bus!r}"
+                )
+        else:
+            ls_bus_int = int(self.ls_bus)
+            if ls_bus_int not in _CCS_LOAD_BUSES:
+                raise ValueError(
+                    f"LoadStepCcsLoadCenter: ls_bus must be in "
+                    f"{sorted(_CCS_LOAD_BUSES)} or 'random_load', "
+                    f"got {self.ls_bus!r}"
+                )
+
+        # Sign-preserving (bidirectional). amp_w in W, system base.
+        amp_w = float(magnitude_sys_pu) * cfg.sbase_va
+        other_bus_int = 9 if ls_bus_int == 7 else 7
+
+        keys: list[str] = []
+        values: list[float] = []
+
+        # CCS Load Center path: target gets amp_w (signed), other zeroed.
+        # Bus 14/15 ESS-terminal CCS untouched (separate var family).
+        k = ws("CCS_LOAD_AMP", bus=ls_bus_int, require_effective=True)
+        bridge.apply_workspace_var(k, amp_w)
+        keys.append(k); values.append(amp_w)
+        k = ws("CCS_LOAD_AMP", bus=other_bus_int, require_effective=True)
+        bridge.apply_workspace_var(k, 0.0)
+        keys.append(k); values.append(0.0)
+
+        # Silence PM + PMG (mirror LoadStepCcsInjection ordering)
+        kp, vp = _silence_pm(bridge, ws, t_now, cfg.n_agents)
+        keys.extend(kp)
+        values.extend(vp)
+        kg, vg = _silence_pmg(bridge, ws, t_now)
+        keys.extend(kg)
+        values.extend(vg)
+
+        sign = "increase" if magnitude_sys_pu > 0 else "decrease"
+        target_descriptor = f"bus{ls_bus_int}:cc_load_{sign}"
+        logger.debug(
+            "[LoadStepCcsLoadCenter] %s at %s: amp=%+.2f MW "
+            "(mag=%+.3f sys-pu), t=%.4fs",
+            sign, f"bus{ls_bus_int}", amp_w / 1e6,
+            float(magnitude_sys_pu), t_now,
+        )
+
+        return DisturbanceTrace(
+            family="load_step_ccs_load_center",
+            target_descriptor=target_descriptor,
+            written_keys=tuple(keys),
+            written_values=tuple(values),
+            magnitude_sys_pu=float(magnitude_sys_pu),
+        )
+
+
+# ---------------------------------------------------------------------------
 # Resolver factory
 # ---------------------------------------------------------------------------
 
@@ -661,6 +791,15 @@ _DISPATCH_TABLE: dict[str, Callable[[], DisturbanceProtocol]] = {
         lambda: LoadStepCcsInjection(ls_bus=15),
     "loadstep_paper_trip_random_bus":
         lambda: LoadStepCcsInjection(ls_bus="random_bus"),
+    # 2026-04-30 Option E: CCS Load Center at paper Fig.3 load buses
+    # (Bus 7 = 967 MW, Bus 9 = 1767 MW). Bidirectional (sign-preserving):
+    # +mag = current INJECTION (freq up), -mag = current draw (freq down).
+    "loadstep_paper_ccs_bus7":
+        lambda: LoadStepCcsLoadCenter(ls_bus=7),
+    "loadstep_paper_ccs_bus9":
+        lambda: LoadStepCcsLoadCenter(ls_bus=9),
+    "loadstep_paper_ccs_random_load":
+        lambda: LoadStepCcsLoadCenter(ls_bus="random_load"),
     # 2026-04-30 Option F4: hybrid SG + ESS-compensate. sg_share=0.7,
     # target_g="random_gen". See HybridSgEssMultiPoint docstring + Option F
     # design doc (docs/superpowers/plans/2026-04-30-option-f-design.md).
@@ -853,6 +992,8 @@ __all__ = [
     "SgPmgStepProxy",
     "LoadStepRBranch",
     "LoadStepCcsInjection",
+    "LoadStepCcsLoadCenter",
+    "HybridSgEssMultiPoint",
     "known_disturbance_types",
     "resolve_disturbance",
 ]

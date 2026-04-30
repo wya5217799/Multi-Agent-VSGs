@@ -742,6 +742,15 @@ def _build_arg_parser() -> argparse.ArgumentParser:
         default=None,
         help="Override default manifest path for --scenario-set.",
     )
+    p.add_argument(
+        "--zero-agent-idx",
+        type=int,
+        default=None,
+        help="2026-04-30 (B-a action ablation): force agent at this 0-based "
+             "index to output zero action every step (= keep H/D at "
+             "baseline = no_control for this agent). Used to verify whether "
+             "trained policy actually uses each agent vs. ES1-only mimic.",
+    )
     return p
 
 
@@ -816,6 +825,26 @@ def main() -> int:
         label = args.policy_label or "zero_action_no_control"
         ckpt_path = None
         print(f"[paper_eval] running zero-action baseline as '{label}'")
+
+    # 2026-04-30 (B-a action ablation): wrap select_fn to force zero action
+    # for one agent. Used to verify trained policy actually uses each agent
+    # individually vs converging to ES1-mimic-only behavior.
+    if args.zero_agent_idx is not None:
+        zero_idx = int(args.zero_agent_idx)
+        if not (0 <= zero_idx < int(env.N_ESS)):
+            raise ValueError(
+                f"--zero-agent-idx={zero_idx} out of range [0, {env.N_ESS})"
+            )
+        _orig_select_fn = select_fn
+
+        def _zero_one_agent_select(obs):
+            a = _orig_select_fn(obs)
+            a = np.array(a, copy=True)
+            a[zero_idx, :] = 0.0
+            return a
+
+        select_fn = _zero_one_agent_select
+        print(f"[paper_eval] B-a action ablation: agent {zero_idx} (ES{zero_idx+1}) actions forced to 0 every step")
 
     if args.disturbance_mode == "bus":
         bus_choices = (7, 9)

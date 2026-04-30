@@ -156,6 +156,29 @@ loadstep_defs = {
     'LoadStep_bus15', 15, 'bus15';   % paper Bus 15 ≈ v3 ESS bus 15 (near ES4)
 };
 
+% Option E (2026-04-30): CCS at Bus 7 / Bus 9 — true network LoadStep at
+% load center.  Reuses Phase A++ CCS Trip pattern (line ~365-425) but
+% targets the actual paper-Fig.3 load buses (Bus 7 = 967 MW load, Bus 9 =
+% 1767 MW load) instead of the ESS terminal buses (Bus 14/15) where the
+% CCS Trip path gave only ~0.01 Hz signal due to electrical distance from
+% load center. CCS injection at Bus 7/9 (where the 967+1767=2734 MW load
+% lives) is the project's first true network-side disturbance with
+% magnitude in the same ballpark as paper LoadStep 1 (248 MW reduction at
+% Bus 14, paper Fig.3) and LoadStep 2 (188 MW increase at Bus 15).
+%
+% Convention: workspace var `CCS_Load_amp_bus<bus>` is in W (system base);
+% positive amp = current INJECTION from GND→bus = generator-like = freq UP
+% (mimics paper LoadStep "trip" semantics where load disconnects). Negative
+% amp = current FROM bus→GND = additional load = freq DOWN (mimics paper
+% LoadStep "engage" semantics).
+%
+% Default amp=0 ⇒ CCS electrically absent ⇒ NR / IC unaffected ⇒ no
+% need to regenerate kundur_ic_cvs_v3.json.
+ccs_load_defs = {
+    'CCSLoad_bus7', 7, 'bus7';   % Bus 7 load center (967 MW load)
+    'CCSLoad_bus9', 9, 'bus9';   % Bus 9 load center (1767 MW load)
+};
+
 %% ===== Reset model =====
 if bdIsLoaded(mdl), close_system(mdl, 0); end
 new_system(mdl);
@@ -422,6 +445,55 @@ for k = 1:size(loadstep_defs, 1)
     set_param([mdl '/' trip_name], 'UserDataPersistent', 'on', ...
         'UserData', struct('bus', bus, 'bus_label', bus_label, ...
                            'mode', 'trip_inject'));
+end
+
+% Option E (2026-04-30): CCS at Bus 7 / Bus 9 load centers. Same pattern
+% as Phase A++ Trip CCS above, but at network load center rather than ESS
+% terminal. Workspace var `CCS_Load_amp_<lb>` drives Real component;
+% Imag = 0 (purely active). Default amp=0 ⇒ NR/IC untouched.
+for k = 1:size(ccs_load_defs, 1)
+    bus       = ccs_load_defs{k, 2};
+    bus_label = ccs_load_defs{k, 3};
+
+    ccs_name    = sprintf('CCSLoad_%s', bus_label);
+    re_name     = sprintf('CCSLoadRe_%s',     bus_label);
+    im_name     = sprintf('CCSLoadIm_%s',     bus_label);
+    ri2c_name   = sprintf('CCSLoadRI2C_%s',   bus_label);
+    gnd_name    = sprintf('GND_%s',           ccs_name);
+
+    yposCC = 850 + (k - 1) * 110;
+    bxCC   = 1100;
+
+    % Real component: amp_W / Vbase_const   (A, peak)
+    add_block('simulink/Sources/Constant', [mdl '/' re_name], ...
+        'Position', [bxCC-160 yposCC bxCC-100 yposCC+20], ...
+        'Value', sprintf('CCS_Load_amp_%s / Vbase_const', bus_label));
+
+    % Imag component: 0 (purely active injection at reference angle)
+    add_block('simulink/Sources/Constant', [mdl '/' im_name], ...
+        'Position', [bxCC-160 yposCC+30 bxCC-100 yposCC+50], 'Value', '0');
+
+    % Real-Imag → Complex (Phasor signal type for the CCS input)
+    add_block('simulink/Math Operations/Real-Imag to Complex', [mdl '/' ri2c_name], ...
+        'Position', [bxCC-80 yposCC bxCC-40 yposCC+40]);
+    add_line(mdl, [re_name '/1'], [ri2c_name '/1'], 'autorouting', 'smart');
+    add_line(mdl, [im_name '/1'], [ri2c_name '/2'], 'autorouting', 'smart');
+
+    % Controlled Current Source: LConn=GND, RConn=bus → +I = INJECTION
+    add_block('powerlib/Electrical Sources/Controlled Current Source', ...
+        [mdl '/' ccs_name], 'Position', [bxCC yposCC bxCC+60 yposCC+50]);
+    set_param([mdl '/' ccs_name], 'Initialize', 'off', 'Measurements', 'None');
+    add_line(mdl, [ri2c_name '/1'], [ccs_name '/1'], 'autorouting', 'smart');
+
+    % Ground at LConn
+    add_block('powerlib/Elements/Ground', [mdl '/' gnd_name], ...
+        'Position', [bxCC-50 yposCC+70 bxCC-10 yposCC+90]);
+    add_line(mdl, [ccs_name '/LConn1'], [gnd_name '/LConn1'], ...
+        'autorouting', 'smart');
+
+    set_param([mdl '/' ccs_name], 'UserDataPersistent', 'on', ...
+        'UserData', struct('bus', bus, 'bus_label', bus_label, ...
+                           'mode', 'ccs_load_center'));
 end
 
 %% ===== Build dynamic sources (3 SG + 4 ESS) with full swing-eq closure =====
@@ -824,6 +896,15 @@ for k = 1:size(loadstep_defs, 1)
     register(bus, [trip_name '/RConn1']);
 end
 
+% Option E (2026-04-30): CCS at Bus 7 / Bus 9 load centers — register
+% RConn at the load-center bus.
+for k = 1:size(ccs_load_defs, 1)
+    bus       = ccs_load_defs{k, 2};
+    bus_label = ccs_load_defs{k, 3};
+    ccs_name  = sprintf('CCSLoad_%s', bus_label);
+    register(bus, [ccs_name '/RConn1']);
+end
+
 % Source internal-X downstream port → bus
 for s = 1:n_src
     sname = src_meta{s, 1};
@@ -922,6 +1003,12 @@ end
 for k = 1:size(loadstep_defs, 1)
     lb = loadstep_defs{k, 3};
     runtime_consts.(sprintf('LoadStep_trip_amp_%s', lb)) = double(0.0);
+end
+% Option E (2026-04-30): CCS load center amp defaults at Bus 7/9.
+% Same convention as LoadStep_trip_amp_*: amp=0 ⇒ NR/IC untouched.
+for k = 1:size(ccs_load_defs, 1)
+    lb = ccs_load_defs{k, 3};
+    runtime_consts.(sprintf('CCS_Load_amp_%s', lb)) = double(0.0);
 end
 save(runtime_mat, '-struct', 'runtime_consts');
 

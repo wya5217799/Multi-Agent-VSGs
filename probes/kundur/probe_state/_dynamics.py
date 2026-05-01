@@ -267,6 +267,26 @@ def run_per_dispatch(probe: "ModelStateProbe") -> dict[str, Any]:
                     (max_abs_per_agent > RESPOND_THRESHOLD_HZ).sum()
                 )
                 share = _r_f_local_share(omega, F_NOM_HZ)
+                # G4 reconciliation (2026-05-01, design §5.7):
+                # compare observed max|Δf| against historical floor.
+                expected_floor = md.get("expected_min_df_hz")
+                observed_global = float(max_abs_per_agent.max())
+                if expected_floor is None:
+                    floor_status = "expected_floor_unknown"
+                    below_floor = None
+                elif observed_global < float(expected_floor):
+                    floor_status = "below_expected_floor"
+                    below_floor = True
+                    logger.warning(
+                        "Phase 4 dispatch %s observed max|Δf|=%.4f Hz < "
+                        "expected floor %.4f Hz (source: %s) — possible "
+                        "model degradation or build drift",
+                        d_type, observed_global, float(expected_floor),
+                        md.get("historical_source") or "—",
+                    )
+                else:
+                    floor_status = "ok"
+                    below_floor = False
                 results[d_type] = {
                     "metadata": md,
                     "applied_magnitude_sys_pu": mag,
@@ -274,7 +294,10 @@ def run_per_dispatch(probe: "ModelStateProbe") -> dict[str, Any]:
                     "resolved_disturbance_type": resolved,
                     "agents_responding_above_1mHz": agents_responding,
                     "max_abs_f_dev_hz_per_agent": max_abs_per_agent.tolist(),
-                    "max_abs_f_dev_hz_global": float(max_abs_per_agent.max()),
+                    "max_abs_f_dev_hz_global": observed_global,
+                    "expected_min_df_hz": expected_floor,
+                    "below_expected_floor": below_floor,
+                    "floor_status": floor_status,
                     "r_f_local_share": share,
                     "r_f_share_max_min_diff": (
                         float(max(share) - min(share)) if share else 0.0

@@ -657,6 +657,105 @@ def test_phase_c_resolve_baseline_eval_returns_none_when_baseline_errored():
     assert _resolve_baseline_eval(_StubProbe()) is None
 
 
+def test_g4_dispatch_metadata_has_expected_min_df_hz_for_known_dispatches():
+    """G4 (2026-05-01): every dispatch in known_disturbance_types() must have
+    a non-None expected_min_df_hz OR an explicit historical_source explaining
+    the gap. Catches drift when a new dispatch is added but its floor isn't."""
+    from scenarios.kundur.disturbance_protocols import known_disturbance_types
+    from probes.kundur.probe_state.dispatch_metadata import METADATA
+
+    missing_floor: list[str] = []
+    for d_type in known_disturbance_types():
+        md = METADATA.get(d_type)
+        if md is None:
+            continue  # caught by test_dispatch_metadata_coverage
+        if md.expected_min_df_hz is None and not md.historical_source:
+            missing_floor.append(d_type)
+    assert not missing_floor, (
+        f"dispatches with no expected_min_df_hz AND no historical_source: "
+        f"{missing_floor}"
+    )
+
+
+def test_g4_dispatch_metadata_g_dispatches_have_design_5_7_floors():
+    """Cross-check 3 design §5.7 example floors against METADATA."""
+    from probes.kundur.probe_state.dispatch_metadata import METADATA
+
+    cases = [
+        ("pm_step_proxy_g2", 0.05),
+        ("pm_step_hybrid_sg_es", 0.30),
+        ("loadstep_paper_trip_bus14", 0.005),
+    ]
+    for name, expected in cases:
+        md = METADATA[name]
+        assert md.expected_min_df_hz == expected, (
+            f"{name}: expected_min_df_hz={md.expected_min_df_hz} != "
+            f"design §5.7 example {expected}"
+        )
+        assert md.historical_source, f"{name}: historical_source empty"
+
+
+def test_g3_resolve_alias_baseline_missing_raises_with_hint(tmp_path):
+    """G3: 'baseline' alias raises FileNotFoundError with --promote-baseline hint."""
+    from probes.kundur.probe_state._diff import resolve_alias
+
+    try:
+        resolve_alias("baseline", tmp_path)
+    except FileNotFoundError as exc:
+        assert "--promote-baseline" in str(exc), str(exc)
+    else:
+        raise AssertionError("expected FileNotFoundError")
+
+
+def test_g3_resolve_alias_latest_missing_raises(tmp_path):
+    from probes.kundur.probe_state._diff import resolve_alias
+
+    try:
+        resolve_alias("latest", tmp_path)
+    except FileNotFoundError as exc:
+        assert "state_snapshot_latest.json" in str(exc)
+    else:
+        raise AssertionError("expected FileNotFoundError")
+
+
+def test_g3_resolve_alias_passes_through_real_paths(tmp_path):
+    """Plain path strings (not 'baseline'/'latest') resolve verbatim."""
+    from probes.kundur.probe_state._diff import resolve_alias
+
+    p = tmp_path / "something.json"
+    p.write_text("{}", encoding="utf-8")
+    out = resolve_alias(str(p), tmp_path)
+    assert out == p.resolve()
+
+
+def test_g3_promote_baseline_copies_file(tmp_path):
+    from probes.kundur.probe_state._diff import promote_baseline, resolve_alias
+
+    src = tmp_path / "snap_v1.json"
+    src.write_text('{"schema_version": 1, "implementation_version": "0.4.0"}',
+                   encoding="utf-8")
+    dst = promote_baseline(src, tmp_path)
+    assert dst == tmp_path / "baseline.json"
+    assert dst.exists()
+    assert dst.read_text(encoding="utf-8") == src.read_text(encoding="utf-8")
+    # Now baseline alias resolves to the copied file.
+    assert resolve_alias("baseline", tmp_path) == dst
+
+
+def test_g3_promote_baseline_overwrites_existing(tmp_path):
+    from probes.kundur.probe_state._diff import promote_baseline
+
+    # First promotion
+    src1 = tmp_path / "old.json"
+    src1.write_text('{"v": 1}', encoding="utf-8")
+    promote_baseline(src1, tmp_path)
+    # Second promotion overwrites
+    src2 = tmp_path / "new.json"
+    src2.write_text('{"v": 2}', encoding="utf-8")
+    dst = promote_baseline(src2, tmp_path)
+    assert dst.read_text(encoding="utf-8") == '{"v": 2}'
+
+
 def test_phase_c_short_train_subprocess_uses_probe_phase_c_run_id_prefix(monkeypatch):
     """End-to-end naming-convention check (added 2026-05-01 from review).
 

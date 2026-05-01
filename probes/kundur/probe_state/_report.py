@@ -262,24 +262,49 @@ def _render_md(snap: dict[str, Any], ts: str) -> str:
         dispatches = p4.get("dispatches", {}) or {}
         if dispatches:
             lines.append("")
-            lines.append("| dispatch | family | mag | sim_s | agents>1mHz | max\\|Δf\\| Hz | r_f Δ |")
-            lines.append("|----------|--------|-----|-------|-------------|----------------|--------|")
+            lines.append(
+                "| dispatch | family | mag | agents>1mHz | max\\|Δf\\| Hz | "
+                "expected≥ Hz | floor | r_f Δ |"
+            )
+            lines.append(
+                "|----------|--------|-----|-------------|----------------|"
+                "----------------|-------|--------|"
+            )
+            n_below_floor = 0
             for d_type, d in dispatches.items():
                 md = d.get("metadata", {}) or {}
                 family = md.get("family", "—")
                 mag = d.get("applied_magnitude_sys_pu", "—")
-                sim_s = d.get("applied_sim_duration_s", "—")
                 if "error" in d and "agents_responding_above_1mHz" not in d:
                     lines.append(
-                        f"| `{d_type}` | {family} | {mag} | {sim_s} "
-                        f"| ❌ {d['error']} | — | — |"
+                        f"| `{d_type}` | {family} | {mag} "
+                        f"| ❌ {d['error']} | — | — | — | — |"
                     )
                     continue
+                exp = d.get("expected_min_df_hz")
+                exp_str = f"{exp:.4f}" if exp is not None else "—"
+                fs = d.get("floor_status", "—")
+                fs_glyph = {
+                    "ok": "✅",
+                    "below_expected_floor": "⚠️ below",
+                    "expected_floor_unknown": "❓ unknown",
+                }.get(fs, fs)
+                if fs == "below_expected_floor":
+                    n_below_floor += 1
                 lines.append(
-                    f"| `{d_type}` | {family} | {mag} | {sim_s} "
+                    f"| `{d_type}` | {family} | {mag} "
                     f"| {d.get('agents_responding_above_1mHz')} "
                     f"| {d.get('max_abs_f_dev_hz_global', 0):.4f} "
+                    f"| {exp_str} | {fs_glyph} "
                     f"| {d.get('r_f_share_max_min_diff', 0):.3e} |"
+                )
+            if n_below_floor:
+                lines.append("")
+                lines.append(
+                    f"⚠️ {n_below_floor} dispatch(es) below expected floor — "
+                    "possible model degradation or build drift; see "
+                    "`historical_source` per-dispatch for the verdict that "
+                    "set the floor."
                 )
 
     # Phase 5 — trained policy ablation (Phase B)

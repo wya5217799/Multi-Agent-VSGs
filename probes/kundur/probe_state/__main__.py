@@ -128,15 +128,40 @@ def main(argv: list[str] | None = None) -> int:
         metavar=("PREV", "CURR"),
         default=None,
         help="Field-level diff between two state_snapshot_*.json files. "
-             "Short-circuits all phases; prints diff to stdout, exits 0 "
-             "if identical, 1 otherwise. Design §5.6 (F2).",
+             "Short-circuits all phases; exits 0 if identical, 1 otherwise. "
+             "Aliases (G3): 'baseline' → baseline.json; 'latest' → "
+             "state_snapshot_latest.json. Design §5.6 (F2).",
+    )
+    parser.add_argument(
+        "--promote-baseline",
+        default=None,
+        metavar="SNAPSHOT",
+        help="Copy SNAPSHOT to baseline.json under --output-dir (G3). "
+             "Use after a green run to rebase the diff baseline. "
+             "Short-circuits all phases.",
     )
     args = parser.parse_args(argv)
 
-    # F2 short-circuit: --diff prev curr ⇒ run diff and exit, no probe phases.
+    # Resolve snapshot dir once (used by both --diff aliases and --promote-baseline).
+    from probes.kundur.probe_state.probe_state import DEFAULT_OUTPUT_DIR
+    snapshot_dir = (
+        Path(args.output_dir).resolve() if args.output_dir
+        else DEFAULT_OUTPUT_DIR
+    )
+
+    # G3 short-circuit: --promote-baseline <path>
+    if args.promote_baseline:
+        from probes.kundur.probe_state._diff import promote_baseline
+        dst = promote_baseline(Path(args.promote_baseline), snapshot_dir)
+        print(f"baseline promoted: {args.promote_baseline} -> {dst}")
+        return 0
+
+    # F2/G3 short-circuit: --diff PREV CURR (with alias support).
     if args.diff:
-        from probes.kundur.probe_state._diff import diff_snapshots
-        return diff_snapshots(Path(args.diff[0]), Path(args.diff[1]))
+        from probes.kundur.probe_state._diff import diff_snapshots, resolve_alias
+        prev = resolve_alias(args.diff[0], snapshot_dir)
+        curr = resolve_alias(args.diff[1], snapshot_dir)
+        return diff_snapshots(prev, curr)
 
     logging.basicConfig(
         level=logging.DEBUG if args.verbose else logging.INFO,

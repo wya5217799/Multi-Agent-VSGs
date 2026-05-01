@@ -1,7 +1,7 @@
 # FACT: this module's diff output (printed to stdout) is the contract.
 # Anything in README about diff format is CLAIM until verified against
 # the actual stdout text emitted here.
-"""Snapshot diff — F2 (design §5.6).
+"""Snapshot diff — F2 (design §5.6) + G3 baseline alias.
 
 Field-level deep-diff between two ``state_snapshot_*.json`` files.
 Used for regression check after build / schema / dispatch changes:
@@ -10,6 +10,14 @@ Used for regression check after build / schema / dispatch changes:
 CLI usage::
 
     python -m probes.kundur.probe_state --diff prev.json curr.json
+    python -m probes.kundur.probe_state --diff baseline latest      # G3 alias
+    python -m probes.kundur.probe_state --promote-baseline <path>   # G3 promote
+
+Aliases (G3 2026-05-01):
+- ``baseline`` resolves to ``baseline.json`` in the snapshot dir.
+- ``latest`` resolves to ``state_snapshot_latest.json``.
+- Aliases use plain file copies (Windows: symlinks need admin); the
+  ``baseline.json`` copy is overwritten on ``--promote-baseline``.
 
 Output: human-readable summary of changed scalar fields, added/removed
 keys, and verdict transitions (G1..G6 PASS↔REJECT↔PENDING). Numeric
@@ -23,8 +31,14 @@ from __future__ import annotations
 
 import json
 import math
+import shutil
 from pathlib import Path
 from typing import Any
+
+# G3: Phase A default snapshot dir; CLI lets caller override via --output-dir.
+DEFAULT_SNAPSHOT_DIR = Path(
+    "results/harness/kundur/probe_state"
+).resolve() if False else None  # resolved at call time
 
 # Keys whose values are large arrays / cells that we summarise rather than
 # diff field-by-field. Added rolling as new noisy fields surface.
@@ -34,6 +48,48 @@ _SUMMARISE_KEYS = frozenset({
     "results",
     "checkpoints",
 })
+
+
+def resolve_alias(name: str, snapshot_dir: Path) -> Path:
+    """G3: resolve ``baseline`` / ``latest`` aliases to real paths.
+
+    Other strings are treated as filesystem paths. Missing ``baseline.json``
+    raises ``FileNotFoundError`` with a hint to ``--promote-baseline``.
+    """
+    if name == "baseline":
+        p = snapshot_dir / "baseline.json"
+        if not p.exists():
+            raise FileNotFoundError(
+                f"baseline alias unresolved: {p} does not exist. "
+                "Run `python -m probes.kundur.probe_state "
+                "--promote-baseline <snapshot.json>` to set one."
+            )
+        return p
+    if name == "latest":
+        p = snapshot_dir / "state_snapshot_latest.json"
+        if not p.exists():
+            raise FileNotFoundError(
+                f"latest alias unresolved: {p} does not exist. "
+                "Run the probe at least once to populate state_snapshot_latest.json."
+            )
+        return p
+    return Path(name).expanduser().resolve()
+
+
+def promote_baseline(src: Path, snapshot_dir: Path) -> Path:
+    """G3: copy ``src`` to ``baseline.json`` in the snapshot dir.
+
+    Uses ``shutil.copy2`` (Windows-safe; symlinks need admin). Overwrites
+    any existing ``baseline.json``. Caller is responsible for confirming
+    the source snapshot is the right one — this is a manual rebase tool.
+    """
+    src = Path(src).expanduser().resolve()
+    if not src.exists():
+        raise FileNotFoundError(f"--promote-baseline source missing: {src}")
+    snapshot_dir.mkdir(parents=True, exist_ok=True)
+    dst = snapshot_dir / "baseline.json"
+    shutil.copy2(src, dst)
+    return dst
 
 
 def diff_snapshots(prev_path: Path, curr_path: Path) -> int:

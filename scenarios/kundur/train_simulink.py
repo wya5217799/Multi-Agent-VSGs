@@ -215,12 +215,24 @@ def parse_args():
         default=None,
         help="G6 warmup override: per-agent warmup_steps (default: WARMUP_STEPS / N).",
     )
+    parser.add_argument(
+        "--run-id",
+        type=str,
+        default=None,
+        help="Override run-id (otherwise auto-generated as "
+             "'kundur_{mode}_{YYYYMMDD}_{HHMMSS}'). Used by probe_state Phase C "
+             "to namespace short-train output dirs under "
+             "results/sim_kundur/runs/probe_phase_c_*/ so they are visibly "
+             "distinct from production runs in `ls`. No-op for production launches.",
+    )
     args = parser.parse_args()
     checkpoint_was_default = args.checkpoint_dir is None
     log_was_default = args.log_file is None
 
     # Derive run-namespaced defaults so every training launch is isolated.
-    args.run_id = generate_run_id(f"kundur_{args.mode}")
+    # Honour --run-id when provided; fall back to auto-generation otherwise so
+    # production launchers (run_kundur_simulink.bat etc.) keep current behaviour.
+    args.run_id = args.run_id or generate_run_id(f"kundur_{args.mode}")
     run_dir = get_run_dir("kundur", args.run_id)
     if args.checkpoint_dir is None:
         args.checkpoint_dir = str(run_dir / "checkpoints")

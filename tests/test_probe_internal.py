@@ -840,6 +840,143 @@ def test_i5_dispatch_metadata_hybrid_has_ceiling():
     )
 
 
+def test_p1_resolve_baseline_returns_none_on_scenario_set_mismatch():
+    """P1 review fix: baseline reused only if eval-config matches expected."""
+    from probes.kundur.probe_state._causality import _resolve_baseline_eval
+
+    class _StubProbe:
+        snapshot = {
+            "phase5_trained_policy": {
+                "runs": {
+                    "baseline": {
+                        "r_f_global": -84.16,
+                        "scenario_set": "test",   # full mode
+                        "n_scenarios": 50,
+                    },
+                },
+            },
+        }
+
+    # Phase C requires scenario_set='none' n=5; baseline has 'test' n=50
+    out = _resolve_baseline_eval(
+        _StubProbe(),
+        expected_scenario_set="none",
+        expected_n_scenarios=5,
+    )
+    assert out is None, "should reject mismatched eval-config"
+
+
+def test_p1_resolve_baseline_returns_none_on_n_scenarios_mismatch():
+    from probes.kundur.probe_state._causality import _resolve_baseline_eval
+
+    class _StubProbe:
+        snapshot = {
+            "phase5_trained_policy": {
+                "runs": {
+                    "baseline": {
+                        "r_f_global": -84.16,
+                        "scenario_set": "none",
+                        "n_scenarios": 2,         # different from expected
+                    },
+                },
+            },
+        }
+
+    out = _resolve_baseline_eval(
+        _StubProbe(),
+        expected_scenario_set="none",
+        expected_n_scenarios=5,
+    )
+    assert out is None
+
+
+def test_p1_resolve_baseline_passes_when_config_matches():
+    from probes.kundur.probe_state._causality import _resolve_baseline_eval
+
+    class _StubProbe:
+        snapshot = {
+            "phase5_trained_policy": {
+                "runs": {
+                    "baseline": {
+                        "r_f_global": -84.16,
+                        "scenario_set": "none",
+                        "n_scenarios": 5,
+                    },
+                },
+            },
+        }
+
+    out = _resolve_baseline_eval(
+        _StubProbe(),
+        expected_scenario_set="none",
+        expected_n_scenarios=5,
+    )
+    assert out is not None
+    assert out["r_f_global"] == -84.16
+
+
+def test_p2a_extract_metrics_errors_on_missing_cum_field():
+    """P2a review fix: silent fallback to 0.0 would mask schema drift."""
+    from probes.kundur.probe_state._trained_policy import _extract_metrics
+
+    out = _extract_metrics({"per_episode_metrics": [], "_wall_s": 1.0})
+    assert "error" in out
+    assert "cumulative_reward_global_rf" in out["error"]
+
+
+def test_p2a_extract_metrics_errors_on_dict_missing_unnormalized():
+    """Cumulative dict shape with renamed/missing 'unnormalized' key
+    must error rather than silently produce r_f_global=0.0."""
+    from probes.kundur.probe_state._trained_policy import _extract_metrics
+
+    eval_dict = {
+        "cumulative_reward_global_rf": {
+            "per_M": -2.5,           # renamed schema; no 'unnormalized'
+            "per_M_per_N": -0.6,
+        },
+        "per_episode_metrics": [],
+        "_wall_s": 1.0,
+    }
+    out = _extract_metrics(eval_dict)
+    assert "error" in out
+    assert "unnormalized" in out["error"]
+    assert "schema drift" in out["error"]
+
+
+def test_p2b_g4_uses_thresholds_singleton(monkeypatch):
+    """P2b review fix: G4 must read floor from THRESHOLDS, not hardcode."""
+    from probes.kundur.probe_state import _verdict, probe_config
+
+    # Build a snapshot where 1 dispatch's max|Δf|_per_agent straddles the
+    # default 1e-3 floor: 0.5e-3, 2e-3, 0.5e-3, 0.5e-3 → 1 responder.
+    snap = {
+        "phase4_per_dispatch": {
+            "dispatches": {
+                "X": {
+                    "max_abs_f_dev_hz_per_agent": [5e-4, 2e-3, 5e-4, 5e-4],
+                },
+                "Y": {
+                    "max_abs_f_dev_hz_per_agent": [3e-3, 5e-4, 5e-4, 5e-4],
+                },
+            },
+        },
+    }
+    g4_default = _verdict._g4_position(snap)
+    # Two distinct signatures: {1} and {0} → PASS at floor=1e-3
+    assert g4_default["verdict"] == "PASS"
+
+    # Now monkeypatch THRESHOLDS.g1_respond_hz higher (5e-3): both
+    # dispatches now classify as 0 responders (signatures collapse to {})
+    # which is 1 distinct signature → REJECT. If G4 still hardcoded 1e-3
+    # this test would PASS instead, exposing the desync.
+    new_thresholds = probe_config.ProbeThresholds(g1_respond_hz=5e-3)
+    monkeypatch.setattr(probe_config, "THRESHOLDS", new_thresholds)
+    g4_after = _verdict._g4_position(snap)
+    assert g4_after["verdict"] == "REJECT", (
+        f"G4 ignored THRESHOLDS bump; got {g4_after!r}"
+    )
+
+
 def test_i2_init_exports_version():
     """I2 review fix: __init__.py exports __version__ for importlib.metadata."""
     import probes.kundur.probe_state as pkg

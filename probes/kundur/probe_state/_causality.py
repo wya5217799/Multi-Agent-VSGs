@@ -208,8 +208,31 @@ def _eval_ckpt(
         return _extract_metrics(eval_dict)
 
 
-def _resolve_baseline_eval(probe: "ModelStateProbe") -> dict[str, Any] | None:
-    """Reuse Phase B baseline if present; else return None (caller may run fresh)."""
+def _resolve_baseline_eval(
+    probe: "ModelStateProbe",
+    *,
+    expected_scenario_set: str | None = None,
+    expected_n_scenarios: int | None = None,
+) -> dict[str, Any] | None:
+    """Reuse Phase B baseline if present AND config-comparable.
+
+    P1 fix (2026-05-01): Phase B baseline is evaluated under whatever
+    scenario_set / n_scenarios Phase B was launched with (smoke=5 'none'
+    vs full=50 'test'). Phase C evaluates ``no_rf`` under its own
+    config (scenario_set='none', phase_c_eval_n_scenarios). If the two
+    configs disagree, R1 compares non-comparable r_f_global populations
+    and the verdict is meaningless.
+
+    When ``expected_scenario_set`` / ``expected_n_scenarios`` are
+    provided, this function returns ``None`` if they don't match the
+    baseline run's recorded config — Phase C then surfaces a PENDING
+    verdict with an explanatory evidence string.
+
+    Returns ``None`` when:
+    - phase5 missing / errored
+    - baseline run errored or missing r_f_global
+    - eval-config mismatch (when expected_* args are non-None)
+    """
     p5 = probe.snapshot.get("phase5_trained_policy") or {}
     if not isinstance(p5, dict) or "error" in p5:
         return None
@@ -217,6 +240,14 @@ def _resolve_baseline_eval(probe: "ModelStateProbe") -> dict[str, Any] | None:
     base = runs.get("baseline")
     if not isinstance(base, dict) or "error" in base or "r_f_global" not in base:
         return None
+    # P1 mismatch guard
+    if expected_scenario_set is not None or expected_n_scenarios is not None:
+        base_set = base.get("scenario_set")
+        base_n = base.get("n_scenarios")
+        if expected_scenario_set is not None and base_set != expected_scenario_set:
+            return None
+        if expected_n_scenarios is not None and base_n != expected_n_scenarios:
+            return None
     out = dict(base)
     out["_source"] = "phase5"
     return out
@@ -313,22 +344,40 @@ def run_causality_short_train(probe: "ModelStateProbe") -> dict[str, Any]:
         "errors": [],
     }
 
-    # 1. Resolve baseline eval (Phase B reuse).
-    baseline_eval = _resolve_baseline_eval(probe)
+    # 1. Resolve baseline eval (Phase B reuse) — P1 config-comparability guard.
+    # Phase C evaluates no_rf under scenario_set='none' + eval_n; Phase B
+    # baseline must have used the same config or R1 compares non-comparable
+    # populations.
+    baseline_eval = _resolve_baseline_eval(
+        probe,
+        expected_scenario_set="none",
+        expected_n_scenarios=eval_n,
+    )
     if baseline_eval is None:
-        # Plan §3 says we may run a fresh baseline; for v1 we mark PENDING
-        # rather than re-eval (avoids extra MATLAB cold start when Phase B
-        # snapshot is the standard chain). Caller can run --phase 5,6 to
-        # populate baseline first.
-        base_record["baseline_source"] = "missing"
+        # Distinguish "missing entirely" vs "present but wrong config" so
+        # the operator knows which fix to apply.
+        p5 = probe.snapshot.get("phase5_trained_policy") or {}
+        runs = (p5 or {}).get("runs") or {}
+        base = runs.get("baseline") if isinstance(runs, dict) else None
+        if isinstance(base, dict) and "r_f_global" in base:
+            mismatch_msg = (
+                f"Phase B baseline eval-config mismatch: "
+                f"baseline used scenario_set={base.get('scenario_set')!r} "
+                f"n_scenarios={base.get('n_scenarios')} but Phase C requires "
+                f"scenario_set='none' n_scenarios={eval_n}. Re-run "
+                f"--phase 5,6 with matching --phase-b-n-scenarios {eval_n}."
+            )
+        else:
+            mismatch_msg = (
+                "no Phase B baseline run available; run --phase 5,6 in one "
+                "invocation (or pre-populate phase5_trained_policy.runs.baseline)"
+            )
+        base_record["baseline_source"] = "missing_or_mismatched"
         base_record["baseline_eval"] = None
-        base_record["error"] = (
-            "no Phase B baseline run available; run --phase 5,6 in one invocation "
-            "(or pre-populate phase5_trained_policy.runs.baseline)"
-        )
+        base_record["error"] = mismatch_msg
         base_record["r1_verdict"] = {
             "verdict": "PENDING",
-            "evidence": "baseline_eval missing",
+            "evidence": mismatch_msg,
         }
         return base_record
 

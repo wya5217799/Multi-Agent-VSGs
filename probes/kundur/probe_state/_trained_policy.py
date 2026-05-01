@@ -241,9 +241,29 @@ def _extract_metrics(eval_dict: dict[str, Any]) -> dict[str, Any]:
     if "error" in eval_dict:
         return dict(eval_dict)  # propagate error verbatim
 
-    raw = eval_dict.get("cumulative_reward_global_rf", 0.0)
+    # P2a fix (2026-05-01): silent fallback to 0.0 on schema drift would
+    # mask R1 / G6 verdicts as PASS/REJECT instead of PENDING. Make the
+    # drift loud — return an error payload.
+    raw = eval_dict.get("cumulative_reward_global_rf")
+    if raw is None:
+        return {
+            "error": (
+                "paper_eval JSON missing 'cumulative_reward_global_rf' "
+                "field — schema drift?"
+            ),
+            "wall_s": float(eval_dict.get("_wall_s", 0.0)),
+        }
     if isinstance(raw, dict):
-        r_f_global = float(raw.get("unnormalized", 0.0))
+        if "unnormalized" not in raw:
+            return {
+                "error": (
+                    "paper_eval cumulative_reward_global_rf is a dict but "
+                    "lacks 'unnormalized' key — schema drift? "
+                    f"keys: {sorted(raw.keys())}"
+                ),
+                "wall_s": float(eval_dict.get("_wall_s", 0.0)),
+            }
+        r_f_global = float(raw["unnormalized"])
     else:
         r_f_global = float(raw)
 
@@ -402,6 +422,10 @@ def run_trained_policy_ablation(probe: "ModelStateProbe") -> dict[str, Any]:
                 )
                 metrics = _extract_metrics(eval_dict)
                 metrics["label"] = spec.label
+                # P1 fix (2026-05-01): tag each run's eval config so Phase C
+                # can verify config-comparability before reusing baseline.
+                metrics["scenario_set"] = scenario_set
+                metrics["n_scenarios"] = n_scenarios
                 runs[spec.label] = metrics
                 if "error" in metrics:
                     per_run_errors.append(

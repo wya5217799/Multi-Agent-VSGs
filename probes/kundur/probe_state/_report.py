@@ -71,7 +71,7 @@ def _render_md(snap: dict[str, Any], ts: str) -> str:
     lines.append(f"# Kundur CVS Model State Report — {ts}")
     lines.append("")
     lines.append(
-        "> CLAIM: this is a derived view of `state_snapshot_{ts}.json`. "
+        f"> CLAIM: this is a derived view of `state_snapshot_{ts}.json`. "
         "FACT = the JSON. Cite the JSON path + this timestamp when "
         "referencing values from this report."
     )

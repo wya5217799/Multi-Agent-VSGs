@@ -184,6 +184,12 @@ def _g4_position(snap: dict[str, Any]) -> dict[str, Any]:
             f"need ≥ 2 dispatches with data, got {len(dispatches)}",
         )
 
+    # P2b fix (2026-05-01): G4 must use the same response floor as G1
+    # (single source of truth = THRESHOLDS.g1_respond_hz). Hardcoded
+    # 1e-3 here would silently desync if THRESHOLDS is tuned.
+    from probes.kundur.probe_state.probe_config import THRESHOLDS
+    floor = THRESHOLDS.g1_respond_hz
+
     signatures: dict[str, tuple[int, ...]] = {}
     for d_type, d in dispatches.items():
         per_agent_max = list(
@@ -191,7 +197,7 @@ def _g4_position(snap: dict[str, Any]) -> dict[str, Any]:
         )
         responding = tuple(
             i for i, v in enumerate(per_agent_max)
-            if v > 1e-3  # 1 mHz floor (same as G1)
+            if v > floor
         )
         signatures[d_type] = responding
 

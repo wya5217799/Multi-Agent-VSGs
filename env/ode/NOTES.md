@@ -1,6 +1,20 @@
 # ODE Model Notes
 
-> 修 ODE 模型前必读。与 `docs/paper/yang2023-fact-base.md` 一致。
+> 修 ODE 模型前必读。与 `docs/paper/kd_4agent_paper_facts.md` 一致（论文事实唯一规范文档；旧 `yang2023-fact-base.md` 已归档）。
+
+## 🚀 2026-05-02 Paper-alignment 计划 (active)
+
+**Plan:** `quality_reports/plans/2026-05-02_ode_paper_alignment.md`
+**Deviation registry (D1/D2/D3):** `docs/paper/ode_paper_alignment_deviations.md`
+
+修 ODE 前先读 deviation 文档，3 个固定决策：
+- **D1**：动作范围保留 `[-16.1, 72] / [-14, 54]` 不变；按"机制对齐"解读
+- **D2**：env 接口加性扩展，**保留** `dict` actions + `done` 4-tuple；新增 `reset(scenario=ODEScenario(...))` 关键字 + `info["action_clip" / "termination_reason" / "reward_components"]`
+- **D3**：积分器 RK45 → 固定 RK4 (substeps=20, dt_substep=0.01s)
+
+`docs/paper/python_ode_env_boundary_cn.md` §12-§15 已重分类为"gym 工程惯例非 paper 不变量"。
+
+---
 
 ## ODE 方法边界（项目决策，非论文事实）
 
@@ -10,7 +24,7 @@
 - ODE 路径目标：在 ODE 能力边界内，贴近论文建模目标、实验覆盖、图表形态；关键数值差距须记录为证据，不得滑向"不做数值对标"。
 - "图能画出来" ≠ "动力学真实对应"（典型反例：Fig.20(a) 随机延迟柱图为装饰，非真实延迟）。
 - 以下属于方法/分辨率不可达的 C 类边界，不进开发计划：电压动态、电磁暂态、风机/同步机全阶动态、短路电流、亚控制步通信周期。
-- 文档分区：论文已核实事实 → `docs/paper/yang2023-fact-base.md`；项目口径/决策 → 本文件或 `docs/decisions/`；不得混写。
+- 文档分区：论文已核实事实 → `docs/paper/kd_4agent_paper_facts.md`；项目口径/决策 → 本文件或 `docs/decisions/`；不得混写。
 
 ## Governor 默认策略（项目决策）
 
@@ -99,7 +113,7 @@ H_paper · Δω̇_rad = ω_s·(Δu - L·Δθ) - D · Δω_rad
 
 **证据链**：
 - 论文原文：`C:\Users\27443\Desktop\论文\high_accuracy_transcription_cn.md` Eq.(1)/(4) 行 67-103（原文对 H 量纲全部描述已穷举，仅"虚拟惯量常数"一词）
-- fact-base：`docs/paper/yang2023-fact-base.md` §2.1 Q7 段已同步修订为"原文未给量纲 + 项目工作假设"
+- fact-base：`docs/paper/kd_4agent_paper_facts.md` §13 Q-A（H 量纲未明示）+ §1.1 Eq.1 形式注记
 - 验证脚本：`tests/test_eq1_unit_verification.py`（**验证的是代码自洽 + ω_s 缩放 + 稳态解析，不证明论文等价**）
 
 ## 时变通信时延（M7 · 2026-04-21）

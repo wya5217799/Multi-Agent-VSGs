@@ -22,6 +22,15 @@ from matplotlib.lines import Line2D
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 import config as cfg
 from env.multi_vsg_env import MultiVSGEnv
+from env.ode.ode_scenario import (
+    ODEScenario,
+    ODE_SCENARIO_SETS_DIR,
+    SEED_TEST_DEFAULT,
+    generate_scenarios as _generate_ode_scenarios,
+    load_manifest as _load_ode_manifest,
+    N_TEST_PAPER,
+)
+from env.ode.reward import evaluation_reward_global as _evaluation_reward_global
 from agents.ma_manager import MultiAgentManager
 from plotting.paper_style import (apply_ieee_style, paper_legend, rolling_stats, plot_band,
                                   ES_COLORS_4, ES_FREQ_LABELS_4, ES_H_LABELS_4, ES_D_LABELS_4,
@@ -67,19 +76,36 @@ def _adaptive_inertia_action(obs_dict, k_h=2.0):
 
 
 def run_episode(env, manager=None, delta_u=None, deterministic=True,
-                control_mode='rl'):
-    """运行一个 episode, 返回完整轨迹."""
-    obs = env.reset(delta_u=delta_u)
+                control_mode='rl', scenario=None):
+    """运行一个 episode, 返回完整轨迹.
+
+    M1 fix 2026-05-02: ``scenario`` kwarg added (additive). When provided,
+    takes precedence over ``delta_u`` and uses ``env.reset(scenario=...)``
+    so the scenario VO controls disturbance + comm failures atomically.
+    Legacy ``delta_u=`` callers continue to work unchanged.
+    """
+    if scenario is not None:
+        obs = env.reset(scenario=scenario)
+    else:
+        obs = env.reset(delta_u=delta_u)
 
     t_log = [0.0]
     freq_log = [env.ps.get_state()['freq_hz']]
     P_es_log = [env.ps.get_state()['P_es']]
-    H_log = [cfg.H_ES0.copy()]
-    D_log = [cfg.D_ES0.copy()]
+    # I-2 fix 2026-05-02: read env baseline rather than cfg.H_ES0 so Fig.7/9
+    # ΔH plots stay correct under ODE_HETEROGENEOUS=True (baseline differs
+    # from cfg by up to ODE_H_SPREAD per agent).
+    H_log = [env._H_base.copy()]
+    D_log = [env._D_base.copy()]
     per_agent_rewards = {i: 0.0 for i in range(cfg.N_AGENTS)}
 
+    # I-7 fix 2026-05-02: explicit error rather than silent fixed-mode fallback
+    # when caller asks for RL evaluation but didn't supply a manager.
+    if control_mode == 'rl' and manager is None:
+        raise ValueError("control_mode='rl' requires a non-None manager argument")
+
     for step in range(cfg.STEPS_PER_EPISODE):
-        if control_mode == 'rl' and manager is not None:
+        if control_mode == 'rl':
             actions = manager.select_actions(obs, deterministic=deterministic)
         elif control_mode == 'adaptive_inertia':
             actions = _adaptive_inertia_action(obs)
@@ -111,55 +137,62 @@ def run_episode(env, manager=None, delta_u=None, deterministic=True,
 
 
 def compute_freq_sync_reward(freq_array):
-    """论文全局频率同步奖励: -sum_t sum_i (f_i,t - f_bar_t)^2."""
-    f_bar = freq_array.mean(axis=1, keepdims=True)
-    return -np.sum((freq_array - f_bar) ** 2)
+    """论文全局频率同步奖励 (Sec.IV-C). [DEPRECATED 2026-05-02]
+
+    Use ``env.ode.reward.evaluation_reward_global`` (identical semantics).
+    Shim retained for legacy callers; delegates to new function.
+    """
+    return _evaluation_reward_global(freq_array)
 
 
-TEST_SEED = 99  # P0: 固定测试集 seed，写入 run metadata 以保证跨 run 可复验
+TEST_SEED = SEED_TEST_DEFAULT  # 2026-05-02: aligned with ODEScenario canonical seed
 
 def generate_test_scenarios(n=None, seed=TEST_SEED):
-    """生成固定测试场景集 (Sec.IV-A: 50 randomly generated test scenarios).
+    """[Stage 4 2026-05-02] Returns legacy (delta_u, failed_links) tuple list.
 
-    n 默认读取 cfg.N_TEST_SCENARIOS（P0 要求：不得绕过 cfg 硬编码）。
+    Loads from canonical ODE manifest when seed matches the canonical default;
+    otherwise regenerates in-memory via the ODEScenario generator (which is
+    byte-equal to the historical inline generator at the same seed — verified
+    by Gate 2.b on 2026-05-02).
     """
     if n is None:
         n = cfg.N_TEST_SCENARIOS
-    rng = np.random.default_rng(seed)
-    scenarios = []
-    for _ in range(n):
-        n_disturbed = rng.integers(1, 3)
-        buses = rng.choice(cfg.N_AGENTS, size=n_disturbed, replace=False)
-        delta_u = np.zeros(cfg.N_AGENTS)
-        for bus in buses:
-            mag = rng.uniform(cfg.DISTURBANCE_MIN, cfg.DISTURBANCE_MAX)
-            sign = rng.choice([-1, 1])
-            delta_u[bus] = sign * mag
-        failed_links = []
-        for i, neighbors in cfg.COMM_ADJACENCY.items():
-            for j in neighbors:
-                if (j, i) not in failed_links and rng.random() < cfg.COMM_FAIL_PROB:
-                    failed_links.append((i, j))
-                    failed_links.append((j, i))
-        scenarios.append((delta_u, failed_links if failed_links else None))
-    return scenarios
+    canonical_path = ODE_SCENARIO_SETS_DIR / "kd_test_50.json"
+    if seed == SEED_TEST_DEFAULT and canonical_path.exists() and n == N_TEST_PAPER:
+        s = _load_ode_manifest(canonical_path)
+    else:
+        s = _generate_ode_scenarios(n, seed_base=seed, name=f"adhoc_seed{seed}")
+    return [scenario.to_legacy_tuple() for scenario in s.scenarios]
 
 
 def run_test_set(manager, scenarios, comm_fail_prob=0.0, comm_delay_steps=0,
                  forced_link_failures=None, include_adaptive=False):
-    """跑固定测试场景集, 返回频率同步奖励列表 (论文 Sec.IV-C)."""
+    """跑固定测试场景集, 返回频率同步奖励列表 (论文 Sec.IV-C).
+
+    M1 fix 2026-05-02: now reconstructs ODEScenario VO from the
+    (delta_u, fail_links) tuple shape and routes through scenario=
+    kwarg. Behaviour identical when ``comm_fail_prob=0.0``; with
+    non-zero prob, scenario.comm_failed_links are now authoritative
+    (no probabilistic layering — see M3 fix).
+    """
     env = MultiVSGEnv(random_disturbance=False, comm_fail_prob=comm_fail_prob,
                       comm_delay_steps=comm_delay_steps,
                       forced_link_failures=forced_link_failures)
     rewards_rl, rewards_fixed, rewards_adaptive = [], [], []
-    for delta_u, fail_links in scenarios:
-        env.forced_link_failures = fail_links
-        traj_r = run_episode(env, manager=manager, delta_u=delta_u, control_mode='rl')
-        traj_f = run_episode(env, delta_u=delta_u, control_mode='fixed')
+    for idx, (delta_u, fail_links) in enumerate(scenarios):
+        # Build VO; empty/None failures → empty tuple → probabilistic env
+        # path (legacy semantics preserved when fail_links is None).
+        scenario_vo = ODEScenario(
+            scenario_idx=idx,
+            delta_u=tuple(float(x) for x in np.asarray(delta_u).flatten()),
+            comm_failed_links=tuple(tuple(int(x) for x in p) for p in (fail_links or ())),
+        )
+        traj_r = run_episode(env, manager=manager, scenario=scenario_vo, control_mode='rl')
+        traj_f = run_episode(env, scenario=scenario_vo, control_mode='fixed')
         rewards_rl.append(compute_freq_sync_reward(traj_r['freq']))
         rewards_fixed.append(compute_freq_sync_reward(traj_f['freq']))
         if include_adaptive:
-            traj_a = run_episode(env, delta_u=delta_u, control_mode='adaptive_inertia')
+            traj_a = run_episode(env, scenario=scenario_vo, control_mode='adaptive_inertia')
             rewards_adaptive.append(compute_freq_sync_reward(traj_a['freq']))
     result = (np.array(rewards_rl), np.array(rewards_fixed))
     if include_adaptive:

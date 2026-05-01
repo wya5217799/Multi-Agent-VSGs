@@ -80,20 +80,41 @@ class MultiVSGEnv:
         self.step_count = 0
         self.current_delta_u = np.zeros(self.N)
 
+        # I-1 fix 2026-05-02: pre-init breakdown cache so info dict access is
+        # safe even if a caller introspects info before any step() runs (rare
+        # but possible via subclass / future code path).
+        self._last_reward_breakdown: dict | None = None
+
     def seed(self, s):
         self.rng = np.random.default_rng(s)
 
-    def reset(self, delta_u=None, event_schedule=None):
+    def reset(self, delta_u=None, event_schedule=None, scenario=None):
         """重置环境.
 
         Parameters
         ----------
         delta_u : np.ndarray or None
-            静态扰动 (测试兼容).
+            静态扰动 (legacy).
         event_schedule : EventSchedule or None
             时变事件. 若给出则优先于 delta_u, 并禁用 random_disturbance.
+        scenario : ODEScenario or None
+            (D2 2026-05-02 加性扩展) 若给出则优先于 delta_u；从 VO 读取
+            ``delta_u`` 和 ``comm_failed_links`` 一起套用，等价于旧 caller
+            手动 ``env.forced_link_failures = ...`` + ``env.reset(delta_u=...)``。
+            参见 docs/paper/ode_paper_alignment_deviations.md §D2。
         """
-        if event_schedule is not None:
+        # D2 (2026-05-02): scenario= takes precedence over legacy delta_u.
+        if scenario is not None:
+            from env.ode.ode_scenario import ODEScenario  # local to avoid cycle on import
+            if not isinstance(scenario, ODEScenario):
+                raise TypeError(
+                    f"scenario must be ODEScenario, got {type(scenario).__name__}"
+                )
+            du, fl = scenario.to_legacy_tuple()
+            self.current_delta_u = du
+            self.forced_link_failures = fl
+            self.ps.reset(delta_u=self.current_delta_u)
+        elif event_schedule is not None:
             self.current_delta_u = np.zeros(self.N)
             self.ps.reset(event_schedule=event_schedule)
         else:
@@ -112,10 +133,19 @@ class MultiVSGEnv:
             self.ps.reset(delta_u=self.current_delta_u)
 
         self.step_count = 0
-        self.comm.reset(rng=self.rng)
+        # M3 fix 2026-05-02: when forced failures are specified (either by
+        # legacy ``forced_link_failures`` attr or by ODEScenario.comm_failed_links),
+        # the scenario VO is authoritative — env-level probabilistic
+        # ``comm_fail_prob`` MUST NOT layer extra random failures on top.
+        # Previously ``comm.reset(rng)`` randomized eta first, then forced
+        # overrides only set 0s, leaving prob-failed-but-not-forced links 0.
+        # See critic verdict M3 in quality_reports/verdicts/2026-05-02_ode_gate_1to5.md.
         if self.forced_link_failures:
+            self.comm.reset_no_failure()
             for i, j in self.forced_link_failures:
                 self.comm.eta[(i, j)] = 0
+        else:
+            self.comm.reset(rng=self.rng)
         self._delayed_omega = {}
         self._delayed_omega_dot = {}
         if self.comm_delay_steps > 0:
@@ -159,8 +189,15 @@ class MultiVSGEnv:
             D_es[i] = self._D_base[i] + delta_D[i]
 
         # 确保 H > 0, D > 0 (物理约束)
-        H_es = np.maximum(H_es, 8.0)
-        D_es = np.maximum(D_es, 0.1)
+        # §15 (D2): track clip events for transparency (no silent floor-clipping)
+        _H_FLOOR = 8.0
+        _D_FLOOR = 0.1
+        H_pre_clip = H_es.copy()
+        D_pre_clip = D_es.copy()
+        H_es = np.maximum(H_es, _H_FLOOR)
+        D_es = np.maximum(D_es, _D_FLOOR)
+        H_clipped = bool(np.any(H_pre_clip < _H_FLOOR))
+        D_clipped = bool(np.any(D_pre_clip < _D_FLOOR))
 
         # 2. 设置参数并积分一步
         self.ps.set_params(H_es, D_es)
@@ -174,8 +211,9 @@ class MultiVSGEnv:
         # 4. 计算奖励 (Eq. 17-18: 物理 delta_H/delta_D，与论文公式一致)
         rewards, r_f_sum, r_h_sum, r_d_sum = self._compute_rewards(result, delta_H, delta_D)
 
-        # 5. 终止条件
-        done = self.step_count >= cfg.STEPS_PER_EPISODE
+        # 5. 终止条件: episode 长度耗尽 OR §15 数值安全失败
+        termination_reason = result.get('termination_reason', '')
+        done = (self.step_count >= cfg.STEPS_PER_EPISODE) or bool(termination_reason)
 
         # Max frequency deviation from nominal 50 Hz (per-step, not episode-peak)
         max_freq_deviation_hz = float(np.max(np.abs(result['freq_hz'] - cfg.OMEGA_N / (2 * np.pi))))
@@ -193,6 +231,29 @@ class MultiVSGEnv:
             'r_h': r_h_sum,
             'r_d': r_d_sum,
             'max_freq_deviation_hz': max_freq_deviation_hz,
+            # D2 (2026-05-02 Stage 3): full reward decomposition (paper §10.3).
+            # Legacy keys r_f/r_h/r_d preserved above for backwards compat.
+            'reward_components': {
+                'r_f_per_agent': list(self._last_reward_breakdown['r_f_per_agent']),
+                'r_h_per_agent': list(self._last_reward_breakdown['r_h_per_agent']),
+                'r_d_per_agent': list(self._last_reward_breakdown['r_d_per_agent']),
+                'r_f_total': self._last_reward_breakdown['r_f_total'],
+                'r_h_total': self._last_reward_breakdown['r_h_total'],
+                'r_d_total': self._last_reward_breakdown['r_d_total'],
+                'phi_f': self._last_reward_breakdown['phi_f'],
+                'phi_h': self._last_reward_breakdown['phi_h'],
+                'phi_d': self._last_reward_breakdown['phi_d'],
+            },
+            # D2 (2026-05-02): explicit safety/clip telemetry, see §15 + ode_paper_alignment_deviations.md
+            'action_clip': {
+                'H_clipped': H_clipped,
+                'D_clipped': D_clipped,
+                'H_min_pre_clip': float(H_pre_clip.min()),
+                'D_min_pre_clip': float(D_pre_clip.min()),
+                'H_floor': _H_FLOOR,
+                'D_floor': _D_FLOOR,
+            },
+            'termination_reason': termination_reason,
         }
 
         return obs, rewards, done, info
@@ -239,53 +300,35 @@ class MultiVSGEnv:
     def _compute_rewards(self, state, delta_H, delta_D):
         """计算每个 agent 的奖励 (Eq. 14-18).
 
-        ODE 的 omega 是 rad/s 偏差, 转换为 pu 以对齐论文 reward 量级:
-            pu 偏差 = rad/s 偏差 / (2π × 50)
+        Stage 3 (2026-05-02): delegates to ``env.ode.reward.training_reward_local``
+        for paper-anchored formula. Signature preserved for legacy callers
+        (4-tuple: rewards, r_f_total, r_h_total, r_d_total).
+
+        See:
+          - env/ode/reward.py — pure reward functions
+          - docs/paper/python_ode_env_boundary_cn.md §10 / §11
+          - docs/paper/ode_paper_alignment_deviations.md §D2
 
         Args:
             state: ODE 积分结果
             delta_H: shape (N,), 物理惯量增量 ΔH (s)
             delta_D: shape (N,), 物理阻尼增量 ΔD (p.u.)
         """
-        # rad/s → Hz 转换因子 (论文 Simulink 用 Hz, 反推自 Fig.4 量级)
-        _TO_HZ = 1.0 / (2 * np.pi)
+        from env.ode.reward import training_reward_local
 
-        # Eq.17-18: 物理调整量全局均值 (先均值再平方)
-        ah_avg = float(np.mean(delta_H))   # ΔH_avg
-        ad_avg = float(np.mean(delta_D))   # ΔD_avg
-
-        rewards = {}
-        r_f_total, r_h_total, r_d_total = 0.0, 0.0, 0.0
+        # Build a {(i,j): eta} dict from CommunicationGraph for the pure func.
+        comm_eta: dict[tuple[int, int], int] = {}
         for i in range(self.N):
-            # === Eq. (16): 加权平均频率 (Hz 偏差) ===
-            omega_i_hz = state['omega'][i] * _TO_HZ
-            neighbors = self.comm.get_neighbors(i)
+            for j in self.comm.get_neighbors(i):
+                comm_eta[(i, j)] = 1 if self.comm.is_link_active(i, j) else 0
 
-            sum_omega = omega_i_hz
-            n_active = 1
-            for j in neighbors:
-                if self.comm.is_link_active(i, j):
-                    sum_omega += state['omega'][j] * _TO_HZ
-                    n_active += 1
-            omega_bar = sum_omega / n_active
-
-            # === Eq. (15): 频率同步惩罚 (Hz 单位) ===
-            r_f = -(omega_i_hz - omega_bar) ** 2
-            for j in neighbors:
-                if self.comm.is_link_active(i, j):
-                    r_f -= (state['omega'][j] * _TO_HZ - omega_bar) ** 2
-
-            # === Eq. (17): r_h = -(ΔH_avg)^2  物理量 (M3 统一口径, 2026-04-21) ===
-            # 论文 Eq.17 明示物理量；NE39/scalability/ANDES/Simulink 均物理量，统一至此
-            r_h = -(ah_avg) ** 2
-
-            # === Eq. (18): r_d = -(ΔD_avg)^2  物理量 ===
-            r_d = -(ad_avg) ** 2
-
-            # === Eq. (14): 总奖励 ===
-            rewards[i] = cfg.PHI_F * r_f + cfg.PHI_H * r_h + cfg.PHI_D * r_d
-            r_f_total += cfg.PHI_F * r_f
-            r_h_total += cfg.PHI_H * r_h
-            r_d_total += cfg.PHI_D * r_d
-
-        return rewards, r_f_total, r_h_total, r_d_total
+        out = training_reward_local(
+            omega=state['omega'],
+            delta_H=delta_H,
+            delta_D=delta_D,
+            comm_neighbors={i: list(self.comm.get_neighbors(i)) for i in range(self.N)},
+            comm_eta=comm_eta,
+        )
+        # Cache the full breakdown so step() can attach it to info without recomputing.
+        self._last_reward_breakdown = out
+        return out["rewards"], out["r_f_total"], out["r_h_total"], out["r_d_total"]

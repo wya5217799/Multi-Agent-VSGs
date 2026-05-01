@@ -1,0 +1,790 @@
+{
+  "schema_version": 1,
+  "name": "kd_test_50",
+  "n_scenarios": 50,
+  "seed_base": 99,
+  "n_agents": 4,
+  "dist_min_pu": 0.5,
+  "dist_max_pu": 3.0,
+  "comm_fail_prob": 0.1,
+  "scenarios": [
+    {
+      "scenario_idx": 0,
+      "delta_u": [
+        0.0,
+        1.7797898992301295,
+        0.0,
+        2.0372578549228093
+      ],
+      "comm_failed_links": [],
+      "seed_base": 99
+    },
+    {
+      "scenario_idx": 1,
+      "delta_u": [
+        0.0,
+        1.1756793309982747,
+        0.0,
+        0.0
+      ],
+      "comm_failed_links": [
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          1
+        ]
+      ],
+      "seed_base": 99
+    },
+    {
+      "scenario_idx": 2,
+      "delta_u": [
+        0.0,
+        0.0,
+        0.0,
+        1.587750078915154
+      ],
+      "comm_failed_links": [
+        [
+          3,
+          2
+        ],
+        [
+          2,
+          3
+        ]
+      ],
+      "seed_base": 99
+    },
+    {
+      "scenario_idx": 3,
+      "delta_u": [
+        -0.7828234165404218,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "comm_failed_links": [],
+      "seed_base": 99
+    },
+    {
+      "scenario_idx": 4,
+      "delta_u": [
+        0.0,
+        2.042289346282685,
+        0.0,
+        0.0
+      ],
+      "comm_failed_links": [],
+      "seed_base": 99
+    },
+    {
+      "scenario_idx": 5,
+      "delta_u": [
+        -2.455031003533878,
+        0.0,
+        -2.738370962154152,
+        0.0
+      ],
+      "comm_failed_links": [
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          1
+        ]
+      ],
+      "seed_base": 99
+    },
+    {
+      "scenario_idx": 6,
+      "delta_u": [
+        0.0,
+        1.4926512763891635,
+        0.0,
+        0.0
+      ],
+      "comm_failed_links": [],
+      "seed_base": 99
+    },
+    {
+      "scenario_idx": 7,
+      "delta_u": [
+        0.0,
+        -0.5997419247061415,
+        0.8499786575073758,
+        0.0
+      ],
+      "comm_failed_links": [],
+      "seed_base": 99
+    },
+    {
+      "scenario_idx": 8,
+      "delta_u": [
+        0.9151894121620612,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "comm_failed_links": [],
+      "seed_base": 99
+    },
+    {
+      "scenario_idx": 9,
+      "delta_u": [
+        1.1349853432138088,
+        0.0,
+        -1.7762648304694724,
+        0.0
+      ],
+      "comm_failed_links": [],
+      "seed_base": 99
+    },
+    {
+      "scenario_idx": 10,
+      "delta_u": [
+        0.0,
+        2.999218272759766,
+        1.925490082626054,
+        0.0
+      ],
+      "comm_failed_links": [],
+      "seed_base": 99
+    },
+    {
+      "scenario_idx": 11,
+      "delta_u": [
+        2.9179564844198005,
+        0.0,
+        -0.5524434389201409,
+        0.0
+      ],
+      "comm_failed_links": [
+        [
+          3,
+          2
+        ],
+        [
+          2,
+          3
+        ]
+      ],
+      "seed_base": 99
+    },
+    {
+      "scenario_idx": 12,
+      "delta_u": [
+        0.0,
+        -1.0662504219148556,
+        0.0,
+        0.0
+      ],
+      "comm_failed_links": [
+        [
+          3,
+          2
+        ],
+        [
+          2,
+          3
+        ]
+      ],
+      "seed_base": 99
+    },
+    {
+      "scenario_idx": 13,
+      "delta_u": [
+        0.0,
+        2.5057289283750155,
+        1.1389131594238733,
+        0.0
+      ],
+      "comm_failed_links": [
+        [
+          3,
+          0
+        ],
+        [
+          0,
+          3
+        ]
+      ],
+      "seed_base": 99
+    },
+    {
+      "scenario_idx": 14,
+      "delta_u": [
+        -2.862748012663019,
+        0.0,
+        1.9154731333628046,
+        0.0
+      ],
+      "comm_failed_links": [],
+      "seed_base": 99
+    },
+    {
+      "scenario_idx": 15,
+      "delta_u": [
+        0.0,
+        0.0,
+        -1.37323588516584,
+        0.0
+      ],
+      "comm_failed_links": [],
+      "seed_base": 99
+    },
+    {
+      "scenario_idx": 16,
+      "delta_u": [
+        -0.7837995527550798,
+        0.0,
+        1.407686548088654,
+        0.0
+      ],
+      "comm_failed_links": [],
+      "seed_base": 99
+    },
+    {
+      "scenario_idx": 17,
+      "delta_u": [
+        0.0,
+        0.0,
+        1.8497726041387477,
+        -1.7525835081614478
+      ],
+      "comm_failed_links": [],
+      "seed_base": 99
+    },
+    {
+      "scenario_idx": 18,
+      "delta_u": [
+        0.625374070659347,
+        1.5251470109856293,
+        0.0,
+        0.0
+      ],
+      "comm_failed_links": [],
+      "seed_base": 99
+    },
+    {
+      "scenario_idx": 19,
+      "delta_u": [
+        2.91560872829366,
+        2.9148885136885436,
+        0.0,
+        0.0
+      ],
+      "comm_failed_links": [
+        [
+          0,
+          3
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          3,
+          2
+        ],
+        [
+          2,
+          3
+        ]
+      ],
+      "seed_base": 99
+    },
+    {
+      "scenario_idx": 20,
+      "delta_u": [
+        0.0,
+        0.0,
+        2.934886083258789,
+        0.0
+      ],
+      "comm_failed_links": [],
+      "seed_base": 99
+    },
+    {
+      "scenario_idx": 21,
+      "delta_u": [
+        0.0,
+        0.0,
+        0.9112344122347172,
+        0.0
+      ],
+      "comm_failed_links": [
+        [
+          1,
+          0
+        ],
+        [
+          0,
+          1
+        ]
+      ],
+      "seed_base": 99
+    },
+    {
+      "scenario_idx": 22,
+      "delta_u": [
+        0.0,
+        0.0,
+        2.3090190062781835,
+        0.0
+      ],
+      "comm_failed_links": [],
+      "seed_base": 99
+    },
+    {
+      "scenario_idx": 23,
+      "delta_u": [
+        0.0,
+        0.0,
+        0.0,
+        2.9304870968684673
+      ],
+      "comm_failed_links": [
+        [
+          2,
+          3
+        ],
+        [
+          3,
+          2
+        ]
+      ],
+      "seed_base": 99
+    },
+    {
+      "scenario_idx": 24,
+      "delta_u": [
+        0.0,
+        0.0,
+        -2.5384782577604947,
+        2.9034513066398904
+      ],
+      "comm_failed_links": [
+        [
+          1,
+          0
+        ],
+        [
+          0,
+          1
+        ]
+      ],
+      "seed_base": 99
+    },
+    {
+      "scenario_idx": 25,
+      "delta_u": [
+        0.0,
+        -0.8681203368310709,
+        0.0,
+        2.2174332929494893
+      ],
+      "comm_failed_links": [],
+      "seed_base": 99
+    },
+    {
+      "scenario_idx": 26,
+      "delta_u": [
+        0.0,
+        0.0,
+        -1.8333236195686813,
+        1.1225910818682547
+      ],
+      "comm_failed_links": [
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          0
+        ]
+      ],
+      "seed_base": 99
+    },
+    {
+      "scenario_idx": 27,
+      "delta_u": [
+        0.0,
+        2.014946746147592,
+        0.0,
+        -2.526188592183885
+      ],
+      "comm_failed_links": [
+        [
+          0,
+          3
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          3,
+          2
+        ]
+      ],
+      "seed_base": 99
+    },
+    {
+      "scenario_idx": 28,
+      "delta_u": [
+        1.0793964739828625,
+        1.0226743202046016,
+        0.0,
+        0.0
+      ],
+      "comm_failed_links": [],
+      "seed_base": 99
+    },
+    {
+      "scenario_idx": 29,
+      "delta_u": [
+        0.0,
+        0.0,
+        0.0,
+        -2.891768619941544
+      ],
+      "comm_failed_links": [],
+      "seed_base": 99
+    },
+    {
+      "scenario_idx": 30,
+      "delta_u": [
+        0.0,
+        2.9692937680637272,
+        1.3931553436486415,
+        0.0
+      ],
+      "comm_failed_links": [
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          0,
+          3
+        ]
+      ],
+      "seed_base": 99
+    },
+    {
+      "scenario_idx": 31,
+      "delta_u": [
+        0.0,
+        -1.806634314308621,
+        0.0,
+        0.0
+      ],
+      "comm_failed_links": [],
+      "seed_base": 99
+    },
+    {
+      "scenario_idx": 32,
+      "delta_u": [
+        -2.285220071761569,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "comm_failed_links": [],
+      "seed_base": 99
+    },
+    {
+      "scenario_idx": 33,
+      "delta_u": [
+        0.0,
+        0.0,
+        0.0,
+        1.6811554760208511
+      ],
+      "comm_failed_links": [
+        [
+          3,
+          2
+        ],
+        [
+          2,
+          3
+        ]
+      ],
+      "seed_base": 99
+    },
+    {
+      "scenario_idx": 34,
+      "delta_u": [
+        0.0,
+        0.0,
+        1.3361790707779206,
+        -2.2799156232107842
+      ],
+      "comm_failed_links": [],
+      "seed_base": 99
+    },
+    {
+      "scenario_idx": 35,
+      "delta_u": [
+        0.9782330086042861,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "comm_failed_links": [],
+      "seed_base": 99
+    },
+    {
+      "scenario_idx": 36,
+      "delta_u": [
+        0.0,
+        1.3742541742071042,
+        0.0,
+        0.0
+      ],
+      "comm_failed_links": [],
+      "seed_base": 99
+    },
+    {
+      "scenario_idx": 37,
+      "delta_u": [
+        2.440738506430341,
+        0.0,
+        0.0,
+        -1.289517075913825
+      ],
+      "comm_failed_links": [],
+      "seed_base": 99
+    },
+    {
+      "scenario_idx": 38,
+      "delta_u": [
+        0.0,
+        -1.656646550196971,
+        0.0,
+        0.0
+      ],
+      "comm_failed_links": [],
+      "seed_base": 99
+    },
+    {
+      "scenario_idx": 39,
+      "delta_u": [
+        0.0,
+        0.0,
+        0.0,
+        -1.129106644472628
+      ],
+      "comm_failed_links": [
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          0,
+          3
+        ]
+      ],
+      "seed_base": 99
+    },
+    {
+      "scenario_idx": 40,
+      "delta_u": [
+        1.1039723823264973,
+        0.0,
+        -2.863759321007956,
+        0.0
+      ],
+      "comm_failed_links": [
+        [
+          3,
+          2
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          0,
+          3
+        ]
+      ],
+      "seed_base": 99
+    },
+    {
+      "scenario_idx": 41,
+      "delta_u": [
+        1.3712522648297696,
+        0.0,
+        2.7694272005401213,
+        0.0
+      ],
+      "comm_failed_links": [],
+      "seed_base": 99
+    },
+    {
+      "scenario_idx": 42,
+      "delta_u": [
+        0.0,
+        0.0,
+        0.0,
+        0.6929785712365706
+      ],
+      "comm_failed_links": [
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          0
+        ]
+      ],
+      "seed_base": 99
+    },
+    {
+      "scenario_idx": 43,
+      "delta_u": [
+        0.0,
+        0.5932565917397582,
+        -1.969704039369254,
+        0.0
+      ],
+      "comm_failed_links": [
+        [
+          0,
+          3
+        ],
+        [
+          3,
+          0
+        ]
+      ],
+      "seed_base": 99
+    },
+    {
+      "scenario_idx": 44,
+      "delta_u": [
+        0.0,
+        -1.891386888472062,
+        0.0,
+        0.0
+      ],
+      "comm_failed_links": [
+        [
+          2,
+          1
+        ],
+        [
+          1,
+          2
+        ]
+      ],
+      "seed_base": 99
+    },
+    {
+      "scenario_idx": 45,
+      "delta_u": [
+        0.0,
+        1.7999970815295074,
+        0.0,
+        -2.289723856336028
+      ],
+      "comm_failed_links": [
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          1
+        ]
+      ],
+      "seed_base": 99
+    },
+    {
+      "scenario_idx": 46,
+      "delta_u": [
+        2.6760100386814747,
+        0.0,
+        -2.60945172585465,
+        0.0
+      ],
+      "comm_failed_links": [],
+      "seed_base": 99
+    },
+    {
+      "scenario_idx": 47,
+      "delta_u": [
+        0.0,
+        1.1926500177900712,
+        0.0,
+        -1.6433502317731388
+      ],
+      "comm_failed_links": [],
+      "seed_base": 99
+    },
+    {
+      "scenario_idx": 48,
+      "delta_u": [
+        0.0,
+        -2.6389528324100935,
+        0.0,
+        0.0
+      ],
+      "comm_failed_links": [],
+      "seed_base": 99
+    },
+    {
+      "scenario_idx": 49,
+      "delta_u": [
+        0.0,
+        -1.0523298483304881,
+        -2.4320043399699927,
+        0.0
+      ],
+      "comm_failed_links": [],
+      "seed_base": 99
+    }
+  ]
+}

@@ -24,37 +24,49 @@ import torch
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 import config as cfg
 from env.multi_vsg_env import MultiVSGEnv
+from env.ode.ode_scenario import (
+    ODEScenario,
+    ODE_SCENARIO_SETS_DIR,
+    SEED_TRAIN_DEFAULT,
+    generate_scenarios as _generate_ode_scenarios,
+    load_manifest as _load_ode_manifest,
+    save_manifest as _save_ode_manifest,
+    N_TRAIN_PAPER,
+)
 from agents.ma_manager import MultiAgentManager
 from utils.monitor import TrainingMonitor
 
 
+# DEPRECATED 2026-05-02 — kept temporarily for any external caller. Use
+# ``env.ode.ode_scenario.generate_scenarios`` + on-disk manifest instead.
 def generate_scenario_set(n_scenarios, seed=0):
-    """
-    预生成固定的扰动场景集 (论文 Sec IV-A).
-    每个场景: (delta_u, comm_fail_links)
-    """
-    rng = np.random.default_rng(seed)
-    scenarios = []
-    for _ in range(n_scenarios):
-        # 随机 1-2 个母线施加扰动
-        n_disturbed = rng.integers(1, 3)
-        buses = rng.choice(cfg.N_AGENTS, size=n_disturbed, replace=False)
-        delta_u = np.zeros(cfg.N_AGENTS)
-        for bus in buses:
-            magnitude = rng.uniform(cfg.DISTURBANCE_MIN, cfg.DISTURBANCE_MAX)
-            sign = rng.choice([-1, 1])
-            delta_u[bus] = sign * magnitude
+    """[DEPRECATED] Use env.ode.ode_scenario.generate_scenarios + manifest.
 
-        # 随机通信链路故障
-        failed_links = []
-        for i, neighbors in cfg.COMM_ADJACENCY.items():
-            for j in neighbors:
-                if (j, i) not in failed_links and rng.random() < cfg.COMM_FAIL_PROB:
-                    failed_links.append((i, j))
-                    failed_links.append((j, i))
+    Returns the legacy (delta_u, failed_links) tuple list shape, kept as a
+    thin shim around the new ODEScenario generator so we cannot drift.
+    """
+    s = _generate_ode_scenarios(n_scenarios, seed_base=seed, name="legacy_shim")
+    return [scenario.to_legacy_tuple() for scenario in s.scenarios]
 
-        scenarios.append((delta_u, failed_links if failed_links else None))
-    return scenarios
+
+def _load_or_generate_train_set(seed: int) -> tuple[list[ODEScenario], str | None]:
+    """Resolve the canonical ODE training set.
+
+    Strategy:
+      - If seed matches the canonical SEED_TRAIN_DEFAULT and the on-disk
+        manifest exists, load it. (paper-aligned reproducibility, §16)
+      - Otherwise regenerate in-memory from the requested seed (no disk
+        write — caller's choice of an experimental seed should not clobber
+        the canonical manifest).
+
+    Returns (scenarios, manifest_path_or_None).
+    """
+    canonical_path = ODE_SCENARIO_SETS_DIR / "kd_train_100.json"
+    if seed == SEED_TRAIN_DEFAULT and canonical_path.exists():
+        s = _load_ode_manifest(canonical_path)
+        return list(s.scenarios), str(canonical_path)
+    s = _generate_ode_scenarios(cfg.N_TRAIN_SCENARIOS, seed_base=seed, name=f"adhoc_seed{seed}")
+    return list(s.scenarios), None
 
 
 def train(args):
@@ -65,8 +77,12 @@ def train(args):
     seed_info = seed_everything(args.seed)
     warmup_rng = np.random.default_rng(args.seed)
 
-    # ── 生成固定训练场景集 ──
-    train_scenarios = generate_scenario_set(cfg.N_TRAIN_SCENARIOS, seed=args.seed)
+    # ── 加载/生成固定训练场景集 (Stage 4 2026-05-02: 从 ODEScenario manifest) ──
+    train_scenarios, train_manifest_path = _load_or_generate_train_set(args.seed)
+    if train_manifest_path is not None:
+        print(f"  [scenario set] loaded canonical manifest: {train_manifest_path}")
+    else:
+        print(f"  [scenario set] adhoc seed={args.seed} (in-memory; not persisted)")
 
     # ── 环境 (不使用内部随机扰动, 由外部指定) ──
     env = MultiVSGEnv(random_disturbance=False, comm_fail_prob=0.0)
@@ -119,13 +135,10 @@ def train(args):
     t_start = time.time()
 
     for episode in range(args.episodes):
-        # 从固定场景集中循环选取
+        # 从固定场景集中循环选取 (D2 2026-05-02: ODEScenario VO via reset(scenario=))
         scenario_idx = episode % len(train_scenarios)
-        delta_u, forced_failures = train_scenarios[scenario_idx]
-
-        # 设置强制链路故障
-        env.forced_link_failures = forced_failures
-        obs = env.reset(delta_u=delta_u)
+        scenario = train_scenarios[scenario_idx]
+        obs = env.reset(scenario=scenario)
 
         ep_rewards = {i: 0.0 for i in range(cfg.N_AGENTS)}
         ep_r_f, ep_r_h, ep_r_d = 0.0, 0.0, 0.0
@@ -235,9 +248,10 @@ def train(args):
         "train_set": {
             "n_train": int(cfg.N_TRAIN_SCENARIOS),
             "seed": int(args.seed),
-            "generator": "generate_scenario_set",
+            "generator": "env.ode.ode_scenario.generate_scenarios",
+            "manifest_path": train_manifest_path,
         },
-        "note": "Kundur 训练侧固定集已绑 cfg.N_TRAIN_SCENARIOS (train_ode.py:64)",
+        "note": "Stage 4 2026-05-02: ODEScenario VO + manifest (env/ode/ode_scenario.py)",
     }
     meta_path = os.path.join(save_dir, 'run_meta.json')
     with open(meta_path, 'w') as f:

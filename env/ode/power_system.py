@@ -16,13 +16,23 @@
 """
 
 import numpy as np
-from scipy.integrate import solve_ivp
 from env.network_topology import build_laplacian
 from utils.ode_events import (
     DisturbanceEvent,
     LineTripEvent,
     EventSchedule,
 )
+
+# D3 (2026-05-02): Fixed-step RK4 for byte-level reproducibility.
+# See docs/paper/ode_paper_alignment_deviations.md §D3 for rationale.
+_RK4_DT_SUBSTEP: float = 0.01            # boundary doc §12 recommends 0.005-0.01s
+# §15 numerical safety thresholds — calibrated to project unit convention.
+# Note: boundary doc §15 suggests |dw|<10, |theta|<10 in dimensionless form.
+# This codebase keeps omega in rad/s (NOT pu) and theta in rad (linearized swing
+# without governor → drift expected). Thresholds therefore raised to catch
+# numerical runaway only, not normal linear-model drift.
+_MAX_ABS_OMEGA: float = 50.0             # rad/s — ~8 Hz deviation, far past any physical scenario
+_MAX_ABS_THETA: float = 100.0            # rad — ~16 cycles; linear model has no restoring mean
 
 
 class PowerSystem:
@@ -91,6 +101,14 @@ class PowerSystem:
         state_dim = 3 * self.N if self.governor_enabled else 2 * self.N
         self.state = np.zeros(state_dim)
 
+        # D3 RK4 substep config
+        self._rk4_dt_substep = _RK4_DT_SUBSTEP
+        self._n_substeps = max(1, int(round(self.dt / self._rk4_dt_substep)))
+        self._rk4_dt_actual = self.dt / self._n_substeps
+
+        # §15 termination tracking: empty string = healthy, non-empty = failed
+        self._termination_reason: str = ""
+
     def reset(self, delta_u=None, event_schedule=None):
         """重置系统到稳态.
 
@@ -104,6 +122,7 @@ class PowerSystem:
         self.state = np.zeros(self.state.shape[0])
         self.H_es = self.H_es0.copy()
         self.D_es = self.D_es0.copy()
+        self._termination_reason = ""
         # Restore original topology so each episode starts from intact network
         if self._B_matrix0 is not None:
             self.B_matrix = self._B_matrix0.copy()
@@ -205,6 +224,45 @@ class PowerSystem:
         domega_dt = M_inv * (self.omega_s * (self.delta_u - coupling) - self.D_es * omega)
         return np.concatenate([dtheta_dt, domega_dt])
 
+    def _rk4_integrate(self, t_start: float, x0: np.ndarray, dt_total: float) -> np.ndarray:
+        """Fixed-step classical RK4 integrator over [t_start, t_start+dt_total].
+
+        Subdivides into ``self._n_substeps`` substeps of width ``self._rk4_dt_actual``.
+        D3 (2026-05-02): replaces ``scipy.integrate.solve_ivp`` for byte-level
+        reproducibility. See docs/paper/ode_paper_alignment_deviations.md §D3.
+        """
+        x = x0.copy()
+        h = self._rk4_dt_actual
+        t = t_start
+        for _ in range(self._n_substeps):
+            k1 = self._dynamics(t,         x)
+            k2 = self._dynamics(t + h / 2, x + (h / 2) * k1)
+            k3 = self._dynamics(t + h / 2, x + (h / 2) * k2)
+            k4 = self._dynamics(t + h,     x + h * k3)
+            x = x + (h / 6.0) * (k1 + 2.0 * k2 + 2.0 * k3 + k4)
+            t += h
+        return x
+
+    def _check_safety(self, state: np.ndarray) -> str:
+        """§15 numerical-safety gate. Returns reason string ('' = healthy).
+
+        Checks (in priority order):
+            1. NaN / Inf in state
+            2. |Δω| beyond threshold (loss of synch / runaway)
+            3. |Δθ| beyond threshold (angle wrap / pole-slip)
+
+        H/D positivity is enforced upstream by env clip floor; not re-checked here.
+        """
+        if not np.all(np.isfinite(state)):
+            return "non_finite_state"
+        omega = state[self.N:2 * self.N]
+        if np.any(np.abs(omega) > _MAX_ABS_OMEGA):
+            return "omega_exceeds_threshold"
+        theta = state[:self.N]
+        if np.any(np.abs(theta) > _MAX_ABS_THETA):
+            return "theta_exceeds_threshold"
+        return ""
+
     def step(self):
         """
         积分一步 (dt 秒).
@@ -217,6 +275,14 @@ class PowerSystem:
             omega_dot : np.ndarray (N,) — 频率变化率 (rad/s²)
             P_es : np.ndarray (N,) — 储能输出功率 ΔP_es = (L · Δθ)_i
             freq_hz : np.ndarray (N,) — 频率 (Hz)
+            termination_reason : str — '' if healthy, else §15 failure reason
+
+        Notes
+        -----
+        D3 (2026-05-02): integration is fixed-step RK4 with ``n_substeps``
+        per control step. State is kept advanced even on safety failure so
+        the env layer can inspect the failure mode; ``termination_reason``
+        signals the env to set ``done=True``.
         """
         t_start = self.current_time
         t_end = t_start + self.dt
@@ -224,21 +290,12 @@ class PowerSystem:
         # Apply events whose nominal time maps to current step index
         self._apply_events()
 
-        sol = solve_ivp(
-            self._dynamics,
-            [t_start, t_end],
-            self.state,
-            method='RK45',
-            rtol=1e-6,
-            atol=1e-8,
-            max_step=self.dt / 10,
-        )
+        # D3: fixed-step RK4 (replaces solve_ivp(RK45))
+        self.state = self._rk4_integrate(t_start, self.state, self.dt)
 
-        if not sol.success:
-            raise RuntimeError(
-                f"solve_ivp failed at step {self._step_count}: {sol.message}"
-            )
-        self.state = sol.y[:, -1]
+        # §15: numerical safety gate
+        self._termination_reason = self._check_safety(self.state)
+
         self.current_time = t_end
         self._step_count += 1
 
@@ -265,6 +322,7 @@ class PowerSystem:
             'P_es': P_es.copy(),
             'freq_hz': freq_hz.copy(),
             'time': self.current_time,
+            'termination_reason': self._termination_reason,
         }
 
     def get_state(self):

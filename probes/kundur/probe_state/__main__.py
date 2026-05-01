@@ -122,7 +122,21 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="DEBUG-level logging",
     )
+    parser.add_argument(
+        "--diff",
+        nargs=2,
+        metavar=("PREV", "CURR"),
+        default=None,
+        help="Field-level diff between two state_snapshot_*.json files. "
+             "Short-circuits all phases; prints diff to stdout, exits 0 "
+             "if identical, 1 otherwise. Design §5.6 (F2).",
+    )
     args = parser.parse_args(argv)
+
+    # F2 short-circuit: --diff prev curr ⇒ run diff and exit, no probe phases.
+    if args.diff:
+        from probes.kundur.probe_state._diff import diff_snapshots
+        return diff_snapshots(Path(args.diff[0]), Path(args.diff[1]))
 
     logging.basicConfig(
         level=logging.DEBUG if args.verbose else logging.INFO,

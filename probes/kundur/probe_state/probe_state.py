@@ -26,6 +26,7 @@ from probes.kundur.probe_state import (
     _trained_policy,
     _verdict,
 )
+from probes.kundur.probe_state.probe_config import IMPLEMENTATION_VERSION
 
 logger = logging.getLogger(__name__)
 
@@ -61,6 +62,7 @@ class ModelStateProbe:
         self.snapshot.update(
             {
                 "schema_version": SCHEMA_VERSION,
+                "implementation_version": IMPLEMENTATION_VERSION,
                 "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S%z") or time.strftime("%Y-%m-%dT%H:%M:%S"),
                 "git_head": _git_head(),
                 "config": {

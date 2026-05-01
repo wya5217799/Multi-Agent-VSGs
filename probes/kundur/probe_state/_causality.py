@@ -46,15 +46,14 @@ logger = logging.getLogger(__name__)
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
-# R1 verdict threshold (plan §3). Same scale as Phase B G6 IMPROVE_TOL.
-IMPROVE_TOL_R1_SYS_PU_SQ = 0.5
+# R1 / train thresholds — sourced from probe_config (F1 2026-05-01).
+# Module-level aliases preserve grep-ability for existing references.
+from probes.kundur.probe_state.probe_config import THRESHOLDS
 
-# Train wall ceiling per short-train (plan §6 Step 2). Conservative 24 hr.
-TRAIN_TIMEOUT_S = 86400
-
-# Smoke / full episode counts (plan §6 Step 8).
-EPISODES_SMOKE = 10
-EPISODES_FULL = 200
+IMPROVE_TOL_R1_SYS_PU_SQ = THRESHOLDS.r1_improve_tol_sys_pu_sq
+TRAIN_TIMEOUT_S = THRESHOLDS.train_timeout_s
+EPISODES_SMOKE = THRESHOLDS.episodes_smoke
+EPISODES_FULL = THRESHOLDS.episodes_full
 
 # Default PHI baselines from config_simulink.py (used unless overridden by mode).
 PHI_F_BASELINE = 100.0

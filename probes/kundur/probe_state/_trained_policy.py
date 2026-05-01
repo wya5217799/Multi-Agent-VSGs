@@ -40,12 +40,16 @@ logger = logging.getLogger(__name__)
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
-# G6 verdict thresholds (Plan §5). Surfaced in snapshot.phase5 so that
-# downstream consumers can see exactly which thresholds produced the verdict.
-G6_K_REQUIRED_CONTRIBUTORS = 2          # ≥ K agents must contribute → PASS
-G6_NOISE_THRESHOLD_SYS_PU_SQ = 1e-3      # |ablation_diff| > NOISE → contribute
-G6_IMPROVE_TOL_SYS_PU_SQ = 0.5           # baseline > zero_all + IMPROVE_TOL → PASS
-PAPER_EVAL_TIMEOUT_S = 900               # plan §3 single-run wall ceiling
+# G6 / paper_eval thresholds — sourced from probe_config (F1 2026-05-01).
+# Module-level aliases kept for back-compat: existing self-tests + downstream
+# consumers can still grep for these names. Default values move with the
+# centralised THRESHOLDS container.
+from probes.kundur.probe_state.probe_config import THRESHOLDS
+
+G6_K_REQUIRED_CONTRIBUTORS = THRESHOLDS.g6_k_required_contributors
+G6_NOISE_THRESHOLD_SYS_PU_SQ = THRESHOLDS.g6_noise_threshold_sys_pu_sq
+G6_IMPROVE_TOL_SYS_PU_SQ = THRESHOLDS.g6_improve_tol_sys_pu_sq
+PAPER_EVAL_TIMEOUT_S = THRESHOLDS.paper_eval_timeout_s
 
 
 @dataclass(frozen=True)

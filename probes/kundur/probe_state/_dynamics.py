@@ -37,7 +37,10 @@ logger = logging.getLogger(__name__)
 # 50 Hz nominal; project Kundur convention (config.py FN).
 F_NOM_HZ = 50.0
 DT_S = 0.2
-RESPOND_THRESHOLD_HZ = 1e-3  # G1 trigger floor
+
+# G1 trigger floor — sourced from probe_config (F1 2026-05-01).
+from probes.kundur.probe_state.probe_config import THRESHOLDS
+RESPOND_THRESHOLD_HZ = THRESHOLDS.g1_respond_hz
 
 
 def _sha256_array(arr: np.ndarray) -> str:

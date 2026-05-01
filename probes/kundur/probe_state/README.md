@@ -98,6 +98,18 @@ self-test `test_dispatch_metadata_coverage_against_known_types`
 guarantees the metadata stays in sync with the dispatch table — adding
 a new dispatch without a metadata row triggers a CI failure here.
 
+## Versioning (F5 / design §10.2)
+
+Snapshots carry two version fields:
+
+- `schema_version` (int, default `1`) — bump only when `state_snapshot.json`
+  **field shape** changes (rename / drop / repurpose). Old snapshots still
+  load until a migration is shipped.
+- `implementation_version` (semver, see `probe_config.py`) — bump on
+  **algorithm** changes (verdict thresholds, discovery heuristics) that
+  leave the schema intact. Old snapshots stay loadable; verdict numbers
+  across versions need CHANGELOG context. Use `--diff` to inspect.
+
 ## Known caveats
 
 - `aggregate_residual_pu`: `kundur_ic_cvs_v3.json` does not record a single

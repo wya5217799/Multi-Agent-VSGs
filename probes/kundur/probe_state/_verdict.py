@@ -142,9 +142,10 @@ def _g3_gradient(snap: dict[str, Any]) -> dict[str, Any]:
         if not share:
             results.append({"dispatch": d_type, "skipped": "no share data"})
             continue
+        from probes.kundur.probe_state.probe_config import THRESHOLDS
         mean_share = sum(share) / len(share)
         diff = max(share) - min(share)
-        threshold = 0.05 * abs(mean_share) if mean_share != 0 else 0.0
+        threshold = THRESHOLDS.g3_share_diff_rel * abs(mean_share) if mean_share != 0 else 0.0
         passes = (diff > threshold) and (diff > 0)
         results.append(
             {
@@ -335,9 +336,11 @@ def _g6_trained_policy(snap: dict[str, Any]) -> dict[str, Any]:
 def _g5_trace(snap: dict[str, Any]) -> dict[str, Any]:
     """Per-agent omega-std should differ across agents in some dispatch.
 
-    PASS if any phase 3 or phase 4 std-diff exceeds noise floor (1e-7 pu).
+    PASS if any phase 3 or phase 4 std-diff exceeds the noise floor
+    (default 1e-7 pu, sourced from ``probe_config.THRESHOLDS``).
     """
-    noise_floor = 1e-7
+    from probes.kundur.probe_state.probe_config import THRESHOLDS
+    noise_floor = THRESHOLDS.g5_noise_floor_pu
     candidates: list[tuple[str, float]] = []
 
     p3 = _phase3(snap)

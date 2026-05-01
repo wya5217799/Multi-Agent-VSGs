@@ -326,6 +326,135 @@ When you (AI) make changes to `probes/kundur/probe_state/`:
 4. Update `USAGE.md` if user-facing CLI / behaviour changed.
 5. Update this `AGENTS.md` only if AI-decision rules changed.
 6. ASK before commit; "1 commit" or "ship it" needed in user message.
+7. Run the **commit-time self-audit** below (§11a) and paste the
+   resulting block into the commit message body before committing.
+
+---
+
+## 11a. Commit-time self-audit (MANDATORY)
+
+**Trigger**: any commit whose `git diff --name-only HEAD` touches one
+or more of:
+
+```
+probes/kundur/probe_state/_verdict.py        (verdict logic)
+probes/kundur/probe_state/_trained_policy.py (Phase B + metrics extraction)
+probes/kundur/probe_state/_causality.py      (Phase C + R1 + baseline resolution)
+probes/kundur/probe_state/_dynamics.py       (Phase 3+4 + reconcile)
+probes/kundur/probe_state/_discover.py       (Phase 1 schema)
+probes/kundur/probe_state/_nr_ic.py          (Phase 2 schema)
+probes/kundur/probe_state/_report.py         (snapshot serialisation)
+probes/kundur/probe_state/probe_state.py     (snapshot top-level shape)
+probes/kundur/probe_state/probe_config.py    (thresholds / version)
+probes/kundur/probe_state/dispatch_metadata.py (DispatchMetadata schema / floors)
+```
+
+(Touching only `__init__.py`, `__main__.py` CLI plumbing, `_diff.py`,
+`README.md`, `USAGE.md`, `AGENTS.md`, or `tests/` does NOT trigger
+the audit unless one of the above co-changes.)
+
+### The 5 audit questions
+
+For every triggering commit, write the answer block into the commit
+message **body** (one line each, exact key names):
+
+```
+impl-version-impact:      yes | no
+schema-version-impact:    yes | no
+verdict-semantics-impact: yes | no
+threshold-default-impact: yes | no
+silent-error-path-impact: yes | no
+```
+
+Question definitions (use these exact rules; do not re-interpret):
+
+1. **`impl-version-impact: yes`** if the commit changes any code path
+   that produces verdict numbers, verdict strings, or evidence
+   strings, OR changes a default value in
+   `probe_config.ProbeThresholds`. A "bug fix" that changes what
+   verdict the probe emits for the same input data IS an
+   impl-version-impact (this is the 1a86de2 / 9825e85 case).
+
+2. **`schema-version-impact: yes`** if the commit renames, removes,
+   or repurposes a snapshot JSON field. **Additive** new fields
+   inside the existing `schema_version=1` envelope are allowed and
+   answer `no`; document them in the CHANGELOG anyway.
+
+3. **`verdict-semantics-impact: yes`** if running the same input
+   through pre-commit code vs post-commit code can produce a
+   different `verdict` ∈ {PASS, REJECT, PENDING} for any G1..G6
+   gate or R1 sub-verdict. Includes "widened PENDING coverage on
+   previously-silent error paths".
+
+4. **`threshold-default-impact: yes`** if any field on
+   `ProbeThresholds` (or any per-dispatch `expected_min_df_hz` /
+   `expected_max_df_hz`) gains a different default than before.
+   Pure additive new fields with `default=None` answer `no`.
+
+5. **`silent-error-path-impact: yes`** if the commit converts a
+   silent fallback (`get(..., 0.0)`, `try: ... except: pass`,
+   missing-key default) into either an error payload, a PENDING
+   verdict, or a logger.warning that downstream consumers will see.
+   This is the P2a-class fix.
+
+### Action mapping
+
+```
+Any answer = yes ⇒ MUST also do (in the same commit):
+  impl-version-impact      → bump probe_config.IMPLEMENTATION_VERSION
+                             (patch for bug fix; minor for new behaviour;
+                             major for incompatible algorithm change)
+                             AND add a CHANGELOG entry
+  schema-version-impact    → bump SCHEMA_VERSION AND document migration
+                             AND add a CHANGELOG entry
+  verdict-semantics-impact → impl-version-impact must also be yes
+                             (verdict semantics is a strict subset of
+                             impl semantics)
+  threshold-default-impact → impl-version-impact must also be yes
+                             AND name the field in the CHANGELOG entry
+  silent-error-path-impact → impl-version-impact must also be yes
+                             (this was the meta-mistake in 1a86de2;
+                             do not repeat)
+
+All answers = no ⇒ commit message body explicitly states
+                   "internal cleanup, no verdict semantics change"
+                   so the no-bump decision is auditable.
+```
+
+### Enforcement
+
+- **Reviewer gate**: any external review SHOULD reject a commit on
+  triggering files that lacks the audit block, regardless of
+  perceived correctness.
+- **Self-check before commit**: AI agents MUST run the audit
+  mentally and paste the block; committing without the block on a
+  triggering file is a process violation.
+- **No pre-commit hook yet**: the audit is doc-enforced for now;
+  upgrade to a hook if compliance drifts.
+
+### Worked example (from real history)
+
+Commit `1a86de2` was the meta-correction that this audit exists to
+prevent. The triggering commit (`9825e85`, P1/P2/P3 batch) should
+have carried:
+
+```
+impl-version-impact:      yes
+schema-version-impact:    no
+verdict-semantics-impact: yes
+threshold-default-impact: no
+silent-error-path-impact: yes
+
+(P1: R1 mismatch path now emits PENDING instead of PASS/REJECT;
+ P2a: schema-drift path now emits error instead of r_f_global=0.0.
+ Both are silent-error-path widenings; both are
+ verdict-semantics-impact; both require impl-version bump per
+ README §"Versioning". Bumping IMPLEMENTATION_VERSION 0.4.0 -> 0.4.1
+ + CHANGELOG entry in this commit.)
+```
+
+Had `9825e85` carried this block, `1a86de2` would not have been
+needed — the audit would have forced the version bump in-line.
 
 ---
 

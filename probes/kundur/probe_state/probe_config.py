@@ -95,10 +95,28 @@ THRESHOLDS = ProbeThresholds()
 # Implementation version (F5)
 # ---------------------------------------------------------------------------
 
-IMPLEMENTATION_VERSION = "0.4.0"
+IMPLEMENTATION_VERSION = "0.4.1"
 """Probe algorithm version — semver. See README §"Versioning" for bump rules.
 
 CHANGELOG (rolling, last 5):
+- 0.4.1 (2026-05-01) — verdict-semantics fixes from external code review:
+  * P1: R1 now PENDING when Phase B baseline eval-config (scenario_set /
+    n_scenarios) does not match Phase C no_rf eval. Pre-0.4.1 silently
+    compared incommensurable r_f_global populations and could emit
+    PASS or REJECT on non-comparable data.
+  * P2a: ``_extract_metrics`` now returns an error payload when paper_eval
+    JSON is missing ``cumulative_reward_global_rf`` or its dict shape
+    lacks the ``unnormalized`` key. Pre-0.4.1 fell back to r_f_global=0.0,
+    erroneously marking R1 REJECT (no_rf "looks better than baseline")
+    instead of PENDING.
+  * P2b: G4 responder floor now sourced from ``THRESHOLDS.g1_respond_hz``
+    (was hardcoded 1e-3). G1 / G4 cannot desynchronise across threshold tunes.
+  * P3: report template literal ``{ts}`` placeholder fixed (cosmetic).
+  * Phase B baseline run now records ``scenario_set`` + ``n_scenarios``
+    (additive schema, schema_version=1 unchanged); used by P1 guard.
+  Snapshot-level effect: some snapshots that pre-0.4.1 emitted PASS / REJECT
+  on Phase C R1 will emit PENDING under 0.4.1. Cross-version --diff
+  WARNs on impl_version mismatch.
 - 0.4.0 (2026-05-01) — F1 thresholds externalised; F5 impl_version added;
   F2 ``--diff`` CLI added. Phase A+B+C verdict logic unchanged (numeric
   values preserved); only sourcing layer changed.

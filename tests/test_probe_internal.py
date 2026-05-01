@@ -978,12 +978,22 @@ def test_p2b_g4_uses_thresholds_singleton(monkeypatch):
 
 
 def test_i2_init_exports_version():
-    """I2 review fix: __init__.py exports __version__ for importlib.metadata."""
+    """I2 review fix: __init__.py exports __version__ for importlib.metadata.
+
+    Also asserts ≥ 0.4.1 floor — pre-0.4.1 verdict semantics on R1 / G4
+    differ from current behaviour (see probe_config CHANGELOG); checks
+    cross-version reading callers should require this floor.
+    """
     import probes.kundur.probe_state as pkg
     assert hasattr(pkg, "__version__"), "__version__ missing from package"
     # Semver shape: 'X.Y.Z'
     parts = pkg.__version__.split(".")
     assert len(parts) == 3 and all(p.isdigit() for p in parts), pkg.__version__
+    major, minor, patch = (int(p) for p in parts)
+    assert (major, minor, patch) >= (0, 4, 1), (
+        f"impl_version {pkg.__version__} below 0.4.1 floor — pre-0.4.1 "
+        "P1/P2 verdict-semantics fixes not present"
+    )
 
 
 def test_phase_c_short_train_subprocess_uses_probe_phase_c_run_id_prefix(monkeypatch):

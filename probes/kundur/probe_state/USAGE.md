@@ -19,7 +19,10 @@ Kundur CVS Simulink 模型的**运行时 ground-truth 探针**.
 - trained-policy 是否真用 4 agent (Phase 5, ablation)
 - φ_f reward penalty 是不是因果 driver (Phase 6, 短训 + R1)
 
-输出 6 个 falsification gates G1-G6, 全 PASS = paper anchor 解锁条件满足.
+输出 6 个 falsification gates G1-G6, 每个 verdict ∈ {PASS, REJECT, PENDING, ERROR}
++ reason_codes (v0.5.0 冻结词表). 探针只收集事实; anchor 解锁 / 论文对齐 /
+phase 解锁判定 — 都是消费方 / 操作者的决定, 不在探针里 (见下面"paper-anchor
+解锁 — 谁判定?").
 
 ---
 
@@ -183,18 +186,40 @@ Type B 设计如此).
 ### `STATE_REPORT_<TS>.md` 顶部速查
 
 ```markdown
-| Gate                  | Verdict     | Evidence
-| G1_signal             | ✅ PASS     | best dispatch 'pm_step_hybrid_sg_es' excites 4 agents > 1 mHz
-| G2_measurement        | ✅ PASS     | open-loop omega sha256: 4/4 distinct
-| G3_gradient           | ✅ PASS     | 12 of 12 dispatches show non-degenerate per-agent share gradient
-| G4_position           | ✅ PASS     | 2 distinct responder signatures across 12 dispatches
-| G5_trace              | ✅ PASS     | largest std-diff = 2.127e-03 pu in 'pm_step_proxy_bus9'
-| G6_trained_policy     | ✅ PASS     | G6_partial=PASS, R1=PASS; ...
+| Gate                  | Verdict     | Reason codes        | Evidence
+| G1_signal             | ✅ PASS     | `EVIDENCE_OK`       | best dispatch 'pm_step_hybrid_sg_es' excites 4 agents > 1 mHz
+| G2_measurement        | ✅ PASS     | `EVIDENCE_OK`       | open-loop omega sha256: 4/4 distinct
+| G3_gradient           | ✅ PASS     | `EVIDENCE_OK`       | 12 of 12 dispatches show non-degenerate per-agent share gradient
+| G4_position           | ✅ PASS     | `EVIDENCE_OK`       | 2 distinct responder signatures across 12 dispatches
+| G5_trace              | ✅ PASS     | `EVIDENCE_OK`       | largest std-diff = 2.127e-03 pu in 'pm_step_proxy_bus9'
+| G6_trained_policy     | ✅ PASS     | `EVIDENCE_OK`       | G6_partial=PASS, R1=PASS; ...
 ```
 
-**全 PASS** = paper anchor 解锁条件满足.
-**任一 REJECT** = 见 `evidence` 字段查具体故障.
-**PENDING** = 该 phase 没跑 / 数据不足, 不算失败.
+**verdict 4 态 (v0.5.0)**:
+
+| Verdict | 含义 | 怎么处理 |
+|---|---|---|
+| ✅ `PASS` | 数据齐 + 阈值满足 | 消费结果即可 |
+| ❌ `REJECT` | 数据齐 + 阈值不满足 | 看 evidence + reason_codes 确诊 |
+| ⏳ `PENDING` | 数据不足以下结论 | 跑相应 phase 即可解锁 |
+| 🛑 `ERROR` | pipeline 失败 (phase 抛 / 子进程崩) | **不要重跑**, 先排查代码/环境 |
+
+**reason_codes** (`probe_config.REASON_CODES` 冻结词表) 让你不用读
+evidence 字符串就能 pattern-match:
+
+| Code | Verdict 类 | 触发 |
+|---|---|---|
+| `EVIDENCE_OK` | PASS | gate 条件满足 |
+| `THRESHOLD_NOT_MET` | REJECT | gate 条件可计算但未达阈值 |
+| `MISSING_PHASE` | PENDING | 上游 phase 整体缺失 |
+| `MISSING_FIELD` | PENDING | phase 在但必需字段缺 |
+| `EMPTY_DATA` | PENDING | 字段在但无样本 |
+| `INSUFFICIENT_DISPATCHES` | PENDING | < 2 dispatch (G4) |
+| `BASELINE_MISMATCH` | PENDING | Phase B baseline eval-config 与 Phase C 不一致 |
+| `SCHEMA_DRIFT` | PENDING | paper_eval JSON 结构异常 |
+| `PHASE_ERRORED` | ERROR | upstream phase 抛 exception |
+| `TRAIN_FAILED` | ERROR | Phase C short-train subprocess 失败 |
+| `EVAL_FAILED` | ERROR | paper_eval subprocess 抛 / schema drift |
 
 ### Phase 4 表 (跑 phase 4 后)
 
@@ -212,16 +237,18 @@ runaway divergence / 阻尼崩.
 
 ---
 
-## paper-anchor lock 解锁判定
+## paper-anchor 解锁 — 谁判定?
 
-CLAUDE.md hard rule: **G1-G6 全 PASS 才能引 paper 数字 / 跑 PHI sweep**.
+**v0.5.0 起, 探针不做 anchor 解锁判定.**
 
-跨 snapshot 也可以满足:
-- G1-G5 fresh PASS (< 7 day age) 来自 `--phase 1,2,3,4` snapshot
-- G6 PASS 来自 `--phase 5,6 --phase-c-mode full` snapshot
+探针只输出 G1-G6 的 verdict + reason_codes + evidence + timestamp.
+是否引 paper 数字 / 跑 PHI sweep / unlock anchor — 由消费 verdict
+的 agent / 操作者 决定. CLAUDE.md PAPER-ANCHOR HARD RULE 引用的是
+探针产出的 G1-G6 verdict, **freshness 判定 / 跨 snapshot 组合规则**
+属于决策层, 不在探针里.
 
-写 verdict markdown 引用两份 snapshot 即可 (示例:
-`quality_reports/phase_C_R1_verdict_20260501T074245.md`).
+具体决策时手工读: snapshot 顶部 `timestamp` 字段 + `falsification_gates`
++ 每个 gate 的 `reason_codes`, 然后跟用户对一下再做.
 
 ---
 

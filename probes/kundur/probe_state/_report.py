@@ -13,6 +13,7 @@ VERDICT_GLYPH = {
     "PASS": "✅",
     "REJECT": "❌",
     "PENDING": "⏳",
+    "ERROR": "🛑",
 }
 
 
@@ -88,10 +89,10 @@ def _render_md(snap: dict[str, Any], ts: str) -> str:
         )
 
     lines.append("")
-    lines.append("## Falsification Gates (Phase A: G1-G5; Phase B: G6)")
+    lines.append("## Falsification Gates (Phase A: G1-G5; Phase B/C: G6)")
     lines.append("")
-    lines.append("| Gate | Verdict | Evidence |")
-    lines.append("|------|---------|----------|")
+    lines.append("| Gate | Verdict | Reason codes | Evidence |")
+    lines.append("|------|---------|--------------|----------|")
     gates = snap.get("falsification_gates", {}) or {}
     # Sorted iteration so future gates (G7, G8, ...) appear automatically
     # in alphabetical order. Gn names sort lexicographically ⇒ same order
@@ -101,7 +102,11 @@ def _render_md(snap: dict[str, Any], ts: str) -> str:
         verdict = g.get("verdict", "PENDING")
         glyph = VERDICT_GLYPH.get(verdict, "?")
         evidence = g.get("evidence", "—")
-        lines.append(f"| {gname} | {glyph} `{verdict}` | {evidence} |")
+        codes = g.get("reason_codes", []) or []
+        codes_str = ", ".join(f"`{c}`" for c in codes) if codes else "—"
+        lines.append(
+            f"| {gname} | {glyph} `{verdict}` | {codes_str} | {evidence} |"
+        )
 
     lines.append("")
     lines.append("## Phase 1 — Static Topology")
@@ -441,14 +446,6 @@ def _render_md(snap: dict[str, Any], ts: str) -> str:
         for e in errors:
             lines.append(f"- `{e.get('phase')}`: {e.get('error')}")
 
-    lines.append("")
-    lines.append("---")
-    lines.append("")
-    lines.append(
-        "Plans: `quality_reports/plans/2026-04-30_probe_state_kundur_cvs.md` "
-        "(Phase A) + `quality_reports/plans/2026-05-01_probe_state_phase_B.md` "
-        "(Phase B). Phases C/D deferred."
-    )
     return "\n".join(lines) + "\n"
 
 

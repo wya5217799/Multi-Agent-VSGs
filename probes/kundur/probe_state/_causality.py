@@ -259,39 +259,39 @@ def _compute_r1_verdict(
 ) -> dict[str, Any]:
     """R1: r_f(no_rf) - r_f(baseline) < -IMPROVE_TOL ⇒ PASS.
 
-    PENDING when either eval errored / missing / not present.
+    Verdict mapping:
+    - either eval missing                ⇒ PENDING + MISSING_PHASE
+    - either eval errored                ⇒ ERROR   + EVAL_FAILED
+    - r_f_global missing                 ⇒ PENDING + MISSING_FIELD
+    - threshold met / not met            ⇒ PASS / REJECT (EVIDENCE_OK / THRESHOLD_NOT_MET)
 
-    Spurious vs healthy R1 PASS — known V1 ambiguity (deferred to V1.1):
-    - **Healthy** R1 PASS: ``no_rf.r_f`` lies between ``baseline.r_f`` and
-      ``zero_all.r_f`` ⇒ no_rf training did learn weak r_h/r_d control but
-      lost the φ_f signal ⇒ φ_f IS a causal driver.
-    - **Spurious** R1 PASS: ``no_rf.r_f ≈ zero_all.r_f`` ⇒ no_rf training
-      did NOT learn anything (e.g. 200 ep too few; reward magnitude
-      collapsed; SAC stuck) ⇒ R1 PASS reflects "no training vs trained"
-      rather than the φ_f penalty being causal.
-
-    V1 does NOT distinguish these cases automatically. Downstream consumers
-    of ``r1_verdict`` must check ``zero_all`` from
-    ``snap.phase5_trained_policy.runs.zero_all.r_f_global`` and compare
-    against ``no_rf_r_f_global`` before treating R1 PASS as causal evidence.
-    A future V1.1 enhancement will add a ``subverdict`` field
-    (healthy / spurious) automatically.
+    Note (interpretation, not verdict logic): downstream consumers of an
+    R1 PASS may want to compare ``no_rf_r_f_global`` against
+    ``zero_all.r_f_global`` from phase5 before treating R1 PASS as
+    causal evidence — that's a consumer-side concern, not a probe
+    verdict. See design notes in ``docs/design/probe_state_design.md``.
     """
     if baseline_eval is None or no_rf_eval is None:
         return {
             "verdict": "PENDING",
             "evidence": "baseline or no_rf eval missing",
+            "reason_codes": ["MISSING_PHASE"],
         }
     if "error" in baseline_eval or "error" in no_rf_eval:
         return {
-            "verdict": "PENDING",
+            "verdict": "ERROR",
             "evidence": (
                 f"baseline.error={baseline_eval.get('error')}, "
                 f"no_rf.error={no_rf_eval.get('error')}"
             ),
+            "reason_codes": ["EVAL_FAILED"],
         }
     if "r_f_global" not in baseline_eval or "r_f_global" not in no_rf_eval:
-        return {"verdict": "PENDING", "evidence": "r_f_global missing in eval"}
+        return {
+            "verdict": "PENDING",
+            "evidence": "r_f_global missing in eval",
+            "reason_codes": ["MISSING_FIELD"],
+        }
 
     base_rf = float(baseline_eval["r_f_global"])
     no_rf_rf = float(no_rf_eval["r_f_global"])
@@ -303,6 +303,7 @@ def _compute_r1_verdict(
             f"baseline.r_f={base_rf:+.3f} vs no_rf.r_f={no_rf_rf:+.3f} "
             f"(diff={diff:+.3f}; IMPROVE_TOL={IMPROVE_TOL_R1_SYS_PU_SQ})"
         ),
+        "reason_codes": ["EVIDENCE_OK" if pass_cond else "THRESHOLD_NOT_MET"],
         "improvement_baseline_minus_no_rf": -diff,
         "baseline_r_f_global": base_rf,
         "no_rf_r_f_global": no_rf_rf,
@@ -375,9 +376,19 @@ def run_causality_short_train(probe: "ModelStateProbe") -> dict[str, Any]:
         base_record["baseline_source"] = "missing_or_mismatched"
         base_record["baseline_eval"] = None
         base_record["error"] = mismatch_msg
+        # BASELINE_MISMATCH = config-comparable Phase B baseline absent;
+        # MISSING_PHASE = no Phase B baseline at all. Pick by message
+        # prefix to keep the reason code precise without re-running the
+        # detection logic.
+        baseline_code = (
+            "BASELINE_MISMATCH"
+            if mismatch_msg.startswith("Phase B baseline eval-config mismatch")
+            else "MISSING_PHASE"
+        )
         base_record["r1_verdict"] = {
             "verdict": "PENDING",
             "evidence": mismatch_msg,
+            "reason_codes": [baseline_code],
         }
         return base_record
 
@@ -411,9 +422,12 @@ def run_causality_short_train(probe: "ModelStateProbe") -> dict[str, Any]:
         if "stderr_tail" in train_result:
             base_record["errors"][-1]["stderr_tail"] = train_result["stderr_tail"]
         base_record["no_rf_eval"] = None
+        # Short-train pipeline failure ⇒ ERROR (re-run alone won't self-heal;
+        # operator must diagnose timeout / non-zero exit / no-best.pt).
         base_record["r1_verdict"] = {
-            "verdict": "PENDING",
+            "verdict": "ERROR",
             "evidence": f"short-train failed: {train_result['error']}",
+            "reason_codes": ["TRAIN_FAILED"],
         }
         return base_record
 
@@ -431,9 +445,11 @@ def run_causality_short_train(probe: "ModelStateProbe") -> dict[str, Any]:
             {"phase": "eval", "error": f"{type(exc).__name__}: {exc}"}
         )
         base_record["no_rf_eval"] = None
+        # Eval subprocess crash ⇒ ERROR (paper_eval pipeline broke).
         base_record["r1_verdict"] = {
-            "verdict": "PENDING",
+            "verdict": "ERROR",
             "evidence": f"no_rf eval crashed: {exc}",
+            "reason_codes": ["EVAL_FAILED"],
         }
         return base_record
     base_record["wall_eval_s"] = time.perf_counter() - eval_t0

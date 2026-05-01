@@ -150,20 +150,36 @@ Path: `results/harness/kundur/probe_state/state_snapshot_latest.json`
 
 ## 5. Verdict semantics (state machine)
 
-Each gate ∈ {`PASS`, `REJECT`, `PENDING`}. Routing rules:
+Each gate ∈ {`PASS`, `REJECT`, `PENDING`, `ERROR`}. Every gate verdict
+dict also carries `reason_codes: list[str]` drawn from the frozen
+vocabulary in `probe_config.REASON_CODES`. Routing rules:
 
 ```
-Verdict       ⇒ AI next action
-PASS          ⇒ green; consume the result
-REJECT        ⇒ data is decisive but anomalous; show user the evidence
-                 string and ASK before taking corrective action
-PENDING       ⇒ data insufficient to decide; if user wanted that gate,
-                 propose the missing phase command (decision table §3)
+Verdict   ⇒ AI next action
+PASS      ⇒ green; consume the result
+REJECT    ⇒ data is decisive but anomalous; show user the evidence string
+              + reason_codes and ASK before taking corrective action
+PENDING   ⇒ data insufficient to decide; re-running the missing phase
+              would resolve. Propose the relevant command from §3.
+              Reason codes: MISSING_PHASE / MISSING_FIELD / EMPTY_DATA /
+              INSUFFICIENT_DISPATCHES / BASELINE_MISMATCH / SCHEMA_DRIFT.
+ERROR     ⇒ pipeline failure (a phase threw / subprocess crashed). Re-
+              running alone will NOT self-heal — diagnose the underlying
+              code or environment first. Reason codes: PHASE_ERRORED /
+              TRAIN_FAILED / EVAL_FAILED.
 ```
+
+PENDING vs ERROR is the v0.5.0 contract distinction: PENDING is
+recoverable by data, ERROR requires code/env investigation. Old (pre-
+0.5.0) snapshots that lacked this distinction surfaced ERROR conditions
+as PENDING; the cross-version `--diff` will WARN on impl_version
+mismatch.
 
 `G6.scope` field disambiguates Phase B vs Phase C composite:
-- `"g6_partial_only"` ⇒ Phase 6 absent or errored; verdict = G6_partial
-- `"g6_complete"`     ⇒ Phase 6 present; verdict = G6_partial AND R1
+- `"g6_partial_only"` ⇒ Phase 6 absent; verdict = G6_partial
+- `"g6_complete"`     ⇒ Phase 6 present (or errored); verdict combines
+                        G6_partial AND R1 (or surfaces phase6 ERROR with
+                        partial preserved in the `g6_partial` extras).
 
 ---
 
@@ -206,11 +222,30 @@ probe_config.ProbeThresholds and bump IMPLEMENTATION_VERSION instead.
 Symptom                                        ⇒ Action
 ─────────────────────────────────────────────────────────────────────────
 "matlab.engine not available"                  ⇒ check andes_env path; pip install matlabengine
+gate verdict = ERROR (any)                     ⇒ inspect reason_codes:
+                                                  - PHASE_ERRORED ⇒ read snapshot.<phase>.error;
+                                                                     fix code/env; re-run
+                                                  - TRAIN_FAILED  ⇒ check results/.../training_log.json
+                                                                     for NaN / low convergence
+                                                  - EVAL_FAILED   ⇒ check evaluation/paper_eval.py
+                                                                     stderr; verify schema
+                                                 NEVER treat ERROR as PENDING — re-running alone
+                                                 will not self-heal.
+gate verdict = PENDING (any)                   ⇒ inspect reason_codes:
+                                                  - MISSING_PHASE         ⇒ propose phase command
+                                                  - MISSING_FIELD         ⇒ phase data drift; check
+                                                                            _dynamics.py / _trained_policy.py
+                                                  - EMPTY_DATA            ⇒ same; data emission gap
+                                                  - INSUFFICIENT_DISPATCHES ⇒ run more dispatches
+                                                  - BASELINE_MISMATCH     ⇒ re-run Phase B with
+                                                                            scenario_set='none' n=eval_n
+                                                  - SCHEMA_DRIFT          ⇒ paper_eval JSON shape changed
 phase4 dispatches all error                    ⇒ MATLAB engine stuck or production train running;
                                                  retry once, then STOP and tell user
 Phase 6 short-train: no best.pt produced       ⇒ smoke mode is plumbing-only; if full mode →
                                                  check results/.../training_log.json for NaN
 G1 PENDING after --phase 5,6 alone             ⇒ expected: G1 needs phase4 data;
+                                                 reason_codes=['MISSING_PHASE'];
                                                  propose --phase 1,2,3,4 sweep
 "--diff baseline latest" → FileNotFoundError   ⇒ run --promote-baseline once; default
                                                  baseline = the V1 full mode snapshot if available
@@ -225,26 +260,20 @@ implementation_version mismatch in --diff      ⇒ probe algorithm bumped; verdi
 
 ---
 
-## 8. Cross-snapshot paper-anchor unlock
+## 8. (removed in v0.5.0) Anchor-unlock judgments
 
-CLAUDE.md HARD RULE wants G1-G6 all PASS, but they may live in
-**different snapshots**:
+Earlier versions of this guide carried a "cross-snapshot paper-anchor
+unlock recipe" here. **Removed in v0.5.0.** The probe collects facts
+(verdicts + reason_codes + evidence + timestamps); deciding whether
+the project may cite paper numbers / run PHI sweep / unlock anchor is
+the **calling agent's** judgment, not the probe's. The probe does not
+encode freshness rules, multi-snapshot composition, or any "if all
+PASS then green-light X" automation.
 
-```
-Required:
-  - G1-G5 PASS in some "paper-anchor gate" snapshot < 7 day age
-    (typically from --phase 1,2,3,4 run)
-  - G6 PASS in a "Phase 5+6 full" snapshot < 7 day age
-    (from --phase 5,6 --phase-c-mode full run)
-
-Verification recipe:
-  1. find paper-anchor snapshot:
-       grep paper-anchor verdict in quality_reports/phase_C_R1_verdict_*.md
-       (most recent verdict markdown is canonical)
-  2. confirm both age stamps (json field "timestamp") within 7 days of NOW
-  3. if either snapshot is stale → re-run; do not unlock anchor based
-     on stale verdict
-```
+If you are deciding anchor unlock, read the latest snapshot's
+`falsification_gates`, the per-gate `timestamp` (the snapshot's
+top-level field; phases are not separately timestamped), and the
+relevant `reason_codes` — then make the call yourself with the user.
 
 ---
 
@@ -280,9 +309,14 @@ Checkpoint discovery       ← probes.kundur.probe_state._trained_policy.
 ## 10. Common AI mis-reads (avoid)
 
 ```
-Mis-read 1: G6 PENDING means "broken"
-  Reality: PENDING = data insufficient (e.g. R1 train didn't converge).
-  Phase B PASS evidence preserved in g6_partial extras field.
+Mis-read 1: G6 PENDING means "broken" / G6 ERROR means "wait for more data"
+  Reality (v0.5.0): PENDING = data insufficient — re-running the
+  relevant phase resolves it. ERROR = pipeline failure (phase threw,
+  subprocess crashed) — re-running alone will NOT fix it; diagnose code
+  or env first. Phase B PASS evidence is preserved in g6_partial extras
+  even when phase6 is in ERROR. Read reason_codes to disambiguate
+  (PHASE_ERRORED / TRAIN_FAILED / EVAL_FAILED ⇒ ERROR; MISSING_*  /
+  EMPTY_DATA / INSUFFICIENT_DISPATCHES ⇒ PENDING).
 
 Mis-read 2: dispatch with high max|Δf| is good
   Reality: above_expected_ceiling can flag runaway divergence (damping

@@ -60,9 +60,13 @@ Design source: `docs/design/probe_state_design.md` (§1-§10).
    `evaluation/paper_eval.py` / `env/` / `engine/`. The single
    exception is the D-minimal `--run-id` flag in
    `scenarios/kundur/train_simulink.py` (Phase C plan §2).
-6. **PAPER-ANCHOR HARD RULE** (CLAUDE.md) — citing paper numbers /
-   running PHI sweep requires G1-G6 all fresh PASS. The probe
-   *measures* this; enforcement is operator-side (manual, by design).
+6. **probe measures, does not interpret** — the probe collects facts
+   (G1-G6 verdicts + reason_codes + evidence + timestamps) and stops
+   there. Anchor-unlock decisions, paper-alignment judgments, and
+   cross-phase composition rules belong to consuming agents, not the
+   probe. CLAUDE.md PAPER-ANCHOR HARD RULE references G1-G6 verdicts
+   the probe produces; whether any given verdict set is "fresh enough"
+   for an anchor unlock is the operator/agent's call, not encoded here.
 
 Violating any of P1-P6 = design regression. Phase B/C plans §2 enumerate
 allowed extensions.
@@ -93,9 +97,17 @@ allowed extensions.
 | G5 — trace | "agent omega-std collapses to one number" | std diff across agents > 1e-7 pu (some run) |
 | G6 — trained-policy | "policy is degenerate AND/OR φ_f penalty isn't causal" | G6_partial PASS (Phase B) + R1 PASS (Phase C) |
 
-Gate verdicts ∈ {`PASS`, `REJECT`, `PENDING`}. Logic in `_verdict.py`.
-For state-machine semantics (how AI / operator should route on each
+Gate verdicts ∈ {`PASS`, `REJECT`, `PENDING`, `ERROR`} (v0.5.0). Each
+verdict dict also carries `reason_codes: list[str]` from a frozen
+vocabulary in `probe_config.REASON_CODES`. Logic in `_verdict.py`. For
+state-machine semantics (how AI / operator should route on each
 verdict), see `AGENTS.md` §5.
+
+**ERROR vs PENDING (v0.5.0)**: PENDING means data insufficient —
+re-running the relevant phase resolves it. ERROR means a pipeline
+failure (phase threw, subprocess crashed); re-running alone does not
+self-heal. The distinction is enforced by `_verdict.py` and asserted
+at the report layer.
 
 ---
 

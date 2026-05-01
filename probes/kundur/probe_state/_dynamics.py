@@ -308,6 +308,13 @@ def run_per_dispatch(probe: "ModelStateProbe") -> dict[str, Any]:
                     floor_status = "expected_floor_unknown"
                 else:
                     floor_status = "ok"
+                # Verdict-relevant fields (G1/G3/G4): the four keys
+                # ``agents_responding_above_1mHz``,
+                # ``max_abs_f_dev_hz_per_agent``, and ``r_f_local_share``
+                # MUST be present on the success path. _verdict.py
+                # distinguishes "field missing" (PENDING + MISSING_FIELD)
+                # from "field present but zero" (REJECT + THRESHOLD_NOT_MET).
+                # Do not silently drop these even if the data is degenerate.
                 results[d_type] = {
                     "metadata": md,
                     "applied_magnitude_sys_pu": mag,

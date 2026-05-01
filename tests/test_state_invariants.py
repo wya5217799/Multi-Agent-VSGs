@@ -10,11 +10,16 @@
   egg break). Otherwise must PASS — Type A FAIL = build script broke or
   paper FACT changed → STOP and investigate.
 
-**Type B — data-required** (3 tests):
-  Phase-data-dependent invariants. Skip cleanly when the relevant phase
-  is missing or errored (fail-soft per plan §3). Reach REJECT verdicts
-  produced by the probe should still result in PASS at this layer
-  (the verdict itself is the regression observable, not its value).
+**Type B — data-required**:
+  Phase-data-dependent invariants. SKIP when the relevant phase is
+  *missing* (fail-soft for fresh snapshots without all phases yet).
+  *ERRORED* phases — under v0.5.0 — are pipeline-failure signals, not
+  data-insufficiency signals; Type B treats ERRORED as data unavailable
+  here too (pytest.skip), but the upstream gate's ERROR verdict is a
+  separate test target via test_typeB_no_unexpected_error_verdicts.
+  Reach REJECT verdicts produced by the probe should still result in
+  PASS at this layer (the verdict itself is the regression observable,
+  not its value).
 
 Run::
 
@@ -123,15 +128,19 @@ def test_typeB_omega_per_agent_distinct(snap):
 def test_typeB_g1_verdict_decided(snap):
     """G1 must reach a decisive verdict (PASS or REJECT) when phase 4 ran.
 
-    PENDING ⇒ data was insufficient to decide. REJECT is acceptable here:
-    the historical state has G1 REJECT under the current build (Probe B
-    1.33-of-4 result, see results/harness/kundur/cvs_v3_probe_b/...). We
-    flag drift in Type A tests, NOT here.
+    v0.5.0 distinction:
+    - PENDING ⇒ data was insufficient to decide (e.g. missing required
+      field) — skip; not a regression.
+    - ERROR ⇒ pipeline failure (phase4 errored or sub-pipeline crash) —
+      skip here, surfaced separately by ``test_typeB_no_unexpected_error_verdicts``.
+    - REJECT is acceptable; we flag historical-state drift via Type A.
     """
     p4 = snap.get("phase4_per_dispatch") or {}
     if "error" in p4 or not p4 or not p4.get("dispatches"):
-        pytest.skip("phase4 not run / no dispatches")
+        pytest.skip("phase4 not run / no dispatches / errored")
     g1 = (snap.get("falsification_gates") or {}).get("G1_signal", {})
+    if g1.get("verdict") in ("PENDING", "ERROR"):
+        pytest.skip(f"G1 verdict not decided: {g1!r}")
     assert g1.get("verdict") in {"PASS", "REJECT"}, (
         f"G1 verdict undecided: {g1!r}"
     )
@@ -223,14 +232,14 @@ def test_typeB_g6_decided(snap):
 @pytest.mark.typeB
 def test_typeB_phase6_r1_verdict_present(snap):
     """Plan §6 Step 6 — once Phase 6 ran, r1_verdict must be present and
-    valid (PASS / REJECT / PENDING)."""
+    valid (PASS / REJECT / PENDING / ERROR per v0.5.0)."""
     p6 = snap.get("phase6_causality") or {}
     if "error" in p6 or not p6:
         pytest.skip("phase6 not run / errored")
     r1 = p6.get("r1_verdict") or {}
     if not r1:
         pytest.skip("r1_verdict empty")
-    assert r1.get("verdict") in {"PASS", "REJECT", "PENDING"}, (
+    assert r1.get("verdict") in {"PASS", "REJECT", "PENDING", "ERROR"}, (
         f"R1 verdict invalid: {r1!r}"
     )
     assert "evidence" in r1, f"R1 has no evidence string: {r1!r}"
@@ -257,4 +266,66 @@ def test_typeB_g6_complete_decided_or_skip(snap):
     if r1.get("verdict") == "REJECT" or partial.get("verdict") == "REJECT":
         assert g6.get("verdict") == "REJECT", (
             f"G6 should REJECT when any sub-verdict REJECT: {g6!r}"
+        )
+
+
+# ===========================================================================
+# v0.5.0 — Evidence-Pack contract checks against the latest snapshot
+# ===========================================================================
+
+
+@pytest.mark.typeB
+def test_typeB_no_unexpected_error_verdicts(snap):
+    """v0.5.0: ERROR verdicts indicate pipeline failures (phase errored,
+    train/eval crashed). When the latest snapshot has any gate in ERROR
+    state, the operator must investigate; this test FAILs (not SKIPs) so
+    pipeline brokenness is surfaced rather than silently absorbed.
+
+    A snapshot from a partial probe run (e.g. ``--phase 1,2`` only) where
+    later phases were never attempted produces PENDING verdicts (handled
+    by SKIP elsewhere); ERROR specifically means a phase WAS attempted
+    and FAILED.
+    """
+    gates = snap.get("falsification_gates") or {}
+    if not gates:
+        pytest.skip("no falsification_gates block in snapshot")
+    errored = {
+        gname: gv
+        for gname, gv in gates.items()
+        if isinstance(gv, dict) and gv.get("verdict") == "ERROR"
+    }
+    if not errored:
+        return  # all clear
+    # Build a compact failure message naming each ERROR gate + its reason.
+    summary = "; ".join(
+        f"{gname}={gv.get('reason_codes', '?')} ({gv.get('evidence','')[:60]})"
+        for gname, gv in errored.items()
+    )
+    pytest.fail(
+        f"{len(errored)} gate(s) in ERROR state — pipeline failure, "
+        f"not data insufficiency: {summary}"
+    )
+
+
+@pytest.mark.typeB
+def test_typeB_reason_codes_present_on_v050_snapshot(snap):
+    """v0.5.0: snapshots produced under impl_version >= 0.5.0 must carry
+    reason_codes on every gate. Older snapshots (impl < 0.5.0 or impl
+    None) are skipped — _diff treats their absence as ``[]``."""
+    impl = snap.get("implementation_version")
+    if impl is None:
+        pytest.skip("snapshot predates impl_version field")
+    parts = str(impl).split(".")
+    if len(parts) != 3 or not all(p.isdigit() for p in parts):
+        pytest.skip(f"non-semver impl_version {impl!r}")
+    if tuple(int(p) for p in parts) < (0, 5, 0):
+        pytest.skip(f"snapshot impl_version {impl} < 0.5.0; reason_codes optional")
+    gates = snap.get("falsification_gates") or {}
+    if not gates:
+        pytest.skip("no falsification_gates block")
+    for gname, gv in gates.items():
+        codes = gv.get("reason_codes")
+        assert isinstance(codes, list) and len(codes) > 0, (
+            f"{gname} missing or empty reason_codes under v0.5.0 contract: "
+            f"{gv!r}"
         )

@@ -92,13 +92,74 @@ THRESHOLDS = ProbeThresholds()
 
 
 # ---------------------------------------------------------------------------
+# reason_codes vocabulary (v0.5.0 frozen set)
+# ---------------------------------------------------------------------------
+#
+# Every gate verdict dict carries ``reason_codes: list[str]`` whose members
+# are drawn from this frozenset. Adding a code is a minor IMPLEMENTATION
+# bump (verdict-semantics widening); renaming or removing a code is a
+# schema bump (consumers may switch on the literal).
+#
+# Codes are paired with verdicts as follows:
+#   PASS    → EVIDENCE_OK
+#   REJECT  → THRESHOLD_NOT_MET
+#   PENDING → MISSING_PHASE | MISSING_FIELD | EMPTY_DATA
+#             | INSUFFICIENT_DISPATCHES | BASELINE_MISMATCH | SCHEMA_DRIFT
+#   ERROR   → PHASE_ERRORED | TRAIN_FAILED | EVAL_FAILED
+#
+# A verdict dict MUST carry at least one reason_code; an empty list is a
+# contract violation (asserted at write time by _verdict._verdict()).
+REASON_CODES: frozenset[str] = frozenset({
+    "EVIDENCE_OK",
+    "THRESHOLD_NOT_MET",
+    "MISSING_PHASE",
+    "MISSING_FIELD",
+    "EMPTY_DATA",
+    "INSUFFICIENT_DISPATCHES",
+    "BASELINE_MISMATCH",
+    "SCHEMA_DRIFT",
+    "PHASE_ERRORED",
+    "TRAIN_FAILED",
+    "EVAL_FAILED",
+})
+
+
+# ---------------------------------------------------------------------------
 # Implementation version (F5)
 # ---------------------------------------------------------------------------
 
-IMPLEMENTATION_VERSION = "0.4.1"
+IMPLEMENTATION_VERSION = "0.5.0"
 """Probe algorithm version — semver. See README §"Versioning" for bump rules.
 
 CHANGELOG (rolling, last 5):
+- 0.5.0 (2026-05-01) — Evidence-Pack boundary: ERROR verdict + reason_codes.
+  * verdict-semantics: phases that errored (snapshot[phaseN].error present)
+    now route to ``verdict="ERROR"`` instead of being silently absorbed into
+    PENDING by the ``_phase3()/_phase4()`` helpers. PENDING now strictly
+    means "data insufficient" (re-run the missing phase); ERROR strictly
+    means "pipeline broke" (re-run won't self-heal — fix code or env).
+  * verdict-semantics: G1/G2/G4 missing-field paths (`get(..., 0)` /
+    `or []` silent fallbacks) now emit PENDING + ``MISSING_FIELD`` reason
+    codes instead of fabricating REJECT verdicts from zero values. G3
+    EMPTY_DATA path likewise distinguished from REJECT.
+  * additive: every gate verdict dict now carries ``reason_codes:
+    list[str]`` drawn from the frozen ``REASON_CODES`` vocabulary. Empty
+    lists are a contract violation (asserted at write time).
+  * additive: ``VERDICT_ERROR = "ERROR"`` is a new value of the existing
+    ``verdict`` string field; no field renamed/removed/repurposed, so
+    ``schema_version`` stays at 1. Old snapshots remain readable; ``--diff``
+    treats missing reason_codes as ``[]`` automatically via the field-
+    agnostic walk in ``_diff.py`` (no _diff.py code change required).
+  * Phase B/C reporting metrics (r_h_global, r_d_global, ablation_diffs)
+    are intentionally NOT touched — they don't feed verdicts under the
+    G6 contract (G6_partial uses only r_f_global). Out-of-scope per the
+    boundary contract: no experiment/training/paper-alignment changes.
+  * AGENTS.md §8 cross-snapshot paper-anchor unlock recipe DELETED —
+    anchor unlock is owned by the consuming agent, not the probe.
+  Snapshot-level effect: snapshots with phase*.error fields will now
+  emit ERROR (was PENDING) for the affected gate; missing-field paths
+  in fresh phase4 data will now emit PENDING (was REJECT or REJECT-like
+  zero counts). Cross-version --diff WARNs on impl_version mismatch.
 - 0.4.1 (2026-05-01) — verdict-semantics fixes from external code review:
   * P1: R1 now PENDING when Phase B baseline eval-config (scenario_set /
     n_scenarios) does not match Phase C no_rf eval. Pre-0.4.1 silently

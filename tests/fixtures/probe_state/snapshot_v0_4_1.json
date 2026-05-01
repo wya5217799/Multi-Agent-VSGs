@@ -1,0 +1,176 @@
+{
+  "schema_version": 1,
+  "implementation_version": "0.4.1",
+  "timestamp": "2026-05-01T07:42:45+0800",
+  "git_head": "9825e85",
+  "config": {
+    "dispatch_magnitude_sys_pu": 0.5,
+    "sim_duration_s": 5.0
+  },
+  "errors": [],
+  "phase1_topology": {
+    "model_name": "kundur_simulink_cvs_v3",
+    "topology_variant": "cvs_v3",
+    "n_ess": 4,
+    "n_sg": 4,
+    "n_wind": 1,
+    "ess_bus_map": {"0": 5, "1": 7, "2": 9, "3": 11},
+    "dispatch_total": 22,
+    "dispatch_effective": ["sg_p_step_g1", "ess_p_step_es1", "load_step_b8"],
+    "dispatch_name_valid_only": []
+  },
+  "phase2_nr_ic": {
+    "ic_path": "scenarios/kundur/kundur_ic_cvs_v3.json",
+    "schema_version": 3,
+    "source_hash": "abcdef1234",
+    "topology_variant": "cvs_v3",
+    "vsg_pm0_pu": [0.0, 0.0, 0.0, 0.0],
+    "sg_pm0_sys_pu": [0.7, 0.65, 0.7, 0.65],
+    "no_hidden_slack": true,
+    "physical_invariants_checked": true,
+    "p_load_total_sys_pu": 1.4,
+    "p_gen_paper_sys_pu": 1.4,
+    "p_wind_paper_sys_pu": 0.0,
+    "p_ess_total_sys_pu": 0.0,
+    "p_loss_sys_pu": 0.0,
+    "global_balance_sum_sys_pu": 0.0
+  },
+  "phase3_open_loop": {
+    "n_steps": 50,
+    "dt_control_s": 0.1,
+    "n_agents": 4,
+    "magnitude_sys_pu": 0.0,
+    "all_sha256_distinct": true,
+    "n_distinct_sha256": 4,
+    "std_diff_max_min_pu": 1.5e-06,
+    "per_agent": [
+      {"idx": 0, "mean_omega_pu": 1.000001, "std_omega_pu_post_settle": 2.1e-06, "max_abs_f_dev_hz": 0.0001, "sha256_omega": "aa11"},
+      {"idx": 1, "mean_omega_pu": 1.000002, "std_omega_pu_post_settle": 2.0e-06, "max_abs_f_dev_hz": 0.0001, "sha256_omega": "bb22"},
+      {"idx": 2, "mean_omega_pu": 1.000001, "std_omega_pu_post_settle": 1.9e-06, "max_abs_f_dev_hz": 0.0001, "sha256_omega": "cc33"},
+      {"idx": 3, "mean_omega_pu": 1.000003, "std_omega_pu_post_settle": 1.8e-06, "max_abs_f_dev_hz": 0.0001, "sha256_omega": "dd44"}
+    ]
+  },
+  "phase4_per_dispatch": {
+    "probe_default_magnitude_sys_pu": 0.5,
+    "dispatches": {
+      "sg_p_step_g1": {
+        "applied_magnitude_sys_pu": 0.5,
+        "agents_responding_above_1mHz": 3,
+        "max_abs_f_dev_hz_global": 0.42,
+        "max_abs_f_dev_hz_per_agent": [0.42, 0.31, 0.0005, 0.28],
+        "r_f_local_share": [0.35, 0.27, 0.10, 0.28],
+        "r_f_share_max_min_diff": 0.25,
+        "expected_min_df_hz": 0.30,
+        "below_expected_floor": false,
+        "above_expected_ceiling": false,
+        "floor_status": "ok",
+        "metadata": {"family": "sg_step", "historical_source": "synthetic_fixture"},
+        "per_agent": [
+          {"idx": 0, "std_omega_pu_post_settle": 1.5e-04},
+          {"idx": 1, "std_omega_pu_post_settle": 1.2e-04},
+          {"idx": 2, "std_omega_pu_post_settle": 0.8e-04},
+          {"idx": 3, "std_omega_pu_post_settle": 1.0e-04}
+        ]
+      },
+      "ess_p_step_es1": {
+        "applied_magnitude_sys_pu": 0.5,
+        "agents_responding_above_1mHz": 4,
+        "max_abs_f_dev_hz_global": 0.61,
+        "max_abs_f_dev_hz_per_agent": [0.61, 0.45, 0.40, 0.42],
+        "r_f_local_share": [0.30, 0.25, 0.22, 0.23],
+        "r_f_share_max_min_diff": 0.08,
+        "expected_min_df_hz": 0.30,
+        "below_expected_floor": false,
+        "above_expected_ceiling": false,
+        "floor_status": "ok",
+        "metadata": {"family": "ess_step", "historical_source": "synthetic_fixture"},
+        "per_agent": [
+          {"idx": 0, "std_omega_pu_post_settle": 2.5e-04},
+          {"idx": 1, "std_omega_pu_post_settle": 2.0e-04},
+          {"idx": 2, "std_omega_pu_post_settle": 1.8e-04},
+          {"idx": 3, "std_omega_pu_post_settle": 1.9e-04}
+        ]
+      }
+    }
+  },
+  "phase5_trained_policy": {
+    "checkpoint_path": "results/sim_kundur/runs/kundur_simulink_v3/checkpoints/best.pt",
+    "checkpoint_mtime": "2026-05-01T03:00:00",
+    "checkpoint_match_strategy": "auto_search",
+    "mode": "smoke",
+    "scenario_set": "none",
+    "n_scenarios": 5,
+    "disturbance_mode": "gen",
+    "n_agents": 4,
+    "noise_threshold_sys_pu_sq": 0.001,
+    "improve_tol_sys_pu_sq": 0.5,
+    "k_required_contributors": 2,
+    "runs": {
+      "baseline": {"label": "baseline", "r_f_global": -84.16, "r_h_global": -1.2, "r_d_global": -0.8, "r_f_per_agent_total": [-21.0, -22.0, -20.5, -20.6], "n_episodes": 5, "wall_s": 60.0, "scenario_set": "none", "n_scenarios": 5, "action_mean": null},
+      "zero_agent_0": {"label": "zero_agent_0", "r_f_global": -105.97, "r_h_global": -1.1, "r_d_global": -0.7, "r_f_per_agent_total": [], "n_episodes": 5, "wall_s": 60.0, "scenario_set": "none", "n_scenarios": 5, "action_mean": null},
+      "zero_agent_1": {"label": "zero_agent_1", "r_f_global": -127.92, "r_h_global": -1.0, "r_d_global": -0.7, "r_f_per_agent_total": [], "n_episodes": 5, "wall_s": 60.0, "scenario_set": "none", "n_scenarios": 5, "action_mean": null},
+      "zero_agent_2": {"label": "zero_agent_2", "r_f_global": -126.53, "r_h_global": -1.0, "r_d_global": -0.7, "r_f_per_agent_total": [], "n_episodes": 5, "wall_s": 60.0, "scenario_set": "none", "n_scenarios": 5, "action_mean": null},
+      "zero_agent_3": {"label": "zero_agent_3", "r_f_global": -108.89, "r_h_global": -1.0, "r_d_global": -0.7, "r_f_per_agent_total": [], "n_episodes": 5, "wall_s": 60.0, "scenario_set": "none", "n_scenarios": 5, "action_mean": null},
+      "zero_all": {"label": "zero_all", "r_f_global": -106.05, "r_h_global": -1.0, "r_d_global": -0.7, "r_f_per_agent_total": [], "n_episodes": 5, "wall_s": 60.0, "scenario_set": "none", "n_scenarios": 5, "action_mean": null}
+    },
+    "ablation_diffs": [-21.81, -43.76, -42.37, -24.73],
+    "agent_contributes": [true, true, true, true],
+    "rf_rh_rd_share": {"rf": 0.97, "rh": 0.02, "rd": 0.01},
+    "errors": []
+  },
+  "phase6_causality": {
+    "mode": "full",
+    "ablation_config": "no_rf",
+    "phi_f_used": 0.0,
+    "phi_h_used": 0.0005,
+    "phi_d_used": 0.0005,
+    "episodes_planned": 200,
+    "episodes_completed": 200,
+    "improve_tol_r1_sys_pu_sq": 0.5,
+    "errors": [],
+    "baseline_source": "phase5",
+    "baseline_eval": {"r_f_global": -84.16, "r_h_global": -1.2, "r_d_global": -0.8, "n_episodes": 5, "wall_s": 60.0},
+    "wall_train_s": 2820.0,
+    "run_id": "probe_phase_c_no_rf_20260501T070000",
+    "run_dir": "results/sim_kundur/runs/probe_phase_c_no_rf_20260501T070000",
+    "no_rf_checkpoint": "results/sim_kundur/runs/probe_phase_c_no_rf_20260501T070000/checkpoints/best.pt",
+    "wall_eval_s": 60.0,
+    "no_rf_eval": {"r_f_global": -91.06, "r_h_global": -1.0, "r_d_global": -0.7, "n_episodes": 5, "wall_s": 60.0},
+    "r1_verdict": {
+      "verdict": "PASS",
+      "evidence": "baseline.r_f=-84.160 vs no_rf.r_f=-91.060 (diff=-6.900; IMPROVE_TOL=0.5)",
+      "improvement_baseline_minus_no_rf": 6.9,
+      "baseline_r_f_global": -84.16,
+      "no_rf_r_f_global": -91.06
+    }
+  },
+  "falsification_gates": {
+    "G1_signal": {"verdict": "PASS", "evidence": "best dispatch 'ess_p_step_es1' excites 4 agents > 1 mHz", "best_dispatch": "ess_p_step_es1", "max_agents_responding": 4},
+    "G2_measurement": {"verdict": "PASS", "evidence": "open-loop omega sha256: 4/4 distinct", "n_distinct": 4, "n_agents": 4},
+    "G3_gradient": {"verdict": "PASS", "evidence": "1 of 2 dispatches show non-degenerate per-agent share gradient", "per_dispatch": [{"dispatch": "sg_p_step_g1", "mean_share": 0.25, "max_min_diff": 0.25, "threshold": 0.0125, "passes": true}, {"dispatch": "ess_p_step_es1", "mean_share": 0.25, "max_min_diff": 0.08, "threshold": 0.0125, "passes": true}]},
+    "G4_position": {"verdict": "PASS", "evidence": "2 distinct responder signatures across 2 dispatches", "signatures": {"sg_p_step_g1": [0, 1, 3], "ess_p_step_es1": [0, 1, 2, 3]}},
+    "G5_trace": {"verdict": "PASS", "evidence": "largest std-diff = 7.000e-05 pu in 'ess_p_step_es1'", "best_diff_pu": 7e-05, "best_source": "ess_p_step_es1", "noise_floor": 1e-07},
+    "G6_trained_policy": {
+      "verdict": "PASS",
+      "evidence": "G6_partial=PASS, R1=PASS; partial: contributors=4/2 K-required; baseline.r_f_global=-84.160 vs zero_all.r_f_global=-106.050 (Δ=+21.890 vs IMPROVE_TOL=0.5); r1: baseline.r_f=-84.160 vs no_rf.r_f=-91.060 (diff=-6.900; IMPROVE_TOL=0.5)",
+      "scope": "g6_complete",
+      "g6_partial": {
+        "verdict": "PASS",
+        "evidence": "contributors=4/2 K-required; baseline.r_f_global=-84.160 vs zero_all.r_f_global=-106.050 (Δ=+21.890 vs IMPROVE_TOL=0.5)",
+        "contributors": 4,
+        "K_required": 2,
+        "baseline_r_f_global": -84.16,
+        "zero_all_r_f_global": -106.05,
+        "improvement_sys_pu_sq": 21.89,
+        "ablation_diffs": [-21.81, -43.76, -42.37, -24.73]
+      },
+      "r1": {
+        "verdict": "PASS",
+        "evidence": "baseline.r_f=-84.160 vs no_rf.r_f=-91.060 (diff=-6.900; IMPROVE_TOL=0.5)",
+        "improvement_baseline_minus_no_rf": 6.9,
+        "baseline_r_f_global": -84.16,
+        "no_rf_r_f_global": -91.06
+      }
+    }
+  }
+}

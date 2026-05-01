@@ -378,7 +378,11 @@ def test_phase_b_g6_pending_when_phase5_missing():
     assert g6["verdict"] == "PENDING"
 
 
-def test_phase_b_g6_pending_when_baseline_errored():
+def test_phase_b_g6_error_when_baseline_errored():
+    """v0.5.0 semantics: errored sub-run is a pipeline failure, not data
+    insufficiency. G6 surfaces ERROR + EVAL_FAILED (was PENDING in 0.4.1)
+    so operators distinguish 'paper_eval crashed' from 'eval not yet run'.
+    """
     from probes.kundur.probe_state import _verdict
 
     snap = {
@@ -394,7 +398,8 @@ def test_phase_b_g6_pending_when_baseline_errored():
         },
     }
     g6 = _verdict.compute_gates(snap)["G6_trained_policy"]
-    assert g6["verdict"] == "PENDING", g6
+    assert g6["verdict"] == "ERROR", g6
+    assert "EVAL_FAILED" in g6["reason_codes"], g6
 
 
 def test_phase_b_extract_metrics_handles_error_payload():
@@ -486,11 +491,13 @@ def test_phase_c_r1_reject_when_no_rf_close_to_baseline():
     assert out["verdict"] == "REJECT", out
 
 
-def test_phase_c_r1_pending_when_baseline_errored():
+def test_phase_c_r1_error_when_baseline_errored():
+    """v0.5.0: errored eval ⇒ ERROR + EVAL_FAILED (was PENDING in 0.4.1)."""
     from probes.kundur.probe_state._causality import _compute_r1_verdict
 
     out = _compute_r1_verdict({"error": "fake"}, {"r_f_global": -10.0})
-    assert out["verdict"] == "PENDING"
+    assert out["verdict"] == "ERROR"
+    assert "EVAL_FAILED" in out["reason_codes"]
 
 
 def test_phase_c_r1_pending_when_either_eval_missing():
@@ -592,7 +599,11 @@ def test_phase_c_g6_falls_back_to_partial_when_phase6_absent():
     assert g6.get("scope") == "g6_partial_only", g6
 
 
-def test_phase_c_g6_falls_back_to_partial_when_phase6_errored():
+def test_phase_c_g6_errors_when_phase6_errored_even_if_partial_passes():
+    """v0.5.0: phase6 errored ⇒ G6 surfaces ERROR + PHASE_ERRORED with
+    g6_partial preserved in extras (was: silently fall back to partial
+    PASS, hiding the pipeline failure). Operators inspecting g6_partial
+    can still see the Phase B verdict."""
     from probes.kundur.probe_state import _verdict
 
     snap = {
@@ -609,8 +620,11 @@ def test_phase_c_g6_falls_back_to_partial_when_phase6_errored():
         "phase6_causality": {"error": "no Phase B baseline available"},
     }
     g6 = _verdict.compute_gates(snap)["G6_trained_policy"]
-    assert g6["verdict"] == "PASS", g6
-    assert g6.get("scope") == "g6_partial_only", g6
+    assert g6["verdict"] == "ERROR", g6
+    assert "PHASE_ERRORED" in g6["reason_codes"], g6
+    assert g6.get("scope") == "g6_complete", g6
+    # Phase B partial verdict still inspectable for evidence preservation.
+    assert g6.get("g6_partial", {}).get("verdict") == "PASS", g6
 
 
 def test_phase_c_resolve_baseline_eval_returns_phase_b_baseline():
@@ -990,9 +1004,9 @@ def test_i2_init_exports_version():
     parts = pkg.__version__.split(".")
     assert len(parts) == 3 and all(p.isdigit() for p in parts), pkg.__version__
     major, minor, patch = (int(p) for p in parts)
-    assert (major, minor, patch) >= (0, 4, 1), (
-        f"impl_version {pkg.__version__} below 0.4.1 floor — pre-0.4.1 "
-        "P1/P2 verdict-semantics fixes not present"
+    assert (major, minor, patch) >= (0, 5, 0), (
+        f"impl_version {pkg.__version__} below 0.5.0 floor — pre-0.5.0 "
+        "lacks ERROR verdict + reason_codes contract"
     )
 
 
@@ -1042,3 +1056,484 @@ def test_phase_c_short_train_subprocess_uses_probe_phase_c_run_id_prefix(monkeyp
         f"KUNDUR_PHI_F not injected as 0.0 in subprocess env: "
         f"{env.get('KUNDUR_PHI_F')!r}"
     )
+
+
+# ===========================================================================
+# v0.5.0 — Evidence-Pack contract (ERROR + reason_codes)
+# ===========================================================================
+#
+# Test matrix mapping (plan §5):
+#   - test_v050_*_phase_errored                : ERROR + PHASE_ERRORED
+#   - test_v050_*_phase_missing                : PENDING + MISSING_PHASE
+#   - test_v050_*_field_missing                : PENDING + MISSING_FIELD
+#   - test_v050_*_real_zero_yields_reject      : no silent fallback
+#   - test_v050_reason_codes_*                 : contract enforcement
+#   - test_v050_old_snapshot_diff_compat       : v0.4.1 fixture interop
+#   - test_v050_train_failed / eval_failed     : Phase C ERROR codes
+#   - test_v050_baseline_mismatch_pending      : 0.4.1 P1 path keeps PENDING + new code
+# ---------------------------------------------------------------------------
+
+
+_FIXTURE_DIR = Path(__file__).resolve().parent / "fixtures" / "probe_state"
+
+
+# ---- ERROR vs PENDING distinction (plan §2) -------------------------------
+
+
+def test_v050_g2_error_when_phase3_errored():
+    from probes.kundur.probe_state import _verdict
+
+    snap = {"phase3_open_loop": {"error": "MATLAB engine died"}}
+    g2 = _verdict.compute_gates(snap)["G2_measurement"]
+    assert g2["verdict"] == "ERROR"
+    assert g2["reason_codes"] == ["PHASE_ERRORED"]
+
+
+def test_v050_g1_g3_g4_error_when_phase4_errored():
+    from probes.kundur.probe_state import _verdict
+
+    gates = _verdict.compute_gates(
+        {"phase4_per_dispatch": {"error": "engine stuck"}}
+    )
+    for gname in ("G1_signal", "G3_gradient", "G4_position"):
+        v = gates[gname]
+        assert v["verdict"] == "ERROR", f"{gname}: {v}"
+        assert v["reason_codes"] == ["PHASE_ERRORED"], f"{gname}: {v}"
+
+
+def test_v050_phase_missing_yields_pending_not_error():
+    """Empty snapshot ⇒ all gates PENDING + MISSING_PHASE (not ERROR).
+
+    PENDING semantics: re-run the missing phase to resolve.
+    ERROR semantics: pipeline broke; fix code/env first.
+    """
+    from probes.kundur.probe_state import _verdict
+
+    gates = _verdict.compute_gates({})
+    for gname in ("G1_signal", "G2_measurement", "G3_gradient",
+                  "G4_position", "G5_trace"):
+        v = gates[gname]
+        assert v["verdict"] == "PENDING", f"{gname}: {v}"
+        assert "MISSING_PHASE" in v["reason_codes"], f"{gname}: {v}"
+
+
+# ---- No silent fallback for missing fields (plan §1 — verdict gates) ------
+
+
+def test_v050_g1_pending_when_agents_responding_field_missing():
+    """G1 must NOT silently treat missing 'agents_responding_above_1mHz'
+    as zero (which would emit REJECT). v0.5.0 surfaces MISSING_FIELD.
+    """
+    from probes.kundur.probe_state import _verdict
+
+    snap = {
+        "phase4_per_dispatch": {
+            "dispatches": {
+                "X": {
+                    # No agents_responding_above_1mHz key — silent-fallback bait.
+                    "max_abs_f_dev_hz_per_agent": [0.5, 0.4, 0.3, 0.2],
+                    "r_f_local_share": [0.25, 0.25, 0.25, 0.25],
+                },
+            }
+        }
+    }
+    g1 = _verdict.compute_gates(snap)["G1_signal"]
+    assert g1["verdict"] == "PENDING", g1
+    assert g1["reason_codes"] == ["MISSING_FIELD"], g1
+
+
+def test_v050_g3_pending_when_share_field_missing():
+    from probes.kundur.probe_state import _verdict
+
+    snap = {
+        "phase4_per_dispatch": {
+            "dispatches": {
+                "X": {
+                    "agents_responding_above_1mHz": 4,
+                    "max_abs_f_dev_hz_per_agent": [0.5, 0.4, 0.3, 0.2],
+                    # No r_f_local_share field.
+                },
+            }
+        }
+    }
+    g3 = _verdict.compute_gates(snap)["G3_gradient"]
+    assert g3["verdict"] == "PENDING", g3
+    assert g3["reason_codes"] == ["MISSING_FIELD"], g3
+
+
+def test_v050_g4_pending_when_per_agent_max_field_missing():
+    from probes.kundur.probe_state import _verdict
+
+    snap = {
+        "phase4_per_dispatch": {
+            "dispatches": {
+                "X": {
+                    "agents_responding_above_1mHz": 4,
+                    # No max_abs_f_dev_hz_per_agent — would silently
+                    # become empty signature in 0.4.1.
+                    "r_f_local_share": [0.25, 0.25, 0.25, 0.25],
+                },
+                "Y": {
+                    "agents_responding_above_1mHz": 4,
+                    "max_abs_f_dev_hz_per_agent": [0.5, 0.4, 0.3, 0.2],
+                    "r_f_local_share": [0.25, 0.25, 0.25, 0.25],
+                },
+            }
+        }
+    }
+    g4 = _verdict.compute_gates(snap)["G4_position"]
+    assert g4["verdict"] == "PENDING", g4
+    assert g4["reason_codes"] == ["MISSING_FIELD"], g4
+
+
+def test_v050_g2_pending_when_phase3_required_field_missing():
+    from probes.kundur.probe_state import _verdict
+
+    snap = {"phase3_open_loop": {"n_steps": 50}}  # missing the 3 required fields
+    g2 = _verdict.compute_gates(snap)["G2_measurement"]
+    assert g2["verdict"] == "PENDING", g2
+    assert g2["reason_codes"] == ["MISSING_FIELD"], g2
+
+
+def test_v050_g3_empty_data_distinct_from_reject():
+    """All dispatches present but with empty share lists ⇒ PENDING +
+    EMPTY_DATA (recoverable by fixing data emission). Not REJECT
+    (which means data was decisive)."""
+    from probes.kundur.probe_state import _verdict
+
+    snap = {
+        "phase4_per_dispatch": {
+            "dispatches": {
+                "X": {
+                    "agents_responding_above_1mHz": 4,
+                    "max_abs_f_dev_hz_per_agent": [0.5, 0.4, 0.3, 0.2],
+                    "r_f_local_share": [],
+                },
+                "Y": {
+                    "agents_responding_above_1mHz": 4,
+                    "max_abs_f_dev_hz_per_agent": [0.5, 0.4, 0.3, 0.2],
+                    "r_f_local_share": [],
+                },
+            }
+        }
+    }
+    g3 = _verdict.compute_gates(snap)["G3_gradient"]
+    assert g3["verdict"] == "PENDING", g3
+    assert "EMPTY_DATA" in g3["reason_codes"], g3
+
+
+def test_v050_g1_real_zero_yields_reject_not_pending():
+    """Field present with real zero count ⇒ REJECT + THRESHOLD_NOT_MET
+    (decisive negative evidence). Not PENDING (which means data
+    insufficient)."""
+    from probes.kundur.probe_state import _verdict
+
+    snap = {
+        "phase4_per_dispatch": {
+            "dispatches": {
+                "X": {
+                    "agents_responding_above_1mHz": 0,  # genuine zero
+                    "max_abs_f_dev_hz_per_agent": [0.0, 0.0, 0.0, 0.0],
+                    "r_f_local_share": [0.25, 0.25, 0.25, 0.25],
+                },
+            }
+        }
+    }
+    g1 = _verdict.compute_gates(snap)["G1_signal"]
+    assert g1["verdict"] == "REJECT", g1
+    assert g1["reason_codes"] == ["THRESHOLD_NOT_MET"], g1
+
+
+def test_v050_g4_insufficient_dispatches_yields_pending():
+    """1 dispatch ⇒ PENDING + INSUFFICIENT_DISPATCHES (need ≥ 2 for
+    distinct signatures; not enough data)."""
+    from probes.kundur.probe_state import _verdict
+
+    snap = {
+        "phase4_per_dispatch": {
+            "dispatches": {
+                "X": {
+                    "agents_responding_above_1mHz": 4,
+                    "max_abs_f_dev_hz_per_agent": [0.5, 0.4, 0.3, 0.2],
+                    "r_f_local_share": [0.4, 0.3, 0.2, 0.1],
+                },
+            }
+        }
+    }
+    g4 = _verdict.compute_gates(snap)["G4_position"]
+    assert g4["verdict"] == "PENDING", g4
+    assert g4["reason_codes"] == ["INSUFFICIENT_DISPATCHES"], g4
+
+
+# ---- reason_codes contract (plan §1, §11a silent-error-path-impact) -------
+
+
+def test_v050_reason_codes_always_present_on_all_gates():
+    """Every gate verdict — under any input — must carry a non-empty
+    reason_codes list. Missing field is a contract violation."""
+    from probes.kundur.probe_state import _verdict
+
+    snapshots_to_probe = [
+        {},                                                          # PENDING
+        {"phase3_open_loop": {"error": "x"}},                        # ERROR
+        {"phase4_per_dispatch": {"dispatches": {}}},                 # PENDING/EMPTY
+        json.loads(
+            (_FIXTURE_DIR / "snapshot_v0_4_1.json").read_text(encoding="utf-8")
+        ),                                                           # PASS-heavy
+    ]
+    for snap in snapshots_to_probe:
+        gates = _verdict.compute_gates(snap)
+        for gname, gv in gates.items():
+            assert "reason_codes" in gv, (
+                f"{gname} missing reason_codes: {gv}"
+            )
+            assert isinstance(gv["reason_codes"], list), (
+                f"{gname} reason_codes not a list: {gv}"
+            )
+            assert len(gv["reason_codes"]) > 0, (
+                f"{gname} has empty reason_codes (contract violation): {gv}"
+            )
+
+
+def test_v050_reason_codes_drawn_from_frozen_vocabulary():
+    from probes.kundur.probe_state import _verdict
+    from probes.kundur.probe_state.probe_config import REASON_CODES
+
+    fix = json.loads(
+        (_FIXTURE_DIR / "snapshot_v0_4_1.json").read_text(encoding="utf-8")
+    )
+    gates = _verdict.compute_gates(fix)
+    for gname, gv in gates.items():
+        for code in gv["reason_codes"]:
+            assert code in REASON_CODES, (
+                f"{gname} emitted unknown reason_code {code!r}; "
+                f"vocab = {sorted(REASON_CODES)}"
+            )
+
+
+def test_v050_verdict_constructor_rejects_empty_reason_codes():
+    from probes.kundur.probe_state._verdict import _verdict as build_verdict, VERDICT_PASS
+
+    with pytest.raises(ValueError, match="reason_codes must be non-empty"):
+        build_verdict(VERDICT_PASS, "fake", reason_codes=[])
+
+
+def test_v050_verdict_constructor_rejects_unknown_codes():
+    from probes.kundur.probe_state._verdict import _verdict as build_verdict, VERDICT_PASS
+
+    with pytest.raises(ValueError, match="unknown reason_codes"):
+        build_verdict(VERDICT_PASS, "fake", reason_codes=["NOT_A_REAL_CODE"])
+
+
+def test_v050_verdict_constructor_rejects_invalid_verdict_string():
+    from probes.kundur.probe_state._verdict import _verdict as build_verdict
+
+    with pytest.raises(ValueError, match="unknown verdict"):
+        build_verdict("MAYBE", "fake", reason_codes=["EVIDENCE_OK"])
+
+
+# ---- v0.4.1 → v0.5.0 backward-compat (plan §1) ----------------------------
+
+
+def test_v050_old_snapshot_v041_is_loadable():
+    """v0.4.1 fixture has no reason_codes; loading and re-deriving gates
+    via compute_gates must succeed without crashing (the snapshot fields
+    drive verdicts, not the embedded gate block)."""
+    from probes.kundur.probe_state import _verdict
+
+    fix = json.loads(
+        (_FIXTURE_DIR / "snapshot_v0_4_1.json").read_text(encoding="utf-8")
+    )
+    # The embedded falsification_gates block lacks reason_codes — that's OK,
+    # we don't read it; we re-derive from raw phase data.
+    assert "reason_codes" not in fix["falsification_gates"]["G1_signal"]
+    gates = _verdict.compute_gates(fix)
+    # Re-derived gates DO carry reason_codes (new contract).
+    for gname, gv in gates.items():
+        assert "reason_codes" in gv, f"{gname}: {gv}"
+
+
+def test_v050_diff_old_vs_new_does_not_crash(tmp_path):
+    """--diff between a v0.4.1 fixture and a v0.5.0 fresh snapshot must
+    not raise: _diff._walk handles missing reason_codes via set-difference
+    (ADDED entries) automatically, no special migration code required.
+    """
+    from probes.kundur.probe_state import _verdict
+    from probes.kundur.probe_state._diff import diff_snapshots
+
+    # v0.4.1: fixture as-is.
+    old_path = _FIXTURE_DIR / "snapshot_v0_4_1.json"
+    fix = json.loads(old_path.read_text(encoding="utf-8"))
+
+    # v0.5.0: re-derive gates with reason_codes; rewrite fixture into tmp.
+    fix_new = dict(fix)
+    fix_new["implementation_version"] = "0.5.0"
+    fix_new["falsification_gates"] = _verdict.compute_gates(fix)
+    new_path = tmp_path / "snap_v050.json"
+    new_path.write_text(json.dumps(fix_new), encoding="utf-8")
+
+    rc = diff_snapshots(old_path, new_path)
+    # Diff finds at least the impl_version bump and the added reason_codes.
+    assert rc == 1
+
+
+# ---- Phase C ERROR codes (plan §1 — silent-fallback widening) -------------
+
+
+def test_v050_phase_c_train_failed_emits_error():
+    """Short-train subprocess failure ⇒ R1 ERROR + TRAIN_FAILED (was
+    PENDING in 0.4.1). Operator must diagnose; re-running won't fix it."""
+    from probes.kundur.probe_state import _causality
+
+    class _StubProbe:
+        snapshot = {
+            "phase5_trained_policy": {
+                "runs": {
+                    "baseline": {
+                        "r_f_global": -84.16,
+                        "scenario_set": "none",
+                        "n_scenarios": 5,
+                    },
+                },
+            },
+        }
+        phase_c_mode = "smoke"
+        phase_c_eval_n_scenarios = 5
+        phase_c_train_timeout_s = 60
+
+    # Force _run_short_train to emit a failure payload.
+    def _fake_train(spec, timeout_s=None):
+        return {
+            "run_id": "probe_phase_c_no_rf_2026XXXXTYYYYY",
+            "run_dir": None,
+            "ckpt": None,
+            "wall_s": 1.0,
+            "error": "non-zero exit 1",
+            "stderr_tail": "boom",
+        }
+
+    orig = _causality._run_short_train
+    _causality._run_short_train = _fake_train
+    try:
+        rec = _causality.run_causality_short_train(_StubProbe())
+    finally:
+        _causality._run_short_train = orig
+
+    r1 = rec["r1_verdict"]
+    assert r1["verdict"] == "ERROR", rec
+    assert r1["reason_codes"] == ["TRAIN_FAILED"], rec
+
+
+def test_v050_phase_c_eval_failed_emits_error():
+    """Eval subprocess crash ⇒ R1 ERROR + EVAL_FAILED."""
+    from probes.kundur.probe_state import _causality
+
+    class _StubProbe:
+        snapshot = {
+            "phase5_trained_policy": {
+                "runs": {
+                    "baseline": {
+                        "r_f_global": -84.16,
+                        "scenario_set": "none",
+                        "n_scenarios": 5,
+                    },
+                },
+            },
+        }
+        phase_c_mode = "smoke"
+        phase_c_eval_n_scenarios = 5
+        phase_c_train_timeout_s = 60
+
+    # Train succeeds, eval crashes.
+    def _fake_train(spec, timeout_s=None):
+        return {
+            "run_id": "probe_phase_c_no_rf_X",
+            "run_dir": "/fake/dir",
+            "ckpt": "/fake/best.pt",
+            "wall_s": 1.0,
+        }
+
+    def _fake_eval_ckpt(ckpt_path, *, label, n_scenarios, timeout_s=900):
+        raise RuntimeError("paper_eval boom")
+
+    orig_train = _causality._run_short_train
+    orig_eval = _causality._eval_ckpt
+    _causality._run_short_train = _fake_train
+    _causality._eval_ckpt = _fake_eval_ckpt
+    try:
+        rec = _causality.run_causality_short_train(_StubProbe())
+    finally:
+        _causality._run_short_train = orig_train
+        _causality._eval_ckpt = orig_eval
+
+    r1 = rec["r1_verdict"]
+    assert r1["verdict"] == "ERROR", rec
+    assert r1["reason_codes"] == ["EVAL_FAILED"], rec
+
+
+def test_v050_phase_c_baseline_mismatch_pending_with_code():
+    """0.4.1 P1 BASELINE_MISMATCH path is preserved as PENDING (data
+    insufficiency — re-run Phase B with matching config). v0.5.0 just
+    adds the reason_code so consumers can pattern-match without parsing
+    evidence strings."""
+    from probes.kundur.probe_state import _causality
+
+    class _StubProbe:
+        snapshot = {
+            "phase5_trained_policy": {
+                "runs": {
+                    "baseline": {
+                        "r_f_global": -84.16,
+                        "scenario_set": "test",   # mismatch — Phase C wants 'none'
+                        "n_scenarios": 50,
+                    },
+                },
+            },
+        }
+        phase_c_mode = "smoke"
+        phase_c_eval_n_scenarios = 5
+        phase_c_train_timeout_s = 60
+
+    rec = _causality.run_causality_short_train(_StubProbe())
+    r1 = rec["r1_verdict"]
+    assert r1["verdict"] == "PENDING", rec
+    assert r1["reason_codes"] == ["BASELINE_MISMATCH"], rec
+
+
+# ---- _report.py rendering (additive — does not touch verdict numbers) ----
+
+
+def test_v050_report_renders_reason_codes_column(tmp_path):
+    """Markdown report must include a 'Reason codes' column with the
+    codes for each gate."""
+    from probes.kundur.probe_state import _report
+
+    snap = {
+        "schema_version": 1,
+        "implementation_version": "0.5.0",
+        "timestamp": "2026-05-01T00:00:00",
+        "git_head": "abc123",
+        "config": {"dispatch_magnitude_sys_pu": 0.5, "sim_duration_s": 5.0},
+        "errors": [],
+        "phase1_topology": {},
+        "phase2_nr_ic": {},
+        "falsification_gates": {
+            "G1_signal": {
+                "verdict": "PASS",
+                "evidence": "stub",
+                "reason_codes": ["EVIDENCE_OK"],
+            },
+            "G2_measurement": {
+                "verdict": "ERROR",
+                "evidence": "phase3 errored",
+                "reason_codes": ["PHASE_ERRORED"],
+            },
+        },
+    }
+    out = _report.write(snap, tmp_path)
+    md = out["md"].read_text(encoding="utf-8")
+    assert "Reason codes" in md, "header column missing"
+    assert "`EVIDENCE_OK`" in md
+    assert "`PHASE_ERRORED`" in md
+    # ERROR glyph rendered:
+    assert "🛑" in md or "ERROR" in md  # fall back to verdict string if glyph swallowed

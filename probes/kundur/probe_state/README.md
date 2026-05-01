@@ -1,122 +1,183 @@
-# probe_state — Kundur CVS model state probe (Phase A)
+# probe_state — Kundur CVS Model State Probe
 
-> CLAIM: usage doc. Source-of-truth = `probe_state.py` runtime behaviour.
+> Runtime ground-truth probe for the Kundur CVS Simulink power-system
+> model. Replaces "infer from history verdicts" with "look at the model
+> state right now". Outputs G1-G6 falsification gates + JSON snapshot
+> + Markdown report.
 
-Captures runtime ground truth for the active Kundur Simulink model — replaces
-"reason from history verdicts + paper-claim CLAIM" with "look at the model
-state right now". Analogous to a software test fixture + invariants.
+---
 
-## Quick start
+## Doc map (read the right one)
 
-```bash
-PY="C:/Users/27443/miniconda3/envs/andes_env/python.exe"
+| You are... | Read | Scope |
+|---|---|---|
+| an operator running the probe | **`USAGE.md`** | command workflows, when-to-run, troubleshooting |
+| an AI agent / tool deciding what to run | **`AGENTS.md`** | decision tables, output contract, hard rules |
+| a developer reading or modifying the package | **this file (`README.md`)** | design rationale, scope, schema layout, versioning |
+| writing a brand-new phase / extension | this file + `docs/design/probe_state_design.md` | full design source |
 
-# all phases (Phase A: 1=static, 2=NR/IC, 3=open-loop, 4=per-dispatch)
-$PY -m probes.kundur.probe_state
+**Cross-link discipline**: this file does NOT duplicate command examples
+(use `USAGE.md`) and does NOT enumerate machine-parseable contracts
+(use `AGENTS.md`). It explains *why* the probe is shaped this way.
 
-# only the file-IO phases (no MATLAB engine)
-$PY -m probes.kundur.probe_state --no-mcp
+---
 
-# only static topology
-$PY -m probes.kundur.probe_state --phase 1
+## Identity
+
+```
+purpose:  capture runtime ground-truth of the active Kundur CVS Simulink model
+mode:     read-only on env / engine / paper_eval (one CLI flag added to train_simulink.py)
+output:   state_snapshot_<TS>.json + STATE_REPORT_<TS>.md
+gates:    G1-G6 falsification verdicts (PASS / REJECT / PENDING)
 ```
 
-Outputs go to `results/harness/kundur/probe_state/`:
-- `state_snapshot_<timestamp>.json` — schema_version=1, all phase data
-- `STATE_REPORT_<timestamp>.md` — human-readable summary + G1-G5 verdict
+Plans (executed):
+- Phase A: `quality_reports/plans/2026-04-30_probe_state_kundur_cvs.md`
+- Phase B: `quality_reports/plans/2026-05-01_probe_state_phase_B.md`
+- Phase C: `quality_reports/plans/2026-05-01_probe_state_phase_C.md`
+- V1 verdict: `quality_reports/phase_C_R1_verdict_20260501T074245.md`
 
-## Phase map
+Design source: `docs/design/probe_state_design.md` (§1-§10).
 
-| CLI `--phase` | Snapshot key            | Source                                           |
-|---------------|-------------------------|--------------------------------------------------|
-| `1`           | `phase1_topology`       | MATLAB find_system + get_param + config import   |
-| `2`           | `phase2_nr_ic`          | `scenarios/kundur/kundur_ic_cvs_v3.json`         |
-| `3`           | `phase3_open_loop`      | `SimulinkBridge` 5s sim, all disturbance amps=0  |
-| `4`           | `phase4_per_dispatch`   | `SimulinkBridge` 5s sim per effective dispatch    |
-| (always)      | `falsification_gates`   | computed from phase 3+4 data (G1-G5)             |
-| (always)      | report writers          | JSON dump + Markdown render                      |
+---
 
-## Falsification gates (Phase A)
+## Design principles (non-negotiable)
 
-| Gate | Question | Logic |
-|------|----------|-------|
-| G1 — signal      | ≥ 1 dispatch produces ≥ 2 agents responding > 1 mHz?  | from phase4 |
-| G2 — measurement | 4 agents have distinct sha256(omega trace) in open-loop? | from phase3 |
-| G3 — gradient    | Per-agent r_f share max-min > 5% × mean across dispatches? | from phase4 |
-| G4 — position    | SG-side dispatches produce different mode-shape signatures? | from phase4 |
-| G5 — trace       | Some dispatch shows 4-agent omega-std diff > noise floor? | from phase3+4 |
+1. **discovery > declaration** — entities (n_ess / dispatch / config) are
+   discovered at runtime from the IC JSON / `_DISPATCH_TABLE` / model
+   blocks. No `n_ess = 4` hardcode.
+2. **single source of truth** — dispatches come from
+   `disturbance_protocols.known_disturbance_types()`; thresholds come
+   from `probe_config.THRESHOLDS`; coverage cross-validated by
+   `dispatch_metadata.coverage_check()` at probe time.
+3. **versioned schema** — snapshot carries `schema_version` (data
+   shape) AND `implementation_version` (algorithm), both enforced as
+   additive only. See *Versioning* below.
+4. **fail-soft per phase** — a single phase failure populates
+   `phase.error` and continues; downstream Type B invariants SKIP
+   instead of failing the whole pytest run.
+5. **read-only on production** — must not edit `.slx` / IC JSON /
+   `evaluation/paper_eval.py` / `env/` / `engine/`. The single
+   exception is the D-minimal `--run-id` flag in
+   `scenarios/kundur/train_simulink.py` (Phase C plan §2).
+6. **PAPER-ANCHOR HARD RULE** (CLAUDE.md) — citing paper numbers /
+   running PHI sweep requires G1-G6 all fresh PASS. The probe
+   *measures* this; enforcement is operator-side (manual, by design).
 
-Gate verdicts ∈ {`PASS`, `REJECT`, `PENDING`}. See `_verdict.py`.
+Violating any of P1-P6 = design regression. Phase B/C plans §2 enumerate
+allowed extensions.
 
-## What the probe does NOT do (Phase A scope)
+---
 
-- Trained-policy ablation (Phase B)
-- φ causal short-train (Phase C)
-- Hook auto-trigger / skill packaging (Phase D)
-- Modify build / `.slx` / IC / runtime.mat (read-only, plan §3)
-- Extend the disturbance dispatch table (single source of truth =
-  `scenarios.kundur.disturbance_protocols.known_disturbance_types`)
+## Phase layout
 
-## Design rules (plan §3, MUST hold)
+| Phase | Module | Snapshot key | Reads from |
+|---|---|---|---|
+| 1 — static topology | `_discover.py` | `phase1_topology` | MATLAB `find_system` + scenario config + IC JSON |
+| 2 — NR / IC | `_nr_ic.py` | `phase2_nr_ic` | `scenarios/kundur/kundur_ic_cvs_v3.json` (file IO only) |
+| 3 — open-loop | `_dynamics.py` | `phase3_open_loop` | 5 s sim, all disturbance amps = 0 |
+| 4 — per-dispatch | `_dynamics.py` | `phase4_per_dispatch` | one sim per effective dispatch (12 in v3) |
+| 5 — trained-policy ablation (Phase B) | `_trained_policy.py` | `phase5_trained_policy` | `paper_eval.py` subprocess × (N+2) runs |
+| 6 — causality short-train (Phase C) | `_causality.py` | `phase6_causality` | `train_simulink.py` subprocess (φ_f=0) + paper_eval |
+| (always) — verdict | `_verdict.py` | `falsification_gates` | computed from phase data |
+| (always) — report | `_report.py` | (writes JSON + MD) | snapshot dict |
 
-1. **discovery > declaration** — `n_ess` derived from MATLAB queries, not hardcoded.
-2. **MCP-first** — reuse simulink-tools where possible; bridge for sim phases.
-3. **single source of truth** — dispatch types from `_DISPATCH_TABLE.keys()`.
-4. **versioned schema** — JSON has `schema_version`.
-5. **fail-soft per phase** — one phase failure does not abort the others.
-6. **read-only** — does not write base workspace vars or modify the `.slx`.
+## Falsification gates
 
-## Companion tests
+| Gate | Falsification hypothesis | PASS condition |
+|---|---|---|
+| G1 — signal | "no dispatch can excite ≥ 2 agents" | ≥ 1 dispatch with ≥ 2 agents responding > 1 mHz |
+| G2 — measurement | "all 4 omega traces are aliased" | open-loop sha256 distinct across agents |
+| G3 — gradient | "per-agent reward share is degenerate" | max-min r_f share > 5% × mean (some dispatch) |
+| G4 — position | "dispatch site doesn't change mode shape" | ≥ 2 distinct responder signatures across dispatches |
+| G5 — trace | "agent omega-std collapses to one number" | std diff across agents > 1e-7 pu (some run) |
+| G6 — trained-policy | "policy is degenerate AND/OR φ_f penalty isn't causal" | G6_partial PASS (Phase B) + R1 PASS (Phase C) |
 
-Two test files (Plan §8 / §8.5):
+Gate verdicts ∈ {`PASS`, `REJECT`, `PENDING`}. Logic in `_verdict.py`.
+For state-machine semantics (how AI / operator should route on each
+verdict), see `AGENTS.md` §5.
 
-```bash
-# A. Regression invariants over the latest snapshot.
-$PY -m pytest tests/test_state_invariants.py -v
-#   Type A — data-independent (paper FACT + project contract): always assert
-#            (skip ONLY when no snapshot yet)
-#   Type B — phase-data-required (fail-soft compatible): SKIP when the
-#            relevant phase is missing or errored
+---
 
-# B. Probe self-test — pure-Python, no MATLAB.
-$PY -m pytest tests/test_probe_internal.py -v
-#   Tests the probe's own logic (verdict, serializer, discovery pattern,
-#   dispatch metadata coverage). MUST pass on any clean checkout.
+## Module layout
+
+```
+probe_state.py        ModelStateProbe orchestrator + ALL_PHASES
+__main__.py           CLI entry (--phase, --diff, --promote-baseline, ...)
+probe_config.py       ProbeThresholds dataclass + IMPLEMENTATION_VERSION
+_discover.py          Phase 1 (static) — MATLAB find_system + IC parse
+_nr_ic.py             Phase 2 (NR/IC) — pure file IO
+_dynamics.py          Phase 3+4 (open-loop + per-dispatch) — bridge.step
+_trained_policy.py    Phase 5 (Phase B) — paper_eval ablation runs
+_causality.py         Phase 6 (Phase C) — short-train + R1 verdict
+_verdict.py           G1-G6 verdict logic (compute_gates entry)
+_report.py            JSON dump + Markdown render
+_diff.py              snapshot deep-diff CLI (F2 / G3)
+dispatch_metadata.py  22-dispatch metadata table (mag / floor / source)
+__init__.py           package exports + __version__
 ```
 
-Run after edits to
-`scenarios/kundur/{disturbance_protocols,workspace_vars,config_simulink}.py`,
-build scripts, or this probe package.
+Tests:
+- `tests/test_state_invariants.py` — Type A / Type B invariants (5+7)
+- `tests/test_probe_internal.py` — pure-Python self-tests (~38)
 
-## Per-dispatch metadata
+---
 
-`probes/kundur/probe_state/dispatch_metadata.py` carries per-dispatch
-defaults (magnitude, sim duration, family, expected behaviour). The
-single source of truth for "which dispatches exist" remains
-`scenarios.kundur.disturbance_protocols.known_disturbance_types()`; the
-self-test `test_dispatch_metadata_coverage_against_known_types`
-guarantees the metadata stays in sync with the dispatch table — adding
-a new dispatch without a metadata row triggers a CI failure here.
+## Versioning
 
-## Versioning (F5 / design §10.2)
+Two independent version fields in every snapshot:
 
-Snapshots carry two version fields:
+| Field | When to bump | What it gates |
+|---|---|---|
+| `schema_version` (int) | snapshot **data shape** changes (rename / drop field) | Old snapshots load only after migration; `--diff` warns |
+| `implementation_version` (semver) | probe **algorithm** changes (verdict thresholds, discovery heuristics, formula edits) | Verdict numbers across versions need CHANGELOG context |
 
-- `schema_version` (int, default `1`) — bump only when `state_snapshot.json`
-  **field shape** changes (rename / drop / repurpose). Old snapshots still
-  load until a migration is shipped.
-- `implementation_version` (semver, see `probe_config.py`) — bump on
-  **algorithm** changes (verdict thresholds, discovery heuristics) that
-  leave the schema intact. Old snapshots stay loadable; verdict numbers
-  across versions need CHANGELOG context. Use `--diff` to inspect.
+**Bump rules**:
+- additive field add (e.g. Phase B / C added their phase keys) → no
+  bump (schema stays = 1; impl stays unless verdict logic changed).
+- threshold value change in `probe_config.ProbeThresholds` → impl
+  bump (minor for one knob, major for whole-protocol shift).
+- snapshot field rename or repurpose → schema bump + migration plan.
 
-## Known caveats
+CHANGELOG lives in `probe_config.py::IMPLEMENTATION_VERSION` docstring
+(rolling, last 5). Use `python -m probes.kundur.probe_state --diff
+prev curr` to see version bumps highlighted.
 
-- `aggregate_residual_pu`: `kundur_ic_cvs_v3.json` does not record a single
-  scalar residual. Probe synthesises one from `global_balance` (sum of
-  `p_load + p_gen + p_wind + p_ess + p_loss` should be ≈ 0); see Phase 2 dump.
-- Phase 4 uses the `SimulinkBridge` directly (not `KundurSimulinkEnv`) so the
-  full SAC pipeline is not loaded. Disturbances are injected via workspace
-  vars per `scenarios.kundur.workspace_vars` schema.
-- MATLAB cold-start ≈ 20 s; allow ~25 s before Phase 1 starts producing
-  output. Total wall time on a fresh engine ≈ 5-10 min for all phases.
+---
+
+## Boundary with adjacent systems
+
+| External | Probe interaction |
+|---|---|
+| `evaluation/paper_eval.py` | consumed via subprocess + JSON output; never imported |
+| `scenarios/kundur/train_simulink.py` | consumed via subprocess; one CLI flag added (`--run-id`, D-minimal) |
+| `scenarios/kundur/disturbance_protocols.py` | imported for `known_disturbance_types()` (single source of truth for dispatches) |
+| `scenarios/kundur/config_simulink.py` | imported for `PHI_F` / `DIST_*` / etc.; ENV-var override path used by Phase C |
+| `scenarios/kundur/workspace_vars.py` | imported for `effective_in_profile` schema |
+| `engine/matlab_session.py` | imported for Phase 1 dynamic discovery |
+| `engine/simulink_bridge.py` | imported indirectly via `KundurSimulinkEnv` for Phase 3+4 sim |
+| `utils/run_protocol.py::generate_run_id` | imported via train_simulink (no probe-side override) |
+
+Probe writes ONLY under `results/harness/kundur/probe_state/` and (for
+Phase C) `results/sim_kundur/runs/probe_phase_c_*/`. Production train
+output (`results/sim_kundur/runs/kundur_simulink_*/`) is read for
+checkpoint discovery (Phase B) and never modified.
+
+---
+
+## Where to find...
+
+| You want | Look in |
+|---|---|
+| Run a specific workflow | `USAGE.md` §"5 个常用 workflow" |
+| Decision table (intent → command) | `AGENTS.md` §3 |
+| Snapshot JSON field schema | `AGENTS.md` §4 |
+| Why G6 has two scopes | `_verdict.py::_g6_trained_policy` docstring + `AGENTS.md` §5 |
+| What "spurious R1 PASS" means | `_causality.py::_compute_r1_verdict` docstring |
+| Threshold defaults | `probe_config.py::ProbeThresholds` |
+| Per-dispatch expected floor | `dispatch_metadata.py::METADATA[<name>]` |
+| Plan or verdict context | `quality_reports/plans/` + `quality_reports/phase_C_R1_verdict_*.md` |
+
+---
+
+*end — `USAGE.md` for operators, `AGENTS.md` for AI, this file for designers.*

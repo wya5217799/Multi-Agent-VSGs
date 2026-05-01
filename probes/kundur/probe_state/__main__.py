@@ -152,8 +152,12 @@ def main(argv: list[str] | None = None) -> int:
     # G3 short-circuit: --promote-baseline <path>
     if args.promote_baseline:
         from probes.kundur.probe_state._diff import promote_baseline
-        dst = promote_baseline(Path(args.promote_baseline), snapshot_dir)
-        print(f"baseline promoted: {args.promote_baseline} -> {dst}")
+        result = promote_baseline(Path(args.promote_baseline), snapshot_dir)
+        print(f"src:    {result['src']}")
+        print(f"dst:    {result['dst']}")
+        if result["backup"]:
+            print(f"backup: {result['backup']}  (previous baseline preserved)")
+        print(f"new baseline verdicts: {result['verdict_summary']}")
         return 0
 
     # F2/G3 short-circuit: --diff PREV CURR (with alias support).

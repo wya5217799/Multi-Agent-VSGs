@@ -35,10 +35,9 @@ import shutil
 from pathlib import Path
 from typing import Any
 
-# G3: Phase A default snapshot dir; CLI lets caller override via --output-dir.
-DEFAULT_SNAPSHOT_DIR = Path(
-    "results/harness/kundur/probe_state"
-).resolve() if False else None  # resolved at call time
+# G3: Phase A default snapshot dir is resolved at the CLI entry point
+# (__main__.py uses probe_state.DEFAULT_OUTPUT_DIR); this module accepts
+# the dir as a parameter to keep it pure.
 
 # Keys whose values are large arrays / cells that we summarise rather than
 # diff field-by-field. Added rolling as new noisy fields surface.
@@ -76,20 +75,54 @@ def resolve_alias(name: str, snapshot_dir: Path) -> Path:
     return Path(name).expanduser().resolve()
 
 
-def promote_baseline(src: Path, snapshot_dir: Path) -> Path:
+def promote_baseline(src: Path, snapshot_dir: Path) -> dict[str, Any]:
     """G3: copy ``src`` to ``baseline.json`` in the snapshot dir.
 
-    Uses ``shutil.copy2`` (Windows-safe; symlinks need admin). Overwrites
-    any existing ``baseline.json``. Caller is responsible for confirming
-    the source snapshot is the right one — this is a manual rebase tool.
+    Uses ``shutil.copy2`` (Windows-safe; symlinks need admin). Caller is
+    responsible for confirming the source snapshot is the right one —
+    this is a manual rebase tool.
+
+    Safety (I7 review fix 2026-05-01):
+    - any existing ``baseline.json`` is renamed to ``baseline.json.bak``
+      before overwrite (one level of history; rerun loses the older bak).
+    - Returns a dict with ``src``, ``dst``, ``backup`` (Path | None), and
+      ``verdict_summary`` (one-line G1-G6 status of the new baseline) so
+      the operator sees what they just made canonical.
     """
     src = Path(src).expanduser().resolve()
     if not src.exists():
         raise FileNotFoundError(f"--promote-baseline source missing: {src}")
     snapshot_dir.mkdir(parents=True, exist_ok=True)
     dst = snapshot_dir / "baseline.json"
+
+    backup: Path | None = None
+    if dst.exists():
+        backup = dst.with_suffix(".json.bak")
+        shutil.copy2(dst, backup)
+
     shutil.copy2(src, dst)
-    return dst
+
+    # I7: read verdict block + render single-line summary so the operator
+    # immediately sees if they just promoted a snapshot with REJECTed gates.
+    try:
+        d = json.loads(dst.read_text(encoding="utf-8"))
+        gates = d.get("falsification_gates", {}) or {}
+        parts = []
+        for g in ("G1_signal", "G2_measurement", "G3_gradient",
+                  "G4_position", "G5_trace", "G6_trained_policy"):
+            v = (gates.get(g) or {}).get("verdict", "?")
+            short = g.split("_")[0]  # G1, G2, ...
+            parts.append(f"{short}={v}")
+        verdict_summary = "  ".join(parts)
+    except Exception as exc:  # noqa: BLE001 — fail-soft, summary is informational
+        verdict_summary = f"(verdict read failed: {exc})"
+
+    return {
+        "src": src,
+        "dst": dst,
+        "backup": backup,
+        "verdict_summary": verdict_summary,
+    }
 
 
 def diff_snapshots(prev_path: Path, curr_path: Path) -> int:
@@ -163,7 +196,7 @@ def _walk(prev: Any, curr: Any, *, path: str) -> list[tuple[str, str]]:
     elif isinstance(prev, list) and isinstance(curr, list):
         if len(prev) != len(curr):
             changes.append(
-                (path, f"list length {len(prev)} → {len(curr)}")
+                (path, f"list length {len(prev)} -> {len(curr)}")
             )
         for i, (p, c) in enumerate(zip(prev, curr)):
             changes.extend(_walk(p, c, path=_join(path, f"[{i}]")))

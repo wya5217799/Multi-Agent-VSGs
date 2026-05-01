@@ -287,9 +287,10 @@ def _render_md(snap: dict[str, Any], ts: str) -> str:
                 fs_glyph = {
                     "ok": "✅",
                     "below_expected_floor": "⚠️ below",
+                    "above_expected_ceiling": "⚠️ above",
                     "expected_floor_unknown": "❓ unknown",
                 }.get(fs, fs)
-                if fs == "below_expected_floor":
+                if fs in ("below_expected_floor", "above_expected_ceiling"):
                     n_below_floor += 1
                 lines.append(
                     f"| `{d_type}` | {family} | {mag} "
@@ -301,10 +302,11 @@ def _render_md(snap: dict[str, Any], ts: str) -> str:
             if n_below_floor:
                 lines.append("")
                 lines.append(
-                    f"⚠️ {n_below_floor} dispatch(es) below expected floor — "
-                    "possible model degradation or build drift; see "
+                    f"⚠️ {n_below_floor} dispatch(es) outside expected band "
+                    "(below floor or above ceiling) — possible model "
+                    "degradation, runaway divergence, or build drift; see "
                     "`historical_source` per-dispatch for the verdict that "
-                    "set the floor."
+                    "set the bounds."
                 )
 
     # Phase 5 — trained policy ablation (Phase B)

@@ -41,9 +41,10 @@ logger = logging.getLogger(__name__)
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
 # G6 / paper_eval thresholds — sourced from probe_config (F1 2026-05-01).
-# Module-level aliases kept for back-compat: existing self-tests + downstream
-# consumers can still grep for these names. Default values move with the
-# centralised THRESHOLDS container.
+# Module-level aliases kept for back-compat / grep-ability. **Do NOT
+# override locally** — edit ``probe_config.ProbeThresholds`` and bump
+# ``IMPLEMENTATION_VERSION``; otherwise this module silently drifts from
+# the rest (m1 review fix 2026-05-01).
 from probes.kundur.probe_state.probe_config import THRESHOLDS
 
 G6_K_REQUIRED_CONTRIBUTORS = THRESHOLDS.g6_k_required_contributors

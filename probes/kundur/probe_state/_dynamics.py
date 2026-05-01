@@ -39,6 +39,8 @@ F_NOM_HZ = 50.0
 DT_S = 0.2
 
 # G1 trigger floor — sourced from probe_config (F1 2026-05-01).
+# **Do NOT override locally** — edit ``probe_config.ProbeThresholds``
+# instead (m1 review fix).
 from probes.kundur.probe_state.probe_config import THRESHOLDS
 RESPOND_THRESHOLD_HZ = THRESHOLDS.g1_respond_hz
 
@@ -267,16 +269,25 @@ def run_per_dispatch(probe: "ModelStateProbe") -> dict[str, Any]:
                     (max_abs_per_agent > RESPOND_THRESHOLD_HZ).sum()
                 )
                 share = _r_f_local_share(omega, F_NOM_HZ)
-                # G4 reconciliation (2026-05-01, design §5.7):
-                # compare observed max|Δf| against historical floor.
+                # G4 reconciliation (2026-05-01, design §5.7) — both
+                # directions: under-response (below_expected_floor) AND
+                # runaway divergence (above_expected_ceiling, I5 review fix).
                 expected_floor = md.get("expected_min_df_hz")
+                expected_ceiling = md.get("expected_max_df_hz")
                 observed_global = float(max_abs_per_agent.max())
+                below_floor: bool | None
+                above_ceiling: bool | None
                 if expected_floor is None:
-                    floor_status = "expected_floor_unknown"
                     below_floor = None
-                elif observed_global < float(expected_floor):
+                else:
+                    below_floor = observed_global < float(expected_floor)
+                if expected_ceiling is None:
+                    above_ceiling = None
+                else:
+                    above_ceiling = observed_global > float(expected_ceiling)
+
+                if below_floor:
                     floor_status = "below_expected_floor"
-                    below_floor = True
                     logger.warning(
                         "Phase 4 dispatch %s observed max|Δf|=%.4f Hz < "
                         "expected floor %.4f Hz (source: %s) — possible "
@@ -284,9 +295,19 @@ def run_per_dispatch(probe: "ModelStateProbe") -> dict[str, Any]:
                         d_type, observed_global, float(expected_floor),
                         md.get("historical_source") or "—",
                     )
+                elif above_ceiling:
+                    floor_status = "above_expected_ceiling"
+                    logger.warning(
+                        "Phase 4 dispatch %s observed max|Δf|=%.4f Hz > "
+                        "expected ceiling %.4f Hz (source: %s) — possible "
+                        "runaway divergence / damping collapse",
+                        d_type, observed_global, float(expected_ceiling),
+                        md.get("historical_source") or "—",
+                    )
+                elif expected_floor is None and expected_ceiling is None:
+                    floor_status = "expected_floor_unknown"
                 else:
                     floor_status = "ok"
-                    below_floor = False
                 results[d_type] = {
                     "metadata": md,
                     "applied_magnitude_sys_pu": mag,
@@ -296,7 +317,9 @@ def run_per_dispatch(probe: "ModelStateProbe") -> dict[str, Any]:
                     "max_abs_f_dev_hz_per_agent": max_abs_per_agent.tolist(),
                     "max_abs_f_dev_hz_global": observed_global,
                     "expected_min_df_hz": expected_floor,
+                    "expected_max_df_hz": expected_ceiling,
                     "below_expected_floor": below_floor,
+                    "above_expected_ceiling": above_ceiling,
                     "floor_status": floor_status,
                     "r_f_local_share": share,
                     "r_f_share_max_min_diff": (

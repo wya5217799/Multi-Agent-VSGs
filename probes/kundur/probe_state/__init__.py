@@ -8,6 +8,9 @@ and falsification gates G1-G5.
 """
 from __future__ import annotations
 
+from probes.kundur.probe_state.probe_config import (
+    IMPLEMENTATION_VERSION as __version__,
+)
 from probes.kundur.probe_state.probe_state import ModelStateProbe, SCHEMA_VERSION
 
-__all__ = ["ModelStateProbe", "SCHEMA_VERSION"]
+__all__ = ["ModelStateProbe", "SCHEMA_VERSION", "__version__"]

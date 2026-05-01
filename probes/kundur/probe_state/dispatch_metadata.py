@@ -55,6 +55,13 @@ class DispatchMetadata:
     """Known-good signal floor (Hz). Phase 4 max|Δf| below this triggers
     ``below_expected_floor`` flag. None = no historical floor recorded;
     Phase 4 emits ``expected_floor_unknown`` instead."""
+    expected_max_df_hz: float | None = None
+    """Known-good signal ceiling (Hz) — runaway-divergence detection
+    (I5 review fix 2026-05-01). Phase 4 max|Δf| above this triggers
+    ``above_expected_ceiling`` flag. None = no ceiling recorded
+    (default); use sparingly — only set when you have a tight historical
+    upper bound (e.g. F4 hybrid mean is 0.65 Hz so 1.5 Hz on the same
+    dispatch is anomalous; ceiling 1.0 Hz catches that)."""
     mag_unit: str = "sys-pu"
     """Magnitude semantics. Common values: ``sys-pu`` (default — sys-pu
     on SBASE), ``sys-pu (SG cap)`` (fraction of generator capacity),
@@ -202,6 +209,7 @@ METADATA: dict[str, DispatchMetadata] = {
         "SG step + ESS compensate (Option F4 multi-point). Largest expected "
         "max|Δf| in current model.",
         expected_min_df_hz=0.30,
+        expected_max_df_hz=1.0,  # F4 v3 mean 0.65 Hz; 1.0 Hz catches runaway
         mag_unit="sys-pu (total budget)",
         t_trigger_s=_DEFAULT_T_TRIG,
         historical_source="F4_V3_RETRAIN_FINAL_VERDICT.md (mean 0.65 Hz)",
@@ -317,6 +325,7 @@ def get_metadata(name: str) -> dict:
             "expected_behavior": "either",
             "notes": "metadata not registered — probe used defaults",
             "expected_min_df_hz": None,
+            "expected_max_df_hz": None,
             "mag_unit": "sys-pu",
             "t_trigger_s": None,
             "historical_source": "",
@@ -331,6 +340,7 @@ def get_metadata(name: str) -> dict:
         "expected_behavior": md.expected_behavior,
         "notes": md.notes,
         "expected_min_df_hz": md.expected_min_df_hz,
+        "expected_max_df_hz": md.expected_max_df_hz,
         "mag_unit": md.mag_unit,
         "t_trigger_s": md.t_trigger_s,
         "historical_source": md.historical_source,

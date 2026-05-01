@@ -734,26 +734,119 @@ def test_g3_promote_baseline_copies_file(tmp_path):
     src = tmp_path / "snap_v1.json"
     src.write_text('{"schema_version": 1, "implementation_version": "0.4.0"}',
                    encoding="utf-8")
-    dst = promote_baseline(src, tmp_path)
+    result = promote_baseline(src, tmp_path)
+    dst = result["dst"]
     assert dst == tmp_path / "baseline.json"
     assert dst.exists()
     assert dst.read_text(encoding="utf-8") == src.read_text(encoding="utf-8")
+    assert result["backup"] is None  # first promotion: nothing to back up
     # Now baseline alias resolves to the copied file.
     assert resolve_alias("baseline", tmp_path) == dst
 
 
 def test_g3_promote_baseline_overwrites_existing(tmp_path):
+    """I7 review fix: existing baseline.json is renamed to .bak before overwrite."""
     from probes.kundur.probe_state._diff import promote_baseline
 
     # First promotion
     src1 = tmp_path / "old.json"
     src1.write_text('{"v": 1}', encoding="utf-8")
     promote_baseline(src1, tmp_path)
-    # Second promotion overwrites
+    assert (tmp_path / "baseline.json").exists()
+    assert not (tmp_path / "baseline.json.bak").exists()  # nothing to back up first time
+
+    # Second promotion: previous baseline preserved as .bak
     src2 = tmp_path / "new.json"
     src2.write_text('{"v": 2}', encoding="utf-8")
-    dst = promote_baseline(src2, tmp_path)
-    assert dst.read_text(encoding="utf-8") == '{"v": 2}'
+    result = promote_baseline(src2, tmp_path)
+    assert result["dst"].read_text(encoding="utf-8") == '{"v": 2}'
+    assert result["backup"] is not None
+    assert result["backup"].name == "baseline.json.bak"
+    assert result["backup"].read_text(encoding="utf-8") == '{"v": 1}'  # old preserved
+
+
+def test_g3_promote_baseline_returns_verdict_summary(tmp_path):
+    """I7 review fix: result includes one-line G1-G6 verdict summary."""
+    from probes.kundur.probe_state._diff import promote_baseline
+
+    src = tmp_path / "snap.json"
+    src.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "falsification_gates": {
+                "G1_signal": {"verdict": "PASS"},
+                "G2_measurement": {"verdict": "PASS"},
+                "G3_gradient": {"verdict": "REJECT"},
+                "G4_position": {"verdict": "PASS"},
+                "G5_trace": {"verdict": "PASS"},
+                "G6_trained_policy": {"verdict": "PENDING"},
+            },
+        }),
+        encoding="utf-8",
+    )
+    result = promote_baseline(src, tmp_path)
+    summary = result["verdict_summary"]
+    assert "G1=PASS" in summary
+    assert "G3=REJECT" in summary
+    assert "G6=PENDING" in summary
+
+
+def test_g3_diff_snapshots_e2e_detects_field_change(tmp_path, capsys):
+    """End-to-end diff: 2 fixture snapshots → expect numeric Δ output."""
+    from probes.kundur.probe_state._diff import diff_snapshots
+
+    a = tmp_path / "a.json"
+    b = tmp_path / "b.json"
+    a.write_text(json.dumps({
+        "schema_version": 1,
+        "implementation_version": "0.4.0",
+        "phase3_open_loop": {"std_diff_max_min_pu": 1e-5},
+    }), encoding="utf-8")
+    b.write_text(json.dumps({
+        "schema_version": 1,
+        "implementation_version": "0.4.0",
+        "phase3_open_loop": {"std_diff_max_min_pu": 5e-5},
+    }), encoding="utf-8")
+    rc = diff_snapshots(a, b)
+    captured = capsys.readouterr().out
+    assert rc == 1
+    assert "phase3_open_loop.std_diff_max_min_pu" in captured
+    assert "1e-05 -> 5e-05" in captured or "5e-05" in captured  # delta line
+
+
+def test_g3_diff_snapshots_e2e_no_changes_returns_zero(tmp_path, capsys):
+    from probes.kundur.probe_state._diff import diff_snapshots
+
+    a = tmp_path / "a.json"
+    a.write_text('{"schema_version": 1, "implementation_version": "0.4.0"}',
+                 encoding="utf-8")
+    rc = diff_snapshots(a, a)
+    out = capsys.readouterr().out
+    assert rc == 0
+    assert "no field-level changes" in out
+
+
+def test_i5_dispatch_metadata_hybrid_has_ceiling():
+    """I5 review fix: F4 hybrid dispatch must have expected_max_df_hz set."""
+    from probes.kundur.probe_state.dispatch_metadata import METADATA
+
+    md = METADATA["pm_step_hybrid_sg_es"]
+    assert md.expected_max_df_hz is not None, (
+        "F4 hybrid lost ceiling — runaway divergence detection broken"
+    )
+    assert md.expected_max_df_hz > md.expected_min_df_hz, (
+        "ceiling must exceed floor: "
+        f"max={md.expected_max_df_hz} <= min={md.expected_min_df_hz}"
+    )
+
+
+def test_i2_init_exports_version():
+    """I2 review fix: __init__.py exports __version__ for importlib.metadata."""
+    import probes.kundur.probe_state as pkg
+    assert hasattr(pkg, "__version__"), "__version__ missing from package"
+    # Semver shape: 'X.Y.Z'
+    parts = pkg.__version__.split(".")
+    assert len(parts) == 3 and all(p.isdigit() for p in parts), pkg.__version__
 
 
 def test_phase_c_short_train_subprocess_uses_probe_phase_c_run_id_prefix(monkeypatch):

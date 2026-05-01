@@ -47,7 +47,8 @@ logger = logging.getLogger(__name__)
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
 # R1 / train thresholds — sourced from probe_config (F1 2026-05-01).
-# Module-level aliases preserve grep-ability for existing references.
+# Module-level aliases preserve grep-ability. **Do NOT override locally**
+# — edit ``probe_config.ProbeThresholds`` instead (m1 review fix).
 from probes.kundur.probe_state.probe_config import THRESHOLDS
 
 IMPROVE_TOL_R1_SYS_PU_SQ = THRESHOLDS.r1_improve_tol_sys_pu_sq

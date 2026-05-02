@@ -1,3 +1,8 @@
+# FACT: 这是合约本身。evaluator 的 metric 计算逻辑 = 项目实际评分方式。
+# "paper-style" 是 CLAIM —— 公式是否真的与 paper Eq. 对齐要逐项核对 paper。
+# 受 PAPER-ANCHOR LOCK：任何 paper 数字引用须连 INVALID_PAPER_ANCHOR.md 一起引。
+# 详见 docs/EVIDENCE_PROTOCOL.md。
+
 """Phase 5.1 — paper-style evaluator for kundur_cvs_v3 checkpoints.
 
 Implements the paper §IV-C cumulative-reward formula:
@@ -21,17 +26,34 @@ This module READS a checkpoint and READS env state; nothing else.
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
-import math
 import os
 import sys
 import time
-from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
 import numpy as np
+
+# 2026-05-03: Metric helpers + dataclasses + scenario gen extracted to
+# evaluation.metrics for unit testability and reuse. Re-exported below
+# (see "Re-exports" section) for backward compat with existing callers
+# (e.g. probes/kundur/probe_state/_discover.py imports KUNDUR_CVS_V3_*
+# from this module — those Kundur-specific dicts deliberately stay here).
+from evaluation.metrics import (  # noqa: F401  (re-export, see below)
+    EvalResult,
+    PerEpisodeMetrics,
+    _compute_global_rf_per_agent,
+    _compute_global_rf_unnorm,
+    _compute_per_agent_max_abs_df,
+    _compute_per_agent_nadir_peak,
+    _compute_per_agent_omega_summary,
+    _compute_r_f_local_per_agent_eta1,
+    _is_finite_arr,
+    _rocof_max,
+    _settling_time_s,
+    generate_scenarios,
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -69,262 +91,6 @@ KUNDUR_CVS_V3_OMEGA_SOURCES: list[dict] = [
 KUNDUR_CVS_V3_COMM_ADJ: dict[int, list[int]] = {
     0: [1, 3], 1: [0, 2], 2: [1, 3], 3: [2, 0],  # ring topology
 }
-
-
-# ---------------------------------------------------------------------------
-# Result dataclasses
-# ---------------------------------------------------------------------------
-
-
-@dataclass
-class PerEpisodeMetrics:
-    scenario_idx: int
-    proxy_bus: int  # 7 or 9
-    magnitude_sys_pu: float
-    n_steps: int
-    max_freq_dev_hz: float
-    rocof_max_hz_per_s: float
-    nadir_hz: float
-    peak_hz: float
-    settling_time_s: Optional[float]  # None if never settled
-    r_f_global_unnormalized: float
-    r_f_local_total: float
-    r_h_total: float
-    r_d_total: float
-    total_reward: float
-    nan_inf_seen: bool
-    tds_failed: bool
-    # 2026-04-30 Probe B: per-agent decomposition for 4-agent collapse falsification
-    r_f_global_per_agent: list[float] = field(default_factory=list)
-    max_abs_df_hz_per_agent: list[float] = field(default_factory=list)
-    # 2026-04-30 Probe B extension (user request): full per-agent diagnostics
-    nadir_hz_per_agent: list[float] = field(default_factory=list)
-    peak_hz_per_agent: list[float] = field(default_factory=list)
-    omega_trace_summary_per_agent: list[dict] = field(default_factory=list)
-    r_f_local_per_agent_eta1: list[float] = field(default_factory=list)
-
-
-@dataclass
-class EvalResult:
-    schema_version: int
-    checkpoint_path: str
-    policy_label: str  # 'best.pt' / 'zero_action_no_control' / etc.
-    n_scenarios: int
-    seed_base: int
-    cumulative_reward_global_rf: dict
-    per_episode_metrics: list[PerEpisodeMetrics]
-    summary: dict
-    figures: list[str] = field(default_factory=list)
-    # 2026-04-30 Probe B: omega-source metadata (cvs_v3-specific)
-    omega_source_paths: list[dict] = field(default_factory=list)
-
-
-# ---------------------------------------------------------------------------
-# Scenario generator (Phase 4.3 placeholder — deterministic per seed)
-# ---------------------------------------------------------------------------
-
-
-def generate_scenarios(
-    n_scenarios: int,
-    seed_base: int,
-    dist_min: float,
-    dist_max: float,
-    bus_choices: tuple[int, ...] = (7, 9),
-) -> list[dict]:
-    """Reproducibly generate (bus, magnitude, sign) triples for evaluation.
-
-    Phase 4.3 will replace this with a JSON manifest; until then, this is
-    deterministic given (seed_base, n_scenarios) and produces a
-    Phase-4.3-compatible record shape.
-    """
-    rng = np.random.default_rng(seed_base)
-    scenarios = []
-    for k in range(n_scenarios):
-        bus = int(rng.choice(list(bus_choices)))
-        # Sign: 50/50 increase / decrease.
-        sign = +1.0 if rng.random() < 0.5 else -1.0
-        magnitude = float(rng.uniform(dist_min, dist_max)) * sign
-        scenarios.append({
-            "scenario_idx": k,
-            "bus": bus,
-            "magnitude_sys_pu": magnitude,
-        })
-    return scenarios
-
-
-# ---------------------------------------------------------------------------
-# Metric helpers
-# ---------------------------------------------------------------------------
-
-
-def _compute_global_rf_unnorm(
-    omega_trace: np.ndarray,  # shape (T, N_agents)
-    f_nom: float,
-) -> float:
-    """- Σ_t Σ_i (Δf_i,t - mean_j Δf_j,t)²  (paper §IV-C)."""
-    if omega_trace.size == 0:
-        return 0.0
-    delta_f = (omega_trace - 1.0) * f_nom  # (T, N)
-    mean_t = delta_f.mean(axis=1, keepdims=True)  # (T, 1)
-    centered = delta_f - mean_t  # (T, N)
-    return float(-(centered ** 2).sum())
-
-
-def _compute_global_rf_per_agent(
-    omega_trace: np.ndarray,  # shape (T, N_agents)
-    f_nom: float,
-) -> list[float]:
-    """Per-agent contribution to r_f_global: -Σ_t (Δf_i,t - mean_j Δf_j,t)².
-
-    2026-04-30 (Probe B for fresh-context falsification audit): per-agent
-    decomposition is needed to falsify the "4-agent measurement collapse"
-    hypothesis surfaced by the 2026-04-30 audit (5 scenarios bit-identical
-    in cvs_v3_eval_fix_smoke/loadstep_metrics.json suggested per-agent
-    omega traces may not be electrically separated). If max - min over
-    the returned list is ~ 0 across all scenarios, the 4 agents are
-    receiving collapsed measurements — broken mode-shape distribution.
-    """
-    if omega_trace.size == 0:
-        return [0.0]
-    delta_f = (omega_trace - 1.0) * f_nom  # (T, N)
-    mean_t = delta_f.mean(axis=1, keepdims=True)  # (T, 1)
-    centered = delta_f - mean_t  # (T, N)
-    per_agent = -(centered ** 2).sum(axis=0)  # (N,)
-    return [float(x) for x in per_agent]
-
-
-def _compute_per_agent_max_abs_df(
-    omega_trace: np.ndarray,  # shape (T, N_agents)
-    f_nom: float,
-) -> list[float]:
-    """Per-agent max|Δf| in Hz. 2026-04-30 Probe B companion: smoking-gun
-    test for 4-agent measurement collapse. If all N entries are bit-equal
-    across scenarios, omega_ts_i may be wired to a single shared signal.
-    """
-    if omega_trace.size == 0:
-        return [0.0]
-    delta_f_abs = np.abs((omega_trace - 1.0) * f_nom)  # (T, N)
-    per_agent = delta_f_abs.max(axis=0)  # (N,)
-    return [float(x) for x in per_agent]
-
-
-def _compute_per_agent_nadir_peak(
-    omega_trace: np.ndarray, f_nom: float,
-) -> tuple[list[float], list[float]]:
-    """Per-agent nadir (most-negative Δf) and peak (most-positive Δf) in Hz.
-
-    2026-04-30 Probe B: a +0.5 / -0.5 magnitude pair must produce
-    sign-asymmetric per-agent nadir/peak. If both magnitudes give same
-    sign across all 4 agents → dispatch sign convention is broken; if
-    all 4 agents show identical nadir → measurement collapse.
-    """
-    if omega_trace.size == 0:
-        return [0.0], [0.0]
-    delta_f = (omega_trace - 1.0) * f_nom  # (T, N)
-    nadir = delta_f.min(axis=0)  # (N,)
-    peak = delta_f.max(axis=0)  # (N,)
-    return [float(x) for x in nadir], [float(x) for x in peak]
-
-
-def _compute_per_agent_omega_summary(
-    omega_trace: np.ndarray,
-) -> list[dict]:
-    """Per-agent omega trace fingerprint for byte-equality detection.
-
-    2026-04-30 Probe B: returns mean / std / first / last / sha256 of
-    each agent's full omega trajectory. Two agents with byte-identical
-    sha256 are demonstrably aliased to the same MATLAB signal. Different
-    sha256 with similar nadir/peak are physically coupled (legitimate)
-    rather than aliased (broken).
-    """
-    if omega_trace.size == 0:
-        return []
-    out = []
-    T, N = omega_trace.shape
-    for i in range(N):
-        col = omega_trace[:, i]
-        h = hashlib.sha256(col.tobytes()).hexdigest()[:16]
-        out.append({
-            "agent_idx": i,
-            "n_samples": int(T),
-            "mean": float(col.mean()),
-            "std": float(col.std()),
-            "first": float(col[0]),
-            "last": float(col[-1]),
-            "sha256_16": h,
-        })
-    return out
-
-
-def _compute_r_f_local_per_agent_eta1(
-    omega_trace: np.ndarray, f_nom: float,
-    comm_adj: dict[int, list[int]],
-) -> list[float]:
-    """Per-agent local r_f under η=1 (no comm failure) upper bound.
-
-    Mirror of _base.py reward formula r_f_i (Eq.15-16) recomputed from
-    omega trace alone — assumes all comm links active. Cannot match
-    online r_f exactly (comm fail samples differ per step), but
-    differential between two scenarios is meaningful for collapse
-    detection. Sum across agents == _compute_global_rf only if
-    comm_adj fully connected (it isn't here — ring topology).
-    """
-    if omega_trace.size == 0:
-        return [0.0]
-    delta_f = (omega_trace - 1.0) * f_nom  # (T, N) Hz
-    delta_w_pu = delta_f / f_nom  # back to pu (paper Eq.15-16 in pu)
-    T, N = delta_w_pu.shape
-    out = [0.0] * N
-    for i in range(N):
-        nbrs = comm_adj.get(i, [])
-        # local mean: agent + neighbors (η=1)
-        local_idxs = [i] + list(nbrs)
-        omega_bar = delta_w_pu[:, local_idxs].mean(axis=1)  # (T,)
-        # r_f_i = -(dw_i - omega_bar)^2 - sum_j (dw_j - omega_bar)^2 (η=1)
-        own = -((delta_w_pu[:, i] - omega_bar) ** 2)
-        nb_sum = sum(
-            -((delta_w_pu[:, j] - omega_bar) ** 2) for j in nbrs
-        )
-        r_f_i_per_step = own + (nb_sum if nbrs else 0.0)
-        out[i] = float(r_f_i_per_step.sum())
-    return out
-
-
-def _rocof_max(omega_trace: np.ndarray, dt_s: float, f_nom: float) -> float:
-    """max |dω/dt| · f_n — peak rate of change of frequency."""
-    if omega_trace.shape[0] < 2:
-        return 0.0
-    dω = np.diff(omega_trace, axis=0)  # (T-1, N)
-    rocof_per_agent = np.abs(dω) / dt_s * f_nom
-    return float(rocof_per_agent.max())
-
-
-def _settling_time_s(
-    omega_trace: np.ndarray,
-    dt_s: float,
-    f_nom: float,
-    tol_hz: float,
-    window_s: float,
-) -> Optional[float]:
-    """First t (sec) such that all subsequent steps within `window_s` have
-    |Δf| < tol_hz across all agents. Returns None if never settled.
-    """
-    if omega_trace.shape[0] == 0:
-        return None
-    delta_f = np.abs((omega_trace - 1.0) * f_nom)  # (T, N)
-    settled = (delta_f.max(axis=1) < tol_hz)  # (T,)
-    window_steps = max(int(round(window_s / dt_s)), 1)
-    T = omega_trace.shape[0]
-    for t0 in range(T):
-        if t0 + window_steps > T:
-            break
-        if bool(settled[t0:t0 + window_steps].all()):
-            return float(t0 * dt_s)
-    return None
-
-
-def _is_finite_arr(x: np.ndarray) -> bool:
-    return bool(np.all(np.isfinite(x)))
 
 
 # ---------------------------------------------------------------------------
@@ -373,7 +139,9 @@ def evaluate_policy(
     # 2026-04-30: extended allowed set with 1-4 for vsg mode + 0 for hybrid F4.
     _allowed_buses = {0, 7, 9, 1, 2, 3, 4}
     _preferred_type = os.environ.get("KUNDUR_DISTURBANCE_TYPE", "")
-    if not _preferred_type.startswith("loadstep_paper_"):
+    # 2026-05-03 Path C: loadstep_ptdf_* is multi-point dispatch (bus
+    # informational), shares LoadStep semantics — bypass bus check.
+    if not _preferred_type.startswith(("loadstep_paper_", "loadstep_ptdf_")):
         _bad = [
             (s.get("scenario_idx"), s.get("bus")) for s in scenarios
             if s.get("bus") not in _allowed_buses
@@ -421,7 +189,9 @@ def evaluate_policy(
         # right after reset and before the step loop.
         from scenarios.kundur.scenario_loader import Scenario as _KdScenario
         preferred_type = os.environ.get("KUNDUR_DISTURBANCE_TYPE", "")
-        if preferred_type.startswith("loadstep_paper_"):
+        # 2026-05-03 Path C: PTDF dispatch shares LoadStep semantics
+        # (bus field informational, env-var preserved at construction).
+        if preferred_type.startswith(("loadstep_paper_", "loadstep_ptdf_")):
             obs, _info0 = env.reset(
                 seed=seed_base + 1009 * sc_idx,
                 options={
@@ -652,7 +422,7 @@ def result_to_dict(result: EvalResult) -> dict:
     # 2026-04-30 PAPER-ANCHOR LOCK: hardcoded False until Signal/Measurement/
     # Causality 三层反证 gate (G1-G6) 全部 PASS 且 verdict 文件存在于
     # quality_reports/paper_compliance/three_layer_signoff/ 且 < 7 天。
-    # 详见 docs/paper/yang2023-fact-base.md §10 PAPER-ANCHOR LOCK
+    # 详见 docs/paper/archive/yang2023-fact-base.md §10 PAPER-ANCHOR LOCK（历史快照）；论文事实查询走 docs/paper/kd_4agent_paper_facts.md
     # 与 docs/paper/disturbance-protocol-mismatch-fix-report.md。
     # 任何 cum_unnorm 与 PAPER_DDIC_UNNORMALIZED / PAPER_NO_CONTROL_UNNORMALIZED
     # 的对账在此字段为 False 时均视为 INVALID。

@@ -49,15 +49,25 @@ def _sha256_array(arr: np.ndarray) -> str:
     return hashlib.sha256(arr.astype(np.float64).tobytes()).hexdigest()
 
 
-def _build_env(disturbance_type: str):
+def _build_env(disturbance_type: str, t_warmup_s: float | None = None,
+               fast_restart: bool | None = None):
     """Lazy import + construct ``KundurSimulinkEnv`` with given dispatch.
 
     Hoisted into a helper so that import errors surface as Phase failures
     (caught by the orchestrator) rather than at module import time.
+
+    ``t_warmup_s`` (None = env default) lets probe contexts shrink the
+    warmup window relative to the production T_WARMUP=10 s.
+    ``fast_restart`` (None = BridgeConfig default = False) enables the
+    Simulink FastRestart opt-in for probe contexts.
     """
     from env.simulink.kundur_simulink_env import KundurSimulinkEnv
 
-    return KundurSimulinkEnv(disturbance_type=disturbance_type)
+    return KundurSimulinkEnv(
+        disturbance_type=disturbance_type,
+        t_warmup_s=t_warmup_s,
+        fast_restart=fast_restart,
+    )
 
 
 def _action_zero(env) -> np.ndarray:
@@ -164,7 +174,11 @@ def run_open_loop(probe: "ModelStateProbe") -> dict[str, Any]:
     settle_steps = max(1, int(round(2.0 / DT_S)))  # 2 s post-IC settle
 
     # Pick any valid dispatch_type; magnitude=0 means it will not fire.
-    env = _build_env(disturbance_type="pm_step_proxy_random_gen")
+    env = _build_env(
+        disturbance_type="pm_step_proxy_random_gen",
+        t_warmup_s=probe.t_warmup_s,
+        fast_restart=probe.fast_restart,
+    )
     try:
         _obs, _info = env.reset(options={"disturbance_magnitude": 0.0})
         omega, sim_meta = _collect_omega(env, n_steps)
@@ -198,6 +212,45 @@ def run_open_loop(probe: "ModelStateProbe") -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
+def _apply_dispatch_subset(
+    targets: list[str],
+    subset_spec: "str | tuple[str, ...] | None",
+) -> "tuple[list[str], tuple[str, ...] | None]":
+    """Filter *targets* to those in *subset_spec*.
+
+    Parameters
+    ----------
+    targets:
+        Full ordered list of effective dispatch names for this run.
+    subset_spec:
+        Either a raw CLI spec string (parsed here against *targets*), a
+        canonical name tuple from ``_parse_subset_spec``, or ``None``
+        meaning "no filter — run all" (M1 serial no-op).
+
+    Returns
+    -------
+    (filtered_targets, canonical_subset_applied)
+        ``canonical_subset_applied`` is ``None`` when no filtering occurred.
+    """
+    if subset_spec is None:
+        return targets, None
+
+    # Parse raw string spec at runtime with the live targets list.
+    if isinstance(subset_spec, str):
+        from probes.kundur.probe_state._subset import _parse_subset_spec  # noqa: PLC0415
+        canonical: tuple[str, ...] = _parse_subset_spec(subset_spec, targets)
+    else:
+        canonical = subset_spec  # already a tuple
+
+    filtered = [t for t in targets if t in canonical]
+    logger.info(
+        "Phase 4 subset filter: %d/%d dispatches retained",
+        len(filtered),
+        len(targets),
+    )
+    return filtered, canonical
+
+
 def run_per_dispatch(probe: "ModelStateProbe") -> dict[str, Any]:
     """One sim per effective dispatch, using per-dispatch metadata.
 
@@ -217,18 +270,28 @@ def run_per_dispatch(probe: "ModelStateProbe") -> dict[str, Any]:
     targets = [d for d in effective_from_phase1 if d in KUNDUR_DISTURBANCE_TYPES_VALID]
     skipped = [d for d in effective_from_phase1 if d not in KUNDUR_DISTURBANCE_TYPES_VALID]
 
+    # Module α: apply dispatch subset filter when probe.dispatch_subset is set.
+    # With dispatch_subset=None (default), this is a no-op (M1 constraint).
+    subset_spec: "tuple[str, ...] | None" = getattr(probe, "dispatch_subset", None)
+    targets, subset_applied = _apply_dispatch_subset(targets, subset_spec)
+
     if not targets:
         return {
             "probe_default_magnitude_sys_pu": float(probe.dispatch_magnitude),
             "probe_default_sim_duration_s": float(probe.sim_duration),
             "skipped_unrecognised": skipped,
+            "subset_applied": list(subset_applied) if subset_applied is not None else None,
             "dispatches": {},
             "warning": "no effective dispatches intersect KUNDUR_DISTURBANCE_TYPES_VALID",
         }
 
     settle_window_s = 2.0  # post-trigger settle window for std stats
 
-    env = _build_env(disturbance_type=targets[0])
+    env = _build_env(
+        disturbance_type=targets[0],
+        t_warmup_s=probe.t_warmup_s,
+        fast_restart=probe.fast_restart,
+    )
     results: dict[str, Any] = {}
     metadata_warnings: list[str] = []
     try:
@@ -252,8 +315,19 @@ def run_per_dispatch(probe: "ModelStateProbe") -> dict[str, Any]:
 
             try:
                 env._disturbance_type = d_type
+                # D3 fix (2026-05-03): re-seed env.np_random per dispatch.
+                # Without this, env.reset(seed=None) preserves RNG state across
+                # dispatches in the loop, making `pm_step_proxy_random_bus` and
+                # `pm_step_proxy_random_gen` collapse onto whichever pick the
+                # entering RNG state happens to favor. Stable cross-process
+                # seed via md5 (Python hash() is PYTHONHASHSEED-sensitive).
+                import hashlib
+                _seed = int.from_bytes(
+                    hashlib.md5(d_type.encode()).digest()[:4], 'little'
+                )
                 _obs, info0 = env.reset(
-                    options={"disturbance_magnitude": mag}
+                    seed=_seed,
+                    options={"disturbance_magnitude": mag},
                 )
                 resolved = info0.get("resolved_disturbance_type", d_type)
                 omega, sim_meta = _collect_omega(env, n_steps)
@@ -354,5 +428,6 @@ def run_per_dispatch(probe: "ModelStateProbe") -> dict[str, Any]:
         "probe_default_sim_duration_s": float(probe.sim_duration),
         "skipped_unrecognised": skipped,
         "metadata_missing_dispatches": metadata_warnings,
+        "subset_applied": list(subset_applied) if subset_applied is not None else None,
         "dispatches": results,
     }

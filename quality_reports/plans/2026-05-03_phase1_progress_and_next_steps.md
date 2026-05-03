@@ -126,6 +126,29 @@ After this read-up, you have full context to either:
 | **F13** | `spike/test_ic_delta_mapping_disc.m` | ✅ PASS | NR IC δ time-domain mapping electrically equivalent: Pe_err 0.6% |
 | **Helper** | `spike/test_dynamic_source_helper.m` | ✅ VALIDATED | 4.93 Hz oracle (matches Phase 0's 4.90, <1% drift) |
 | **v3 IC** | `spike/test_v3_discrete_ic_settle.m` | 🟡 5/7 PASS | G1/G2/G3/ES1/ES2 settle; ES3/ES4 oscillate (Phase 1.3a open) |
+| **H1a** | inline (no script saved) | ❌ NR-confounded | both breakers open: ES4 std −42% / ES3 std −36%. Test BROKE NR consistency by removing 248 MW LS1 → cannot distinguish breaker IC from NR mismatch. Data: `phase1_3a_h1_open_breaker.mat` |
+| **H1b** | `spike/test_h1_no_breaker_bus14.m` | ❌ FALSIFIED | NR-consistent variant (skip breaker, load 248 MW direct on Bus 14): ES3 std=0.001772 = baseline 0.001772 to 6 dp. Threshold 0.001. → breaker block is NOT the ES3 osc source. Closed Three-Phase Breaker (Ron=0.001 Ω) electrically equivalent to direct connect. Data: `phase1_3a_h1_nr_consistent.mat` |
+| **Z (refactor)** | `scenarios/kundur/{model_profiles/kundur_cvs_v3_discrete.json, model_profile.py, workspace_vars.py, config_simulink.py, simulink_models/build_kundur_cvs_v3_discrete.m}` + `env/simulink/kundur_simulink_env.py` + `probes/kundur/probe_state/{probe_state.py, _dynamics.py, __main__.py}` + schema.json | ✅ ROUTE OPEN | Added `PROFILE_CVS_V3_DISCRETE` to workspace_vars; `PROFILES_CVS` / `PROFILES_CVS_V3` family constants replace literal model_name tuples in config_simulink + env (3 sites). New profile JSON loads same kundur_ic_cvs_v3.json. `t_warmup_s` constructor param + `--t-warmup-s` CLI flag (probe-context warmup override, default = T_WARMUP=10s). LOAD_STEP_AMP spec marked `effective_in_profile=frozenset({PROFILE_CVS_V3_DISCRETE})` (Phasor name-valid only; Discrete physically effective). `bus14_no_breaker` flag in build script (default false; H1b uses it). |
+| **probe Z smoke** | `python -m probes.kundur.probe_state --phase 1,2,3 --sim-duration 3.0` (under `KUNDUR_MODEL_PROFILE=…kundur_cvs_v3_discrete.json`) | ✅ G2/G5 PASS | Phase 1: model_name=kundur_cvs_v3_discrete, n_ess=4, n_sg=3, n_wind=2, powergui_mode=Discrete, solver=FixedStepAuto, omega_tw_count_ess=4, omega_tw_count_sg=3 — all FACTs match build. Phase 3: 4 ESS distinct ω sha256, std-diff 1.189e-04 pu (G5 PASS). All 4 ESS settle ω=1.0±1e-5 in [4-5]s window after 10s warmup. Snapshot: `results/harness/kundur/probe_state/state_snapshot_20260503T175758.json` (impl 0.5.0, schema 1) |
+| **FR microtest** | `probes/kundur/spike/test_fastrestart_v3_discrete.py` | ✅ FR_VIABLE | FastRestart on v3 Discrete: physics rel err 2.46e-08 (off vs on-repeat) << 1e-5 threshold. Wall: off-1=6.75s, off-2=1.78s (warm), on-repeat=1.16s. Per-sim speedup 1.5× over warm baseline (35% reduction). param-tune sanity (M_1=23.5) rel err 8.9e-06 — solver propagates changes correctly. Recommend opt-in via BridgeConfig.fast_restart flag, default off. |
+| **alpha probe** | `python -m probes.kundur.probe_state --phase 1,2,3,4 --sim-duration 3.0 --t-warmup-s 5.0` (no FR, v3 Discrete) | 🟡 G1/G2/G3/G5 PASS, **G4 REJECT** | Phase 1+2+3+4 wall=37.9 min (Phase 4 = 36.1 min, 12 dispatch OK + 3 LoadStep ERROR for missing LOAD_STEP_TRIP_AMP profile). G4 REJECT: 1 distinct responder signature across 12 dispatches (1mHz threshold too low for v3 Discrete EMT coupling — every agent always above 74 mHz). Snapshot: `state_snapshot_20260503T184730.json`. |
+| **D3 RNG fix** | `_dynamics.py:273` (1-line, applied 2026-05-03) | ✅ APPLIED | env.reset(seed=hashlib.md5(d_type)) per dispatch; deterministic per-dispatch RNG so `pm_step_proxy_random_*` no longer collapse to same RNG state across loop. Verified: `pm_step_proxy_random_gen` now distinct from `pm_step_proxy_g3` post-fix. |
+| **2 pytest fixes** | `tests/test_kundur_workspace_vars.py::test_spec_for_per_sg_v3_family` + `tests/test_disturbance_protocols.py::test_known_types_includes_all_14_plus_single_vsg` | ✅ APPLIED | Z route widened PMG_STEP_AMP profiles to PROFILES_CVS_V3 + disturbance registry grew 14→22 — tests updated, 83 passed. |
+| **dispatch collision diag** | inline (no script) — debugger 2026-05-03 | 🔵 D1+D3 split | 3 collision groups in alpha snapshot. **D1 (naming overlap)**: `pm_step_proxy_bus7 ≡ pm_step_single_es1` and `pm_step_proxy_bus9 ≡ pm_step_single_es4` are synonyms by adapter design (target_indices=(0,) and (3,) respectively) — not a bug, doc clarification only. **D3 (RNG state)**: `pm_step_proxy_random_*` collapsed because `env.np_random` not re-seeded in probe loop — fixed via D3 RNG fix above. |
+| **FR integration** | `engine/simulink_bridge.py` + `env/simulink/kundur_simulink_env.py` + 3 probe files | ❌ REVERTED 2026-05-03 EOD | bvc00fouh (`--fast-restart` Phase 4 sweep) measured 46 min wall, **+28% vs alpha 36 min**. Microtest's 35% per-sim speedup did not translate to integrated env.reset+warmup loop (per-dispatch wall ~176s vs alpha 181s, similar; FR added overhead without gain). Reverted: `simulink_bridge.py:301` `_apply_fast_restart()` call commented out (1 line). Method body + BridgeConfig.fast_restart field + CLI flag retained as dead code for future Option C refactor. Physics zero change (G1-G5 verdicts identical to alpha). |
+| **G4 floor follow-up** | (deferred) `dispatch_metadata.py` — D1 agent recommendation | 🔵 PENDING | Add `g4_position_hz` field to `ProbeThresholds` (~0.10 Hz for v3 Discrete). Current `g1_respond_hz=1e-3` too low: every agent responds > 74 mHz under any dispatch in EMT-coupled v3 Discrete, collapsing all 12 signatures to `(0,1,2,3)`. Not blocking; threshold tune for next paper anchor. |
+| **Hybrid floor follow-up** | (deferred) `dispatch_metadata.py::pm_step_hybrid_sg_es.expected_min_df_hz` — D2 agent recommendation | 🔵 PENDING | Floor 0.30 Hz derived from F4_V3_RETRAIN_FINAL_VERDICT mean (DIST_MAX=3.0 sweep, mean magnitude 1.55). Probe runs at fixed mag=0.5 (32% of historical mean) — observed 0.177 Hz consistent with mag-linear scaling (0.65 × 0.32 ≈ 0.21). Recalibrate floor to ~0.15-0.20 Hz for fixed mag=0.5, OR run probe at higher mag. Not blocking; measurement-protocol mismatch not model degradation. |
+| **LoadStep adapter fix** | `disturbance_protocols.py::LoadStepRBranch.apply` + `kundur_simulink_env.py::_reset_backend` + `workspace_vars.py::LOAD_STEP_T schema` | ✅ APPLIED 2026-05-03 EOD | bvc00fouh snapshot showed 3 LoadStep dispatches bitwise-identical 0.1081 Hz = Phase 3 IC settle drift — breaker fired during warmup at compile-baked `LoadStep_t=5.0`, never inside measurement window. Fix: adapter writes `LOAD_STEP_T = t_now + 0.1` post-amp; env reset pushes `LOAD_STEP_T` to 100s (warmup safe). Schema added LOAD_STEP_T (PROFILES_CVS_V3, effective only in Discrete). 117 pytest pass, 0 regression. |
+| **P2 Module α** | `probes/kundur/probe_state/{__main__.py, _subset.py, _dynamics.py::_apply_dispatch_subset, probe_state.py}` + `tests/test_p2_dispatch_subset.py` + `tests/test_p2_subset_cli_validation.py` | ✅ APPLIED 2026-05-03 | argparse adds `--workers` (int, default 1) + `--dispatch-subset` (str/tuple/None). `_parse_subset_spec` resolves "0,3,7" indices or "name1,name2" names against effective dispatch list. Module α validates `workers > 1` incompatible with `--phase 5/6` (raises SystemExit). Mode banner per S7 logged at run() start. Default workers=1 preserves serial path bit-identical (M1). 88+12 unit tests pass. |
+| **P2 Module β** | `probes/kundur/probe_state/_build_check.py` + `probe_state.py::_ensure_build_current` + `tests/test_p2_build_check.py` | ✅ APPLIED 2026-05-03 | `is_build_current(slx_path, deps)` mtime-compares .slx vs build script + helper + IC JSON. Gated behind `self.workers > 1`; serial mode bypass. If stale, `MatlabSession.get('default').eval('build_kundur_cvs_v3_discrete()')` rebuilds once before workers fork (R_P2 mitigation). Re-raises on rebuild failure. 6 unit tests pass. |
+| **P2 Module γ** | `probes/kundur/probe_state/_orchestrator.py` (185 LOC: slice_targets / spawn_worker / wait_for_all) + `probe_state.py::_run_parallel` (~80 LOC) + `tests/test_p2_orchestrator.py` + `tests/test_p2_serial_compat.py` | ✅ APPLIED 2026-05-03 | Round-robin `targets[k::n_workers]` slicing. Subprocess.Popen × N workers; worker 0 runs `--phase 2,3,4`; workers 1..N-1 run `--phase 4`. Each worker has private MATLAB engine + private output dir `p2_worker_<n>/`. SIGTERM @ 4hr timeout, SIGKILL @ +30s. Empty slices skipped. Decision 4.3 trust-worker-0 for phases 2/3. 24+10 unit tests pass. |
+| **P2 Module δ** | `probes/kundur/probe_state/_merge.py` (127 LOC: merge_snapshots / load_worker_snapshot / MergeError) + `probe_state.py::_run_parallel` merge call site + `tests/test_p2_merge.py` | ✅ APPLIED 2026-05-03 | Phase 1 from parent; phase 2/3 from worker 0; phase 4 dispatches combined disjoint (raises MergeError on overlap, R_P3 mitigation). New `phase4_per_dispatch.parallel_metadata` key (Y3 telemetry: n_workers, worker_subsets, worker_meta, dropped_dispatches). Non-zero exit codes surfaced into errors[] (S6). Worker errors[] forwarded with dedup. Decision 4.4: verdict centrally recomputed via `_verdict.compute_gates(merged)`. 17 unit tests pass + diff_handles_merged regression (R_P8/M5). |
+| **Y4 license smoke** | `probes/kundur/spike/test_y4_license_smoke.py` | ✅ GATE_LIC_PASS @ N=4 (2026-05-03) | 4 subprocess.Popen workers each starting matlab.engine concurrently. Cold start times: 11.15s / 10.55s / 10.78s / 8.27s. Total wall 11.3s (true parallel). 4/4 exit_code=0. RAM peak ~5 GB (= 4 × 1.3 GB; under spec M8 8 GB threshold). M7 BLOCKED → PASS. Unblocks P2 E2E. |
+| **P2 spec + plan** | `quality_reports/specs/2026-05-03_phase4_speedup_p2.md` + `quality_reports/plans/2026-05-03_phase4_speedup_p2_plan.md` | 🔵 APPROVED PENDING IMPL | Subprocess parallelization spec (11 sections, 5 acceptance gates GATE-PHYS/WALL/G15/LIC/RAM, 3 BLOCKED items) + impl plan (4 modules α/β/γ/δ, 11 hr estimate). Triggered by alpha 2168s ≥ 1500s threshold. Gated on M7 4-engine license smoke (Y4 helper) before E2E. FR baseline DEFERRED — alpha used as immutable trigger reference. |
+| **P2 E2E v1** | `python -m probes.kundur.probe_state --phase 1,2,3,4 --workers 4` (2026-05-03) | ❌ FAILED root-cause | All 4 workers exit_code=1 in 139s, 0 dispatches done. Root cause: workers launched with `--phase 4` (worker 0 with `2,3,4`) — Phase 1 missing → `valid_targets=[]` in `_dynamics.run_per_dispatch` → `_parse_subset_spec` rejected all subset names as unknown → SystemExit. Plan §2.3 design assumed workers don't need Phase 1; FALSIFIED. |
+| **P2 spawn_worker fix** | `_orchestrator.py:113-122` (1-line: `phases_arg = "2,3,4"/"4"` → `"1,2,3,4"/"1,4"`) + `tests/test_p2_orchestrator.py` (2 assertion updates) | ✅ APPLIED 2026-05-03 EOD | Add Phase 1 to all workers. Plan §2.3 + spec §11 amended with drift note. 24 unit tests pass. Cost: +~15s wall (parallel Phase 1 across workers). |
+| **P2 E2E v2** | re-run parallel-only (`--workers 4`, serial baseline preserved at p2_e2e_serial/state_snapshot_20260503T214806.json) | 🟡 PARTIAL PASS | Serial: 47.9 min wall, 15 dispatches OK, G1/G2/G3/G5 PASS, G4 REJECT. Parallel: **984.7s = 16.4 min wall, 4/4 workers exit_code=0, 2.92× speedup, 0 dropped**. **GATE-WALL/G15/LIC PASS**. **GATE-PHYS PARTIAL: 12/15 bit-exact (delta=0.0)**, 3 dispatches diverge: `loadstep_paper_bus15` (Δ=0.072 Hz), `loadstep_paper_random_bus` (Δ=0.072), `pm_step_hybrid_sg_es` (Δ=0.026). |
+| **LoadStep latent bug diagnosis** | debugger agent 2026-05-03 EOD (background) | 🔵 ROOT CAUSE LOCKED | 3 GATE-PHYS fails are NOT P2-introduced. Root cause: (1) Three-Phase Breaker `SwitchTimes` compile-frozen (F2 mechanism applies) → LOAD_STEP_T runtime writes are silent no-ops; (2) bus15 `InitialState='open'` + frozen breaker → bus15 RLC permanently disconnected → amp writes electrically inert; (3) hybrid `target_g` from RNG state varies across engine instances. Both serial 0.036 and parallel 0.108 for bus15 are "wrong" (residual from preceding bus14 dispatch). Tracked in `quality_reports/plans/2026-05-04_loadstep_bus15_hybrid_dispatch_fix.md` (~3 hr fix, separate session). |
 
 Detailed evidence: F1-F3 → `2026-05-03_phase_b_findings_cvs_discrete_unlock.md`; F4-F9 → `2026-05-03_phase_b_extended_module_selection.md`; Phase 0 → `2026-05-03_phase0_smib_discrete_verdict.md`; F11-F13 + helper + v3 IC → commits `b6e5d97` / `84b6036` / `68a669f` / `7062695`.
 
@@ -171,16 +194,24 @@ Detailed evidence: F1-F3 → `2026-05-03_phase_b_findings_cvs_discrete_unlock.md
 - Sim wall (5s, measured 2026-05-03): 4.99s (1.0× real-time, init overhead amortized)
 - Sim wall (10s, measured 2026-05-03): 8.95s (1.1× real-time)
 
+**Z refactor route opened (2026-05-03 EOD)**:
+- Model profiles abstraction added: `model_profiles/kundur_cvs_v3_discrete.json` + schema
+- workspace_vars.py: `PROFILE_CVS_V3_DISCRETE` + `PROFILES_CVS` / `PROFILES_CVS_V3` constants
+- env config 3 sites: config_simulink.py / bridge / kundur_simulink_env.py using profile constants (not literal model names)
+- probe_state: Phase 1+2+3 smoke runs G2/G5 PASS; all 4 ESS settle ω=1.0±1e-5 after 10s warmup
+- FastRestart viable on v3 Discrete: 1.5× reset speedup, physics err 2.46e-08 (not yet integrated, opt-in flag ready)
+
 **What works structurally**:
 - Source chain (helper-based) ✓
 - 3-phase network (lines + loads + shunts + wind) ✓
 - LoadStep mechanism (Breaker+Load) ✓
 - Bus net wiring (per-phase anchor maps) ✓
 - IC numerics (V_emf_pu × sin pattern) ✓ (mostly)
+- Model profile abstraction + route ✓
 
 **What's incomplete**:
-- ES3/ES4 oscillation root cause (Phase 1.3a — diagnosis pending, see §4)
-- CCS injection (disabled, Phase 1.5)
+- ES3/ES4 oscillation root cause (Phase 1.3a — H1 FALSIFIED, H2 is now leading, see §4)
+- CCS injection (disabled, Phase 1.5; LOAD_STEP_TRIP_AMP / CCS_LOAD_AMP profiles still Phasor-only)
 - Continuous Integrator → Discrete-Time Integrator (FixedStepAuto bypass; Phase 1.5+ optimization)
 - Pe FIR filter (currently instantaneous V·I, oscillates at 100 Hz; Phase 1.5+ optimization)
 
@@ -202,14 +233,28 @@ Detailed evidence: F1-F3 → `2026-05-03_phase_b_findings_cvs_discrete_unlock.md
   same natural mode preferentially. Magnitude ordering is not yet code-verified beyond raw FFT power.
 
 **Hypotheses to test** (cheapest first, in original §4 order):
-1. **H1**: LS1 closed-state × Π-line shunt-C transient. **Test**: rebuild + override
-   `LoadStepBreaker_bus14` `InitialState` to `'open'`, re-run **1s** test, check ES3/ES4 settle at
-   original gate.
+1. **H1**: LS1 closed-state × Π-line shunt-C transient.
+   - **H1a (2026-05-03)**: open both breakers, re-run 1s test → ES3 std −36%, ES4 → PASS, but
+     this BROKE NR consistency (removed 248 MW LS1 from a topology NR solved with it).
+     Result confounded — could be breaker IC OR NR mismatch.
+   - **H1b (2026-05-03, NR-consistent)**: skip breaker, connect 248 MW load DIRECTLY to Bus 14
+     (NR consistency preserved). Result: ES3 std = 0.001772 = baseline 0.001772 (6 dp).
+     **VERDICT = H1 FALSIFIED.** Closed Three-Phase Breaker (Ron=0.001 Ω) is electrically
+     equivalent to direct connection at the precision of std-over-50000-samples. Breaker block
+     is NOT the ES3 osc source.
+   - Inference for H1a: the 36% std drop in H1a came from the NR mismatch (= H2 territory),
+     not from removing the breaker IC transient.
 2. **H2**: Bus 14/15 power-flow imbalance from LS1 pre-engaged → re-derive NR with LS1 active and use updated Pm.
+   - **Now the leading hypothesis** given H1 falsification. Need to read
+     `compute_kundur_cvs_v3_powerflow.m` (or equivalent) to scope cost.
 3. **H3**: Solver step too coarse for Breaker-Load-Π interaction → try 25 μs step.
 4. **H4**: Three-Phase PI Section Line zero-seq params wrong → try [Lk, 1.5×Lk] instead of [Lk, 3×Lk].
 
-**Status**: H1 falsification test pending (per §0.6 pitfall #6 — DO NOT widen acceptance to bypass diagnosis).
+**Status**: H1 FALSIFIED (2026-05-03, test H1b). Evidence: three-phase breaker + load at Bus 14 electrically equivalent to direct 248 MW load at breaker precision. Next: scope H2 NR re-derive cost (read `compute_kundur_powerflow.m`), design NR-consistent falsification test, run, decide.
+
+**Build script change**: `build_kundur_cvs_v3_discrete.m` gained `bus14_no_breaker` flag
+(default false, preserves baseline). Override via `assignin('base','bus14_no_breaker',true)`.
+Used by `test_h1_no_breaker_bus14.m`.
 
 ### Issue 1.3b — Steady-state ω = 0.995 (UNRESOLVED, root cause not proven)
 
@@ -227,12 +272,12 @@ artifact. If H1 fails, 1.3a/1.3b need separate root-causing.
 
 | Phase | Goal | Estimated effort |
 |---|---|---|
-| **1.3a** | Diagnose + fix ES3/ES4 oscillation → 7/7 settle | 1-2 hours |
+| **1.3a** | H2 test (NR re-derive) → diagnose ES3/ES4 oscillation root | 1-2 hours |
 | **1.3b** | Diagnose ω = 0.995 vs 1.0 (or accept as tolerance) | 1-3 hours |
 | **1.4** | 248 MW LoadStep oracle on full v3 Discrete (paper anchor) | 2-4 hours |
-| **1.5** | Restore CCS injection (sin-driven 3-phase pattern) | 4-6 hours |
+| **1.5** | Restore CCS injection (sin-driven 3-phase, Phase 1.5 sub-design) | 4-6 hours |
 | **1.5+** | Speed optimization (TRIGGERED ONLY — see §6) | 0 hours default; 30 min if triggered |
-| **1.6** | Update env config + paper_eval to use v3 Discrete | 2-4 hours |
+| **1.6** | Update env config + paper_eval to use v3 Discrete (mostly done by Z route) | 1-2 hours |
 | **1.7** | First trained policy run on v3 Discrete | 1-2 days |
 
 **Optimistic remaining**: 4-6 days (vs original 8-12 day Phase 1 estimate)
@@ -386,5 +431,19 @@ H1-H4 are falsified — Bus 14/15 attachments could excite the same natural mode
 Hypothesis tests are needed before any verdict.
 
 ---
+
+---
+
+## §10 Optimization Trail
+
+This section captures performance and physics-preservation decisions made during Phase 1.
+
+**FastRestart Viability (2026-05-03)**:
+- Test: `probes/kundur/spike/test_fastrestart_v3_discrete.py`
+- Physics preservation: rel err 2.46e-08 (off vs on-repeat) << 1e-5 tolerance
+- Wall-clock benefit: 1.5× per-reset speedup (off-1=6.75s, off-2=1.78s warm, on-repeat=1.16s)
+- Param-tune consistency: rel err 8.9e-06 on M_1 change (solver propagates correctly)
+- Status: **FR_VIABLE** — ready for opt-in integration via `BridgeConfig.fast_restart` flag (default off, waiting for Phase 1.4+ integration)
+- Constraint: All optimizations must preserve paper-grade physics per `feedback_optimization_no_perf_regression.md`
 
 *end — Phase 1 progress + next steps as of 2026-05-03 EOD.*

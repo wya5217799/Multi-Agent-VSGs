@@ -34,6 +34,17 @@ results/**/summary.md
 !results/harness/
 !results/harness/.gitkeep
 !results/harness/README.md
+
+# probe_state runtime artefacts (regenerated each run; not source)
+# Snapshots: state_snapshot_<TS>.json + STATE_REPORT_<TS>.md
+# Worker dirs: p2_worker_<n>/ from --workers N runs
+# E2E run dirs: p2_e2e_<serial|parallel>/
+# Baselines for --diff are kept (baseline.json is tracked).
+results/harness/kundur/probe_state/state_snapshot_*.json
+results/harness/kundur/probe_state/STATE_REPORT_*.md
+results/harness/kundur/probe_state/p2_worker_*/
+results/harness/kundur/probe_state/p2_e2e_*/
+results/harness/kundur/probe_state/probe_state_exp*/
 scenarios/**/results/
 scenarios/**/*.autosave
 scenarios/**/*.fig

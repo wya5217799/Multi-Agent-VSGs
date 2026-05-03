@@ -68,6 +68,40 @@ If any of (1)(2) fails → STOP. Probe package broken; do not run phases.
 
 When user intent is ambiguous → ask 1 question; default to **Phase 1+2+3+4 sweep** (cheapest fact-gathering).
 
+### Parallel Mode Decision Table (P2 — 2026-05-03)
+
+When to use `--workers` (N ≥ 2):
+
+| Decision point | Use serial (`--workers 1`, default) | Use parallel (`--workers N` ≥ 2) |
+|---|---|---|
+| **Wall time pressure** | Quick single-phase (Phase 2 only) or fresh-model sanity | Phase 4 dispatch sweep; want ≤ 1192s @ N=4 |
+| **License availability** | Default setup; no explicit 4-engine testing | Pre-flight smoke: `python probes/kundur/spike/test_y4_license_smoke.py 4` PASS |
+| **Phase scope** | Any phase 5/6 run | Phase 1-4 only (M5: phases 5/6 incompatible with parallel) |
+| **Snapshot consumption** | Any downstream (`_diff`, `_report`) — no change | Same interface; merge produces identical schema |
+
+**Output contract** (identical in both modes):
+- Canonical merged snapshot: `results/harness/kundur/probe_state/state_snapshot_<TS>.json`
+  + `state_snapshot_latest.json` alias.
+- Per-worker auxiliary: `results/harness/kundur/probe_state/p2_worker_<n>/state_snapshot_*.json`
+  (audit trail only; not consumed by downstream tools).
+- Verdict interface via `falsification_gates` — no change (M5).
+
+**Hard rules** (from spec §3 + engineering_philosophy.md §6):
+- GATE-PHYS @ 1e-9: per-dispatch `max_abs_f_dev_hz_global` identical serial ↔ parallel.
+- GATE-G15 verdict-for-verdict: G1-G5 verdicts PASS↔PASS across serial/parallel (no flips).
+- Production path untouched: `grep workers scenarios/kundur/train_simulink.py` = 0.
+- Phase 5/6: CLI rejects `--workers > 1 --phase 5` | `--workers > 1 --phase 6`
+  (SystemExit with explicit message).
+
+**Failure modes**:
+- Worker exit_code=1: MATLAB engine failed (license or init error); check
+  `p2_worker_<n>/probe.log`.
+- Worker exit_code=2: sim crash on assigned dispatch; check per-worker log +
+  dispatch name in `parallel_metadata.dropped_dispatches`.
+- Worker exit_code=3: output write error; check disk space + permissions.
+- Merge `dropped_dispatches` non-empty: workers crashed; investigate per-worker
+  logs before re-running.
+
 ---
 
 ## 4. Snapshot contract (FACT layer — query these directly)

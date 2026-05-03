@@ -37,7 +37,7 @@ from dataclasses import dataclass
 class ProbeThresholds:
     """Frozen container for every probe-runtime numeric constant."""
 
-    # ---- G1 / G3 / G5 (Phase A) ----
+    # ---- G1 / G3 / G4 / G5 (Phase A) ----
     g1_respond_hz: float = 1e-3
     """G1: per-agent max|Δf| floor for "agent responding" classification.
     Phase 4 dispatch is "exciting" when ≥ 2 agents exceed this."""
@@ -45,6 +45,18 @@ class ProbeThresholds:
     g3_share_diff_rel: float = 0.05
     """G3: per-agent r_f_local_share max-min must exceed this fraction
     of mean for the gradient to count as non-degenerate."""
+
+    g4_position_hz: float = 0.10
+    """G4: per-agent max|Δf| threshold for "responder signature" bucketing.
+    Distinct from g1_respond_hz (1 mHz, used for the "responding at all"
+    classification): under EMT-coupled v3 Discrete every agent always
+    responds > 74 mHz, so bucket-by-1-mHz collapses every dispatch's
+    signature to (0,1,2,3) and G4 REJECTs even when dispatches actually
+    excite different mode shapes. 0.10 Hz separates "primary responder"
+    from "secondary mode echo" at v3 Discrete scale (alpha probe 2026-05-03
+    showed pm_step_proxy_bus7 max|Δf|=0.34 Hz primary, ~0.07-0.10 Hz on
+    other agents). D1 follow-up 2026-05-03; not yet wired into _verdict
+    (separate impl)."""
 
     g5_noise_floor_pu: float = 1e-7
     """G5: omega-std diff (max-min across agents) must exceed this to
@@ -128,10 +140,35 @@ REASON_CODES: frozenset[str] = frozenset({
 # Implementation version (F5)
 # ---------------------------------------------------------------------------
 
-IMPLEMENTATION_VERSION = "0.5.0"
+IMPLEMENTATION_VERSION = "0.6.0"
 """Probe algorithm version — semver. See README §"Versioning" for bump rules.
 
 CHANGELOG (rolling, last 5):
+- 0.6.0 (2026-05-03) — P2 parallel mode (subprocess pool) + LoadStep adapter
+  fix + Z route v3 Discrete profile + D3 RNG seed + g4_position_hz threshold
+  field added.
+  * additive: ``--workers N`` and ``--dispatch-subset SPEC`` CLI flags.
+    Default ``--workers=1`` preserves serial behaviour bit-exact (M1).
+    ``--workers >= 2`` triggers subprocess pool path (Module γ).
+  * additive: ``--t-warmup-s`` and ``--fast-restart`` CLI overrides for
+    probe context. ``T_WARMUP`` production default unchanged.
+  * additive: snapshot ``phase4_per_dispatch.parallel_metadata`` key
+    (n_workers / worker_subsets / worker_meta / dropped_dispatches) when
+    --workers >= 2; serial mode snapshot is byte-exact unchanged
+    (parallel_metadata key absent). schema_version stays at 1.
+  * additive: ``ProbeThresholds.g4_position_hz`` (default 0.10 Hz) for v3
+    Discrete responder-signature bucketing under EMT coupling. Not yet
+    wired into _verdict (D1 follow-up 2026-05-03).
+  * verdict-semantics: G4 may still REJECT under v3 Discrete at default
+    1 mHz threshold; user/operator should switch to g4_position_hz once
+    _verdict is updated.
+  * E2E 2026-05-03 verdict: GATE-G15/WALL/LIC PASS @ N=4, 2.92× speedup
+    (47.9 min serial → 16.4 min parallel). GATE-PHYS partial (12/15
+    dispatches bit-exact 1e-9; 3 LoadStep/hybrid dispatches diverge —
+    serial-mode latent state-contamination bug exposed by P2, separate
+    follow-up).
+  * docs/decisions/2026-05-03-probe-state-phase4-p2-parallelization.md
+    records the 6 decisions; quality_reports/specs+plans land alongside.
 - 0.5.0 (2026-05-01) — Evidence-Pack boundary: ERROR verdict + reason_codes.
   * verdict-semantics: phases that errored (snapshot[phaseN].error present)
     now route to ``verdict="ERROR"`` instead of being silently absorbed into

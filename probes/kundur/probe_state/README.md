@@ -86,6 +86,55 @@ allowed extensions.
 | (always) — verdict | `_verdict.py` | `falsification_gates` | computed from phase data |
 | (always) — report | `_report.py` | (writes JSON + MD) | snapshot dict |
 
+## Parallel Mode (P2 — 2026-05-03)
+
+**Why it exists**: Phase 4 dispatch sweep takes ~36 min serial on v3 Discrete
+(`sim_duration=3.0`, `t_warmup_s=5`). Parallel mode targets ≤ 1192s @ N=4
+worker processes (3.5× speedup). Each worker owns a private MATLAB engine;
+snapshots merge centrally.
+
+**Design constraints** (from spec §3):
+- M1: default `--workers=1` preserves serial behaviour bit-exact.
+- M3: physics determinism @ 1e-9 absolute per dispatch (M3 GATE-PHYS).
+- M5: schema_version=1 unchanged; merged snapshots consumed transparently by
+  `_diff.py`/`_report.py`.
+- M6: production training path (`scenarios/kundur/train_simulink.py`) untouched.
+- M7: license requires N concurrent matlab.engine instances; smoke 2-engine PASS
+  (2026-05-03); 4-engine PENDING.
+
+**Module layout** (Decision refs):
+- **α (CLI)**: `--workers N`, `--dispatch-subset SPEC` (`_subset.py`).
+- **β (build)**: `_ensure_build_current` pre-build before forking workers
+  (`_build_check.py`).
+- **γ (orchestrator)**: subprocess.Popen × N, round-robin slicing
+  (`_orchestrator.py`).
+- **δ (merge)**: central verdict recompute on merged snapshot (`_merge.py`).
+
+**Worker dir layout**: `results/harness/kundur/probe_state/p2_worker_<n>/`
+(per-worker output; includes per-worker `state_snapshot_latest.json` +
+`probe.log`). Canonical merged snapshot at the existing `state_snapshot_<TS>.json`
+path.
+
+**Phase wiring** (corrected 2026-05-03): worker 0 runs
+`--phase 1,2,3,4` (full workflow); workers 1..N-1 run `--phase 1,4` (Phase 1
+required to validate the subset spec via `_dynamics.run_per_dispatch`, which
+resolves targets from `phase1_topology.dispatch_effective`). Skipping Phase 1 in
+workers ⇒ `valid_targets=[]` ⇒ `_parse_subset_spec` raises SystemExit.
+
+**Trust-worker-0** (Decision 4.3): phases 2/3 in merged snapshot come from
+worker 0's output; merge does NOT cross-validate phase 1/2/3 across workers
+(identical by construction since same .slx + IC JSON loaded).
+
+**`parallel_metadata` snapshot key** (new with P2): under
+`phase4_per_dispatch.parallel_metadata`, contains `n_workers / worker_subsets /
+worker_meta / dropped_dispatches`. M5-compatible (additive only; schema_version
+unchanged).
+
+**Disabled phases**: `--workers > 1` incompatible with `--phase 5/6`
+(out of P2 scope); raises SystemExit at CLI validation.
+
+---
+
 ## Falsification gates
 
 | Gate | Falsification hypothesis | PASS condition |

@@ -175,6 +175,24 @@ def main(argv: list[str] | None = None) -> int:
              "state_snapshot_latest.json. Design §5.6 (F2).",
     )
     parser.add_argument(
+        "--gate-eval",
+        nargs=2,
+        metavar=("PREV", "CURR"),
+        default=None,
+        help="Structured gate evaluation between two state_snapshot_*.json files. "
+             "Computes GATE-PHYS, GATE-G15, GATE-WALL verdicts and writes JSON to "
+             "stdout. Exit code: 0 if overall_verdict==PASS, 1 if FAIL. "
+             "Short-circuits all phases. P0-3 (2026-05-04).",
+    )
+    parser.add_argument(
+        "--gate-eval-tol",
+        type=float,
+        default=1e-9,
+        metavar="FLOAT",
+        help="GATE-PHYS absolute tolerance (default 1e-9, immutable P2 contract). "
+             "Override only in exploratory / diagnostic contexts.",
+    )
+    parser.add_argument(
         "--promote-baseline",
         default=None,
         metavar="SNAPSHOT",
@@ -208,6 +226,17 @@ def main(argv: list[str] | None = None) -> int:
         prev = resolve_alias(args.diff[0], snapshot_dir)
         curr = resolve_alias(args.diff[1], snapshot_dir)
         return diff_snapshots(prev, curr)
+
+    # P0-3 short-circuit: --gate-eval PREV CURR
+    if args.gate_eval:
+        import json as _json
+        from probes.kundur.probe_state._gate_eval import evaluate_gates
+        from probes.kundur.probe_state._diff import resolve_alias
+        prev = resolve_alias(args.gate_eval[0], snapshot_dir)
+        curr = resolve_alias(args.gate_eval[1], snapshot_dir)
+        result = evaluate_gates(prev, curr, phys_tol=args.gate_eval_tol)
+        print(_json.dumps(result, indent=2))
+        return 0 if result["overall_verdict"] == "PASS" else 1
 
     logging.basicConfig(
         level=logging.DEBUG if args.verbose else logging.INFO,

@@ -431,6 +431,372 @@ def make_policy_selector(agent):
     return _sel
 
 
+def _wrap_with_zero_agent_ablation(select_fn, zero_agent_idx: int):
+    """Wrap a select_fn to force agent at zero_agent_idx to output zeros.
+
+    Used for B-a action ablation (2026-04-30): verify trained policy
+    actually uses each agent vs converging to ES1-mimic-only behavior.
+    Caller validates zero_agent_idx is within [0, n_agents).
+    """
+    def _zeroed(obs):
+        a = select_fn(obs)
+        a = np.array(a, copy=True)
+        a[zero_agent_idx, :] = 0.0
+        return a
+    return _zeroed
+
+
+# ---------------------------------------------------------------------------
+# Agent loading + single-cell + batch (P1a, 2026-05-03)
+# ---------------------------------------------------------------------------
+
+
+def _load_agent_from_checkpoint(
+    ckpt_path: Path,
+    *,
+    n_ess: int,
+    obs_dim: int,
+    act_dim: int,
+    hidden_sizes: tuple,
+) -> tuple[object, bool]:
+    """Auto-detect single-agent vs multi-agent checkpoint and load it.
+
+    Returns (agent, is_multi_agent). Raises FileNotFoundError if the
+    path does not exist; lets torch.load propagate other errors.
+
+    Heavy imports (torch, agent classes) happen inside this function so
+    the module top-level stays MATLAB/torch-free.
+    """
+    if not ckpt_path.exists():
+        raise FileNotFoundError(f"checkpoint not found: {ckpt_path}")
+    import torch
+    _peek = torch.load(str(ckpt_path), map_location="cpu", weights_only=False)
+    is_multi_agent = bool(_peek.get("multi_agent", False))
+    del _peek
+    if is_multi_agent:
+        from agents.multi_agent_sac_manager import MultiAgentSACManager
+        agent = MultiAgentSACManager(
+            n_agents=n_ess,
+            obs_dim=obs_dim,
+            act_dim=act_dim,
+            hidden_sizes=tuple(hidden_sizes),
+            alpha_min=0.05,
+            device="cpu",
+        )
+    else:
+        from env.simulink.sac_agent_standalone import SACAgent
+        agent = SACAgent(
+            obs_dim=obs_dim,
+            act_dim=act_dim,
+            hidden_sizes=tuple(hidden_sizes),
+            alpha_min=0.05,  # match train_simulink.py:249
+            device="cpu",
+        )
+    agent.load(str(ckpt_path))
+    return agent, is_multi_agent
+
+
+def _resolve_bus_choices(effective_mode: str) -> tuple[int, ...]:
+    """Map effective disturbance mode to allowed bus_choices for scenario gen.
+
+    Pure function; tested via test_paper_eval_runner. The ``hybrid`` and
+    ``ccs_load`` choices are 2026-04-30 dispatch protocol additions.
+    """
+    if effective_mode == "bus":
+        return (7, 9)
+    if effective_mode == "gen":
+        return (1, 2, 3)
+    if effective_mode == "vsg":
+        return (1, 2, 3, 4)  # 1-indexed ES{i}
+    if effective_mode == "ccs_load":
+        return (7, 9)  # 2026-04-30 Option E: CCS at paper Fig.3 load centers
+    if effective_mode == "hybrid":
+        return (0,)  # 2026-04-30 Option F4: target field informational
+    return (7, 9)  # defensive fallback
+
+
+def run_single_eval(
+    env,
+    *,
+    ckpt_path: Optional[Path],
+    zero_agent_idx: Optional[int],
+    scenario_set: str,
+    scenario_set_path: Optional[Path],
+    n_scenarios: int,
+    seed_base: int,
+    disturbance_mode_cli: Optional[str],
+    settle_tol_hz: float,
+    output_path: Path,
+    policy_label: Optional[str] = None,
+    obs_dim: Optional[int] = None,
+    act_dim: Optional[int] = None,
+    hidden_sizes: Optional[tuple] = None,
+    dist_min: Optional[float] = None,
+    dist_max: Optional[float] = None,
+) -> tuple[EvalResult, dict]:
+    """Run one evaluation cell end-to-end and write its JSON.
+
+    Encapsulates: dispatch resolution → agent load (or zero baseline) →
+    select_fn (with optional ablation) → scenario manifest load →
+    evaluate_policy → runner_config snapshot → write JSON. Single env
+    instance is reused across calls (caller controls cold-start cost).
+
+    Returns (result, runner_config) so caller can build batch summaries
+    without re-reading the JSON.
+
+    The ``obs_dim`` / ``act_dim`` / ``hidden_sizes`` / ``dist_min`` /
+    ``dist_max`` args default to the env's KUNDUR_CVS_V3 config when
+    omitted (read from scenarios.kundur.config_simulink at first call).
+    """
+    if obs_dim is None or act_dim is None or hidden_sizes is None \
+       or dist_min is None or dist_max is None:
+        from scenarios.kundur.config_simulink import (
+            ACT_DIM, DIST_MAX, DIST_MIN, HIDDEN_SIZES, OBS_DIM,
+        )
+        obs_dim = OBS_DIM if obs_dim is None else obs_dim
+        act_dim = ACT_DIM if act_dim is None else act_dim
+        hidden_sizes = tuple(HIDDEN_SIZES) if hidden_sizes is None else hidden_sizes
+        dist_min = DIST_MIN if dist_min is None else dist_min
+        dist_max = DIST_MAX if dist_max is None else dist_max
+
+    fnom = float(env._F_NOM)
+    dt_s = float(env.DT)
+
+    # 1. Dispatch resolution (P0c) — may SystemExit on explicit conflict.
+    dispatch_resolution = _resolve_disturbance_dispatch(
+        cli_mode=disturbance_mode_cli,
+        env_type=os.environ.get("KUNDUR_DISTURBANCE_TYPE", ""),
+    )
+    effective_mode = disturbance_mode_cli if disturbance_mode_cli is not None else "bus"
+    bus_choices = _resolve_bus_choices(effective_mode)
+
+    # 2. Agent load (None → zero-action baseline).
+    if ckpt_path is not None:
+        agent, is_multi_agent = _load_agent_from_checkpoint(
+            ckpt_path,
+            n_ess=int(env.N_ESS),
+            obs_dim=int(obs_dim),
+            act_dim=int(act_dim),
+            hidden_sizes=tuple(hidden_sizes),
+        )
+        select_fn = make_policy_selector(agent)
+        label = policy_label or ckpt_path.stem
+        print(f"[paper_eval] loaded {'MULTI-AGENT' if is_multi_agent else 'SHARED-WEIGHTS'} "
+              f"checkpoint {ckpt_path}")
+    else:
+        select_fn = make_zero_action_selector(int(env.N_ESS), int(act_dim))
+        label = policy_label or "zero_action_no_control"
+        print(f"[paper_eval] zero-action baseline as '{label}'")
+
+    # 3. Optional ablation wrap.
+    if zero_agent_idx is not None:
+        if not (0 <= zero_agent_idx < int(env.N_ESS)):
+            raise ValueError(
+                f"zero_agent_idx={zero_agent_idx} out of range [0, {env.N_ESS})"
+            )
+        select_fn = _wrap_with_zero_agent_ablation(select_fn, zero_agent_idx)
+        print(f"[paper_eval] ablation: agent {zero_agent_idx} (ES{zero_agent_idx+1}) "
+              f"actions forced to 0")
+
+    # 4. Scenarios manifest (or inline).
+    scenarios_override: Optional[list[dict]] = None
+    if scenario_set != "none":
+        from scenarios.kundur.scenario_loader import load_manifest
+        default_paths = {
+            "train": REPO_ROOT / "scenarios" / "kundur" / "scenario_sets" / "v3_paper_train_100.json",
+            "test": REPO_ROOT / "scenarios" / "kundur" / "scenario_sets" / "v3_paper_test_50.json",
+        }
+        manifest_path = Path(scenario_set_path or default_paths[scenario_set])
+        manifest = load_manifest(manifest_path)
+        scenarios_override = [
+            {"scenario_idx": s.scenario_idx, "bus": s.target,
+             "magnitude_sys_pu": s.magnitude_sys_pu}
+            for s in manifest.scenarios
+        ]
+        print(f"[paper_eval] manifest {manifest_path.name}: {manifest.n_scenarios} scenarios")
+
+    # 5. Run.
+    print(
+        f"[paper_eval] running cell '{label}' "
+        f"(mode={effective_mode}, dispatch_path={dispatch_resolution['dispatch_path']}, "
+        f"settle_tol_hz={settle_tol_hz}) ..."
+    )
+    result = evaluate_policy(
+        env=env,
+        n_scenarios=n_scenarios,
+        seed_base=seed_base,
+        policy_label=label,
+        checkpoint_path=str(ckpt_path) if ckpt_path else None,
+        select_action_fn=select_fn,
+        fnom=fnom,
+        dt_s=dt_s,
+        dist_min=dist_min,
+        dist_max=dist_max,
+        bus_choices=bus_choices,
+        scenarios_override=scenarios_override,
+        disturbance_mode=effective_mode,
+        settle_tol_hz=settle_tol_hz,
+        settle_window_s=SETTLE_WINDOW_S,
+    )
+
+    # 6. Snapshot runner_config + write JSON.
+    runner_config = _build_runner_config(
+        env=env,
+        settle_tol_hz=settle_tol_hz,
+        settle_window_s=SETTLE_WINDOW_S,
+        dispatch_resolution=dispatch_resolution,
+    )
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with output_path.open("w", encoding="utf-8") as f:
+        json.dump(result_to_dict(result, runner_config=runner_config), f,
+                  indent=2, default=str)
+    print(f"[paper_eval] wrote {output_path}")
+
+    return result, runner_config
+
+
+def _load_batch_spec(path: Path) -> dict:
+    """Parse + validate batch spec JSON. Raises ValueError on bad shape.
+
+    Required keys:
+      - ``checkpoints``: list[str] (≥1) — paths to .pt files (or null for
+        zero-action baseline if exactly one entry equals null/None)
+      - ``ablations``: list[dict] (≥1) with ``label`` (str) and
+        ``zero_agent_idx`` (int or null)
+      - ``output_dir``: str — directory for per-cell JSONs
+
+    Optional (override main()-level CLI defaults):
+      - ``scenario_set`` (str, default "none")
+      - ``scenario_set_path`` (str, default null)
+      - ``disturbance_mode`` (str or null, default null = use env-var)
+      - ``settle_tol_hz`` (float, default ``SETTLE_TOL_HZ``)
+      - ``n_scenarios`` (int, default 50)
+      - ``seed_base`` (int, default 42)
+    """
+    if not path.exists():
+        raise FileNotFoundError(f"batch spec not found: {path}")
+    spec = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(spec, dict):
+        raise ValueError(f"batch spec must be a JSON object, got {type(spec).__name__}")
+
+    # Required keys.
+    for k in ("checkpoints", "ablations", "output_dir"):
+        if k not in spec:
+            raise ValueError(f"batch spec missing required key {k!r}")
+    if not isinstance(spec["checkpoints"], list) or not spec["checkpoints"]:
+        raise ValueError("'checkpoints' must be non-empty list")
+    if not isinstance(spec["ablations"], list) or not spec["ablations"]:
+        raise ValueError("'ablations' must be non-empty list")
+    for i, ab in enumerate(spec["ablations"]):
+        if not isinstance(ab, dict):
+            raise ValueError(f"ablations[{i}] must be a dict, got {type(ab).__name__}")
+        if "label" not in ab or not isinstance(ab["label"], str) or not ab["label"]:
+            raise ValueError(f"ablations[{i}] missing non-empty 'label' string")
+        zai = ab.get("zero_agent_idx")
+        if zai is not None and not isinstance(zai, int):
+            raise ValueError(f"ablations[{i}].zero_agent_idx must be int or null, "
+                             f"got {type(zai).__name__}")
+
+    # Apply defaults for optional keys.
+    spec.setdefault("scenario_set", "none")
+    spec.setdefault("scenario_set_path", None)
+    spec.setdefault("disturbance_mode", None)
+    spec.setdefault("settle_tol_hz", SETTLE_TOL_HZ)
+    spec.setdefault("n_scenarios", 50)
+    spec.setdefault("seed_base", 42)
+    return spec
+
+
+def run_batch(env, batch_spec: dict) -> dict:
+    """Run all (checkpoint × ablation) cells with single env reuse.
+
+    Per-cell failures (FileNotFoundError, RuntimeError, ValueError) are
+    caught and recorded in the returned summary; the batch continues so
+    a 25-min cold-start isn't lost on the first bad ckpt path. Each
+    successful cell writes its own JSON to
+    ``<output_dir>/<ckpt_stem>_<ablation_label>.json``.
+
+    Returns summary dict:
+      {
+        "n_cells": int,
+        "n_pass": int,
+        "n_fail": int,
+        "total_time_s": float,
+        "results": list[{"ckpt": str, "ablation": str,
+                         "status": "PASS"|"FAIL", "output_path": str|null,
+                         "error": str|null}],
+      }
+    """
+    out_dir = Path(batch_spec["output_dir"])
+    out_dir.mkdir(parents=True, exist_ok=True)
+    ckpts = batch_spec["checkpoints"]
+    ablations = batch_spec["ablations"]
+    n_cells = len(ckpts) * len(ablations)
+    print(f"[paper_eval] batch: {len(ckpts)} ckpt × {len(ablations)} ablation = "
+          f"{n_cells} cells; output_dir={out_dir}")
+
+    results: list[dict] = []
+    t_batch = time.time()
+    for ckpt_str in ckpts:
+        ckpt_path = Path(ckpt_str) if ckpt_str else None
+        ckpt_stem = ckpt_path.stem if ckpt_path else "zero_action_no_control"
+        for ab in ablations:
+            label = ab["label"]
+            zai = ab.get("zero_agent_idx")
+            cell_id = f"{ckpt_stem}__{label}"
+            out_path = out_dir / f"{cell_id}.json"
+            print(f"[paper_eval] === cell {len(results)+1}/{n_cells}: {cell_id} ===")
+            try:
+                run_single_eval(
+                    env=env,
+                    ckpt_path=ckpt_path,
+                    zero_agent_idx=zai,
+                    scenario_set=batch_spec["scenario_set"],
+                    scenario_set_path=(Path(batch_spec["scenario_set_path"])
+                                       if batch_spec["scenario_set_path"] else None),
+                    n_scenarios=int(batch_spec["n_scenarios"]),
+                    seed_base=int(batch_spec["seed_base"]),
+                    disturbance_mode_cli=batch_spec["disturbance_mode"],
+                    settle_tol_hz=float(batch_spec["settle_tol_hz"]),
+                    output_path=out_path,
+                    policy_label=label,
+                )
+                results.append({
+                    "ckpt": str(ckpt_path) if ckpt_path else None,
+                    "ablation": label,
+                    "status": "PASS",
+                    "output_path": str(out_path),
+                    "error": None,
+                })
+            except (FileNotFoundError, ValueError, RuntimeError) as e:
+                # Log + continue; preserves cold-start work for remaining cells.
+                err_msg = f"{type(e).__name__}: {e}"
+                print(f"[paper_eval] cell FAIL: {err_msg}", file=sys.stderr)
+                results.append({
+                    "ckpt": str(ckpt_path) if ckpt_path else None,
+                    "ablation": label,
+                    "status": "FAIL",
+                    "output_path": None,
+                    "error": err_msg,
+                })
+
+    total = time.time() - t_batch
+    n_pass = sum(1 for r in results if r["status"] == "PASS")
+    n_fail = n_cells - n_pass
+    summary = {
+        "n_cells": n_cells,
+        "n_pass": n_pass,
+        "n_fail": n_fail,
+        "total_time_s": total,
+        "results": results,
+    }
+    summary_path = out_dir / "_batch_summary.json"
+    summary_path.write_text(json.dumps(summary, indent=2, default=str), encoding="utf-8")
+    print(f"[paper_eval] batch done: {n_pass}/{n_cells} PASS in {total:.1f}s; "
+          f"summary at {summary_path}")
+    return summary
+
+
 # ---------------------------------------------------------------------------
 # Result serialization
 # ---------------------------------------------------------------------------
@@ -507,16 +873,37 @@ def result_to_dict(
 
 def _build_arg_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description="Phase 5.1 paper-style evaluator")
-    p.add_argument(
+    # 2026-05-03 (P1a): --checkpoint vs --batch-spec are mutually exclusive.
+    # Single-cell mode = --checkpoint + --output-json (legacy CLI shape).
+    # Batch mode = --batch-spec PATH (writes per-cell JSONs to spec.output_dir;
+    # --output-json then becomes optional summary path; ignored if not given).
+    g = p.add_mutually_exclusive_group()
+    g.add_argument(
         "--checkpoint",
         type=str,
         default=None,
-        help="Path to a SACAgent .pt checkpoint. If omitted, runs zero-action baseline.",
+        help="Path to a SACAgent .pt checkpoint. If omitted (and --batch-spec "
+             "also omitted), runs zero-action baseline. Mutually exclusive "
+             "with --batch-spec.",
+    )
+    g.add_argument(
+        "--batch-spec",
+        type=str,
+        default=None,
+        help="Path to a batch-spec JSON describing checkpoints × ablations "
+             "to evaluate in a single env cold-start. See _load_batch_spec "
+             "docstring for required schema. Mutually exclusive with "
+             "--checkpoint; --output-json becomes optional in batch mode "
+             "(per-cell JSONs land in spec.output_dir).",
     )
     p.add_argument("--n-scenarios", type=int, default=50)
     p.add_argument("--seed-base", type=int, default=42)
     p.add_argument("--policy-label", type=str, default=None)
-    p.add_argument("--output-json", type=str, required=True)
+    p.add_argument(
+        "--output-json", type=str, default=None,
+        help="Required in single-cell mode (--checkpoint or zero-action). "
+             "Ignored in batch mode (per-cell JSONs land in spec.output_dir).",
+    )
     p.add_argument(
         "--disturbance-mode",
         choices=["bus", "gen", "vsg", "hybrid", "ccs_load"],
@@ -575,6 +962,12 @@ def main() -> int:
     sys.path.insert(0, str(REPO_ROOT))
     args = _build_arg_parser().parse_args()
 
+    # Single-cell mode requires --output-json; batch mode does not.
+    if args.batch_spec is None and args.output_json is None:
+        print("[paper_eval] ERROR: --output-json is required in single-cell "
+              "mode (no --batch-spec given).", file=sys.stderr)
+        return 2
+
     # Force v3 profile + Path C dispatch (probe sets disturbance_type per ep).
     os.environ["KUNDUR_MODEL_PROFILE"] = str(
         REPO_ROOT / "scenarios" / "kundur" / "model_profiles" / "kundur_cvs_v3.json"
@@ -588,175 +981,42 @@ def main() -> int:
     os.environ.setdefault("KUNDUR_DISTURBANCE_TYPE", "pm_step_proxy_random_gen")
 
     from env.simulink.kundur_simulink_env import KundurSimulinkEnv
-    from env.simulink.sac_agent_standalone import SACAgent
-    from scenarios.kundur.config_simulink import (
-        DIST_MIN, DIST_MAX, OBS_DIM, ACT_DIM, HIDDEN_SIZES,
-    )
 
     print(f"[paper_eval] constructing KundurSimulinkEnv (cold start) ...")
     t0 = time.time()
     env = KundurSimulinkEnv(training=False)  # eval mode
     print(f"[paper_eval] env constructed ({time.time()-t0:.1f}s)")
 
-    fnom = float(env._F_NOM)
-    dt_s = float(env.DT)
+    # Batch mode: parse spec, run cartesian product, write summary, exit.
+    if args.batch_spec is not None:
+        try:
+            spec = _load_batch_spec(Path(args.batch_spec))
+        except (FileNotFoundError, ValueError) as e:
+            print(f"[paper_eval] ERROR: invalid batch spec: {e}", file=sys.stderr)
+            return 2
+        summary = run_batch(env=env, batch_spec=spec)
+        return 0 if summary["n_fail"] == 0 else 1
 
-    if args.checkpoint:
-        ckpt_path = Path(args.checkpoint)
-        if not ckpt_path.exists():
-            print(f"[paper_eval] ERROR: checkpoint not found: {ckpt_path}")
-            return 1
-        # Auto-detect: peek at the checkpoint bundle to see if it's a
-        # multi-agent G6 bundle or a shared-weights SACAgent checkpoint.
-        import torch
-        _peek = torch.load(str(ckpt_path), map_location="cpu", weights_only=False)
-        is_multi_agent = bool(_peek.get("multi_agent", False))
-        del _peek
-        if is_multi_agent:
-            from agents.multi_agent_sac_manager import MultiAgentSACManager
-            agent = MultiAgentSACManager(
-                n_agents=int(env.N_ESS),
-                obs_dim=int(OBS_DIM),
-                act_dim=int(ACT_DIM),
-                hidden_sizes=tuple(HIDDEN_SIZES),
-                alpha_min=0.05,
-                device="cpu",
-            )
-            agent.load(str(ckpt_path))
-            print(f"[paper_eval] loaded MULTI-AGENT checkpoint {ckpt_path}")
-        else:
-            agent = SACAgent(
-                obs_dim=int(OBS_DIM),
-                act_dim=int(ACT_DIM),
-                hidden_sizes=tuple(HIDDEN_SIZES),
-                alpha_min=0.05,  # match train_simulink.py:249
-                device="cpu",
-            )
-            agent.load(str(ckpt_path))
-            print(f"[paper_eval] loaded SHARED-WEIGHTS checkpoint {ckpt_path}")
-        select_fn = make_policy_selector(agent)
-        label = args.policy_label or ckpt_path.stem
-        print(f"[paper_eval] policy_label='{label}' (multi_agent={is_multi_agent})")
-    else:
-        select_fn = make_zero_action_selector(env.N_ESS, int(ACT_DIM))
-        label = args.policy_label or "zero_action_no_control"
-        ckpt_path = None
-        print(f"[paper_eval] running zero-action baseline as '{label}'")
-
-    # 2026-04-30 (B-a action ablation): wrap select_fn to force zero action
-    # for one agent. Used to verify trained policy actually uses each agent
-    # individually vs converging to ES1-mimic-only behavior.
-    if args.zero_agent_idx is not None:
-        zero_idx = int(args.zero_agent_idx)
-        if not (0 <= zero_idx < int(env.N_ESS)):
-            raise ValueError(
-                f"--zero-agent-idx={zero_idx} out of range [0, {env.N_ESS})"
-            )
-        _orig_select_fn = select_fn
-
-        def _zero_one_agent_select(obs):
-            a = _orig_select_fn(obs)
-            a = np.array(a, copy=True)
-            a[zero_idx, :] = 0.0
-            return a
-
-        select_fn = _zero_one_agent_select
-        print(f"[paper_eval] B-a action ablation: agent {zero_idx} (ES{zero_idx+1}) actions forced to 0 every step")
-
-    # Resolve disturbance dispatch (P0c, 2026-05-03): may raise SystemExit
-    # on explicit CLI vs loadstep-env conflict; warns to stderr on implicit
-    # conflict (CLI default + loadstep env). Records resolution into
-    # runner_config block of output JSON.
-    dispatch_resolution = _resolve_disturbance_dispatch(
-        cli_mode=args.disturbance_mode,
-        env_type=os.environ.get("KUNDUR_DISTURBANCE_TYPE", ""),
-    )
-    # Resolve effective mode for downstream bus_choices logic. None CLI +
-    # non-loadstep env-var → default 'bus'. None CLI + loadstep env →
-    # 'bus' as placeholder (the per-episode dispatch in evaluate_policy
-    # bypasses bus check on loadstep paths anyway).
-    effective_mode = args.disturbance_mode if args.disturbance_mode is not None else "bus"
-
-    if effective_mode == "bus":
-        bus_choices = (7, 9)
-    elif effective_mode == "gen":
-        bus_choices = (1, 2, 3)
-    elif effective_mode == "vsg":
-        bus_choices = (1, 2, 3, 4)  # 1-indexed ES{i}
-    elif effective_mode == "ccs_load":
-        # 2026-04-30 Option E: CCS at paper Fig.3 load centers Bus 7 / Bus 9.
-        bus_choices = (7, 9)
-    elif effective_mode == "hybrid":
-        # 2026-04-30 Option F4: target field is informational only;
-        # HybridSgEssMultiPoint resolves random_gen at apply time.
-        bus_choices = (0,)  # placeholder; manifest scenarios all set target=0
-    else:
-        bus_choices = (7, 9)
-
-    scenarios_override: Optional[list[dict]] = None
-    if args.scenario_set != "none":
-        from scenarios.kundur.scenario_loader import load_manifest
-        default_paths = {
-            "train": REPO_ROOT / "scenarios" / "kundur" / "scenario_sets" / "v3_paper_train_100.json",
-            "test": REPO_ROOT / "scenarios" / "kundur" / "scenario_sets" / "v3_paper_test_50.json",
-        }
-        manifest_path = Path(args.scenario_set_path or default_paths[args.scenario_set])
-        manifest = load_manifest(manifest_path)
-        scenarios_override = [
-            {
-                "scenario_idx": s.scenario_idx,
-                "bus": s.target,  # 7/9 for bus mode, 1/2/3 for gen mode
-                "magnitude_sys_pu": s.magnitude_sys_pu,
-            }
-            for s in manifest.scenarios
-        ]
-        print(
-            f"[paper_eval] loaded manifest {manifest_path.name}: "
-            f"{manifest.n_scenarios} scenarios, mode={manifest.disturbance_mode}"
+    # Single-cell mode (legacy CLI shape preserved).
+    ckpt_path = Path(args.checkpoint) if args.checkpoint else None
+    try:
+        result, _ = run_single_eval(
+            env=env,
+            ckpt_path=ckpt_path,
+            zero_agent_idx=args.zero_agent_idx,
+            scenario_set=args.scenario_set,
+            scenario_set_path=(Path(args.scenario_set_path)
+                               if args.scenario_set_path else None),
+            n_scenarios=int(args.n_scenarios),
+            seed_base=int(args.seed_base),
+            disturbance_mode_cli=args.disturbance_mode,
+            settle_tol_hz=float(args.settle_tol_hz),
+            output_path=Path(args.output_json),
+            policy_label=args.policy_label,
         )
-
-    print(
-        f"[paper_eval] running {args.n_scenarios} deterministic scenarios "
-        f"(mode={effective_mode}, dispatch_path={dispatch_resolution['dispatch_path']}, "
-        f"bus_choices={bus_choices}, seed_base={args.seed_base}, "
-        f"fnom={fnom} Hz, dt={dt_s} s, "
-        f"DIST=[{DIST_MIN:.2f}, {DIST_MAX:.2f}] sys-pu, "
-        f"settle_tol_hz={args.settle_tol_hz}, "
-        f"scenario_set={args.scenario_set}) ..."
-    )
-
-    result = evaluate_policy(
-        env=env,
-        n_scenarios=args.n_scenarios,
-        seed_base=args.seed_base,
-        policy_label=label,
-        checkpoint_path=str(ckpt_path) if ckpt_path else None,
-        select_action_fn=select_fn,
-        fnom=fnom,
-        dt_s=dt_s,
-        dist_min=DIST_MIN,
-        dist_max=DIST_MAX,
-        bus_choices=bus_choices,
-        scenarios_override=scenarios_override,
-        disturbance_mode=effective_mode,
-        settle_tol_hz=args.settle_tol_hz,
-        settle_window_s=SETTLE_WINDOW_S,
-    )
-
-    # Build runner_config (P0b) AFTER env construction so PHI env-var
-    # overrides applied at env init are captured from env attributes.
-    runner_config = _build_runner_config(
-        env=env,
-        settle_tol_hz=args.settle_tol_hz,
-        settle_window_s=SETTLE_WINDOW_S,
-        dispatch_resolution=dispatch_resolution,
-    )
-
-    out_path = Path(args.output_json)
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    with out_path.open("w", encoding="utf-8") as f:
-        json.dump(result_to_dict(result, runner_config=runner_config), f, indent=2, default=str)
-    print(f"[paper_eval] wrote {out_path}")
+    except FileNotFoundError as e:
+        print(f"[paper_eval] ERROR: {e}", file=sys.stderr)
+        return 1
 
     cum = result.cumulative_reward_global_rf
     print(

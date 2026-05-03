@@ -305,3 +305,279 @@ def test_result_to_dict_paper_comparison_lock_unchanged() -> None:
     d = result_to_dict(r, runner_config={"phi_f": 100.0})
     assert d["paper_comparison_enabled"] is False
     assert "INCONCLUSIVE_STOP_REQUIRED" in d["paper_comparison_lock_reason"]
+
+
+# ---------------------------------------------------------------------------
+# P1a (batch) — spec validation
+# ---------------------------------------------------------------------------
+
+
+def test_batch_spec_missing_required_keys_raises(tmp_path) -> None:
+    """Batch spec without 'checkpoints' / 'ablations' / 'output_dir' → ValueError."""
+    from evaluation.paper_eval import _load_batch_spec
+    bad = tmp_path / "bad.json"
+    bad.write_text('{"checkpoints": ["a.pt"]}', encoding="utf-8")
+    with pytest.raises(ValueError, match="missing required key 'ablations'"):
+        _load_batch_spec(bad)
+
+
+def test_batch_spec_empty_checkpoints_raises(tmp_path) -> None:
+    """Empty 'checkpoints' list → ValueError."""
+    from evaluation.paper_eval import _load_batch_spec
+    bad = tmp_path / "bad.json"
+    bad.write_text(
+        '{"checkpoints": [], "ablations": [{"label":"x","zero_agent_idx":null}], '
+        '"output_dir": "/tmp"}',
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="non-empty list"):
+        _load_batch_spec(bad)
+
+
+def test_batch_spec_ablation_missing_label_raises(tmp_path) -> None:
+    """Ablation entry without 'label' → ValueError."""
+    from evaluation.paper_eval import _load_batch_spec
+    bad = tmp_path / "bad.json"
+    bad.write_text(
+        '{"checkpoints": ["a.pt"], "ablations": [{"zero_agent_idx":null}], '
+        '"output_dir": "/tmp"}',
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="non-empty 'label' string"):
+        _load_batch_spec(bad)
+
+
+def test_batch_spec_ablation_zero_agent_idx_must_be_int_or_null(tmp_path) -> None:
+    """zero_agent_idx must be int or null (not str)."""
+    from evaluation.paper_eval import _load_batch_spec
+    bad = tmp_path / "bad.json"
+    bad.write_text(
+        '{"checkpoints": ["a.pt"], '
+        '"ablations": [{"label":"x","zero_agent_idx":"1"}], '
+        '"output_dir": "/tmp"}',
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="must be int or null"):
+        _load_batch_spec(bad)
+
+
+def test_batch_spec_minimal_valid_applies_defaults(tmp_path) -> None:
+    """Minimal valid spec — optional keys get sensible defaults."""
+    from evaluation.paper_eval import _load_batch_spec
+    good = tmp_path / "good.json"
+    good.write_text(
+        '{"checkpoints": ["a.pt", "b.pt"], '
+        '"ablations": [{"label":"full","zero_agent_idx":null}, '
+        '              {"label":"ab1","zero_agent_idx":0}], '
+        '"output_dir": "/tmp/batch1"}',
+        encoding="utf-8",
+    )
+    spec = _load_batch_spec(good)
+    assert spec["checkpoints"] == ["a.pt", "b.pt"]
+    assert len(spec["ablations"]) == 2
+    assert spec["ablations"][1]["zero_agent_idx"] == 0
+    # Defaults applied:
+    assert spec["scenario_set"] == "none"
+    assert spec["scenario_set_path"] is None
+    assert spec["disturbance_mode"] is None
+    assert spec["settle_tol_hz"] == SETTLE_TOL_HZ
+    assert spec["n_scenarios"] == 50
+    assert spec["seed_base"] == 42
+
+
+def test_batch_spec_optional_overrides_preserved(tmp_path) -> None:
+    """User-supplied optional keys override defaults."""
+    from evaluation.paper_eval import _load_batch_spec
+    good = tmp_path / "good.json"
+    good.write_text(
+        '{"checkpoints": ["a.pt"], '
+        '"ablations": [{"label":"x","zero_agent_idx":null}], '
+        '"output_dir": "/tmp/x", '
+        '"scenario_set": "test", "settle_tol_hz": 0.001, '
+        '"n_scenarios": 10, "seed_base": 7, "disturbance_mode": "gen"}',
+        encoding="utf-8",
+    )
+    spec = _load_batch_spec(good)
+    assert spec["scenario_set"] == "test"
+    assert spec["settle_tol_hz"] == 0.001
+    assert spec["n_scenarios"] == 10
+    assert spec["seed_base"] == 7
+    assert spec["disturbance_mode"] == "gen"
+
+
+def test_batch_spec_path_does_not_exist_raises(tmp_path) -> None:
+    """Missing spec file → FileNotFoundError."""
+    from evaluation.paper_eval import _load_batch_spec
+    with pytest.raises(FileNotFoundError):
+        _load_batch_spec(tmp_path / "no_such_file.json")
+
+
+def test_batch_spec_not_object_raises(tmp_path) -> None:
+    """Spec must be JSON object, not list/scalar."""
+    from evaluation.paper_eval import _load_batch_spec
+    bad = tmp_path / "bad.json"
+    bad.write_text('["not", "an", "object"]', encoding="utf-8")
+    with pytest.raises(ValueError, match="must be a JSON object"):
+        _load_batch_spec(bad)
+
+
+# ---------------------------------------------------------------------------
+# P1a (CLI) — mutual exclusion + output-json optionality in batch mode
+# ---------------------------------------------------------------------------
+
+
+def test_argparse_checkpoint_and_batch_spec_mutually_exclusive() -> None:
+    """argparse rejects both --checkpoint and --batch-spec."""
+    p = _build_arg_parser()
+    with pytest.raises(SystemExit):
+        p.parse_args(["--checkpoint", "a.pt", "--batch-spec", "b.json"])
+
+
+def test_argparse_batch_mode_does_not_require_output_json() -> None:
+    """In batch mode, --output-json is optional (per-cell paths from spec)."""
+    p = _build_arg_parser()
+    ns = p.parse_args(["--batch-spec", "b.json"])
+    assert ns.batch_spec == "b.json"
+    assert ns.output_json is None
+    assert ns.checkpoint is None
+
+
+def test_argparse_single_mode_output_json_optional_at_parse_time() -> None:
+    """argparse no longer marks --output-json as required (main() enforces)."""
+    p = _build_arg_parser()
+    # Parses without --output-json; main() will return 2 with stderr error.
+    ns = p.parse_args(["--checkpoint", "a.pt"])
+    assert ns.checkpoint == "a.pt"
+    assert ns.output_json is None  # main() will reject this combo
+
+
+# ---------------------------------------------------------------------------
+# P1a — _resolve_bus_choices pure dispatch
+# ---------------------------------------------------------------------------
+
+
+def test_resolve_bus_choices_all_modes() -> None:
+    """Each mode maps to its documented bus_choices tuple."""
+    from evaluation.paper_eval import _resolve_bus_choices
+    assert _resolve_bus_choices("bus") == (7, 9)
+    assert _resolve_bus_choices("gen") == (1, 2, 3)
+    assert _resolve_bus_choices("vsg") == (1, 2, 3, 4)
+    assert _resolve_bus_choices("hybrid") == (0,)
+    assert _resolve_bus_choices("ccs_load") == (7, 9)
+
+
+def test_resolve_bus_choices_unknown_falls_back_to_bus() -> None:
+    """Unknown mode → defensive (7, 9) fallback (matches original behavior)."""
+    from evaluation.paper_eval import _resolve_bus_choices
+    assert _resolve_bus_choices("nonexistent_mode") == (7, 9)
+
+
+# ---------------------------------------------------------------------------
+# P1a — _wrap_with_zero_agent_ablation
+# ---------------------------------------------------------------------------
+
+
+def test_wrap_with_zero_agent_ablation_zeros_target_row() -> None:
+    """Wrapping forces row[zero_agent_idx] = 0 in returned action."""
+    import numpy as np
+    from evaluation.paper_eval import _wrap_with_zero_agent_ablation
+    base_action = np.array([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0], [7.0, 8.0]])
+    base_select = lambda obs: base_action  # noqa: E731 — trivial test stub
+    wrapped = _wrap_with_zero_agent_ablation(base_select, zero_agent_idx=2)
+    out = wrapped(obs=None)
+    assert out.shape == (4, 2)
+    # Row 2 zeroed; other rows untouched.
+    assert (out[2] == 0.0).all()
+    assert (out[0] == [1.0, 2.0]).all()
+    assert (out[1] == [3.0, 4.0]).all()
+    assert (out[3] == [7.0, 8.0]).all()
+    # Source array NOT mutated (we copy).
+    assert (base_action[2] == [5.0, 6.0]).all()
+
+
+# ---------------------------------------------------------------------------
+# P1a — run_batch with stub env (no MATLAB) — verifies orchestration shape
+# ---------------------------------------------------------------------------
+
+
+class _StubBatchEnv:
+    """Minimal env stub: just enough for run_single_eval to fail predictably
+    on missing checkpoints, exercising the per-cell fail-continue path.
+    """
+    def __init__(self) -> None:
+        self.N_ESS = 4
+        self._F_NOM = 50.0
+        self.DT = 0.04
+        self.T_EPISODE = 2.0
+        self._PHI_F = 100.0
+        self._PHI_H = 5e-4
+        self._PHI_D = 5e-4
+        self._PHI_H_PER_AGENT = None
+        self._PHI_D_PER_AGENT = None
+
+
+def test_run_batch_all_missing_ckpts_records_failures(tmp_path, monkeypatch) -> None:
+    """All ckpts missing → run_batch returns n_fail=n_cells, no JSONs written.
+
+    Verifies the fail-continue contract: a missing-ckpt cell does not abort
+    the batch; subsequent cells still get attempted; summary is written.
+    """
+    from evaluation.paper_eval import run_batch
+    # Avoid requiring KUNDUR_DISTURBANCE_TYPE side-effects:
+    monkeypatch.setenv("KUNDUR_DISTURBANCE_TYPE", "pm_step_proxy_random_gen")
+
+    spec = {
+        "checkpoints": [str(tmp_path / "missing_a.pt"),
+                        str(tmp_path / "missing_b.pt")],
+        "ablations": [
+            {"label": "full", "zero_agent_idx": None},
+            {"label": "ab1", "zero_agent_idx": 0},
+        ],
+        "output_dir": str(tmp_path / "out"),
+        "scenario_set": "none",
+        "scenario_set_path": None,
+        "disturbance_mode": None,
+        "settle_tol_hz": 0.005,
+        "n_scenarios": 1,
+        "seed_base": 42,
+    }
+    env = _StubBatchEnv()
+    summary = run_batch(env=env, batch_spec=spec)
+    assert summary["n_cells"] == 4  # 2 ckpt × 2 ablation
+    assert summary["n_fail"] == 4
+    assert summary["n_pass"] == 0
+    assert all(r["status"] == "FAIL" for r in summary["results"])
+    assert all("FileNotFoundError" in r["error"] for r in summary["results"])
+    # Summary JSON written even when all fail.
+    assert (tmp_path / "out" / "_batch_summary.json").exists()
+
+
+def test_run_batch_summary_records_per_cell_paths_and_labels(tmp_path, monkeypatch) -> None:
+    """Summary records ckpt+ablation+status+output_path for each cell."""
+    from evaluation.paper_eval import run_batch
+    monkeypatch.setenv("KUNDUR_DISTURBANCE_TYPE", "pm_step_proxy_random_gen")
+    spec = {
+        "checkpoints": [str(tmp_path / "a.pt"), str(tmp_path / "b.pt")],
+        "ablations": [{"label": "full", "zero_agent_idx": None}],
+        "output_dir": str(tmp_path / "out"),
+        "scenario_set": "none",
+        "scenario_set_path": None,
+        "disturbance_mode": None,
+        "settle_tol_hz": 0.005,
+        "n_scenarios": 1,
+        "seed_base": 42,
+    }
+    env = _StubBatchEnv()
+    summary = run_batch(env=env, batch_spec=spec)
+    assert len(summary["results"]) == 2
+    # Cell 0: ckpt a, ablation full
+    assert summary["results"][0]["ckpt"].endswith("a.pt")
+    assert summary["results"][0]["ablation"] == "full"
+    # Cell 1: ckpt b, ablation full
+    assert summary["results"][1]["ckpt"].endswith("b.pt")
+    # output_path is None on FAIL (no JSON written for failed cell).
+    for r in summary["results"]:
+        assert r["status"] == "FAIL"
+        assert r["output_path"] is None
+    # total_time_s present and non-negative.
+    assert summary["total_time_s"] >= 0.0

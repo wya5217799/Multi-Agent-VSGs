@@ -28,7 +28,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from typing import Any, Callable, Protocol
+from typing import Any, Callable, ClassVar, Protocol
 
 import numpy as np
 
@@ -404,6 +404,9 @@ class SgPmgStepProxy:
 @dataclass(frozen=True)
 class LoadStepRBranch:
     """Paper-lumped ΔP via Pm_step infrastructure (Phase 1.5 reroute 2026-05-04).
+    Phase 1.5 (2026-05-04 B3 fix): caller-supplied magnitude IGNORED for
+    ``loadstep_paper_*`` family; paper magnitude (PAPER_LS_MAGNITUDE_SYS_PU)
+    always used. This is the paper-anchor lock per G1.5-B/C.
 
     Previous implementation (P0-1c CCS attempt) was abandoned because CCS
     injection in EMT v3 Discrete was 62× weaker than paper LS1 baseline. This
@@ -433,6 +436,10 @@ class LoadStepRBranch:
 
     ls_bus: int | str
 
+    # B3 fix (2026-05-04): warn-once dedup for magnitude override log.
+    # Key: (ls_bus_int, original_magnitude_sys_pu rounded to 6dp).
+    _warned_keys: ClassVar[set[tuple[int, float]]] = set()
+
     def __post_init__(self) -> None:
         if isinstance(self.ls_bus, str):
             if self.ls_bus not in _LOAD_STEP_SENTINELS:
@@ -456,6 +463,10 @@ class LoadStepRBranch:
     ) -> DisturbanceTrace:
         # Phase 1.5 reroute (2026-05-04): paper-lumped ΔP via Pm_step.
         # CCS path (P0-1c) abandoned: 62× weaker than paper LS1 baseline.
+        #
+        # Phase 1.5 B3 fix (2026-05-04): caller-supplied magnitude IGNORED for
+        # loadstep_paper_* family; PAPER_LS_MAGNITUDE_SYS_PU always used.
+        # Paper-anchor lock per G1.5-B/C.
         ws = _make_ws(cfg.model_name, cfg.n_agents)
 
         # Resolve random sentinel
@@ -476,6 +487,21 @@ class LoadStepRBranch:
                     f"LoadStepRBranch: ls_bus must be 14/15 or "
                     f"'random_bus', got {self.ls_bus!r}"
                 )
+
+        # B3 fix: override caller magnitude with paper-anchor value.
+        paper_mag = PAPER_LS_MAGNITUDE_SYS_PU[ls_bus_int]
+        original_magnitude_sys_pu = float(magnitude_sys_pu)
+        if abs(original_magnitude_sys_pu - paper_mag) > 0.01:
+            _wkey = (ls_bus_int, round(original_magnitude_sys_pu, 6))
+            if _wkey not in LoadStepRBranch._warned_keys:
+                LoadStepRBranch._warned_keys.add(_wkey)
+                logger.warning(
+                    "[LoadStepRBranch] B3 paper-anchor lock: caller magnitude "
+                    "%.4f sys-pu IGNORED for bus%d; using paper value %.4f. "
+                    "(G1.5-B/C override)",
+                    original_magnitude_sys_pu, ls_bus_int, paper_mag,
+                )
+        magnitude_sys_pu = paper_mag
 
         # ESS index (1-based): ES3→bus14, ES4→bus15
         ess_i = _PAPER_BUS_TO_ESS_I[ls_bus_int]
@@ -533,6 +559,9 @@ class LoadStepRBranch:
 # ---------------------------------------------------------------------------
 
 
+# DEPRECATED 2026-05-04 B4 — LoadStepCcsInjection removed from resolver
+# registry (loadstep_paper_trip_* entries archived). Class body retained for
+# git history; do not use in new dispatch entries.
 @dataclass(frozen=True)
 class LoadStepCcsInjection:
     """Phase A++ CCS trip-injection dispatch.
@@ -801,12 +830,9 @@ _DISPATCH_TABLE: dict[str, Callable[[], DisturbanceProtocol]] = {
         lambda: LoadStepRBranch(ls_bus=15),
     "loadstep_paper_random_bus":
         lambda: LoadStepRBranch(ls_bus="random_bus"),
-    "loadstep_paper_trip_bus14":
-        lambda: LoadStepCcsInjection(ls_bus=14),
-    "loadstep_paper_trip_bus15":
-        lambda: LoadStepCcsInjection(ls_bus=15),
-    "loadstep_paper_trip_random_bus":
-        lambda: LoadStepCcsInjection(ls_bus="random_bus"),
+    # Archived 2026-05-04 (B4 cleanup): loadstep_paper_trip_bus14/bus15/
+    # random_bus removed from registry. CCS path 62x weaker than paper
+    # anchor; superseded by Phase 1.5 reroute (loadstep_paper_* above).
     # 2026-04-30 Option E: CCS Load Center at paper Fig.3 load buses
     # (Bus 7 = 967 MW, Bus 9 = 1767 MW). Bidirectional (sign-preserving):
     # +mag = current INJECTION (freq up), -mag = current draw (freq down).

@@ -294,35 +294,14 @@ METADATA: dict[str, DispatchMetadata] = {
         expected_df_hz_per_sys_pu=None,
     ),
     # =====================================================================
-    # CCS injection at ESS terminal (Bus 14/15) — name-valid, ~0.01 Hz
-    # =====================================================================
-    "loadstep_paper_trip_bus14": DispatchMetadata(
-        "loadstep_paper_trip_bus14", "ccs_inject_ess", "bus_14",
-        _DEFAULT_MAG, _DEFAULT_SIM_S, "freq_rise",
-        "CCS trip injection at bus 14 ESS terminal; ~0.01 Hz signal — NOT effective.",
-        expected_min_df_hz=0.005,
-        mag_unit="sys-pu -> W via cfg.sbase_va",
-        t_trigger_s=_DEFAULT_T_TRIG,
-        historical_source="OPTION_E_ABORT_VERDICT (Phasor decay)",
-    ),
-    "loadstep_paper_trip_bus15": DispatchMetadata(
-        "loadstep_paper_trip_bus15", "ccs_inject_ess", "bus_15",
-        _DEFAULT_MAG, _DEFAULT_SIM_S, "freq_rise",
-        "CCS trip injection at bus 15 ESS terminal; ~0.01 Hz signal — NOT effective.",
-        expected_min_df_hz=0.005,
-        mag_unit="sys-pu -> W via cfg.sbase_va",
-        t_trigger_s=_DEFAULT_T_TRIG,
-        historical_source="OPTION_E_ABORT_VERDICT",
-    ),
-    "loadstep_paper_trip_random_bus": DispatchMetadata(
-        "loadstep_paper_trip_random_bus", "ccs_inject_ess", "random",
-        _DEFAULT_MAG, _DEFAULT_SIM_S, "freq_rise",
-        "Random CCS trip injection. NOT effective.",
-        expected_min_df_hz=0.005,
-        mag_unit="sys-pu -> W via cfg.sbase_va",
-        t_trigger_s=_DEFAULT_T_TRIG,
-        historical_source="OPTION_E_ABORT_VERDICT",
-    ),
+    # Archived 2026-05-04 (B4 cleanup): loadstep_paper_trip_bus14,
+    # loadstep_paper_trip_bus15, loadstep_paper_trip_random_bus
+    # (family ccs_inject_ess) were superseded by Phase 1.5 paper-lumped
+    # reroute (loadstep_paper_bus14/bus15/random_bus, family
+    # paper_lumped_pm_step). The CCS path was measured at 62x weaker than
+    # the paper anchor (route_audit.md). Entries removed from active
+    # metadata; canonical names are loadstep_paper_bus14, _bus15,
+    # _random_bus. Commit history preserves the old entries.
     # =====================================================================
     # CCS at paper Fig.3 load centers (Option E) — name-valid, dormant
     # =====================================================================

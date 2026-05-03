@@ -133,12 +133,14 @@ class TestAdapter_Bus14_PmStepES3:
     """bus14 (paper LS1): LoadStepRBranch writes positive PM_STEP_AMP@ES3."""
 
     def test_bus14_writes_pm_step_amp_3_positive(self) -> None:
+        # B3 fix: paper-anchor lock — always uses 1.53 regardless of caller mag.
+        from scenarios.kundur.disturbance_protocols import PAPER_LS_MAGNITUDE_SYS_PU
         cfg = FakeCfg()
         bridge = FakeBridge()
         adapter = LoadStepRBranch(ls_bus=14)
         adapter.apply(
             bridge=bridge,
-            magnitude_sys_pu=2.48,
+            magnitude_sys_pu=2.48,  # ignored; overridden to paper 1.53
             rng=np.random.default_rng(0),
             t_now=0.5,
             cfg=cfg,
@@ -147,9 +149,9 @@ class TestAdapter_Bus14_PmStepES3:
         assert "Pm_step_amp_3" in pm_amps, (
             "bus14 dispatch must write Pm_step_amp_3 (ES3=bus14 ESS)"
         )
-        assert pm_amps["Pm_step_amp_3"] == pytest.approx(2.48), (
-            "bus14 Pm_step_amp_3 must be +abs(magnitude) = +2.48 sys-pu "
-            "(positive = freq UP = paper LS1 load reduction)"
+        assert pm_amps["Pm_step_amp_3"] == pytest.approx(PAPER_LS_MAGNITUDE_SYS_PU[14]), (
+            "bus14 Pm_step_amp_3 must be +paper_mag = +1.53 sys-pu "
+            "(B3 paper-anchor lock; positive = freq UP = paper LS1 load reduction)"
         )
         assert pm_amps["Pm_step_amp_3"] > 0.0, (
             "bus14 amplitude must be positive (freq UP)"
@@ -169,15 +171,16 @@ class TestAdapter_Bus14_PmStepES3:
             assert pm_amps[key] == 0.0, f"ES{i} PM_STEP_AMP should be zeroed"
 
     def test_bus14_negative_magnitude_still_positive_pm(self) -> None:
-        """abs() applied: negative input must still produce positive Pm_step."""
+        """B3: any caller magnitude overridden to paper +1.53 (positive Pm_step)."""
+        from scenarios.kundur.disturbance_protocols import PAPER_LS_MAGNITUDE_SYS_PU
         cfg = FakeCfg()
         bridge = FakeBridge()
         LoadStepRBranch(ls_bus=14).apply(
-            bridge=bridge, magnitude_sys_pu=-2.48,
+            bridge=bridge, magnitude_sys_pu=-2.48,  # ignored; overridden to 1.53
             rng=np.random.default_rng(0), t_now=0.5, cfg=cfg,
         )
         pm_amps = {k: v for k, v in bridge.calls if k.startswith("Pm_step_amp_")}
-        assert pm_amps["Pm_step_amp_3"] == pytest.approx(2.48)
+        assert pm_amps["Pm_step_amp_3"] == pytest.approx(PAPER_LS_MAGNITUDE_SYS_PU[14])
         assert pm_amps["Pm_step_amp_3"] > 0.0
 
     def test_bus14_does_not_write_load_step_trip_amp(self) -> None:
@@ -215,12 +218,14 @@ class TestAdapter_Bus15_PmStepES4:
     """bus15 (paper LS2): LoadStepRBranch writes negative PM_STEP_AMP@ES4."""
 
     def test_bus15_writes_pm_step_amp_4_negative(self) -> None:
+        # B3 fix: paper-anchor lock — always uses -0.90 regardless of caller mag.
+        from scenarios.kundur.disturbance_protocols import PAPER_LS_MAGNITUDE_SYS_PU
         cfg = FakeCfg()
         bridge = FakeBridge()
         adapter = LoadStepRBranch(ls_bus=15)
         adapter.apply(
             bridge=bridge,
-            magnitude_sys_pu=1.88,
+            magnitude_sys_pu=1.88,  # ignored; overridden to paper -0.90
             rng=np.random.default_rng(0),
             t_now=0.5,
             cfg=cfg,
@@ -229,9 +234,9 @@ class TestAdapter_Bus15_PmStepES4:
         assert "Pm_step_amp_4" in pm_amps, (
             "bus15 dispatch must write Pm_step_amp_4 (ES4=bus15 ESS)"
         )
-        assert pm_amps["Pm_step_amp_4"] == pytest.approx(-1.88), (
-            "bus15 Pm_step_amp_4 must be -abs(magnitude) = -1.88 sys-pu "
-            "(negative = freq DOWN = paper LS2 load increase)"
+        assert pm_amps["Pm_step_amp_4"] == pytest.approx(-PAPER_LS_MAGNITUDE_SYS_PU[15]), (
+            "bus15 Pm_step_amp_4 must be -paper_mag = -0.90 sys-pu "
+            "(B3 paper-anchor lock; negative = freq DOWN = paper LS2 load increase)"
         )
         assert pm_amps["Pm_step_amp_4"] < 0.0, (
             "bus15 amplitude must be negative (freq DOWN)"
@@ -366,16 +371,16 @@ class TestMagnitudeConversion:
         pm_amps = {k: v for k, v in bridge.calls if k.startswith("Pm_step_amp_")}
         assert pm_amps["Pm_step_amp_4"] == pytest.approx(-0.90)
 
-    def test_half_paper_magnitude_produces_half_pm_step(self) -> None:
-        """Linearity check: 0.5 × paper magnitude → 0.5 × expected Pm_step."""
+    def test_half_paper_magnitude_overridden_to_paper_value(self) -> None:
+        """B3: any non-paper magnitude overridden to paper lock value 1.53."""
         cfg = FakeCfg()
         bridge = FakeBridge()
         LoadStepRBranch(ls_bus=14).apply(
-            bridge=bridge, magnitude_sys_pu=0.5,  # legacy probe magnitude
+            bridge=bridge, magnitude_sys_pu=0.5,  # ignored; overridden to 1.53
             rng=np.random.default_rng(0), t_now=0.5, cfg=cfg,
         )
         pm_amps = {k: v for k, v in bridge.calls if k.startswith("Pm_step_amp_")}
-        assert pm_amps["Pm_step_amp_3"] == pytest.approx(0.5)
+        assert pm_amps["Pm_step_amp_3"] == pytest.approx(PAPER_LS_MAGNITUDE_SYS_PU[14])
 
 
 # ---------------------------------------------------------------------------
@@ -482,14 +487,15 @@ class TestTraceInvariants:
             assert v_t == pytest.approx(v_b)
 
     @pytest.mark.parametrize("ls_bus", [14, 15])
-    def test_trace_magnitude_sys_pu_preserved(self, ls_bus: int) -> None:
+    def test_trace_magnitude_sys_pu_is_paper_value(self, ls_bus: int) -> None:
+        # B3: trace.magnitude_sys_pu reflects paper-locked magnitude, not caller.
         cfg = FakeCfg()
         bridge = FakeBridge()
         trace = LoadStepRBranch(ls_bus=ls_bus).apply(
-            bridge=bridge, magnitude_sys_pu=2.48,
+            bridge=bridge, magnitude_sys_pu=2.48,  # ignored; overridden
             rng=np.random.default_rng(0), t_now=0.5, cfg=cfg,
         )
-        assert trace.magnitude_sys_pu == pytest.approx(2.48)
+        assert trace.magnitude_sys_pu == pytest.approx(PAPER_LS_MAGNITUDE_SYS_PU[ls_bus])
 
 
 # ---------------------------------------------------------------------------

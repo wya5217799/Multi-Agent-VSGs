@@ -102,16 +102,18 @@ def loadstep_effective_v3(monkeypatch):  # noqa: ARG001
 
 
 class TestRiskA_LS1_PmStepSemantics:
-    @pytest.mark.parametrize("magnitude,expected_pm", [
-        (+0.5, +0.5),
-        (-0.5, +0.5),   # negative magnitude → abs() → positive Pm_step
-        (+5.0, +5.0),
-        (-5.0, +5.0),
-        (+0.0, 0.0),
+    @pytest.mark.parametrize("magnitude", [
+        +0.5,
+        -0.5,   # negative magnitude → overridden to paper +1.53
+        +5.0,
+        -5.0,
+        +0.0,   # zero → overridden to paper +1.53
     ])
     def test_bus14_trip_writes_pm_step_amp_3_positive(
-        self, magnitude: float, expected_pm: float, loadstep_effective_v3
+        self, magnitude: float, loadstep_effective_v3
     ) -> None:
+        # B3 fix: all caller magnitudes overridden to paper value 1.53 (bus14).
+        from scenarios.kundur.disturbance_protocols import PAPER_LS_MAGNITUDE_SYS_PU
         cfg = FakeCfg()
         bridge = FakeBridge(cfg)
         adapter = LoadStepRBranch(ls_bus=14)
@@ -127,7 +129,8 @@ class TestRiskA_LS1_PmStepSemantics:
         assert "Pm_step_amp_3" in pm_amps, (
             "bus14 dispatch must write Pm_step_amp_3 (ES3 = bus14 ESS)"
         )
-        assert pm_amps["Pm_step_amp_3"] == pytest.approx(expected_pm)
+        # B3: paper anchor — always +1.53 regardless of caller magnitude
+        assert pm_amps["Pm_step_amp_3"] == pytest.approx(PAPER_LS_MAGNITUDE_SYS_PU[14])
         assert pm_amps["Pm_step_amp_3"] >= 0.0, (
             "bus14 Pm_step_amp_3 must be non-negative (freq UP)"
         )
@@ -146,17 +149,19 @@ class TestRiskA_LS1_PmStepSemantics:
 
 class TestRiskB_LS2_PmStepNegative:
     @pytest.mark.parametrize(
-        "magnitude,expected_pm",
+        "magnitude",
         [
-            (+1.88, -1.88),   # positive input → negated → freq DOWN
-            (-1.88, -1.88),   # negative input → abs then negate → freq DOWN
-            (+0.0,   0.0),
-            (-0.5,  -0.5),
+            +1.88,   # positive input → overridden to paper -0.90
+            -1.88,   # negative input → overridden to paper -0.90
+            +0.0,    # zero → overridden to paper -0.90
+            -0.5,    # arbitrary → overridden to paper -0.90
         ],
     )
     def test_bus15_engage_writes_pm_step_amp_4_negative(
-        self, magnitude: float, expected_pm: float, loadstep_effective_v3
+        self, magnitude: float, loadstep_effective_v3
     ) -> None:
+        # B3 fix: all caller magnitudes overridden to paper value -0.90 (bus15).
+        from scenarios.kundur.disturbance_protocols import PAPER_LS_MAGNITUDE_SYS_PU
         cfg = FakeCfg()
         bridge = FakeBridge(cfg)
         adapter = LoadStepRBranch(ls_bus=15)
@@ -171,11 +176,11 @@ class TestRiskB_LS2_PmStepNegative:
         assert "Pm_step_amp_4" in pm_amps, (
             "bus15 dispatch must write Pm_step_amp_4 (ES4 = bus15 ESS)"
         )
-        assert pm_amps["Pm_step_amp_4"] == pytest.approx(expected_pm)
-        if magnitude != 0.0:
-            assert pm_amps["Pm_step_amp_4"] <= 0.0, (
-                "bus15 Pm_step_amp_4 must be non-positive (freq DOWN)"
-            )
+        # B3: paper anchor — always -0.90 regardless of caller magnitude
+        assert pm_amps["Pm_step_amp_4"] == pytest.approx(-PAPER_LS_MAGNITUDE_SYS_PU[15])
+        assert pm_amps["Pm_step_amp_4"] <= 0.0, (
+            "bus15 Pm_step_amp_4 must be non-positive (freq DOWN)"
+        )
         # Must NOT write LOAD_STEP_AMP (RLC path abandoned)
         ls_writes = [k for k, _ in bridge.calls if "LoadStep_amp" in k]
         assert ls_writes == []
@@ -430,6 +435,46 @@ class TestRiskG_SymmetricPaths:
 
 
 # ---------------------------------------------------------------------------
+# R-B3: paper-anchor magnitude lock for loadstep_paper_* family
+# (2026-05-04 B3 fix)
+# ---------------------------------------------------------------------------
+
+
+class TestB3_PaperMagnitudeLock:
+    def test_arbitrary_magnitude_overridden_to_paper_for_bus14(
+        self, loadstep_effective_v3
+    ) -> None:
+        """Caller mag=0.5 → Pm_step_amp_3 = +1.53 (paper anchor bus14)."""
+        from scenarios.kundur.disturbance_protocols import PAPER_LS_MAGNITUDE_SYS_PU
+        cfg = FakeCfg()
+        bridge = FakeBridge(cfg)
+        LoadStepRBranch(ls_bus=14).apply(
+            bridge=bridge, magnitude_sys_pu=0.5,
+            rng=np.random.default_rng(0), t_now=1.0, cfg=cfg,
+        )
+        pm_amps = {k: v for k, v in bridge.calls if k.startswith("Pm_step_amp_")}
+        assert pm_amps["Pm_step_amp_3"] == pytest.approx(PAPER_LS_MAGNITUDE_SYS_PU[14]), (
+            "B3 lock: Pm_step_amp_3 must always be +1.53 for bus14"
+        )
+
+    def test_arbitrary_magnitude_overridden_to_paper_for_bus15(
+        self, loadstep_effective_v3
+    ) -> None:
+        """Caller mag=0.5 → Pm_step_amp_4 = -0.90 (paper anchor bus15)."""
+        from scenarios.kundur.disturbance_protocols import PAPER_LS_MAGNITUDE_SYS_PU
+        cfg = FakeCfg()
+        bridge = FakeBridge(cfg)
+        LoadStepRBranch(ls_bus=15).apply(
+            bridge=bridge, magnitude_sys_pu=0.5,
+            rng=np.random.default_rng(0), t_now=1.0, cfg=cfg,
+        )
+        pm_amps = {k: v for k, v in bridge.calls if k.startswith("Pm_step_amp_")}
+        assert pm_amps["Pm_step_amp_4"] == pytest.approx(-PAPER_LS_MAGNITUDE_SYS_PU[15]), (
+            "B3 lock: Pm_step_amp_4 must always be -0.90 for bus15"
+        )
+
+
+# ---------------------------------------------------------------------------
 # R-H: random_bus distribution (statistical sanity)
 # ---------------------------------------------------------------------------
 
@@ -521,24 +566,14 @@ class TestRiskI_TraceConsistency:
         "dtype",
         [
             "loadstep_paper_bus14", "loadstep_paper_bus15",
-            "loadstep_paper_trip_bus14",
         ],
     )
     def test_trace_keys_and_values_have_equal_length_loadstep(
         self, dtype: str, loadstep_effective_v3
     ) -> None:
-        # Phase 1.5 reroute: loadstep_paper_* now writes PM_STEP_AMP natively
-        # (no fixture promotion needed). loadstep_paper_trip_* still uses
-        # LoadStepCcsInjection (LOAD_STEP_TRIP_AMP); fixture is no-op but
-        # CcsInjection writes use require_effective=True on LOAD_STEP_TRIP_AMP
-        # which is deprecated (frozenset() effective) → raises on production
-        # schema. Only test loadstep_paper_bus14 and loadstep_paper_bus15 here.
-        if "trip" in dtype:
-            pytest.skip(
-                "loadstep_paper_trip_* uses CcsInjection with deprecated "
-                "LOAD_STEP_TRIP_AMP (require_effective=True raises). "
-                "CCS path covered separately in TestLoadStepCcsInjection."
-            )
+        # Phase 1.5 reroute: loadstep_paper_* writes PM_STEP_AMP natively.
+        # loadstep_paper_trip_* (CCS family) archived 2026-05-04 B4 cleanup;
+        # removed from parametrize list above.
         cfg = FakeCfg()
         bridge = FakeBridge(cfg)
         protocol = resolve_disturbance(dtype)
@@ -582,10 +617,11 @@ class TestResolver:
     # Originally "14_plus_single_vsg"; registry has grown since (Z route
     # 2026-05-03 added pm_step_single_es{1-4}, loadstep_paper_ccs_*,
     # pm_step_hybrid_sg_es; H1 2026-05-04 added pm_step_hybrid_sg_es_probe_g2).
-    # Count is now 23. Name kept for git-blame tracing.
+    # B4 2026-05-04: loadstep_paper_trip_bus14/bus15/random_bus archived.
+    # Count is now 20. Name kept for git-blame tracing.
     def test_known_types_includes_all_14_plus_single_vsg(self) -> None:
         kt = known_disturbance_types()
-        assert len(kt) == 23
+        assert len(kt) == 20
         assert "pm_step_single_vsg" in kt
         for label in [
             "pm_step_proxy_bus7", "pm_step_proxy_bus9",
@@ -596,8 +632,6 @@ class TestResolver:
             "pm_step_single_es3", "pm_step_single_es4",
             "loadstep_paper_bus14", "loadstep_paper_bus15",
             "loadstep_paper_random_bus",
-            "loadstep_paper_trip_bus14", "loadstep_paper_trip_bus15",
-            "loadstep_paper_trip_random_bus",
             "loadstep_paper_ccs_bus7", "loadstep_paper_ccs_bus9",
             "loadstep_paper_ccs_random_load",
             "pm_step_hybrid_sg_es",
@@ -615,10 +649,7 @@ class TestResolver:
         assert isinstance(
             resolve_disturbance("loadstep_paper_bus14"), LoadStepRBranch
         )
-        assert isinstance(
-            resolve_disturbance("loadstep_paper_trip_bus14"),
-            LoadStepCcsInjection,
-        )
+        # loadstep_paper_trip_* (LoadStepCcsInjection) archived B4 2026-05-04
 
 
 # ---------------------------------------------------------------------------

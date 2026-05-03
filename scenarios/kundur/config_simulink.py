@@ -290,13 +290,10 @@ KUNDUR_DISTURBANCE_TYPES_VALID = (
     "loadstep_paper_bus14",
     "loadstep_paper_bus15",
     "loadstep_paper_random_bus",
-    # Phase A++ (2026-04-27): trip-direction LoadStep via Controlled Current
-    # Source. amp pushed in W; magnitude (sys-pu, expected positive) -> W via
-    # cfg.sbase_va. Trip semantics: amp 0 -> X injects X-watt at bus -> freq
-    # rises (paper LoadStep 1 direction). NR/IC unchanged at amp=0.
-    "loadstep_paper_trip_bus14",
-    "loadstep_paper_trip_bus15",
-    "loadstep_paper_trip_random_bus",
+    # Archived 2026-05-04 (B4 cleanup): loadstep_paper_trip_bus14,
+    # loadstep_paper_trip_bus15, loadstep_paper_trip_random_bus removed.
+    # CCS path (ccs_inject_ess family) measured 62x weaker than paper anchor
+    # (route_audit.md). Superseded by Phase 1.5 paper-lumped reroute above.
     # Option E (2026-04-30): CCS at paper Fig.3 load centers (Bus 7 / Bus 9).
     # Bidirectional (sign preserved): +mag = injection (freq up, paper LoadStep
     # trip), -mag = draw (freq down, paper LoadStep engage). Targets the true

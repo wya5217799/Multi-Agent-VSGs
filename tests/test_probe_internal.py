@@ -698,7 +698,9 @@ def test_g4_dispatch_metadata_g_dispatches_have_design_5_7_floors():
     cases = [
         ("pm_step_proxy_g2", 0.05),
         ("pm_step_hybrid_sg_es", 0.30),
-        ("loadstep_paper_trip_bus14", 0.005),
+        # loadstep_paper_trip_bus14 archived B4 2026-05-04; replaced with
+        # the Phase 1.5 canonical entry.
+        ("loadstep_paper_bus14", 0.30),
     ]
     for name, expected in cases:
         md = METADATA[name]

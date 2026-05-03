@@ -1042,9 +1042,9 @@ def main() -> int:
         return 2
 
     # Force v3 profile + Path C dispatch (probe sets disturbance_type per ep).
-    os.environ["KUNDUR_MODEL_PROFILE"] = str(
+    os.environ.setdefault("KUNDUR_MODEL_PROFILE", str(
         REPO_ROOT / "scenarios" / "kundur" / "model_profiles" / "kundur_cvs_v3.json"
-    )
+    ))
     # 2026-04-30: changed default from "pm_step_proxy_random_bus" (ESS-side,
     # P0' v2 anchor protocol) to "pm_step_proxy_random_gen" (SG-side, P1b
     # validated per_M=-16.14 ≈ paper no_control -15.20). Aligns paper_eval

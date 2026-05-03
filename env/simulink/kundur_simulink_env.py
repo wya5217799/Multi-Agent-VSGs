@@ -879,47 +879,15 @@ class KundurSimulinkEnv(_KundurBaseEnv):
                     cfg.tripload2_p_var, cfg.tripload2_p_default
                 )
             else:
-                # v3 LoadStep IC restoration (2026-04-29 fix to paper_eval
-                # weak-signal observation): build_kundur_cvs_v3.m defaults
-                # have Bus 14 LS1 pre-engaged at 248e6 W (paper line 993)
-                # and Bus 15 LS2 = 0 (paper line 994). After
-                # apply_disturbance_backend writes mid-episode (e.g. LS1
-                # trip writes LoadStep_amp_bus14=0), those workspace vars
-                # PERSIST across env.reset() under FastRestart — the next
-                # episode's apply_disturbance_backend may write 0 again
-                # (if random pick is LS1 trip), producing zero transient
-                # because the var was already 0. Restoring the IC every
-                # reset ensures every episode starts from the paper-IC
-                # condition: Bus 14 carries 248 MW, Bus 15 is open.
-                # Also zeros the Phase A++ CCS trip injection amps so a
-                # prior cc_inject dispatch does not leak (skipped in
-                # v3 Discrete where CCS blocks don't exist).
-                self.bridge.apply_workspace_var(
-                    self._ws('LOAD_STEP_AMP', bus=14), 248e6
-                )
-                self.bridge.apply_workspace_var(
-                    self._ws('LOAD_STEP_AMP', bus=15), 1.0  # 1 W IC placeholder (bus15 breaker closed)
-                )
-                # LOAD_STEP_T reset writes removed (2026-05-04): Three-Phase
-                # Breaker SwitchTimes is compile-frozen in Discrete + FastRestart
-                # per F2; runtime writes are silent no-ops. No env.reset action needed.
-                # CCS trip injection vars: name-valid in both v3 profiles.
-                # v3 Phasor: CCS Constant block reads it (name-valid, not
-                # effective due to ~0.01 Hz ESS-terminal signal).
-                # v3 Discrete: CCS blocks wrapped in `if false` (Phase 1.5
-                # to restore); write lands in dangling base-ws, no consumer.
-                # Both cases: write 0.0 as state-reset (no require_effective
-                # needed). Guard uses schema membership to stay profile-agnostic.
-                from scenarios.kundur.workspace_vars import (
-                    _SCHEMA as _WS_SCHEMA,
-                )
-                if cfg.model_name in _WS_SCHEMA['LOAD_STEP_TRIP_AMP'].profiles:
-                    self.bridge.apply_workspace_var(
-                        self._ws('LOAD_STEP_TRIP_AMP', bus=14), 0.0
-                    )
-                    self.bridge.apply_workspace_var(
-                        self._ws('LOAD_STEP_TRIP_AMP', bus=15), 0.0
-                    )
+                # Phase 1.5 reroute (2026-05-04, commit c202fb0):
+                # LOAD_STEP_AMP and LOAD_STEP_TRIP_AMP writes removed —
+                # these vars are deprecated (effective_in_profile=frozenset()
+                # per workspace_vars.py). The canonical disturbance path is
+                # now Pm_step_amp_4 @ ES3/ES4 blocks. v3 Discrete LoadStep IC
+                # is satisfied by build script defaults (bus14/15 breaker
+                # initial states, Pm_step_amp=0). No runtime workspace writes
+                # needed at reset.
+                pass
 
             self.bridge.warmup(self._t_warmup_s)
             self._sim_time = self.bridge.t_current

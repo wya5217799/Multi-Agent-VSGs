@@ -356,7 +356,14 @@ def run_per_dispatch(probe: "ModelStateProbe") -> dict[str, Any]:
                 # G4 reconciliation (2026-05-01, design §5.7) — both
                 # directions: under-response (below_expected_floor) AND
                 # runaway divergence (above_expected_ceiling, I5 review fix).
-                expected_floor = md.get("expected_min_df_hz")
+                # P1-2 (2026-05-04): per-sys-pu linear scaling takes precedence
+                # over static expected_min_df_hz when expected_df_hz_per_sys_pu
+                # is set (retro §3.5, D2 follow-up).
+                per_sys_pu = md.get("expected_df_hz_per_sys_pu")
+                if per_sys_pu is not None:
+                    expected_floor: float | None = float(per_sys_pu) * abs(mag)
+                else:
+                    expected_floor = md.get("expected_min_df_hz")
                 expected_ceiling = md.get("expected_max_df_hz")
                 observed_global = float(max_abs_per_agent.max())
                 below_floor: bool | None

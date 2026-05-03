@@ -72,6 +72,14 @@ class DispatchMetadata:
     typical."""
     historical_source: str = ""
     """Verdict or artifact path the ``expected_min_df_hz`` came from."""
+    expected_df_hz_per_sys_pu: float | None = None
+    """Linear-scaled Δf floor per unit of applied magnitude (Hz / sys-pu).
+    When set, takes precedence over ``expected_min_df_hz`` for floor checks:
+    effective_floor = expected_df_hz_per_sys_pu * |applied_magnitude_sys_pu|.
+    None = use static ``expected_min_df_hz`` field.
+    Calibration: derived from historical verdict mean Δf ÷ mean magnitude.
+    P1-2 recalibration (2026-05-04): pm_step_hybrid_sg_es at mag=1.55 sys-pu
+    produced mean 0.65 Hz → 0.65/1.55 ≈ 0.42 Hz/sys-pu (retro §3.5, D2)."""
 
 
 # Common defaults (project history: probe B mag=±0.5, F4 hybrid mag=+0.5,
@@ -208,11 +216,17 @@ METADATA: dict[str, DispatchMetadata] = {
         _DEFAULT_MAG, _DEFAULT_SIM_S, "either",
         "SG step + ESS compensate (Option F4 multi-point). Largest expected "
         "max|Δf| in current model.",
-        expected_min_df_hz=0.30,
+        # P1-2 (2026-05-04): static floor replaced by per-sys-pu linear scaling
+        # (retro §3.5, D2 follow-up). Old static 0.30 Hz was calibrated at
+        # mag=1.55 mean; probe runs at mag=0.5 → false-alarm at 0.18-0.21 Hz.
+        # Derived: 0.65 Hz / 1.55 sys-pu = 0.42 Hz/sys-pu.
+        # At probe mag=0.5: effective_floor = 0.42 * 0.5 = 0.21 Hz ≈ observed.
+        expected_min_df_hz=None,  # nulled; per-sys-pu field takes precedence
         expected_max_df_hz=1.0,  # F4 v3 mean 0.65 Hz; 1.0 Hz catches runaway
         mag_unit="sys-pu (total budget)",
         t_trigger_s=_DEFAULT_T_TRIG,
-        historical_source="F4_V3_RETRAIN_FINAL_VERDICT.md (mean 0.65 Hz)",
+        historical_source="F4_V3_RETRAIN_FINAL_VERDICT.md (mean 0.65 Hz at mag≈1.55)",
+        expected_df_hz_per_sys_pu=0.42,
     ),
     # =====================================================================
     # LoadStep R-branch — name-valid only (compile-frozen at FastRestart)
@@ -326,6 +340,7 @@ def get_metadata(name: str) -> dict:
             "notes": "metadata not registered — probe used defaults",
             "expected_min_df_hz": None,
             "expected_max_df_hz": None,
+            "expected_df_hz_per_sys_pu": None,
             "mag_unit": "sys-pu",
             "t_trigger_s": None,
             "historical_source": "",
@@ -341,6 +356,7 @@ def get_metadata(name: str) -> dict:
         "notes": md.notes,
         "expected_min_df_hz": md.expected_min_df_hz,
         "expected_max_df_hz": md.expected_max_df_hz,
+        "expected_df_hz_per_sys_pu": md.expected_df_hz_per_sys_pu,
         "mag_unit": md.mag_unit,
         "t_trigger_s": md.t_trigger_s,
         "historical_source": md.historical_source,

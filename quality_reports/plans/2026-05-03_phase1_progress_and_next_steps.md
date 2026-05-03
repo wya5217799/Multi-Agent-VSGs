@@ -77,13 +77,14 @@ RESULT: 5/7 sources settled
 
 ### §0.5 Read order (15 min total)
 
+0. **§1.0 Tests Registry below** — 30-second scan; full landscape of completed tests + verdicts
 1. **This doc §1-§5** — completed work + key findings + current state + next actions (5 min)
-2. **`2026-05-03_phase0_smib_discrete_verdict.md`** — Phase 0 4.9 Hz oracle PASS evidence (3 min)
-3. **`2026-05-03_phase_b_extended_module_selection.md`** — F1-F9 micro-experiments + module decisions (5 min)
-4. **Main worktree `CLAUDE.md`** — project-wide coding conventions (skim, 2 min). Note: branch-specific paths are in §0.3 above, not in CLAUDE.md.
+2. **`2026-05-03_engineering_philosophy.md`** — 13 principles + 8-item stop-trigger checklist (3 min) — reads BEFORE diagnosis
+3. **`2026-05-03_phase_b_extended_module_selection.md`** — F1-F9 details if registry is insufficient (5 min, on demand)
+4. **Main worktree `CLAUDE.md`** — project-wide coding conventions (skim, 2 min)
 
-After this 15-min read-up, you have full context to either:
-- Continue Phase 1.3a (ES3/ES4 oscillation diagnosis) — top of forward path
+After this read-up, you have full context to either:
+- Continue Phase 1.3a (ES3/ES4 oscillation diagnosis, see §4) — top of forward path
 - OR pick a different sub-task from §5
 
 ### §0.6 Common pitfalls
@@ -99,57 +100,48 @@ After this 15-min read-up, you have full context to either:
    - Verdict claims like "Phase 1.X closed" REQUIRE evidence: actual sim output captured, FFT plot if frequency claimed, damping calc if mode-based, NR re-derive if IC-related. Anything stated in `RESULT:` lines that's not in the actual sim output IS HALLUCINATION.
    - If you find yourself thinking "the obvious answer is X, let me just write the verdict" — STOP. Run the falsification test for X first. If X is the right answer, the test confirms it cheaply. If X is wrong, you've avoided enshrining hallucination as truth.
 
-   **Real example (2026-05-03 cross-session review)**: an agent extended the IC settle test window from 1s → [4,5]s, claimed "ES3/ES4 oscillation is 2 Hz electromechanical swing mode (ES3 amp 28× G1)", and marked Phase 1.3a closed. NONE of these had evidence: no FFT was run, no §4 hypothesis was tested, no LoadStep `InitialState` toggle. The window extension may be correct (if H1 is the cause, swing damps in 4-5s), but it must be VALIDATED by hypothesis testing, not assumed.
+   See `2026-05-03_engineering_philosophy.md` §6 for the full case study + 8-item stop-trigger checklist.
 
 ---
 
-## §1 Completed (Phase 0 + Pre-flights + Phase 1.1 + Phase 1.1+)
+## §1 Completed Work
 
-### Phase 0 — SMIB Discrete Oracle ✅ PASS
-- File: `probes/kundur/spike/build_minimal_smib_discrete.m`
-- Result: 248 MW LoadStep → max\|Δf\| = **4.9 Hz** (16× the 0.3 Hz threshold)
-- Speed: 5s sim in 0.96s wall (5.2× real-time)
-- **Falsified the 2026-05-01 REJECT verdict** — Discrete is feasible
-- Verdict doc: `2026-05-03_phase0_smib_discrete_verdict.md`
+### §1.0 Tests Completed Registry (one row per test)
 
-### Pre-flight Micro-experiments — F11/F12/F13 ALL PASS
-| # | Goal | Result |
-|---|---|---|
-| F11 | 3-phase Π Section Line + 3-phase Load at v3-scale (230kV/100MW/100km) | I_err 0.8%, P_err 1.6%, 2.2× real-time |
-| F12 | Multi-source coupling (2 ESS sharing Π line + load) | ω diff = 0, both sources synchronize |
-| F13 | NR IC `(V_emf_pu, δ)` time-domain mapping with non-zero δ0 | Pe_err 0.6%, ω = 0.999999 |
+| ID | Script | Verdict | Key Result |
+|---|---|---|---|
+| **Phase 0** | `spike/build_minimal_smib_discrete.m` | ✅ PASS | 4.9 Hz @ 248 MW (16× threshold), 5.2× real-time |
+| **F1** | `spike/test_cvs_disc_input.m` | ✅ PASS | sin / const real OK; complex phasor FAIL (= Phasor's blocker) |
+| **F2** | `spike/test_r_fastrestart_disc.m` | ✅ PROVEN | Series RLC R is non-tunable in BOTH Phasor and Discrete |
+| **F3** | `spike/test_var_resistor_disc.m` | ✅ PASS | Variable Resistor IS dynamic in Discrete + FastRestart |
+| **F4** | `spike/test_ccs_dynamic_disc.m` | ✅ PASS | CCS responds to signal mid-sim (Phase 1.5 mechanism viable) |
+| **F5** | `spike/test_pe_calc_options.m` | ✅ PASS | FIR Mean (20ms) settles 2.6× faster than 1st-order LPF |
+| **F6** | `spike/test_solver_speed_disc.m` | ✅ PASS | DC trivial: solver/dt deltas < 5% |
+| **F7** | `spike/test_phasor_vs_discrete_speed.m` | ⚠️ PARTIAL | Discrete 10× RT on AC trivial; Phasor side broken (config) |
+| **F8** | `spike/test_ac_solver_sweep.m` | ✅ PASS | TBE/Tustin/BE × {25,50,100,200}μs all within 20% |
+| **F9** | `spike/test_integrator_options.m` | ✅ PROVEN | Continuous Integrator FAILS in FixedStepDiscrete (use FixedStepAuto OR Discrete-Time Integrator) |
+| **F10** | `spike/test_fastrestart_scale.m` | ⏸️ DEFERRED | Wiring blocked, retry post-1.4 |
+| **F11** | `spike/test_3phase_network_disc.m` | ✅ PASS | Three-Phase Π Section Line + Load at v3-scale: I_err 0.8%, P_err 1.6% |
+| **F12** | `spike/test_multisrc_coupling_disc.m` | ✅ PASS | 2 ESS perfect sync; **caught helper Zvsg bug** + fixed |
+| **F13** | `spike/test_ic_delta_mapping_disc.m` | ✅ PASS | NR IC δ time-domain mapping electrically equivalent: Pe_err 0.6% |
+| **Helper** | `spike/test_dynamic_source_helper.m` | ✅ VALIDATED | 4.93 Hz oracle (matches Phase 0's 4.90, <1% drift) |
+| **v3 IC** | `spike/test_v3_discrete_ic_settle.m` | 🟡 5/7 PASS | G1/G2/G3/ES1/ES2 settle; ES3/ES4 oscillate (Phase 1.3a open) |
 
-**Implication**: All 3 highest-risk module unknowns locked down before integration.
+Detailed evidence: F1-F3 → `2026-05-03_phase_b_findings_cvs_discrete_unlock.md`; F4-F9 → `2026-05-03_phase_b_extended_module_selection.md`; Phase 0 → `2026-05-03_phase0_smib_discrete_verdict.md`; F11-F13 + helper + v3 IC → commits `b6e5d97` / `84b6036` / `68a669f` / `7062695`.
 
-### Phase 1.1 — Source-chain Helper + LoadStep + v3 Compiles
-- New helper: `scenarios/kundur/simulink_models/build_dynamic_source_discrete.m`
-  - Encapsulates SMIB pattern (theta + sin + 3 single-phase CVS + Y-config + VImeas + Pe via V·I)
-  - Validated end-to-end on 1-source test (4.93 Hz vs Phase 0's 4.90 Hz, < 1% drift)
-- v3 build script: `scenarios/kundur/simulink_models/build_kundur_cvs_v3_discrete.m`
-  - 7 source chains migrated to helper (replaces ~270 lines inline pattern)
-  - LoadStep R-block (compile-frozen) replaced with Three-Phase Breaker + Three-Phase Series RLC Load
-  - CCS injection blocks wrapped in `if false` (Phase 1.5 to restore with sin pattern)
+### §1.1 Phase 1.1 — Source-chain Helper + LoadStep + v3 Compiles
 
-### Phase 1.1+ — Full Network 3-phase Migration
-- 19× single-phase Pi Section Line → `sps_lib/Power Grid Elements/Three-Phase PI Section Line`
-  (positive-seq + zero-seq params, propagation-speed clamp for short lines)
-- 2× single-phase loads → `sps_lib/Passives/Three-Phase Series RLC Load` (Y-grounded)
-- 2× single-phase shunts → Three-Phase Series RLC Load capacitive mode
-- 2× Wind PVS: AC Voltage Source → Three-Phase Source NonIdeal Yg
+- New helper `build_dynamic_source_discrete.m` encapsulates SMIB pattern (theta + 3 sin + 3 single-phase CVS + Y-config + Zvsg + VImeas + Pe via V·I) — replaces ~270 lines of v3 inline pattern with one function call × 7 sources
+- LoadStep migrated: Series RLC R (compile-frozen) → Three-Phase Breaker + Three-Phase Series RLC Load
+- CCS blocks wrapped in `if false` (Phase 1.5 to restore with sin-driven pattern)
+
+### §1.2 Phase 1.1+ — Full Network 3-phase Migration
+
+- 19× single-phase Pi Section Line → Three-Phase PI Section Line (with propagation-speed clamp for short lines)
+- 2× loads + 2× shunts + 2× Wind PVS migrated to 3-phase variants
 - Bus net wiring: per-phase anchor maps (A/B/C), 3-port-per-block registration
 
-**v3 Discrete IC Settle Test result** (`probes/kundur/spike/test_v3_discrete_ic_settle.m`):
-```
-G1: PASS  ω=0.99534 ± 0.00029
-G2: PASS  ω=0.99545 ± 0.00026
-G3: PASS  ω=0.99642 ± 0.00041
-ES1: PASS ω=0.99546 ± 0.00042
-ES2: PASS ω=0.99649 ± 0.00093
-ES3: FAIL ω=0.99663 ± 0.00177  (oscillate)
-ES4: FAIL ω=0.99669 ± 0.00102  (oscillate)
-Wall: 1.74s for 1s sim (1.7× real-time)
-5/7 sources settle.
-```
+**Result**: 5/7 sources settle (see registry §1.0 v3 IC row); ES3/ES4 oscillation is Phase 1.3a (§4).
 
 ---
 

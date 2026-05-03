@@ -7,7 +7,79 @@
 
 ---
 
-## §0 Context
+## §0 Quickstart for Fresh Session (READ FIRST)
+
+> 本章节是 self-contained handoff — 新会话不需任何额外 conversation history 即可执行 Phase 1.6。
+> 注：`quality_reports/session_logs/` 在 .gitignore，所以 handoff 永久 context 嵌入在此 (plan committed)。
+
+### §0.1 验证当前状态（必跑）
+
+```bash
+cd "C:\Users\27443\Desktop\Multi-Agent-VSGs-discrete"   # 必须用此 worktree
+git rev-parse --abbrev-ref HEAD                          # 期望: discrete-rebuild
+git log --oneline -5                                     # 期望 HEAD: P0-1e commit (含 plan)
+git status                                               # 期望: clean (results/harness 未跟踪除外)
+```
+
+⚠️ **不要在** `pensive-goldberg-c29299` 或主 `Multi-Agent  VSGs` worktree 工作 — 会偏差。
+
+### §0.2 P0-1e 已完成（2026-05-04）— 4 fix 摘要
+
+| ID | 文件:行 | 修了什么 | Verify |
+|----|---------|----------|--------|
+| **B1** | `evaluation/paper_eval.py:1045` | `os.environ[X]=` → `setdefault` (CLI 现在可切 v3 Discrete) | 56 passed |
+| **B2** | `env/simulink/kundur_simulink_env.py:881-922` | 删 4 死写 (LOAD_STEP_AMP/_TRIP_AMP[14/15] post-Phase-1.5 deprecated) | 156 passed |
+| **B3** | `scenarios/kundur/disturbance_protocols.py` LoadStepRBranch.apply() | 强制 PAPER_LS_MAGNITUDE_SYS_PU (1.53 bus14, 0.90 bus15)，caller magnitude IGNORED with warn-once | 158 passed (+2 new) |
+| **B4** | dispatch_metadata + config_simulink + disturbance_protocols + tests | 归档 3 `loadstep_paper_trip_*` (CCS family), `LoadStepCcsInjection` 标 DEPRECATED 保留体 | 110 passed |
+
+**Combined**: 283 passed across 6 affected suites, 0 new failures.
+
+### §0.3 4 个 pre-existing test_probe_internal failures (PHASE 1.7 follow-up，**不修**)
+
+- `test_dispatch_metadata_coverage_against_known_types` — 缺 `pm_step_hybrid_sg_es_probe_g2` METADATA
+- `test_g4_dispatch_metadata_g_dispatches_have_design_5_7_floors`
+- `test_i5_dispatch_metadata_hybrid_has_ceiling`
+- `test_p2b_g4_uses_thresholds_singleton`
+
+Verified pre-existing on c202fb0 via `git stash` + rerun。**Phase 1.6 scope discipline: 不修这些。**
+
+### §0.4 Phase 1.6 必要 env-var (PowerShell)
+
+```powershell
+$env:KUNDUR_MODEL_PROFILE = "C:\Users\27443\Desktop\Multi-Agent-VSGs-discrete\scenarios\kundur\model_profiles\kundur_cvs_v3_discrete.json"
+$env:KUNDUR_DISTURBANCE_TYPE = "loadstep_paper_random_bus"
+```
+
+### §0.5 不要做的事（严格）
+
+- ❌ 不要在错的 worktree 工作（必须 `Multi-Agent-VSGs-discrete`）
+- ❌ 不要重启 CCS injection 路径（62× 弱于 paper anchor 实测）
+- ❌ 不要修 §0.3 4 个 pre-existing failures（Phase 1.7 follow-up）
+- ❌ 不要直接进 Phase 1.7 RL training 而不先 Phase 1.6 ALL_PASS
+- ❌ 不要相信 agent "pytest pass" 当物理验收（必须主会话 MATLAB run paper_reward 数值）
+- ❌ 不要把 B3 magnitude lock 当 bug — 它是 paper-anchor 守门设计
+- ❌ 不要 commit Phase 1.6 after smoke fail = SUCCESS（G1.6-A/B/C 必须 PASS）
+- ❌ 不要挪 §1 阈值（engineering_philosophy.md §6 anti-goalpost）
+
+### §0.6 必读文件（按顺序）
+
+1. **本文件 §0-§6** ← Phase 1.6 plan, 必读首先
+2. `quality_reports/plans/2026-05-04_phase1_5_paper_lumped.md` ← Phase 1.5 plan + acceptance gates
+3. `quality_reports/reviews/2026-05-04_route_audit.md` ← 严格 audit framework (W1-W8 弱项)
+4. `docs/paper/kd_4agent_paper_facts.md` §1.1.1 / §6.2 / §8.4 / §12 ← paper anchor 数字
+5. `quality_reports/plans/2026-05-03_engineering_philosophy.md` ← 13 原则（重点 §6 anti-goalpost / §13 honest ignorance）
+
+### §0.7 P0-1e 估时校准 datapoint（新增）
+
+| Cycle | Estimate | Actual | 备注 |
+|---|---|---|---|
+| P0-1e (B1+B2+B3+B4 cleanup) | 1.5 hr | ~50 min wall | 4 agent 并行 + 主验证 |
+
+**Pattern**: cleanup cycles 估时偏保守。Phase 1.6 smoke physics cycles 不能套此 trend。Phase 1.5 attempt 1 数据点显示 physics smoke cycles 可能 100% 失败 + 100% revert（建模假设错时是 100%，不是估时偏差），budget cap 严格执行。
+
+---
+
+## §0a Context
 
 P0-1d (Phase 1.5 paper-lumped reroute, commit c202fb0) 完成 + P0-1e (B1/B2/B3/B4 cleanup, this cycle) 完成后，剩余 Phase 1.6 作用是：让 `paper_eval.py` 与训练 pipeline 在 v3 Discrete profile 下端到端可跑（smoke validation），把 Z route 留下的 90% wiring 推到 100%。
 

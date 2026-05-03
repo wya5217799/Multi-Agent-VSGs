@@ -131,6 +131,14 @@ class BridgeConfig:
     #   existing caller (NE39, legacy Kundur). "cvs_signal" is reserved
     #   for the Kundur CVS profile; dispatch wiring lands in G3-prep-C.
     step_strategy: str = "phang_feedback"
+    # FastRestart opt-in flag.
+    #   When True, the bridge calls set_param(<model>, 'FastRestart', 'on')
+    #   on the loaded model after load_system so all subsequent warmup()
+    #   calls skip the model-init phase.  Validated for v3 Discrete
+    #   (microtest 2026-05-03, physics rel err 2.46e-08, 35% wall savings);
+    #   not yet validated for v3 Phasor or v2.  Production training paths
+    #   inherit the safe default (False).
+    fast_restart: bool = False
 
     def __post_init__(self) -> None:
         """Validate configuration at construction time.
@@ -290,9 +298,43 @@ class SimulinkBridge:
             return
         self.session.call("cd", self.cfg.model_dir, nargout=0)
         self.session.call("load_system", self.cfg.model_name, nargout=0)
+        # FR integration disabled 2026-05-03 EOD: probe Phase 4 with cfg.fast_restart=True
+        # measured 28% wall regression (alpha 36 min vs FR run 46 min). Microtest's
+        # 35% per-sim speedup did not translate to integrated env.reset+warmup loop.
+        # Suspected interaction with the existing _fr_compiled / slx_episode_warmup_cvs
+        # FR cycling state machine — proper integration deferred to Option C refactor
+        # (single source of truth for FR state). cfg.fast_restart kept as opt-in flag
+        # but currently a no-op; CLI / env / probe wiring kept for future.
+        # self._apply_fast_restart()  # ← reverted; Option A per debugger 2026-05-03
         self._matlab_cfg = self._build_matlab_cfg()
         self._model_loaded = True
         logger.info("Loaded Simulink model: %s", self.cfg.model_name)
+
+    def _apply_fast_restart(self) -> None:
+        """Set FastRestart='on' on the loaded model if cfg.fast_restart is True.
+
+        No-op when cfg.fast_restart is False (production default).  Must be
+        called after load_system and before the first sim() / warmup().
+
+        STATUS 2026-05-03 EOD: this method is currently UNUSED — the call site
+        in load_model() was reverted after measuring a 28% wall regression in
+        integrated probe Phase 4 (alpha 36 min vs FR run 46 min). The microtest
+        passed (1e-9 physics rel err, 35% per-sim speedup) but the speedup did
+        not translate to the env.reset → warmup → multi-dispatch loop. Proper
+        re-integration (Option C refactor) requires unifying this with the
+        pre-existing _fr_compiled / slx_episode_warmup_cvs FR state machine.
+        Method body kept for future use; do NOT remove.
+        """
+        if not self.cfg.fast_restart:
+            return
+        self.session.eval(
+            f"set_param('{self.cfg.model_name}', 'FastRestart', 'on')",
+            nargout=0,
+        )
+        logger.info(
+            "FastRestart=on applied to %s (opt-in, v3 Discrete validated)",
+            self.cfg.model_name,
+        )
 
     def _build_matlab_cfg(self) -> Any:
         """Build a MATLAB struct from BridgeConfig via slx_build_bridge_config.

@@ -64,6 +64,20 @@ out_slx   = fullfile(out_dir, [mdl '.slx']);
 ic_path   = fullfile(fileparts(out_dir), 'kundur_ic_cvs_v3.json');
 runtime_mat = fullfile(out_dir, [mdl '_runtime.mat']);
 
+% Phase 1.3a H1 falsification flag (2026-05-03). When true, skip
+% LoadStepBreaker_bus14 and connect LoadStep_bus14 directly to Bus 14
+% (the load is still 248 MW per Task 2 default, so NR remains consistent).
+% Decision: ES3 std @ [0.5,1]s after 1s sim. < 0.001 -> breaker IC is the
+% main excitation source (H1 SUPPORTED). >= 0.001 -> H1 FALSIFIED.
+% Default false (preserves 5/7 baseline). Override via:
+%   assignin('base', 'bus14_no_breaker', true); build_kundur_cvs_v3_discrete();
+try
+    bus14_no_breaker = logical(evalin('base', 'bus14_no_breaker'));
+catch
+    bus14_no_breaker = false;
+end
+fprintf('RESULT: bus14_no_breaker = %d\n', double(bus14_no_breaker));
+
 %% ===== Read v3 IC =====
 ic = jsondecode(fileread(ic_path));
 assert(isfield(ic, 'schema_version') && ic.schema_version == 3, ...
@@ -424,22 +438,29 @@ for k = 1:size(loadstep_defs, 1)
     yposLS = 200 + (k - 1) * 130;
     bxLS   = 1100;
 
-    % Initial state of breaker depends on whether load is pre-engaged at IC.
-    % Bus 14 LS1: pre-engaged 248 MW (paper line 993, see loadstep_defs default).
-    % Bus 15 LS2: not engaged at IC.
-    % Convention: closed initially if amp_default > 0 (load conducting at IC).
-    if strcmp(bus_label, 'bus14')
-        breaker_init = 'closed';   % LS1 pre-engaged
-    else
-        breaker_init = 'open';     % LS2 not engaged; trigger CLOSES it
-    end
+    % H1 falsification: when bus14_no_breaker=true and bus_label=='bus14',
+    % skip the breaker block and connect load directly to Bus 14 (NR
+    % remains consistent because LoadStep_amp_bus14 default is still 248e6).
+    skip_breaker = bus14_no_breaker && strcmp(bus_label, 'bus14');
 
-    % Three-Phase Breaker
-    add_block('sps_lib/Power Grid Elements/Three-Phase Breaker', ...
-        [mdl '/' breaker_name], 'Position', [bxLS yposLS bxLS+60 yposLS+80]);
-    set_param([mdl '/' breaker_name], 'InitialState', breaker_init, ...
-        'SwitchA', 'on', 'SwitchB', 'on', 'SwitchC', 'on', ...
-        'External', 'off', 'SwitchTimes', sprintf('[%s]', t_var));
+    if ~skip_breaker
+        % Initial state of breaker depends on whether load is pre-engaged at IC.
+        % Bus 14 LS1: pre-engaged 248 MW (paper line 993, see loadstep_defs default).
+        % Bus 15 LS2: not engaged at IC.
+        % Convention: closed initially if amp_default > 0 (load conducting at IC).
+        if strcmp(bus_label, 'bus14')
+            breaker_init = 'closed';   % LS1 pre-engaged
+        else
+            breaker_init = 'open';     % LS2 not engaged; trigger CLOSES it
+        end
+
+        % Three-Phase Breaker
+        add_block('sps_lib/Power Grid Elements/Three-Phase Breaker', ...
+            [mdl '/' breaker_name], 'Position', [bxLS yposLS bxLS+60 yposLS+80]);
+        set_param([mdl '/' breaker_name], 'InitialState', breaker_init, ...
+            'SwitchA', 'on', 'SwitchB', 'on', 'SwitchC', 'on', ...
+            'External', 'off', 'SwitchTimes', sprintf('[%s]', t_var));
+    end
 
     % Three-Phase Series RLC Load (R-only, Y-grounded)
     add_block(load_path_3p, [mdl '/' load_name], ...
@@ -449,15 +470,17 @@ for k = 1:size(loadstep_defs, 1)
         'ActivePower', sprintf('max(LoadStep_amp_%s, 1)', bus_label), ...
         'InductivePower', '0', 'CapacitivePower', '0');
 
-    % Wire Breaker RConn1/2/3 → Load LConn1/2/3
-    add_line(mdl, [breaker_name '/RConn1'], [load_name '/LConn1'], 'autorouting', 'smart');
-    add_line(mdl, [breaker_name '/RConn2'], [load_name '/LConn2'], 'autorouting', 'smart');
-    add_line(mdl, [breaker_name '/RConn3'], [load_name '/LConn3'], 'autorouting', 'smart');
+    if ~skip_breaker
+        % Wire Breaker RConn1/2/3 → Load LConn1/2/3
+        add_line(mdl, [breaker_name '/RConn1'], [load_name '/LConn1'], 'autorouting', 'smart');
+        add_line(mdl, [breaker_name '/RConn2'], [load_name '/LConn2'], 'autorouting', 'smart');
+        add_line(mdl, [breaker_name '/RConn3'], [load_name '/LConn3'], 'autorouting', 'smart');
 
-    % UserData on the breaker so downstream registry can find this LoadStep
-    set_param([mdl '/' breaker_name], 'UserDataPersistent', 'on', ...
-        'UserData', struct('bus', bus, 'bus_label', bus_label, ...
-                           'load_block', load_name));
+        % UserData on the breaker so downstream registry can find this LoadStep
+        set_param([mdl '/' breaker_name], 'UserDataPersistent', 'on', ...
+            'UserData', struct('bus', bus, 'bus_label', bus_label, ...
+                               'load_block', load_name));
+    end
 end
 
 % PHASE 1.1 PATCH (2026-05-03): CCS injection blocks DISABLED for now.
@@ -725,13 +748,23 @@ end
 
 % LoadStep — Breaker has 3 LConn (bus side) + 3 RConn (load side)
 % bus → Breaker LConn1/2/3 → Breaker RConn1/2/3 → Load_step LConn1/2/3 (already wired internally)
+% H1 falsification: when bus14_no_breaker=true, register the LOAD's LConn
+% directly on Bus 14 (no breaker block in path).
 for k = 1:size(loadstep_defs, 1)
     bus_label = loadstep_defs{k, 3};
-    breaker_name = sprintf('LoadStepBreaker_%s', bus_label);
     bus = loadstep_defs{k, 2};
-    local_register_at_bus(mdl, bus_anchor_A, bus, [breaker_name '/LConn1']);
-    local_register_at_bus(mdl, bus_anchor_B, bus, [breaker_name '/LConn2']);
-    local_register_at_bus(mdl, bus_anchor_C, bus, [breaker_name '/LConn3']);
+    skip_breaker = bus14_no_breaker && strcmp(bus_label, 'bus14');
+    if skip_breaker
+        load_name = loadstep_defs{k, 1};
+        local_register_at_bus(mdl, bus_anchor_A, bus, [load_name '/LConn1']);
+        local_register_at_bus(mdl, bus_anchor_B, bus, [load_name '/LConn2']);
+        local_register_at_bus(mdl, bus_anchor_C, bus, [load_name '/LConn3']);
+    else
+        breaker_name = sprintf('LoadStepBreaker_%s', bus_label);
+        local_register_at_bus(mdl, bus_anchor_A, bus, [breaker_name '/LConn1']);
+        local_register_at_bus(mdl, bus_anchor_B, bus, [breaker_name '/LConn2']);
+        local_register_at_bus(mdl, bus_anchor_C, bus, [breaker_name '/LConn3']);
+    end
 end
 
 % CCS injection blocks DISABLED (wrapped in if false above) — skip wiring.

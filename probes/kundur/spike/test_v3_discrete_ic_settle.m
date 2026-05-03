@@ -81,7 +81,7 @@ for s = 1:numel(src_names_for_log)
     end
 end
 
-% --- Step 4: Run 1s zero-disturbance sim ---
+% --- Step 4: Run 5s zero-disturbance sim ---
 % Force all step amplitudes to 0 — pure IC settle test
 fprintf('RESULT: setting all step amplitudes to 0 for IC test\n');
 for k = 1:4

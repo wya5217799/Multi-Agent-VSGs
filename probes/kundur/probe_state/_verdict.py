@@ -404,8 +404,11 @@ def _g4_position(snap: dict[str, Any]) -> dict[str, Any]:
             reason_codes=["MISSING_FIELD"],
         )
 
-    # G4 must use the same response floor as G1 (single source of truth).
-    floor = probe_config.THRESHOLDS.g1_respond_hz
+    # G4 uses g4_position_hz (0.10 Hz default) NOT g1_respond_hz (1mHz).
+    # At 1mHz in v3 Discrete EMT, all agents always respond → signature collapse →
+    # spurious G4 REJECT. 0.10 Hz buckets agents by physical proximity to disturbance.
+    # Wired 2026-05-04 (P1-1 follow-up to P2 D1).
+    floor = probe_config.THRESHOLDS.g4_position_hz
 
     signatures: dict[str, tuple[int, ...]] = {}
     for d_type, d in dispatches.items():

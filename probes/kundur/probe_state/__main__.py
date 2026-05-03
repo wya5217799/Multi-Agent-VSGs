@@ -19,6 +19,7 @@ import logging
 import sys
 from pathlib import Path
 
+from engine.path_guard import assert_active_worktree
 from probes.kundur.probe_state.probe_state import ModelStateProbe
 
 
@@ -201,6 +202,11 @@ def main(argv: list[str] | None = None) -> int:
              "Short-circuits all phases.",
     )
     args = parser.parse_args(argv)
+
+    # Fail-fast if launched from the wrong worktree (Python-side analog of the
+    # MATLAB assert in build_kundur_cvs_v3_discrete.m:61-79).  Placed after
+    # parse_args so --help still works without triggering the guard.
+    assert_active_worktree()
 
     # Resolve snapshot dir once (used by both --diff aliases and --promote-baseline).
     from probes.kundur.probe_state.probe_state import DEFAULT_OUTPUT_DIR

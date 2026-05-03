@@ -253,21 +253,50 @@ add_line(mdl, ['CVS_' sname '_A/LConn1'], ['GND_neutral_' sname '/LConn1'], 'aut
 add_line(mdl, ['CVS_' sname '_B/LConn1'], ['GND_neutral_' sname '/LConn1'], 'autorouting', 'smart');
 add_line(mdl, ['CVS_' sname '_C/LConn1'], ['GND_neutral_' sname '/LConn1'], 'autorouting', 'smart');
 
-% Three-Phase V-I Measurement at terminal
+% Per-phase Zvsg (R+L) BETWEEN CVS and VImeas — Thévenin equivalent of VSG.
+% Without this, ideal CVS in parallel with downstream Π line shunt-C breaks
+% SimPowerSystems compile (capacitor-parallel-ideal-source error).
+% R_vsg = 0.003 × (Vbase²/VSG_SN); L_vsg = src.Lint_H (passed by caller).
+% VSG_SN inferred from scale: VSG_SN = Sbase / SCvar_value (approx).
+% Use a hardcoded R_vsg here based on conventional VSG terminal R fraction
+% (caller can override by setting workspace var).
+R_vsg_hard = 0.003 * (Vbase^2 / 200e6);   % vsg base 200 MVA convention
+
+add_block('spsSeriesRLCBranchLib/Series RLC Branch', ...
+    [mdl '/Zvsg_' sname '_A'], 'Position', [bx+150 cy-95 bx+185 cy-65]);
+set_param([mdl '/Zvsg_' sname '_A'], 'BranchType', 'RL', ...
+    'Resistance', num2str(R_vsg_hard), ...
+    'Inductance', num2str(src.Lint_H));
+add_block('spsSeriesRLCBranchLib/Series RLC Branch', ...
+    [mdl '/Zvsg_' sname '_B'], 'Position', [bx+150 cy-55 bx+185 cy-25]);
+set_param([mdl '/Zvsg_' sname '_B'], 'BranchType', 'RL', ...
+    'Resistance', num2str(R_vsg_hard), ...
+    'Inductance', num2str(src.Lint_H));
+add_block('spsSeriesRLCBranchLib/Series RLC Branch', ...
+    [mdl '/Zvsg_' sname '_C'], 'Position', [bx+150 cy-15 bx+185 cy+15]);
+set_param([mdl '/Zvsg_' sname '_C'], 'BranchType', 'RL', ...
+    'Resistance', num2str(R_vsg_hard), ...
+    'Inductance', num2str(src.Lint_H));
+
+add_line(mdl, ['CVS_' sname '_A/RConn1'], ['Zvsg_' sname '_A/LConn1'], 'autorouting', 'smart');
+add_line(mdl, ['CVS_' sname '_B/RConn1'], ['Zvsg_' sname '_B/LConn1'], 'autorouting', 'smart');
+add_line(mdl, ['CVS_' sname '_C/RConn1'], ['Zvsg_' sname '_C/LConn1'], 'autorouting', 'smart');
+
+% Three-Phase V-I Measurement at terminal (after Zvsg)
 % Note: per-source Vabc/Iabc tags used in Pe calc + downstream
 vimeas = ['VImeas_' sname];
 v_tag = ['Vabc_' sname];
 i_tag = ['Iabc_' sname];
 add_block('powerlib/Measurements/Three-Phase V-I Measurement', ...
-    [mdl '/' vimeas], 'Position', [bx+170 cy-95 bx+240 cy+15]);
+    [mdl '/' vimeas], 'Position', [bx+200 cy-95 bx+260 cy+15]);
 set_param([mdl '/' vimeas], 'VoltageMeasurement', 'phase-to-ground', ...
     'CurrentMeasurement', 'yes', ...
     'SetLabelV', 'on', 'LabelV', v_tag, ...
     'SetLabelI', 'on', 'LabelI', i_tag);
 
-add_line(mdl, ['CVS_' sname '_A/RConn1'], [vimeas '/LConn1'], 'autorouting', 'smart');
-add_line(mdl, ['CVS_' sname '_B/RConn1'], [vimeas '/LConn2'], 'autorouting', 'smart');
-add_line(mdl, ['CVS_' sname '_C/RConn1'], [vimeas '/LConn3'], 'autorouting', 'smart');
+add_line(mdl, ['Zvsg_' sname '_A/RConn1'], [vimeas '/LConn1'], 'autorouting', 'smart');
+add_line(mdl, ['Zvsg_' sname '_B/RConn1'], [vimeas '/LConn2'], 'autorouting', 'smart');
+add_line(mdl, ['Zvsg_' sname '_C/RConn1'], [vimeas '/LConn3'], 'autorouting', 'smart');
 
 % Caller wires vimeas RConn1/2/3 → bus_anchor (caller's responsibility).
 

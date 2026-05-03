@@ -2,7 +2,7 @@
 
 **Target path:** `quality_reports/plans/2026-05-03_phase1_5_ccs_restoration.md`
 **Date:** 2026-05-03
-**Status:** DRAFT — BLOCKED ON DISCOVERY (2026-05-04): LoadStep amp also nontunable under FR. See §0.5 below before proceeding.
+**Status:** BLOCKED ON DESIGN (2026-05-04 attempt 1 reverted): see §0.6 for the deeper finding — Option E `if false` block uses Phasor-only Real-Imag-to-Complex pattern, incompatible with Discrete-mode powergui. Redesign required: 3-phase sin-driven Constant→Product→CCS pattern (similar to `build_dynamic_source_discrete.m` SG/ESS helper). Estimated 1-2 hr design + 3 hr implementation. All first-attempt code reverted; only this plan retains the diagnosis.
 **Branch:** `discrete-rebuild`
 **Supersedes (relevant section):** §5 row "1.5" of `2026-05-03_phase1_progress_and_next_steps.md`
 **Authored by:** planner subagent (2026-05-03), persisted by parent agent
@@ -25,6 +25,62 @@ P0-1 cycle (`quality_reports/plans/2026-05-04_loadstep_bus15_hybrid_dispatch_fix
 **P0-1 foundation kept**: `bus15 InitialState='closed' + 1W IC` (L1) is preserved as-is; closed-breaker topology matches future CCS endpoint where load is electrically connected at IC. No revert needed before Phase 1.5.
 
 **Reference**: `quality_reports/plans/2026-05-04_loadstep_bus15_hybrid_dispatch_fix.md` §Done Summary "LoadStep silent no-op finding".
+
+---
+
+## §0.6 Phase 1.5 first-attempt finding (added 2026-05-04): Option E pattern is Phasor-only
+
+**Attempt 1 (2026-05-04 EOD)**: An executor agent removed the `if false` wrapper around Option E CCS Trip + CCS Load blocks in `build_kundur_cvs_v3_discrete.m`, deleted the broken Three-Phase Breaker + RLC Load mechanism, and updated workspace_vars / adapter / dispatch_metadata / tests accordingly. 1071/1056+ pytest pass. **But MATLAB compile FAILED**.
+
+**Compile error (via `feval(model, [], [], [], 'compile')` cause inspection):**
+```
+cause(1): 复信号不匹配. 'kundur_cvs_v3_discrete/powergui/EquivalentModel1/Sources/Mux'
+  的'输入端口 26' 应接受 数值类型 complex 的信号. 但它由 数值类型 real 的信号驱动
+cause(2): 复信号不匹配. 'kundur_cvs_v3_discrete/powergui/EquivalentModel1/Sources/From26'
+  的'输出端口 1' 的信号类型是 数值类型 real. 但它驱动的是 数值类型 complex 类型的信号
+```
+
+**Root cause**: The Option E `if false` block at lines ~530-614 uses the pattern:
+```matlab
+add_block('simulink/Sources/Constant', re_name, 'Value', 'amp/Vbase_const');
+add_block('simulink/Sources/Constant', im_name, 'Value', '0');
+add_block('simulink/Math Operations/Real-Imag to Complex', ri2c_name);
+add_block('powerlib/Electrical Sources/Controlled Current Source', ccs_name);
+% wire: re/im → ri2c → ccs (input)
+```
+
+This is a **Phasor-mode pattern**: in Phasor solver, all signals are complex (encoding magnitude + phase). The CCS in Phasor mode accepts a complex input. powergui's auto-generated `EquivalentModel1/Sources/Mux` aggregates all sources expecting Phasor's complex signal type.
+
+In **Discrete mode**, signals are real-valued time-domain. The CCS expects a real time-domain current signal (or uses its built-in `Source_Type=AC` with internal `Amplitude/Phase/Frequency` params — but those are not FR-tunable). The RI2C output is complex → mismatches the Discrete Mux's real signal type → compile error.
+
+**F4 micro-test (`test_ccs_dynamic_disc.m`) only proved CCS-block can respond to a real-signal mid-sim** — it did NOT validate that the RI2C-Phasor-pattern works in Discrete. The §0.5 implication "Option E CCS substitution is the only viable path" was over-interpreting F4: Option E is the right MECHANISM (CCS+Constant), but its Phasor WIRING needs Discrete-mode redesign.
+
+**Required redesign** (next cycle, P0-1c):
+
+1. **3-phase wiring**: One CCS per phase (Y-config), like `build_dynamic_source_discrete.m` does for SG/ESS sources. Three CCS blocks per disturbance bus.
+2. **Real time-domain signal**: each CCS driven by `Constant(LoadStep_trip_amp_busN/Vbase_const) × Sine(omega*t + phi_phase)` where phi_phase ∈ {0°, -120°, +120°}.
+3. **FR-tunable amp**: only `Constant.Value` is FR-tunable (per `slx_episode_warmup_cvs.m:160-164`). The Sine block's amplitude/phase/frequency are nontunable; thus the Sine output is fixed at `1·sin(...)` and the Constant scales it.
+4. **Block topology**:
+   ```
+   Constant(LoadStep_trip_amp_busN/Vbase_const)  ──┐
+                                                    ├→ Product → CCS_a → bus phase A
+   Sine_a (Amp=1, Freq=fn, Phase=0)              ──┘
+   Sine_b (Amp=1, Freq=fn, Phase=-120°)          ──→ Product → CCS_b → bus phase B  
+   Sine_c (Amp=1, Freq=fn, Phase=+120°)          ──→ Product → CCS_c → bus phase C
+                                                       (same Constant for all 3 phases)
+   ```
+5. **Per disturbance bus**: 3 CCS + 3 Sine + 1 Constant + 3 Product = 10 new blocks. × 4 buses (LS1+LS2+CCS_Load_bus7+CCS_Load_bus9) = 40 blocks. Reasonable scope.
+6. **Possibly reuse** `build_dynamic_source_discrete.m` helper after refactor — currently produces CVS, would need a CCS variant.
+
+**Estimated cost** (post-redesign):
+- Design + sin-CCS pattern micro-test: 1-2 hr
+- Build script integration (4 buses × 10 blocks): 2-3 hr
+- IC settle + E2E re-validation: ~1.5 hr (rebuild + IC + serial 40min + parallel 13min + gate eval)
+- Total: 4-6 hr (vs original 5 hr estimate — similar magnitude)
+
+**Acceptance gates G1.5-A..F (Section 1.2) UNCHANGED** — paper-anchor magnitude requirements survive the redesign; only the implementation pattern shifts.
+
+**Attempt 1 outcome (2026-05-04)**: code changes reverted in commit (next), pytest restored to baseline. The plan-doc finding (§0.6) is the deliverable of this cycle. Phase 1.5 redesign is the next cycle.
 
 ---
 

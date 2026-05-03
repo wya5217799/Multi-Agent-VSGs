@@ -417,8 +417,12 @@ def test_scenario_provenance_sha256_changes_when_content_changes(tmp_path) -> No
     m1.write_text('{"a": 1}', encoding="utf-8")
     m2 = tmp_path / "b.json"
     m2.write_text('{"a": 2}', encoding="utf-8")
-    p1 = _compute_scenario_provenance("test", m1, 1, 42)
-    p2 = _compute_scenario_provenance("test", m2, 1, 42)
+    p1 = _compute_scenario_provenance(
+        scenario_set="test", manifest_path=m1, n_scenarios=1, seed_base=42,
+    )
+    p2 = _compute_scenario_provenance(
+        scenario_set="test", manifest_path=m2, n_scenarios=1, seed_base=42,
+    )
     assert p1["manifest_sha256_16"] != p2["manifest_sha256_16"]
 
 

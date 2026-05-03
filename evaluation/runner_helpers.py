@@ -6,6 +6,16 @@
 
 """Runner-level helpers for paper_eval — pure functions, env-shape-only deps.
 
+Contents:
+
+- ``_LOADSTEP_ENV_PREFIXES`` — single source of truth for which
+  KUNDUR_DISTURBANCE_TYPE prefixes force LoadStep dispatch
+- ``_resolve_disturbance_dispatch`` — A3+ semantics (raise / warn / clean)
+- ``_build_runner_config`` — snapshot PHI weights + settle config +
+  dispatch resolution + scenario provenance into the JSON block
+- ``_compute_scenario_provenance`` — sha256 + n_scenarios + seed_base
+  for the resolved scenario set (P0a, 2026-05-03)
+
 Extracted from paper_eval.py 2026-05-03 (after Phase A commit ab1d480) for
 the same reason as evaluation/metrics.py: the helpers are Ousterhout-deep
 (small interface, substantive resolution logic) but were trapped in a
@@ -30,7 +40,9 @@ NE39/Kundur, runner_helpers.py is Kundur-runner-shape-specific.
 """
 from __future__ import annotations
 
+import hashlib
 import sys
+from pathlib import Path
 from typing import Optional
 
 
@@ -112,6 +124,7 @@ def _build_runner_config(
     settle_tol_hz: float,
     settle_window_s: float,
     dispatch_resolution: dict,
+    scenario_provenance: Optional[dict] = None,
 ) -> dict:
     """Snapshot all runner-level params that affect JSON interpretation.
 
@@ -120,6 +133,11 @@ def _build_runner_config(
     Reads PHI_* directly from env attributes so that any future env-var
     override applied at env-construction time is captured (single source
     of truth: ``env._PHI_F`` etc., set in kundur_simulink_env.py:148-154).
+
+    ``scenario_provenance`` (P0a, 2026-05-03): records where the scenario
+    list came from — manifest sha256 vs inline RNG — so downstream consumers
+    can verify two runs used the same scenarios. Optional for backward
+    compat with callers that don't yet provide it.
     """
     cfg: dict = {
         "phi_f": float(getattr(env, "_PHI_F")),
@@ -130,6 +148,7 @@ def _build_runner_config(
         "settle_tol_hz": float(settle_tol_hz),
         "settle_window_s": float(settle_window_s),
         "dispatch_resolution": dispatch_resolution,
+        "scenario_provenance": scenario_provenance if scenario_provenance is not None else {},
     }
     # Per-agent overrides: convert numpy / list to plain JSON-friendly form.
     for k in ("phi_h_per_agent", "phi_d_per_agent"):
@@ -140,3 +159,63 @@ def _build_runner_config(
             except TypeError:
                 cfg[k] = None  # not iterable / scalar None
     return cfg
+
+
+# ---------------------------------------------------------------------------
+# Scenario provenance (P0a, 2026-05-03)
+# ---------------------------------------------------------------------------
+
+
+def _compute_scenario_provenance(
+    *,
+    scenario_set: str,
+    manifest_path: Optional[Path],
+    n_scenarios: int,
+    seed_base: int,
+) -> dict:
+    """Build a scenario_provenance dict for the runner_config block.
+
+    Two sources, mutually exclusive:
+
+    - ``scenario_set != 'none'`` + ``manifest_path`` is set → manifest mode.
+      Computes sha256 of the manifest file bytes (truncated to 16 hex chars
+      for compactness; full sha256 is recoverable by re-hashing the file).
+      Returns ``source = 'manifest'`` plus ``manifest_path`` and
+      ``manifest_sha256_16``. ``n_scenarios`` is informational (manifest is
+      authoritative).
+
+    - ``scenario_set == 'none'`` (or manifest_path is None) → inline mode
+      with deterministic RNG seeded by ``seed_base``. Returns
+      ``source = 'inline_generator'`` plus ``seed_base`` and
+      ``n_scenarios``. ``manifest_*`` fields absent.
+
+    The returned dict always includes ``source`` and ``n_scenarios`` so
+    consumers can assert presence of the key without source-conditional
+    logic.
+
+    Pure function except for sha256 file read. Callers should resolve
+    manifest_path BEFORE this call (we don't dispatch by scenario_set
+    keyword — caller already loaded the manifest if needed).
+    """
+    if scenario_set != "none" and manifest_path is not None:
+        # Manifest mode.
+        if not manifest_path.exists():
+            raise FileNotFoundError(
+                f"scenario manifest not found: {manifest_path}"
+            )
+        h = hashlib.sha256(manifest_path.read_bytes()).hexdigest()[:16]
+        return {
+            "source": "manifest",
+            "scenario_set": scenario_set,
+            "manifest_path": str(manifest_path),
+            "manifest_sha256_16": h,
+            "n_scenarios": int(n_scenarios),
+        }
+    # Inline mode (deterministic generator, seed_base + n_scenarios are sufficient
+    # to reproduce the scenario list — see evaluation.metrics.generate_scenarios).
+    return {
+        "source": "inline_generator",
+        "scenario_set": "none",
+        "seed_base": int(seed_base),
+        "n_scenarios": int(n_scenarios),
+    }

@@ -78,6 +78,7 @@ SETTLE_WINDOW_S = 1.0
 from evaluation.runner_helpers import (  # noqa: F401  (re-export)
     _LOADSTEP_ENV_PREFIXES,
     _build_runner_config,
+    _compute_scenario_provenance,
     _resolve_disturbance_dispatch,
 )
 
@@ -616,20 +617,24 @@ def run_single_eval(
 
     # 4. Scenarios manifest (or inline).
     scenarios_override: Optional[list[dict]] = None
+    resolved_manifest_path: Optional[Path] = None
     if scenario_set != "none":
         from scenarios.kundur.scenario_loader import load_manifest
         default_paths = {
             "train": REPO_ROOT / "scenarios" / "kundur" / "scenario_sets" / "v3_paper_train_100.json",
             "test": REPO_ROOT / "scenarios" / "kundur" / "scenario_sets" / "v3_paper_test_50.json",
         }
-        manifest_path = Path(scenario_set_path or default_paths[scenario_set])
-        manifest = load_manifest(manifest_path)
+        resolved_manifest_path = Path(scenario_set_path or default_paths[scenario_set])
+        manifest = load_manifest(resolved_manifest_path)
         scenarios_override = [
             {"scenario_idx": s.scenario_idx, "bus": s.target,
              "magnitude_sys_pu": s.magnitude_sys_pu}
             for s in manifest.scenarios
         ]
-        print(f"[paper_eval] manifest {manifest_path.name}: {manifest.n_scenarios} scenarios")
+        # Override n_scenarios to match manifest (informational; manifest authoritative).
+        n_scenarios = manifest.n_scenarios
+        print(f"[paper_eval] manifest {resolved_manifest_path.name}: "
+              f"{manifest.n_scenarios} scenarios")
 
     # 5. Run.
     print(
@@ -656,11 +661,18 @@ def run_single_eval(
     )
 
     # 6. Snapshot runner_config + write JSON.
+    scenario_provenance = _compute_scenario_provenance(
+        scenario_set=scenario_set,
+        manifest_path=resolved_manifest_path,
+        n_scenarios=n_scenarios,
+        seed_base=seed_base,
+    )
     runner_config = _build_runner_config(
         env=env,
         settle_tol_hz=settle_tol_hz,
         settle_window_s=SETTLE_WINDOW_S,
         dispatch_resolution=dispatch_resolution,
+        scenario_provenance=scenario_provenance,
     )
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with output_path.open("w", encoding="utf-8") as f:

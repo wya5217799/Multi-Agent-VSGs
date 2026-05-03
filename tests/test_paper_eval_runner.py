@@ -195,6 +195,27 @@ def test_runner_config_per_agent_overrides_serialized() -> None:
     assert all(isinstance(x, float) for x in cfg["phi_h_per_agent"])
 
 
+def test_runner_config_includes_scenario_provenance_when_provided() -> None:
+    """P0a: runner_config carries scenario_provenance dict from caller."""
+    env = _FakeEnv()
+    dr = {"env_type": "", "cli_mode": None, "dispatch_path": "pm_step_proxy",
+          "implicit_conflict_warned": False}
+    prov = {"source": "manifest", "manifest_path": "/x.json",
+            "manifest_sha256_16": "abc1234567890def", "n_scenarios": 50,
+            "scenario_set": "test"}
+    cfg = _build_runner_config(env, 0.005, 1.0, dr, scenario_provenance=prov)
+    assert cfg["scenario_provenance"] == prov
+
+
+def test_runner_config_scenario_provenance_default_empty_for_backward_compat() -> None:
+    """Caller not passing scenario_provenance gets {} (additive evolution)."""
+    env = _FakeEnv()
+    dr = {"env_type": "", "cli_mode": None, "dispatch_path": "pm_step_proxy",
+          "implicit_conflict_warned": False}
+    cfg = _build_runner_config(env, 0.005, 1.0, dr)
+    assert cfg["scenario_provenance"] == {}
+
+
 def test_runner_config_settle_tol_override_captured() -> None:
     """CLI --settle-tol-hz override flows into runner_config (not just default)."""
     env = _FakeEnv()
@@ -328,6 +349,77 @@ def test_result_to_dict_paper_comparison_lock_unchanged() -> None:
     d = result_to_dict(r, runner_config={"phi_f": 100.0})
     assert d["paper_comparison_enabled"] is False
     assert "INCONCLUSIVE_STOP_REQUIRED" in d["paper_comparison_lock_reason"]
+
+
+# ---------------------------------------------------------------------------
+# P0a (scenario provenance) — _compute_scenario_provenance
+# ---------------------------------------------------------------------------
+
+
+def test_scenario_provenance_inline_mode_returns_seed_and_n() -> None:
+    """scenario_set='none' → inline mode; provenance has seed_base + n_scenarios."""
+    from evaluation.runner_helpers import _compute_scenario_provenance
+    prov = _compute_scenario_provenance(
+        scenario_set="none", manifest_path=None, n_scenarios=50, seed_base=42,
+    )
+    assert prov["source"] == "inline_generator"
+    assert prov["scenario_set"] == "none"
+    assert prov["seed_base"] == 42
+    assert prov["n_scenarios"] == 50
+    # Manifest fields absent in inline mode.
+    assert "manifest_path" not in prov
+    assert "manifest_sha256_16" not in prov
+
+
+def test_scenario_provenance_manifest_mode_returns_sha256(tmp_path) -> None:
+    """scenario_set != 'none' + valid manifest → sha256 + path recorded."""
+    from evaluation.runner_helpers import _compute_scenario_provenance
+    manifest = tmp_path / "manifest.json"
+    manifest.write_text('{"scenarios": [{"idx": 1}]}', encoding="utf-8")
+    prov = _compute_scenario_provenance(
+        scenario_set="test", manifest_path=manifest,
+        n_scenarios=1, seed_base=42,
+    )
+    assert prov["source"] == "manifest"
+    assert prov["scenario_set"] == "test"
+    assert prov["manifest_path"] == str(manifest)
+    assert "manifest_sha256_16" in prov
+    assert len(prov["manifest_sha256_16"]) == 16
+    # Sanity: re-hashing yields same value.
+    import hashlib
+    expected = hashlib.sha256(manifest.read_bytes()).hexdigest()[:16]
+    assert prov["manifest_sha256_16"] == expected
+
+
+def test_scenario_provenance_manifest_missing_raises(tmp_path) -> None:
+    """Missing manifest path → FileNotFoundError."""
+    from evaluation.runner_helpers import _compute_scenario_provenance
+    with pytest.raises(FileNotFoundError):
+        _compute_scenario_provenance(
+            scenario_set="test", manifest_path=tmp_path / "nope.json",
+            n_scenarios=1, seed_base=42,
+        )
+
+
+def test_scenario_provenance_manifest_path_none_falls_to_inline() -> None:
+    """If scenario_set != 'none' but manifest_path is None → inline (defensive)."""
+    from evaluation.runner_helpers import _compute_scenario_provenance
+    prov = _compute_scenario_provenance(
+        scenario_set="test", manifest_path=None, n_scenarios=10, seed_base=99,
+    )
+    assert prov["source"] == "inline_generator"
+
+
+def test_scenario_provenance_sha256_changes_when_content_changes(tmp_path) -> None:
+    """Different manifest content → different sha256 (collision check)."""
+    from evaluation.runner_helpers import _compute_scenario_provenance
+    m1 = tmp_path / "a.json"
+    m1.write_text('{"a": 1}', encoding="utf-8")
+    m2 = tmp_path / "b.json"
+    m2.write_text('{"a": 2}', encoding="utf-8")
+    p1 = _compute_scenario_provenance("test", m1, 1, 42)
+    p2 = _compute_scenario_provenance("test", m2, 1, 42)
+    assert p1["manifest_sha256_16"] != p2["manifest_sha256_16"]
 
 
 # ---------------------------------------------------------------------------

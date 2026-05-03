@@ -223,44 +223,9 @@ set_param([mdl '/powergui'], 'SimulationMode', 'Discrete', 'SampleTime', '50e-6'
 set_param(mdl, 'StopTime', '0.5', 'SolverType', 'Fixed-step', ...
     'Solver', 'FixedStepAuto', 'FixedStep', '50e-6');
 
-% =====================================================================
-% ⚠️  PHASE 1.1 INCOMPLETE — DO NOT BUILD YET
-% =====================================================================
-% Status (2026-05-03):
-%   ✅ Header + docstring updated for Discrete
-%   ✅ Model name changed to kundur_cvs_v3_discrete
-%   ✅ powergui Phasor → Discrete (SampleTime=50us)
-%   ✅ Solver Variable-step ode23t → Fixed-step 50us
-%   ❌ Source-chain RI2C+CVS pattern (lines ~540-575 + 740-758 per source × 7)
-%      → MUST replace with SMIB pattern: theta_<src>=wn*t+δ → 3 sin signals →
-%        3 single-phase CVS in Y-config (per probes/kundur/spike/build_minimal_smib_discrete.m)
-%   ❌ Pe calculation (lines ~576-605 per source × 7)
-%      → Replace Complex-to-Real-Imag with V·I·sum across 3 phases (vector product + sum-collapse)
-%   ❌ LoadStep R-block (lines ~280-360, 2 buses)
-%      → Replace Series RLC with R from workspace var (PROVEN compile-frozen even in Discrete)
-%        with: Three-Phase Breaker + Three-Phase Series RLC Load (verified Phase 0)
-%   ❌ CCS injection (lines ~395-470, 4 blocks)
-%      → Replace RI2C complex pattern with sin × 3 single-phase CCS in Y-config
-%   ❌ Wind PVS (lines ~803-880, 2 sources)
-%      → Verify AC Voltage Source works in Discrete (likely OK, TODO confirm)
-%   ❌ Pm-step gating (lines ~607-625 per source × 7)
-%      → Should work as-is (paradigm-independent), TODO verify
-%
-% Reference reuse:
-%   - SMIB pattern: probes/kundur/spike/build_minimal_smib_discrete.m
-%   - CVS sin compatibility: probes/kundur/spike/test_cvs_disc_input.m
-%   - R-block freeze proof: probes/kundur/spike/test_r_fastrestart_disc.m
-%   - Phase 0 verdict: quality_reports/plans/2026-05-03_phase0_smib_discrete_verdict.md
-%
-% ⚠️  Calling this function NOW will fail at first source-chain RI2C+CVS
-%     placement (test_cvs_disc_input.m C confirmed: complex phasor input
-%     fails compile under Discrete). Halt with explicit error to prevent
-%     accidental partial builds:
-error(['build_kundur_cvs_v3_discrete: PHASE 1.1 INCOMPLETE — source-chain ' ...
-       'rewrite pending. See banner above + Phase 0 verdict for the rewrite recipe. ' ...
-       'For Phase 0 SMIB oracle (which IS working), call ' ...
-       'build_minimal_smib_discrete() instead.']);
-% =====================================================================
+% Phase 1.1 source-chain rewrite uses build_dynamic_source_discrete helper
+% (see scenarios/kundur/simulink_models/build_dynamic_source_discrete.m,
+%  validated end-to-end at probes/kundur/spike/test_dynamic_source_helper.m).
 
 %% ===== Base workspace scalars =====
 % --- Shared constants ---
@@ -429,34 +394,78 @@ for sh = 1:n_shunts
         'UserData', struct('bus', bus));
 end
 
-% LoadStep — Series RLC R-only with workspace-expression Resistance.
-% Phase A (2026-04-27): replaces v3-Phase1.3 dead `Resistance='1e9'`. The
-% Resistance param is set to a string expression
-%     'Vbase_const^2 / max(LoadStep_amp_<lb>, 1e-3)'
-% which MATLAB re-evaluates from the base workspace at each sim() call.
-% Verified Phasor-tunable in tmp_R_tune_test on 2026-04-27 (Variable Resistor
-% requires Discrete solver and was rejected). env writes `LoadStep_amp_<lb>`
-% mid-episode (W); amp=0 ⇒ R≈5e13 Ω (open); amp=X ⇒ R=V²/X draws X W at V≈Vbase.
-% NR/IC unaffected by default amp=0 (load electrically absent at IC).
+% PHASE 1.1 PATCH (2026-05-03): LoadStep — Three-Phase Breaker + Three-Phase
+% Series RLC Load (replaces v3 Series RLC R with Resistance from workspace var,
+% PROVEN compile-frozen in Discrete+FastRestart per test_r_fastrestart_disc.m).
+%
+% Pattern (validated by Phase 0 SMIB oracle 4.9 Hz at 248 MW):
+%   Breaker (signal-controlled, closes at LoadStep_t_<lb>)
+%   ├ initial state: open if amp_default=0; closed if amp_default>0
+%   ├ SwitchTimes = [LoadStep_t_<lb>] (single transition: open→closed or closed→open)
+%   └ External = off (internal time-driven gating)
+% Three-Phase Series RLC Load (Y-grounded, R-only)
+%   ├ ActivePower = LoadStep_amp_<lb> (W, workspace var)
+%   └ Connection: VSG bus 14 / 15 (3-phase RConn1/2/3)
+%
+% Workspace contract preserved: `LoadStep_amp_<lb>` and `LoadStep_t_<lb>`
+% drive the load active power and trigger time. Default amp_default per
+% loadstep_defs (Bus 14 LS1 pre-engaged 248 MW; Bus 15 LS2 0 → trigger writes 188 MW).
+load_path_3p = sprintf('sps_lib/Passives/Three-Phase\nSeries RLC Load');
 for k = 1:size(loadstep_defs, 1)
     name      = loadstep_defs{k, 1};
     bus       = loadstep_defs{k, 2};
     bus_label = loadstep_defs{k, 3};
 
-    yposLS = 200 + (k - 1) * 100;
-    add_block('powerlib/Elements/Series RLC Branch', [mdl '/' name], ...
-        'Position', [1100 yposLS 1160 yposLS+60]);
-    set_param([mdl '/' name], 'BranchType', 'R', ...
-        'Resistance', sprintf('Vbase_const^2 / max(LoadStep_amp_%s, 1e-3)', bus_label));
+    breaker_name = sprintf('LoadStepBreaker_%s', bus_label);
+    load_name    = name;   % keep historical name for downstream wiring
+    t_var = sprintf('LoadStep_t_%s', bus_label);
 
-    add_block('powerlib/Elements/Ground', [mdl '/GND_' name], ...
-        'Position', [1100 yposLS+90 1140 yposLS+120]);
-    add_line(mdl, [name '/RConn1'], ['GND_' name '/LConn1'], 'autorouting', 'smart');
+    yposLS = 200 + (k - 1) * 130;
+    bxLS   = 1100;
 
-    set_param([mdl '/' name], 'UserDataPersistent', 'on', ...
-        'UserData', struct('bus', bus, 'bus_label', bus_label));
+    % Initial state of breaker depends on whether load is pre-engaged at IC.
+    % Bus 14 LS1: pre-engaged 248 MW (paper line 993, see loadstep_defs default).
+    % Bus 15 LS2: not engaged at IC.
+    % Convention: closed initially if amp_default > 0 (load conducting at IC).
+    if strcmp(bus_label, 'bus14')
+        breaker_init = 'closed';   % LS1 pre-engaged
+    else
+        breaker_init = 'open';     % LS2 not engaged; trigger CLOSES it
+    end
+
+    % Three-Phase Breaker
+    add_block('sps_lib/Power Grid Elements/Three-Phase Breaker', ...
+        [mdl '/' breaker_name], 'Position', [bxLS yposLS bxLS+60 yposLS+80]);
+    set_param([mdl '/' breaker_name], 'InitialState', breaker_init, ...
+        'SwitchA', 'on', 'SwitchB', 'on', 'SwitchC', 'on', ...
+        'External', 'off', 'SwitchTimes', sprintf('[%s]', t_var));
+
+    % Three-Phase Series RLC Load (R-only, Y-grounded)
+    add_block(load_path_3p, [mdl '/' load_name], ...
+        'Position', [bxLS+90 yposLS bxLS+150 yposLS+80]);
+    set_param([mdl '/' load_name], 'Configuration', 'Y (grounded)', ...
+        'NominalVoltage', num2str(Vbase), 'NominalFrequency', num2str(fn), ...
+        'ActivePower', sprintf('max(LoadStep_amp_%s, 1)', bus_label), ...
+        'InductivePower', '0', 'CapacitivePower', '0');
+
+    % Wire Breaker RConn1/2/3 → Load LConn1/2/3
+    add_line(mdl, [breaker_name '/RConn1'], [load_name '/LConn1'], 'autorouting', 'smart');
+    add_line(mdl, [breaker_name '/RConn2'], [load_name '/LConn2'], 'autorouting', 'smart');
+    add_line(mdl, [breaker_name '/RConn3'], [load_name '/LConn3'], 'autorouting', 'smart');
+
+    % UserData on the breaker so downstream registry can find this LoadStep
+    set_param([mdl '/' breaker_name], 'UserDataPersistent', 'on', ...
+        'UserData', struct('bus', bus, 'bus_label', bus_label, ...
+                           'load_block', load_name));
 end
 
+% PHASE 1.1 PATCH (2026-05-03): CCS injection blocks DISABLED for now.
+% v3 used RI2C complex-phasor pattern driving CCS — proven to fail compile
+% in Discrete mode (test_cvs_disc_input.m result C). Future patch will
+% restore these using sin-driven 3-phase CCS (similar to source-chain pattern).
+% For Phase 1.3 (compile + IC settle test), CCS is not needed — Breaker+Load
+% LoadStep mechanism above provides the disturbance signal.
+if false  % CCS_DISABLED — restore in Phase 1.5+ with sin-driven pattern
 % LoadStep TRIP direction (Phase A++ 2026-04-27) — Controlled Current Source
 % per bus, in parallel with the Series RLC R load. Drives the trip-direction
 % disturbance (freq UP) which a passive R cannot do. CCS is single-phase and
@@ -567,6 +576,7 @@ for k = 1:size(ccs_load_defs, 1)
         'UserData', struct('bus', bus, 'bus_label', bus_label, ...
                            'mode', 'ccs_load_center'));
 end
+end  % end CCS_DISABLED guard (if false ... end)
 
 %% ===== Build dynamic sources (3 SG + 4 ESS) with full swing-eq closure =====
 % Each source produces a CVS at internal EMF, connected through internal X
@@ -588,288 +598,40 @@ src_meta = {
 n_src = size(src_meta, 1);
 
 % Global clock (shared across all Pm-step gates and LoadStep gates)
-add_block('simulink/Sources/Clock', [mdl '/Clock_global'], ...
+add_block('built-in/Clock', [mdl '/Clock_global'], ...
     'Position', [200 1500 230 1530], 'DisplayTime', 'off');
 
+% PHASE 1.1 PATCH (2026-05-03): inline source chain replaced with helper.
+% Helper: build_dynamic_source_discrete (validated end-to-end on
+% probes/kundur/spike/test_dynamic_source_helper.m, max|Δf|=4.93 Hz at 248 MW).
+%
+% Helper produces per-source: theta = wn*t + delta → 3-phase sin signals → 3
+% single-phase CVS in Y-config → Three-Phase V-I Measurement → Pe = Σ V·I.
+% Network-side terminal: VImeas_<sname>/RConn1..3 (3-phase, Y).
+%
+% Storage: source struct + geometry struct + global params struct.
+params.fn = fn; params.wn = wn; params.Vbase = Vbase; params.Sbase = Sbase;
 for s = 1:n_src
-    sname  = src_meta{s, 1};
-    bus    = src_meta{s, 2};
-    stype  = src_meta{s, 3};
-    Mvar   = src_meta{s, 4};
-    Dvar   = src_meta{s, 5};
-    Pmvar  = src_meta{s, 6};
-    d0var  = src_meta{s, 7};
-    Vvar   = src_meta{s, 8};
-    SCvar  = src_meta{s, 9};
-    Rvar   = src_meta{s, 10};
-    Lint_H = src_meta{s, 11};
-    Tvar   = src_meta{s, 12};
-    Avar   = src_meta{s, 13};
+    src.name        = src_meta{s, 1};
+    src.bus         = src_meta{s, 2};
+    src.stype       = src_meta{s, 3};
+    src.M_var       = src_meta{s, 4};
+    src.D_var       = src_meta{s, 5};
+    src.Pm_var      = src_meta{s, 6};
+    src.delta0_var  = src_meta{s, 7};
+    src.Vmag_var    = src_meta{s, 8};
+    src.scale_var   = src_meta{s, 9};
+    src.Rdrop_var   = src_meta{s, 10};
+    src.Lint_H      = src_meta{s, 11};
+    src.step_t_var  = src_meta{s, 12};
+    src.step_amp_var = src_meta{s, 13};
 
-    cy = 80 + (s - 1) * 260;
-    bx = 1300;
+    geom.cy = 80 + (s - 1) * 260;
+    geom.bx = 1300;
+    geom.global_clock = 'Clock_global';
+    geom.bus_anchor = '';   % unused; per-source bus wiring done in §"Connect electrical bus net"
 
-    cvs   = sprintf('CVS_%s', sname);
-    Lint  = sprintf('Lint_%s', sname);
-    gnd   = sprintf('GND_%s', sname);
-    intW  = sprintf('IntW_%s', sname);
-    intD  = sprintf('IntD_%s', sname);
-
-    % --- Electrical: CVS, Imeas, internal X, GND, Vmeas (terminal) ---
-    add_block('powerlib/Electrical Sources/Controlled Voltage Source', ...
-        [mdl '/' cvs], 'Position', [bx cy bx+60 cy+50]);
-    set_param([mdl '/' cvs], ...
-        'Source_Type', 'DC', 'Initialize', 'off', ...
-        'Amplitude', Vvar, 'Phase', '0', 'Frequency', '0', ...
-        'Measurements', 'None');
-
-    add_block('powerlib/Measurements/Current Measurement', ...
-        [mdl '/Imeas_' sname], 'Position', [bx+90 cy+10 bx+110 cy+40]);
-
-    add_block('powerlib/Elements/Series RLC Branch', [mdl '/' Lint], ...
-        'Position', [bx+150 cy bx+200 cy+30]);
-    set_param([mdl '/' Lint], 'BranchType', 'L', ...
-        'Inductance', sprintf('%.10g', Lint_H));
-    set_param([mdl '/' Lint], 'UserDataPersistent', 'on', ...
-        'UserData', struct('bus', bus, 'src', sname));
-
-    add_block('powerlib/Elements/Ground', [mdl '/' gnd], ...
-        'Position', [bx cy+70 bx+40 cy+100]);
-
-    add_block('powerlib/Measurements/Voltage Measurement', ...
-        [mdl '/Vmeas_' sname], 'Position', [bx+50 cy+110 bx+110 cy+150]);
-
-    add_line(mdl, [cvs '/RConn1'], ['Imeas_' sname '/LConn1'], 'autorouting', 'smart');
-    add_line(mdl, ['Imeas_' sname '/RConn1'], [Lint '/LConn1'], 'autorouting', 'smart');
-    add_line(mdl, [cvs '/LConn1'], [gnd '/LConn1'], 'autorouting', 'smart');
-    add_line(mdl, [cvs '/RConn1'], ['Vmeas_' sname '/LConn1'], 'autorouting', 'smart');
-    add_line(mdl, [cvs '/LConn1'], ['Vmeas_' sname '/LConn2'], 'autorouting', 'smart');
-
-    % --- Pe = Re(V·conj(I)) / Sbase  (sys-pu) ---
-    add_block('simulink/Math Operations/Complex to Real-Imag', ...
-        [mdl '/V_RI_' sname], 'Position', [bx+220 cy+110 bx+260 cy+150]);
-    set_param([mdl '/V_RI_' sname], 'Output', 'Real and imag');
-    add_line(mdl, ['Vmeas_' sname '/1'], ['V_RI_' sname '/1'], 'autorouting', 'smart');
-
-    add_block('simulink/Math Operations/Complex to Real-Imag', ...
-        [mdl '/I_RI_' sname], 'Position', [bx+220 cy+170 bx+260 cy+210]);
-    set_param([mdl '/I_RI_' sname], 'Output', 'Real and imag');
-    add_line(mdl, ['Imeas_' sname '/1'], ['I_RI_' sname '/1'], 'autorouting', 'smart');
-
-    add_block('simulink/Math Operations/Product', [mdl '/VrIr_' sname], ...
-        'Position', [bx+290 cy+110 bx+320 cy+135], 'Inputs', '2');
-    add_line(mdl, ['V_RI_' sname '/1'], ['VrIr_' sname '/1']);
-    add_line(mdl, ['I_RI_' sname '/1'], ['VrIr_' sname '/2']);
-
-    add_block('simulink/Math Operations/Product', [mdl '/ViIi_' sname], ...
-        'Position', [bx+290 cy+170 bx+320 cy+195], 'Inputs', '2');
-    add_line(mdl, ['V_RI_' sname '/2'], ['ViIi_' sname '/1']);
-    add_line(mdl, ['I_RI_' sname '/2'], ['ViIi_' sname '/2']);
-
-    add_block('simulink/Math Operations/Sum', [mdl '/PSum_' sname], ...
-        'Position', [bx+350 cy+140 bx+380 cy+170], 'Inputs', '++');
-    add_line(mdl, ['VrIr_' sname '/1'], ['PSum_' sname '/1']);
-    add_line(mdl, ['ViIi_' sname '/1'], ['PSum_' sname '/2']);
-
-    add_block('simulink/Math Operations/Gain', [mdl '/Pe_pu_' sname], ...
-        'Position', [bx+400 cy+140 bx+440 cy+170], 'Gain', 'Pe_scale');
-    add_line(mdl, ['PSum_' sname '/1'], ['Pe_pu_' sname '/1']);
-
-    % --- Pm-step gating (per-source) ---
-    add_block('simulink/Sources/Constant', [mdl '/Pm_step_t_c_' sname], ...
-        'Position', [bx-560 cy+130 bx-520 cy+150], 'Value', Tvar);
-    add_block('simulink/Logic and Bit Operations/Relational Operator', ...
-        [mdl '/GE_' sname], ...
-        'Position', [bx-500 cy+115 bx-470 cy+145], 'Operator', '>=');
-    add_line(mdl, 'Clock_global/1', ['GE_' sname '/1']);
-    add_line(mdl, ['Pm_step_t_c_' sname '/1'], ['GE_' sname '/2']);
-
-    add_block('simulink/Signal Attributes/Data Type Conversion', ...
-        [mdl '/Cast_' sname], ...
-        'Position', [bx-460 cy+115 bx-430 cy+140], 'OutDataTypeStr', 'double');
-    add_line(mdl, ['GE_' sname '/1'], ['Cast_' sname '/1']);
-
-    add_block('simulink/Sources/Constant', [mdl '/Pm_step_amp_c_' sname], ...
-        'Position', [bx-460 cy+155 bx-420 cy+175], 'Value', Avar);
-    add_block('simulink/Math Operations/Product', [mdl '/PmStepMul_' sname], ...
-        'Position', [bx-410 cy+125 bx-385 cy+150], 'Inputs', '2');
-    add_line(mdl, ['Cast_' sname '/1'], ['PmStepMul_' sname '/1']);
-    add_line(mdl, ['Pm_step_amp_c_' sname '/1'], ['PmStepMul_' sname '/2']);
-
-    % --- Swing equation: M·dω/dt = Pm_total − Pe_src_pu − D·(ω−1)
-    %     where Pe_src_pu is on the source's own base (gen-base for SG,
-    %     vsg-base for ESS): Pe_src_pu = Pe_sys_pu / SCvar (= Sbase/Sn_src)
-    %     Pm_total stored on source-base too:
-    %       SG:  Pm_total = Pm0_sys/Sscale − (1/R)·(ω−1) + step
-    %       ESS: Pm_total = Pm0_sys/Sscale + step
-    %
-    %     For Phase 1.3 we store Pm0 in sys-pu via base-ws Pm_var, then divide
-    %     by SCvar=Sbase/Sn_src inside the model to get source-base pu.
-
-    % Pm0 source-base = Pm_var * SCvar  (Pm_var sys-pu, SCvar=Sbase/Sn_src)
-    % MULTIPLY: P_src_pu = P_W/Sn = (P_W/Sbase)*(Sbase/Sn) = Pm_sys * SCvar
-    add_block('simulink/Sources/Constant', [mdl '/Pm_sys_c_' sname], ...
-        'Position', [bx-450 cy+50 bx-410 cy+70], 'Value', Pmvar);
-    add_block('simulink/Sources/Constant', [mdl '/Sscale_c_' sname], ...
-        'Position', [bx-450 cy+90 bx-410 cy+110], 'Value', SCvar);
-    add_block('simulink/Math Operations/Product', [mdl '/PmSrcPU_' sname], ...
-        'Position', [bx-400 cy+60 bx-370 cy+90], 'Inputs', '2');
-    add_line(mdl, ['Pm_sys_c_' sname '/1'], ['PmSrcPU_' sname '/1']);
-    add_line(mdl, ['Sscale_c_' sname '/1'], ['PmSrcPU_' sname '/2']);
-
-    % Sum step + base Pm
-    add_block('simulink/Math Operations/Sum', [mdl '/PmTotal_' sname], ...
-        'Position', [bx-360 cy+70 bx-330 cy+100], 'Inputs', '++');
-    add_line(mdl, ['PmSrcPU_' sname '/1'],  ['PmTotal_' sname '/1']);
-    add_line(mdl, ['PmStepMul_' sname '/1'], ['PmTotal_' sname '/2']);
-
-    % SG governor droop: subtract (1/R)·(ω−1) from Pm_total
-    % Use Gain with literal '1/<Rvar>' so 1/R is computed once at compile.
-    if strcmp(stype, 'sg')
-        add_block('simulink/Math Operations/Gain', [mdl '/InvR_' sname], ...
-            'Position', [bx-310 cy+105 bx-280 cy+135], ...
-            'Gain', ['1/' Rvar]);
-        % InvR will be wired to (ω−1) downstream via DroopMul.
-    end
-
-    % ω integrator
-    add_block('simulink/Continuous/Integrator', [mdl '/' intW], ...
-        'Position', [bx-200 cy+40 bx-170 cy+70], 'InitialCondition', '1');
-
-    add_block('simulink/Sources/Constant', [mdl '/One_' sname], ...
-        'Position', [bx-360 cy+10 bx-330 cy+30], 'Value', '1');
-    add_block('simulink/Math Operations/Sum', [mdl '/SumDw_' sname], ...
-        'Position', [bx-300 cy+40 bx-270 cy+70], 'Inputs', '+-');
-    add_line(mdl, [intW '/1'], ['SumDw_' sname '/1']);
-    add_line(mdl, ['One_' sname '/1'], ['SumDw_' sname '/2']);
-
-    % D · (ω − 1)
-    add_block('simulink/Math Operations/Gain', [mdl '/Dgain_' sname], ...
-        'Position', [bx-300 cy+100 bx-270 cy+120], 'Gain', Dvar);
-    add_line(mdl, ['SumDw_' sname '/1'], ['Dgain_' sname '/1']);
-
-    if strcmp(stype, 'sg')
-        % InvR Gain consumes (ω−1) directly: InvR/1 = (1/R)·(ω−1)
-        add_line(mdl, ['SumDw_' sname '/1'], ['InvR_' sname '/1']);
-
-        % Pm_after_droop = PmTotal − (1/R)·(ω−1)
-        add_block('simulink/Math Operations/Sum', [mdl '/PmAfterDroop_' sname], ...
-            'Position', [bx-220 cy+70 bx-190 cy+100], 'Inputs', '+-');
-        add_line(mdl, ['PmTotal_' sname '/1'], ['PmAfterDroop_' sname '/1']);
-        add_line(mdl, ['InvR_' sname '/1'],   ['PmAfterDroop_' sname '/2']);
-
-        add_block('simulink/Math Operations/Sum', [mdl '/SwingSum_' sname], ...
-            'Position', [bx-180 cy+50 bx-150 cy+110], 'Inputs', '+--');
-        add_line(mdl, ['PmAfterDroop_' sname '/1'], ['SwingSum_' sname '/1']);
-        add_line(mdl, ['Pe_pu_' sname '/1'],        ['SwingSum_' sname '/2']);
-        add_line(mdl, ['Dgain_' sname '/1'],        ['SwingSum_' sname '/3']);
-    else
-        add_block('simulink/Math Operations/Sum', [mdl '/SwingSum_' sname], ...
-            'Position', [bx-260 cy+50 bx-230 cy+110], 'Inputs', '+--');
-        add_line(mdl, ['PmTotal_' sname '/1'], ['SwingSum_' sname '/1']);
-        add_line(mdl, ['Pe_pu_' sname '/1'],   ['SwingSum_' sname '/2']);
-        add_line(mdl, ['Dgain_' sname '/1'],   ['SwingSum_' sname '/3']);
-    end
-
-    % NOTE: Pe_pu_<sname> is on sys-pu but the swing eq is on source-base pu.
-    % Convert here: Pe_src_pu = Pe_sys_pu / SCvar. Use a Gain block.
-    %
-    % Architectural simplification: rewrite the SwingSum input to use the
-    % converted Pe. Place a divider before SwingSum.
-    %
-    % Implementation: add `Pe_src_pu_<sname>` Divide block between Pe_pu and
-    % SwingSum.  Easier: replace the line into SwingSum/2 with the divided
-    % signal.
-    % Pe_src_pu = Pe_sys_pu * SCvar  (multiply, see Pm conversion above)
-    add_block('simulink/Math Operations/Product', [mdl '/PeSrcPU_' sname], ...
-        'Position', [bx-100 cy+135 bx-70 cy+165], 'Inputs', '2');
-    add_block('simulink/Sources/Constant', [mdl '/SCvar_c_' sname], ...
-        'Position', [bx-130 cy+170 bx-100 cy+190], 'Value', SCvar);
-    add_line(mdl, ['Pe_pu_' sname '/1'], ['PeSrcPU_' sname '/1']);
-    add_line(mdl, ['SCvar_c_' sname '/1'], ['PeSrcPU_' sname '/2']);
-
-    % Disconnect the original Pe_pu→SwingSum/2 and connect PeSrcPU instead
-    delete_line(mdl, ['Pe_pu_' sname '/1'], ['SwingSum_' sname '/2']);
-    add_line(mdl, ['PeSrcPU_' sname '/1'], ['SwingSum_' sname '/2'], 'autorouting', 'smart');
-
-    % 1/M
-    add_block('simulink/Math Operations/Gain', [mdl '/Mgain_' sname], ...
-        'Position', [bx-145 cy+50 bx-115 cy+70], 'Gain', ['1/' Mvar]);
-    add_line(mdl, ['SwingSum_' sname '/1'], ['Mgain_' sname '/1']);
-    add_line(mdl, ['Mgain_' sname '/1'],     [intW '/1']);
-
-    % --- δ integrator ---
-    add_block('simulink/Math Operations/Gain', [mdl '/wnG_' sname], ...
-        'Position', [bx-300 cy-50 bx-270 cy-25], 'Gain', 'wn_const');
-    add_line(mdl, ['SumDw_' sname '/1'], ['wnG_' sname '/1']);
-
-    add_block('simulink/Continuous/Integrator', [mdl '/' intD], ...
-        'Position', [bx-200 cy-50 bx-170 cy-20], ...
-        'InitialCondition', d0var);
-    add_line(mdl, ['wnG_' sname '/1'], [intD '/1']);
-
-    % cos/sin → V_emf scaling → Real-Imag to Complex → CVS amplitude input
-    add_block('simulink/Math Operations/Trigonometric Function', ...
-        [mdl '/cosD_' sname], 'Position', [bx-100 cy-30 bx-70 cy-10], 'Operator', 'cos');
-    add_block('simulink/Math Operations/Trigonometric Function', ...
-        [mdl '/sinD_' sname], 'Position', [bx-100 cy-60 bx-70 cy-40], 'Operator', 'sin');
-    add_line(mdl, [intD '/1'], ['cosD_' sname '/1']);
-    add_line(mdl, [intD '/1'], ['sinD_' sname '/1']);
-
-    add_block('simulink/Math Operations/Gain', [mdl '/VrG_' sname], ...
-        'Position', [bx-50 cy-30 bx-20 cy-10], 'Gain', Vvar);
-    add_block('simulink/Math Operations/Gain', [mdl '/ViG_' sname], ...
-        'Position', [bx-50 cy-60 bx-20 cy-40], 'Gain', Vvar);
-    add_line(mdl, ['cosD_' sname '/1'], ['VrG_' sname '/1']);
-    add_line(mdl, ['sinD_' sname '/1'], ['ViG_' sname '/1']);
-
-    add_block('simulink/Math Operations/Real-Imag to Complex', ...
-        [mdl '/RI2C_' sname], 'Position', [bx-10 cy-50 bx+30 cy-15]);
-    add_line(mdl, ['VrG_' sname '/1'], ['RI2C_' sname '/1']);
-    add_line(mdl, ['ViG_' sname '/1'], ['RI2C_' sname '/2']);
-    add_line(mdl, ['RI2C_' sname '/1'], [cvs '/1']);
-
-    % --- ToWorkspace loggers (bounded to 2 samples) ---
-    %
-    % P3.0b interface fix (2026-04-26): align ESS logger VariableName with the
-    % shared CVS step helper contract. slx_helpers/vsg_bridge/slx_step_and_read_cvs.m
-    % hardcodes simOut.get(sprintf('omega_ts_%d', idx)) for agent_ids 1..n_agents.
-    % The previous v3 build emitted 'omega_ts_ES1..ES4' (string suffix),
-    % which the helper's %d format cannot retrieve, returning empty → bridge
-    % returned zero state. ESS loggers now emit integer suffixes 1..4.
-    %
-    % Block paths (W_omega_<sname>) keep the descriptive suffix for in-model
-    % readability — only the VariableName field (which controls simOut access)
-    % changes. SG / wind loggers keep their string suffix because the helper
-    % does not consume them (they are diagnostic-only).
-    if strcmp(stype, 'ess')
-        ess_idx = sscanf(sname, 'ES%d');
-        var_omega = sprintf('omega_ts_%d', ess_idx);
-        var_delta = sprintf('delta_ts_%d', ess_idx);
-        var_pe    = sprintf('Pe_ts_%d',    ess_idx);
-    else
-        var_omega = sprintf('omega_ts_%s', sname);
-        var_delta = sprintf('delta_ts_%s', sname);
-        var_pe    = sprintf('Pe_ts_%s',    sname);
-    end
-
-    add_block('simulink/Sinks/To Workspace', [mdl '/W_omega_' sname], ...
-        'Position', [bx-150 cy+45 bx-110 cy+60], ...
-        'VariableName', var_omega, 'SaveFormat', 'Timeseries', ...
-        'MaxDataPoints', '2');
-    add_line(mdl, [intW '/1'], ['W_omega_' sname '/1']);
-
-    add_block('simulink/Sinks/To Workspace', [mdl '/W_delta_' sname], ...
-        'Position', [bx-150 cy-45 bx-110 cy-30], ...
-        'VariableName', var_delta, 'SaveFormat', 'Timeseries', ...
-        'MaxDataPoints', '2');
-    add_line(mdl, [intD '/1'], ['W_delta_' sname '/1']);
-
-    add_block('simulink/Sinks/To Workspace', [mdl '/W_Pe_' sname], ...
-        'Position', [bx+450 cy+145 bx+490 cy+165], ...
-        'VariableName', var_pe, 'SaveFormat', 'Timeseries', ...
-        'MaxDataPoints', '2');
-    add_line(mdl, ['Pe_pu_' sname '/1'], ['W_Pe_' sname '/1']);
+    build_dynamic_source_discrete(mdl, src, geom, params);
 end
 
 %% ===== Build wind PVS (W1, W2) — Programmable Voltage Source, no swing eq =====

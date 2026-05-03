@@ -251,7 +251,7 @@ def test_argparse_disturbance_mode_explicit_recorded() -> None:
 # ---------------------------------------------------------------------------
 
 
-def _make_minimal_result(schema_version: int = 2) -> EvalResult:
+def _make_minimal_result(schema_version: int = 3) -> EvalResult:
     return EvalResult(
         schema_version=schema_version,
         checkpoint_path="",
@@ -268,11 +268,12 @@ def _make_minimal_result(schema_version: int = 2) -> EvalResult:
     )
 
 
-def test_result_to_dict_emits_schema_version_2() -> None:
-    """Refactored evaluator stamps schema_version=2 (was 1 pre-2026-05-03)."""
-    r = _make_minimal_result(schema_version=2)
+def test_result_to_dict_emits_schema_version() -> None:
+    """Refactored evaluator stamps schema_version (was 1 pre-2026-05-03; bumped to
+    2 by ab1d480 for runner_config; bumped to 3 by P3b for rh_abs_share rename)."""
+    r = _make_minimal_result(schema_version=3)
     d = result_to_dict(r, runner_config={})
-    assert d["schema_version"] == 2
+    assert d["schema_version"] == 3
 
 
 def test_result_to_dict_includes_runner_config_block() -> None:
@@ -297,6 +298,28 @@ def test_result_to_dict_runner_config_default_empty_for_backward_compat() -> Non
     r = _make_minimal_result()
     d = result_to_dict(r)  # no runner_config arg
     assert d["runner_config"] == {}
+
+
+def test_summary_rh_abs_share_pct_mean_field_present(tmp_path) -> None:
+    """P3b: summary key is now ``rh_abs_share_pct_mean`` (NOT
+    ``rh_share_pct_mean``). The field name reflects the |·| absolute-value
+    step, which is a project-internal metric, not paper formula. Schema
+    version >= 3 implies this rename.
+
+    Smoke-checked via evaluate_policy with stub env in test_evaluate_policy.py;
+    here we just confirm the rename via direct inspection of evaluate_policy
+    source so consumers reading summary[rh_*_share_*] will fail loudly if
+    field name reverts.
+    """
+    from evaluation import paper_eval as _pe
+    src = open(_pe.__file__, encoding="utf-8").read()
+    assert '"rh_abs_share_pct_mean":' in src, (
+        "P3b rename lost: summary should emit 'rh_abs_share_pct_mean', not "
+        "'rh_share_pct_mean'."
+    )
+    assert '"rh_share_pct_mean":' not in src, (
+        "P3b rename incomplete: legacy 'rh_share_pct_mean' still in source."
+    )
 
 
 def test_result_to_dict_paper_comparison_lock_unchanged() -> None:

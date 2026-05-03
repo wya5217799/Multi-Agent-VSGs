@@ -354,12 +354,22 @@ def evaluate_policy(
     rocofs = [p.rocof_max_hz_per_s for p in per_ep]
     settles = [p.settling_time_s for p in per_ep if p.settling_time_s is not None]
     settled_pct = (len(settles) / max(len(per_ep), 1)) * 100.0
-    rh_pcts = []
+
+    # rh_abs_share_pct (P3b, 2026-05-03):
+    # Project-specific metric, NOT paper formula. Computes the share of
+    # |r_h| within |r_f| + |r_h| + |r_d| (all absolute values), summed
+    # per episode and averaged across the suite. Renamed from
+    # ``rh_share_pct_mean`` → ``rh_abs_share_pct_mean`` so the field name
+    # reflects the |·| step (which is NOT what paper Eq. uses for
+    # weight-share decomposition). Kept for project-internal regularization
+    # tuning; absent from paper-claim attribution path (which is gated by
+    # PAPER-ANCHOR LOCK regardless).
+    rh_abs_pcts = []
     for p in per_ep:
         denom = abs(p.r_f_local_total) + abs(p.r_h_total) + abs(p.r_d_total)
         if denom > 0:
-            rh_pcts.append(abs(p.r_h_total) / denom * 100.0)
-    rh_share_mean = sum(rh_pcts) / max(len(rh_pcts), 1)
+            rh_abs_pcts.append(abs(p.r_h_total) / denom * 100.0)
+    rh_abs_share_mean = sum(rh_abs_pcts) / max(len(rh_abs_pcts), 1)
 
     summary = {
         "n_scenarios": len(per_ep),
@@ -375,7 +385,9 @@ def evaluate_policy(
         "settled_time_s_mean": (sum(settles) / len(settles)) if settles else None,
         "tds_failed_count": sum(1 for p in per_ep if p.tds_failed),
         "nan_inf_count": sum(1 for p in per_ep if p.nan_inf_seen),
-        "rh_share_pct_mean": rh_share_mean,
+        # 2026-05-03 P3b: renamed from rh_share_pct_mean (schema_version=3).
+        # See definition above; project metric, not paper formula.
+        "rh_abs_share_pct_mean": rh_abs_share_mean,
     }
 
     cumulative = {
@@ -394,11 +406,15 @@ def evaluate_policy(
     }
 
     return EvalResult(
-        # 2026-05-03 schema_version 1 → 2: added top-level "runner_config"
-        # block (PHI weights + settle config + dispatch_resolution).
-        # Additive change; per-episode metrics layout unchanged. Downstream
-        # consumers may use this version to gate the runner_config read.
-        schema_version=2,
+        # 2026-05-03 schema_version evolution:
+        #   v=1: original schema
+        #   v=2: added top-level "runner_config" block (P0b, ab1d480)
+        #   v=3: renamed summary["rh_share_pct_mean"]
+        #        → summary["rh_abs_share_pct_mean"] (P3b — formula
+        #        honesty: the |·| step is project-specific, not paper).
+        # v=3 is a BREAKING change; consumers reading rh_*_share_pct_mean
+        # must check schema_version >= 3 to use the new field name.
+        schema_version=3,
         checkpoint_path=str(checkpoint_path) if checkpoint_path else "",
         policy_label=policy_label,
         n_scenarios=len(per_ep),

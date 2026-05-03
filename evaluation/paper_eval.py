@@ -65,9 +65,16 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 PAPER_DDIC_UNNORMALIZED = -8.04
 PAPER_NO_CONTROL_UNNORMALIZED = -15.20
 
-# Settling tolerance (paper does not specify; project default 0.01 % × f_n = 5 mHz)
+# Settling tolerance defaults (paper does not specify; project default
+# 0.01 % × f_n = 5 mHz). CLI flag --settle-tol-hz overrides at runtime;
+# resolved value lands in JSON output's runner_config.settle_tol_hz.
 SETTLE_TOL_HZ = 0.005
 SETTLE_WINDOW_S = 1.0
+
+# Loadstep env-var prefixes that force LoadStep dispatch path inside
+# evaluate_policy (line 433-440 logic). Single source of truth used by
+# both the CLI conflict resolver and the per-episode dispatch branch.
+_LOADSTEP_ENV_PREFIXES: tuple[str, ...] = ("loadstep_paper_", "loadstep_ptdf_")
 
 # 2026-04-30 Probe B metadata: kundur_cvs_v3 omega measurement source paths.
 # Hardcoded from build_kundur_cvs_v3.m::src_meta (lines 439-442) — IntW
@@ -94,6 +101,99 @@ KUNDUR_CVS_V3_COMM_ADJ: dict[int, list[int]] = {
 
 
 # ---------------------------------------------------------------------------
+# Runner-level helpers (P0b/P0c/P3a, 2026-05-03)
+# ---------------------------------------------------------------------------
+
+
+def _resolve_disturbance_dispatch(
+    cli_mode: Optional[str],
+    env_type: str,
+) -> dict:
+    """Resolve --disturbance-mode (CLI) vs KUNDUR_DISTURBANCE_TYPE (env-var).
+
+    Three-zone semantics (P0c, 2026-05-03):
+
+    - CLI explicit (non-None) + env startswith loadstep_*  → SystemExit
+      (operator must pick one; loadstep dispatch ignores CLI mode silently
+      otherwise — refuse to run rather than produce mis-labeled JSON).
+    - CLI None (default) + env startswith loadstep_*  → stderr WARN,
+      use env-var precedence, record `implicit_conflict_warned=True` in
+      the returned dispatch_resolution (so JSON consumer can audit).
+    - Otherwise (no env, or non-loadstep env) → resolve cli_mode to its
+      default "bus" if None, return clean resolution.
+
+    Returns a dict with keys ``env_type``, ``cli_mode``, ``dispatch_path``
+    (one of "loadstep_paper" / "loadstep_ptdf" / "pm_step_proxy"), and
+    ``implicit_conflict_warned``. Pure function (no side effects beyond
+    stderr in the implicit-conflict branch); raises SystemExit on the
+    explicit-conflict branch.
+    """
+    is_loadstep = env_type.startswith(_LOADSTEP_ENV_PREFIXES)
+    if cli_mode is not None and is_loadstep:
+        raise SystemExit(
+            f"paper_eval: explicit --disturbance-mode={cli_mode!r} conflicts "
+            f"with KUNDUR_DISTURBANCE_TYPE={env_type!r} (loadstep dispatch "
+            f"ignores CLI mode). Either unset the env-var or omit "
+            f"--disturbance-mode."
+        )
+    implicit_conflict = (cli_mode is None and is_loadstep)
+    if implicit_conflict:
+        print(
+            f"[paper_eval] WARNING: --disturbance-mode unspecified but "
+            f"KUNDUR_DISTURBANCE_TYPE={env_type!r} forces loadstep dispatch. "
+            f"Using env-var; CLI mode is ignored.",
+            file=sys.stderr,
+        )
+    if env_type.startswith("loadstep_paper_"):
+        dispatch_path = "loadstep_paper"
+    elif env_type.startswith("loadstep_ptdf_"):
+        dispatch_path = "loadstep_ptdf"
+    else:
+        dispatch_path = "pm_step_proxy"
+    return {
+        "env_type": env_type,
+        "cli_mode": cli_mode,  # None if user did not specify
+        "dispatch_path": dispatch_path,
+        "implicit_conflict_warned": implicit_conflict,
+    }
+
+
+def _build_runner_config(
+    env,
+    settle_tol_hz: float,
+    settle_window_s: float,
+    dispatch_resolution: dict,
+) -> dict:
+    """Snapshot all runner-level params that affect JSON interpretation.
+
+    Anything that doesn't change RL/env behavior but affects how downstream
+    consumers interpret the metric numbers belongs here (P0b, 2026-05-03).
+    Reads PHI_* directly from env attributes so that any future env-var
+    override applied at env-construction time is captured (single source
+    of truth: ``env._PHI_F`` etc., set in kundur_simulink_env.py:148-154).
+    """
+    cfg: dict = {
+        "phi_f": float(getattr(env, "_PHI_F")),
+        "phi_h": float(getattr(env, "_PHI_H")),
+        "phi_d": float(getattr(env, "_PHI_D")),
+        "phi_h_per_agent": getattr(env, "_PHI_H_PER_AGENT", None),
+        "phi_d_per_agent": getattr(env, "_PHI_D_PER_AGENT", None),
+        "settle_tol_hz": float(settle_tol_hz),
+        "settle_window_s": float(settle_window_s),
+        "dispatch_resolution": dispatch_resolution,
+    }
+    # Per-agent overrides: convert numpy / list to plain JSON-friendly form.
+    for k in ("phi_h_per_agent", "phi_d_per_agent"):
+        v = cfg[k]
+        if v is not None:
+            try:
+                cfg[k] = [float(x) for x in v]
+            except TypeError:
+                cfg[k] = None  # not iterable / scalar None
+    return cfg
+
+
+# ---------------------------------------------------------------------------
 # Evaluator core
 # ---------------------------------------------------------------------------
 
@@ -112,6 +212,8 @@ def evaluate_policy(
     bus_choices: tuple[int, ...] = (7, 9),
     scenarios_override: Optional[list[dict]] = None,
     disturbance_mode: str = "bus",
+    settle_tol_hz: float = SETTLE_TOL_HZ,
+    settle_window_s: float = SETTLE_WINDOW_S,
 ) -> EvalResult:
     """Run `n_scenarios` deterministic episodes; collect per-ep + cumulative metrics.
 
@@ -273,7 +375,7 @@ def evaluate_policy(
             peak_hz = float((mean_omega_per_step.max() - 1.0) * fnom)
             rocof = _rocof_max(omega_trace, dt_s, fnom)
             sett = _settling_time_s(
-                omega_trace, dt_s, fnom, SETTLE_TOL_HZ, SETTLE_WINDOW_S
+                omega_trace, dt_s, fnom, settle_tol_hz, settle_window_s
             )
             r_f_per_agent = _compute_global_rf_per_agent(omega_trace, fnom)
             max_df_per_agent = _compute_per_agent_max_abs_df(omega_trace, fnom)
@@ -380,7 +482,11 @@ def evaluate_policy(
     }
 
     return EvalResult(
-        schema_version=1,
+        # 2026-05-03 schema_version 1 → 2: added top-level "runner_config"
+        # block (PHI weights + settle config + dispatch_resolution).
+        # Additive change; per-episode metrics layout unchanged. Downstream
+        # consumers may use this version to gate the runner_config read.
+        schema_version=2,
         checkpoint_path=str(checkpoint_path) if checkpoint_path else "",
         policy_label=policy_label,
         n_scenarios=len(per_ep),
@@ -418,7 +524,10 @@ def make_policy_selector(agent):
 # ---------------------------------------------------------------------------
 
 
-def result_to_dict(result: EvalResult) -> dict:
+def result_to_dict(
+    result: EvalResult,
+    runner_config: Optional[dict] = None,
+) -> dict:
     # 2026-04-30 PAPER-ANCHOR LOCK: hardcoded False until Signal/Measurement/
     # Causality 三层反证 gate (G1-G6) 全部 PASS 且 verdict 文件存在于
     # quality_reports/paper_compliance/three_layer_signoff/ 且 < 7 天。
@@ -426,9 +535,15 @@ def result_to_dict(result: EvalResult) -> dict:
     # 与 docs/paper/disturbance-protocol-mismatch-fix-report.md。
     # 任何 cum_unnorm 与 PAPER_DDIC_UNNORMALIZED / PAPER_NO_CONTROL_UNNORMALIZED
     # 的对账在此字段为 False 时均视为 INVALID。
+    #
+    # 2026-05-03 (P0b): runner_config (PHI weights + settle config +
+    # dispatch_resolution) is now a top-level block. Older callers passing
+    # only `result` get an empty {} for backward compat — but should
+    # update to provide it (since schema_version=2 implies its presence).
     return {
         "schema_version": result.schema_version,
         "paper_comparison_enabled": False,
+        "runner_config": runner_config if runner_config is not None else {},
         "paper_comparison_lock_reason": (
             "INCONCLUSIVE_STOP_REQUIRED (2026-04-30 STOP verdict): "
             "Signal layer LoadStep dead; Measurement layer Probe B verdict "
@@ -493,13 +608,28 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     p.add_argument(
         "--disturbance-mode",
         choices=["bus", "gen", "vsg", "hybrid", "ccs_load"],
-        default="bus",
-        help="bus = ESS-side Pm-step proxy at bus 7/9 (P4.1 default); "
+        default=None,  # 2026-05-03 (P0c): default None lets us distinguish
+                       # "user didn't specify" from "user explicitly chose
+                       # bus" — needed by _resolve_disturbance_dispatch to
+                       # tell explicit-conflict (raise) from implicit-conflict
+                       # (warn) when KUNDUR_DISTURBANCE_TYPE=loadstep_*.
+                       # Backward-compat: missing → resolves to 'bus' unless
+                       # env-var forces loadstep dispatch.
+        help="bus = ESS-side Pm-step proxy at bus 7/9 (default if neither "
+             "this flag nor KUNDUR_DISTURBANCE_TYPE=loadstep_* is set); "
              "gen = SG-side Pm-step proxy at G1/G2/G3 (Z1); "
              "vsg = single-ESS direct Pm injection at ES1/2/3/4 "
              "(2026-04-30 Probe B-ESS prereq for Option F); "
              "hybrid = Option F4 SG-random + ESS-compensate, all 4 ES "
              "agents above 1e-3 Hz per scenario (2026-04-30 design final).",
+    )
+    p.add_argument(
+        "--settle-tol-hz",
+        type=float,
+        default=SETTLE_TOL_HZ,
+        help=f"Settling tolerance in Hz (paper unspecified; project default "
+             f"{SETTLE_TOL_HZ} = 0.01%% × 50 Hz). Resolved value lands in "
+             f"runner_config.settle_tol_hz of the output JSON.",
     )
     p.add_argument(
         "--scenario-set",
@@ -621,16 +751,30 @@ def main() -> int:
         select_fn = _zero_one_agent_select
         print(f"[paper_eval] B-a action ablation: agent {zero_idx} (ES{zero_idx+1}) actions forced to 0 every step")
 
-    if args.disturbance_mode == "bus":
+    # Resolve disturbance dispatch (P0c, 2026-05-03): may raise SystemExit
+    # on explicit CLI vs loadstep-env conflict; warns to stderr on implicit
+    # conflict (CLI default + loadstep env). Records resolution into
+    # runner_config block of output JSON.
+    dispatch_resolution = _resolve_disturbance_dispatch(
+        cli_mode=args.disturbance_mode,
+        env_type=os.environ.get("KUNDUR_DISTURBANCE_TYPE", ""),
+    )
+    # Resolve effective mode for downstream bus_choices logic. None CLI +
+    # non-loadstep env-var → default 'bus'. None CLI + loadstep env →
+    # 'bus' as placeholder (the per-episode dispatch in evaluate_policy
+    # bypasses bus check on loadstep paths anyway).
+    effective_mode = args.disturbance_mode if args.disturbance_mode is not None else "bus"
+
+    if effective_mode == "bus":
         bus_choices = (7, 9)
-    elif args.disturbance_mode == "gen":
+    elif effective_mode == "gen":
         bus_choices = (1, 2, 3)
-    elif args.disturbance_mode == "vsg":
+    elif effective_mode == "vsg":
         bus_choices = (1, 2, 3, 4)  # 1-indexed ES{i}
-    elif args.disturbance_mode == "ccs_load":
+    elif effective_mode == "ccs_load":
         # 2026-04-30 Option E: CCS at paper Fig.3 load centers Bus 7 / Bus 9.
         bus_choices = (7, 9)
-    elif args.disturbance_mode == "hybrid":
+    elif effective_mode == "hybrid":
         # 2026-04-30 Option F4: target field is informational only;
         # HybridSgEssMultiPoint resolves random_gen at apply time.
         bus_choices = (0,)  # placeholder; manifest scenarios all set target=0
@@ -661,9 +805,11 @@ def main() -> int:
 
     print(
         f"[paper_eval] running {args.n_scenarios} deterministic scenarios "
-        f"(mode={args.disturbance_mode}, bus_choices={bus_choices}, "
-        f"seed_base={args.seed_base}, fnom={fnom} Hz, dt={dt_s} s, "
+        f"(mode={effective_mode}, dispatch_path={dispatch_resolution['dispatch_path']}, "
+        f"bus_choices={bus_choices}, seed_base={args.seed_base}, "
+        f"fnom={fnom} Hz, dt={dt_s} s, "
         f"DIST=[{DIST_MIN:.2f}, {DIST_MAX:.2f}] sys-pu, "
+        f"settle_tol_hz={args.settle_tol_hz}, "
         f"scenario_set={args.scenario_set}) ..."
     )
 
@@ -680,13 +826,24 @@ def main() -> int:
         dist_max=DIST_MAX,
         bus_choices=bus_choices,
         scenarios_override=scenarios_override,
-        disturbance_mode=args.disturbance_mode,
+        disturbance_mode=effective_mode,
+        settle_tol_hz=args.settle_tol_hz,
+        settle_window_s=SETTLE_WINDOW_S,
+    )
+
+    # Build runner_config (P0b) AFTER env construction so PHI env-var
+    # overrides applied at env init are captured from env attributes.
+    runner_config = _build_runner_config(
+        env=env,
+        settle_tol_hz=args.settle_tol_hz,
+        settle_window_s=SETTLE_WINDOW_S,
+        dispatch_resolution=dispatch_resolution,
     )
 
     out_path = Path(args.output_json)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     with out_path.open("w", encoding="utf-8") as f:
-        json.dump(result_to_dict(result), f, indent=2, default=str)
+        json.dump(result_to_dict(result, runner_config=runner_config), f, indent=2, default=str)
     print(f"[paper_eval] wrote {out_path}")
 
     cum = result.cumulative_reward_global_rf

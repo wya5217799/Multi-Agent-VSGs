@@ -26,6 +26,13 @@ from scenarios.config_simulink_base import (
 import os as _os
 from pathlib import Path
 from scenarios.kundur.model_profile import load_kundur_model_profile
+from scenarios.kundur.workspace_vars import (
+    PROFILE_CVS_V2,
+    PROFILE_CVS_V3,
+    PROFILE_CVS_V3_DISCRETE,
+    PROFILES_CVS,
+    PROFILES_CVS_V3,
+)
 
 # Default profile locked to v3 (paper-faithful 16-bus topology) post-credibility
 # close 2026-04-28. v2 (kundur_cvs.json, 5-bus simplified) is retained for legacy
@@ -146,17 +153,20 @@ def _load_profile_ic(profile):
     """
     import json as _json
     scenario_dir = Path(__file__).resolve().parent
-    if profile.model_name == 'kundur_cvs':
+    if profile.model_name == PROFILE_CVS_V2:
         with (scenario_dir / 'kundur_ic_cvs.json').open(encoding='utf-8') as _f:
             raw = _json.load(_f)
         return (
             np.asarray(raw['vsg_pm0_pu'], dtype=np.float64),
             np.asarray(raw['vsg_internal_emf_angle_rad'], dtype=np.float64),
         )
-    if profile.model_name == 'kundur_cvs_v3':
+    if profile.model_name in PROFILES_CVS_V3:
         # P3.2 (2026-04-26): v3 paper-faithful 16-bus CVS path. Identity
         # contract enforced by build_kundur_cvs_v3.m: refuses to load a
         # non-v3 IC. Mirror that contract here.
+        # Z (2026-05-03): v3 Phasor and v3 Discrete share the same NR
+        # solution and the same kundur_ic_cvs_v3.json (identical topology
+        # and powerflow; only the time-domain solver differs).
         with (scenario_dir / 'kundur_ic_cvs_v3.json').open(encoding='utf-8') as _f:
             raw = _json.load(_f)
         if raw.get('schema_version') != 3:
@@ -384,7 +394,7 @@ def make_bridge_config(profile, *, model_dir=None) -> BridgeConfig:
     template set (M0_val_ES{idx} / D0_val_ES{idx}, M0=12/D0=3).
     """
     pe0_sys, delta0_rad = _load_profile_ic(profile)
-    is_cvs = profile.model_name in ('kundur_cvs', 'kundur_cvs_v3')
+    is_cvs = profile.model_name in PROFILES_CVS
     resolved_dir = model_dir or _os.path.join(
         _os.path.dirname(_os.path.abspath(__file__)), 'simulink_models'
     )

@@ -104,6 +104,25 @@ load center 远）。
 **论文真值对账要解封**：需重做物理层（破 credibility close 锁定）。完整偏差备案见
 `docs/paper/eval-disturbance-protocol-deviation.md`。
 
+## 2026-05-03 Z route (model profile abstraction + v3 Discrete env route)
+
+Files added/modified:
+- `model_profiles/kundur_cvs_v3_discrete.json`: New profile JSON (loads same `kundur_ic_cvs_v3.json` IC data). Three lines: references IC, sets `model_name=kundur_cvs_v3_discrete`, declares effective LoadStep profiles.
+- `workspace_vars.py`: Added `PROFILE_CVS_V3_DISCRETE` constant; new `PROFILES_CVS` / `PROFILES_CVS_V3` family constants replace literal model_name tuples in 3 config sites.
+- `config_simulink.py`: Uses profile constants instead of hardcoded names (2 sites).
+- `kundur_simulink_env.py`: Uses profile constants + adds `t_warmup_s` constructor param (1 site).
+- `build_kundur_cvs_v3_discrete.m`: Added `bus14_no_breaker` flag (default false, toggles whether LoadStepBreaker_bus14 is created). Used by H1b hypothesis test.
+- `probes/kundur/probe_state/`: Phase 1+2+3 smoke runs G2/G5 PASS; all 4 ESS settle ω=1.0±1e-5 in [4-5]s window after 10s warmup.
+
+LOAD_STEP_AMP spec in workspace_vars.py:
+- `effective_in_profile=frozenset({PROFILE_CVS_V3_DISCRETE})`: Updated to mark Discrete physically effective (Phasor v3 name-valid but R-block compile-frozen).
+- LOAD_STEP_TRIP_AMP / CCS_LOAD_AMP: Still v3 Phasor-only profiles (Phase 1.5 sub-design to add Discrete variants after CCS block restoration).
+
+FastRestart on v3 Discrete:
+- Test: `probes/kundur/spike/test_fastrestart_v3_discrete.py` (2026-05-03)
+- Verdict: FR_VIABLE — physics rel err 2.46e-08 << 1e-5, wall speedup 1.5× over warm baseline
+- Status: Ready for opt-in integration, not yet deployed to bridge (default off flag in BridgeConfig)
+
 ## 现在在修
 Pe 幅值根因 Batch 7 完成（verdict=RC-A）：解析证明电流异常（1456 A vs 预期 71 A）不可能由 ESS 阻抗+角度差解释。  
 电压测量正常（187.6 kV），电流测量异常大（ratio_I=14–21x）→ 测量块拓扑位置错误（RC-A首要候选）。  
@@ -112,6 +131,23 @@ Pe 幅值根因 Batch 7 完成（verdict=RC-A）：解析证明电流异常（14
 当前 verdict：见 `results/harness/kundur/20260424-kundur-sps-workpoint-alignment/summary.md`。
 
 ## 已知事实（改代码前看一眼）
+
+### v3 Discrete ESS 振荡诊断（2026-05-03 Phase 1.3a）
+
+**H1（断路器块）状态：❌ FALSIFIED (2026-05-03)**
+- H1a (2026-05-03)：双断路器打开 → ES3 std −36% / ES4 PASS，但破坏 NR 一致性（移除 248 MW LS1）→ 混淆因子
+- H1b (2026-05-03)：NR 一致变体（跳过断路器，直接 248 MW 到 Bus 14）→ **ES3 std=0.001772 = 基线值到小数点后 6 位**
+  - 三相断路器（Ron=0.001 Ω）在我们的分辨率下电气等效于直接连接
+  - **结论**：断路器块不是 ES3 振荡源
+  - 推论：H1a 的 std 下降来自 NR 不匹配（H2），不是断路器 IC 瞬变
+- 对应脚本：`spike/test_h1_no_breaker_bus14.m`；build 脚本 `bus14_no_breaker` 标志
+
+**H2（Bus 14/15 功率流不平衡）：现为主导假说**
+- LS1 预装（248 MW）改变 Bus 14 功率流平衡 → Pm 与 Pmax 关系变化 → 可能激励自然模态
+- 需要用 `compute_kundur_powerflow.m` 重新推导 NR 并验证 Pm 值
+- 成本评估待中
+
+**H3/H4：暂定，待 H2 确认**
 
 ### SPS/Phasor 路径（kundur_vsg_sps）— 历史诊断上下文（Task 9 NO-GO 作废 Branch 7A；见"现在在修"）
 - **根因候选（未最终确认）：Three-Phase Source PhaseAngle = EMF 角而非 terminal 角**。

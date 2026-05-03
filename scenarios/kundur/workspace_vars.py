@@ -71,7 +71,18 @@ from typing import Any
 
 PROFILE_CVS_V2 = "kundur_cvs"
 PROFILE_CVS_V3 = "kundur_cvs_v3"
-_PROFILES_CVS = frozenset({PROFILE_CVS_V2, PROFILE_CVS_V3})
+PROFILE_CVS_V3_DISCRETE = "kundur_cvs_v3_discrete"
+
+# Family aliases — single source of truth for "what counts as CVS-pattern"
+# and "what counts as v3-pattern". All other modules (config_simulink.py,
+# kundur_simulink_env.py, _discover.py, ...) import these instead of
+# repeating literal model-name tuples.
+PROFILES_CVS_V3 = frozenset({PROFILE_CVS_V3, PROFILE_CVS_V3_DISCRETE})
+PROFILES_CVS = frozenset(
+    {PROFILE_CVS_V2}
+) | PROFILES_CVS_V3
+# Internal back-compat alias (legacy spec definitions reference _PROFILES_CVS).
+_PROFILES_CVS = PROFILES_CVS
 
 
 class IndexFamily(Enum):
@@ -178,29 +189,41 @@ _SCHEMA: dict[str, WorkspaceVarSpec] = {
         profiles=_PROFILES_CVS,
         description="ESS i Pm-step amplitude (sys-pu).",
     ),
-    # SG-side Pm-step proxy (Z1 routing — v3 only).
+    # SG-side Pm-step proxy (Z1 routing — v3 family: Phasor + Discrete).
+    # Both v3 variants assign PmgStep_t_<g> / PmgStep_amp_<g> in their build
+    # scripts and route them through the SG source helper's Pm-step gate.
     "PMG_STEP_T": WorkspaceVarSpec(
         template="PmgStep_t_{g}",
         family=IndexFamily.PER_SG,
-        profiles=frozenset({PROFILE_CVS_V3}),
+        profiles=PROFILES_CVS_V3,
         description="SG g Pm-step trigger time (s).",
     ),
     "PMG_STEP_AMP": WorkspaceVarSpec(
         template="PmgStep_amp_{g}",
         family=IndexFamily.PER_SG,
-        profiles=frozenset({PROFILE_CVS_V3}),
+        profiles=PROFILES_CVS_V3,
         description="SG g Pm-step amplitude (sys-pu).",
     ),
-    # Paper LoadStep — bus-suffixed Series RLC R-block amplitude (Phase A).
-    # Name-valid in v3 (Constant block reads it) but NOT physically effective:
-    # the R block compile-freezes its Resistance string at FastRestart, so
-    # subsequent writes do not produce a load step.
+    # Paper LoadStep — bus-suffixed load amplitude. Name-valid in both v3
+    # variants but physically effective ONLY in v3 Discrete:
+    #   v3 Phasor: drives a Series RLC R-block Resistance — compile-frozen
+    #     at FastRestart, writes do not re-evaluate (Phase A defect).
+    #   v3 Discrete (2026-05-03): drives a Three-Phase Series RLC Load's
+    #     ActivePower behind a Three-Phase Breaker; reads at every sim
+    #     chunk under FastRestart. Phase 0 SMIB Oracle measured 4.9 Hz
+    #     |Δf| at 248 MW step. See quality_reports/plans/2026-05-03_phase0_
+    #     smib_discrete_verdict.md.
     "LOAD_STEP_AMP": WorkspaceVarSpec(
         template="LoadStep_amp_bus{bus}",
         family=IndexFamily.PER_BUS,
-        profiles=frozenset({PROFILE_CVS_V3}),
-        description="Series RLC R-block load amplitude (W) at bus 14 or 15.",
-        effective_in_profile=frozenset(),
+        profiles=PROFILES_CVS_V3,
+        description=(
+            "Bus-attached load amplitude (W) at bus 14 or 15. "
+            "v3 Phasor: Series RLC R-block (compile-frozen). "
+            "v3 Discrete: Three-Phase Series RLC Load.ActivePower behind "
+            "Three-Phase Breaker (working)."
+        ),
+        effective_in_profile=frozenset({PROFILE_CVS_V3_DISCRETE}),
         inactive_reason={
             PROFILE_CVS_V3: (
                 "Series RLC R Resistance string compile-frozen at FastRestart; "
@@ -210,13 +233,18 @@ _SCHEMA: dict[str, WorkspaceVarSpec] = {
         },
     ),
     # Phase A++ Controlled Current Source trip injection.
-    # Name-valid in v3 (CCS Constant block reads it) but NOT physically
+    # Name-valid in v3 Phasor (CCS Constant block reads it) but NOT physically
     # effective: measured signal at Bus 14/15 ESS terminals is ~0.01 Hz
     # (electrically distant from load center), well below paper-grade.
+    # Name-valid in v3 Discrete as a reserved slot: CCS blocks are currently
+    # wrapped in `if false` (Phase 1.5 to restore). Writes land in a dangling
+    # base-ws var with no consumer block reading it; no physical effect.
+    # The LoadStepRBranch adapter writes 0.0 as a state-reset (preventing
+    # episode contamination) using require_effective=False.
     "LOAD_STEP_TRIP_AMP": WorkspaceVarSpec(
         template="LoadStep_trip_amp_bus{bus}",
         family=IndexFamily.PER_BUS,
-        profiles=frozenset({PROFILE_CVS_V3}),
+        profiles=frozenset({PROFILE_CVS_V3, PROFILE_CVS_V3_DISCRETE}),
         description="CCS trip-injection amplitude (W) at bus 14 or 15.",
         effective_in_profile=frozenset(),
         inactive_reason={
@@ -224,6 +252,38 @@ _SCHEMA: dict[str, WorkspaceVarSpec] = {
                 "CCS injection path live but signal ~0.01 Hz on Bus 14/15 "
                 "ESS terminals (electrically distant from load center). "
                 "See scenarios/kundur/NOTES.md §'2026-04-29 Eval 协议偏差'."
+            ),
+            PROFILE_CVS_V3_DISCRETE: (
+                "CCS blocks currently wrapped in `if false` in "
+                "build_kundur_cvs_v3_discrete.m; Phase 1.5 to restore. "
+                "Workspace var name is reserved (writes are no-op until "
+                "CCS blocks are built). Use require_effective=False for "
+                "state-reset writes (episode contamination prevention)."
+            ),
+        },
+    ),
+    # Three-Phase Breaker SwitchTimes trigger time for LoadStep R-branch.
+    # The build script bakes LoadStep_t_<lb> = 5.0 into runtime_consts
+    # (build_kundur_cvs_v3_discrete.m lines ~299, 868). Under v3 Discrete the
+    # breaker fires exactly once per sim chunk at this time; the adapter must
+    # write a value within the post-warmup window so the disturbance fires
+    # AFTER warmup completes. Under v3 Phasor the R-block Resistance is
+    # compile-frozen so the trigger time is irrelevant (name-valid only).
+    "LOAD_STEP_T": WorkspaceVarSpec(
+        template="LoadStep_t_bus{bus}",
+        family=IndexFamily.PER_BUS,
+        profiles=PROFILES_CVS_V3,
+        description=(
+            "Three-Phase Breaker SwitchTimes trigger time (s) at bus 14 or "
+            "15. v3 Discrete: sets when the breaker fires to apply the load "
+            "step. env.reset writes 100.0 (far-future, prevents warmup "
+            "trigger); adapter writes t_now+0.1 after warmup completes."
+        ),
+        effective_in_profile=frozenset({PROFILE_CVS_V3_DISCRETE}),
+        inactive_reason={
+            PROFILE_CVS_V3: (
+                "Phasor LoadStep R-block has compile-frozen Resistance — "
+                "trigger time is irrelevant. See LOAD_STEP_AMP inactive_reason."
             ),
         },
     ),
@@ -386,6 +446,9 @@ def spec_for(key: str) -> WorkspaceVarSpec:
 __all__ = [
     "PROFILE_CVS_V2",
     "PROFILE_CVS_V3",
+    "PROFILE_CVS_V3_DISCRETE",
+    "PROFILES_CVS",
+    "PROFILES_CVS_V3",
     "IndexFamily",
     "WorkspaceVarSpec",
     "WorkspaceVarError",

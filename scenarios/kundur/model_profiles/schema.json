@@ -17,7 +17,7 @@
     "scenario_id": { "const": "kundur" },
     "profile_id": { "type": "string", "minLength": 1 },
     "model_name": { "type": "string", "minLength": 1 },
-    "solver_family": { "enum": ["simscape_ee", "sps_phasor"] },
+    "solver_family": { "enum": ["simscape_ee", "sps_phasor", "sps_discrete"] },
     "pe_measurement": { "enum": ["feedback", "vi"] },
     "phase_command_mode": { "enum": ["passthrough", "absolute_with_loadflow"] },
     "warmup_mode": { "enum": ["physics_compensation", "technical_reset_only"] },

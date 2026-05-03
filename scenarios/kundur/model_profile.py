@@ -28,7 +28,7 @@ class KundurModelProfile:
     feature_flags: KundurFeatureFlags
 
 
-_VALID_SOLVER_FAMILY = {"simscape_ee", "sps_phasor"}
+_VALID_SOLVER_FAMILY = {"simscape_ee", "sps_phasor", "sps_discrete"}
 _VALID_PE_MEASUREMENT = {"feedback", "vi"}
 
 

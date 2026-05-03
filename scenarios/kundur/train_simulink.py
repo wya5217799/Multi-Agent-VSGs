@@ -42,6 +42,7 @@ from utils.run_protocol import (
 from utils.training_log import load_or_create_log
 from utils.notifier import notify
 import scenarios.kundur.config_simulink as _cfg_module
+from scenarios.kundur.workspace_vars import PROFILES_CVS_V3
 
 
 def _kundur_runtime_facts() -> dict:
@@ -62,7 +63,7 @@ def _kundur_runtime_facts() -> dict:
     )
     cfg = _cfg_module.KUNDUR_BRIDGE_CONFIG
     scenario_dir = _Path(__file__).resolve().parent
-    if profile.model_name == "kundur_cvs_v3":
+    if profile.model_name in PROFILES_CVS_V3:
         ic_path = scenario_dir / "kundur_ic_cvs_v3.json"
     elif profile.model_name == "kundur_cvs":
         ic_path = scenario_dir / "kundur_ic_cvs.json"
@@ -75,7 +76,7 @@ def _kundur_runtime_facts() -> dict:
         ).hexdigest()
 
     legacy_ok = os.environ.get("KUNDUR_ALLOW_LEGACY_PROFILE", "0") == "1"
-    if profile.model_name != "kundur_cvs_v3" and not legacy_ok:
+    if profile.model_name not in PROFILES_CVS_V3 and not legacy_ok:
         raise RuntimeError(
             f"Refusing to train against non-v3 profile {profile.model_name!r} "
             f"(path={profile_path}). v3 is the paper-aligned default since "

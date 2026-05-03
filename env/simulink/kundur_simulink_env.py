@@ -56,7 +56,11 @@ from scenarios.kundur.config_simulink import (
     TRIPLOAD2_P_MAX_W,
     VSG_P0_SBASE,
 )
-from scenarios.kundur.workspace_vars import resolve as _ws_resolve
+from scenarios.kundur.workspace_vars import (
+    PROFILES_CVS,
+    PROFILES_CVS_V3,
+    resolve as _ws_resolve,
+)
 
 warnings.filterwarnings("ignore", category=UserWarning, module="matlab")
 
@@ -722,7 +726,19 @@ class KundurSimulinkEnv(_KundurBaseEnv):
         training: bool = True,
         model_profile_path: Optional[str] = None,
         disturbance_type: Optional[str] = None,
+        t_warmup_s: Optional[float] = None,
+        fast_restart: Optional[bool] = None,
     ):
+        """``t_warmup_s`` overrides the module-level ``T_WARMUP`` for this
+        env instance only — useful for probe / smoke contexts that don't
+        need the production 10 s reward-shaping settle (Phase 1.3a/1.3b
+        motivation, Z 2026-05-03). ``None`` = use ``T_WARMUP`` default.
+
+        ``fast_restart`` override (None = use BridgeConfig default, currently
+        False). Validated for v3 Discrete only (probe microtest 2026-05-03,
+        physics rel err 2.46e-08). Not safe for v3 Phasor or production
+        training without separate validation.
+        """
         from scenarios.kundur.config_simulink import (
             DEFAULT_KUNDUR_MODEL_PROFILE,
             KUNDUR_DISTURBANCE_TYPE,
@@ -755,19 +771,19 @@ class KundurSimulinkEnv(_KundurBaseEnv):
                 f"model_name independently — it would desync the IC."
             )
 
-        # v3 explicit-target guard: if the active profile is v3 it MUST be
-        # the canonical v3 profile (model_name=='kundur_cvs_v3' AND profile
-        # file basename contains 'v3'). Catches a hand-edited or renamed
-        # profile JSON that claims model_name='kundur_cvs_v3' but ships
-        # with v2 IC contents.
-        if self._runtime_profile.model_name == 'kundur_cvs_v3':
-            if 'kundur_cvs_v3' not in os.path.basename(str(selected_path)):
+        # CVS profile filename guard: catches a hand-edited or renamed profile
+        # JSON whose model_name does not match its file basename (e.g. a JSON
+        # claiming model_name='kundur_cvs_v3' but actually holding v2 IC
+        # contents). One rule for every CVS profile, including v3 Discrete
+        # (Z 2026-05-03): basename must contain the model_name.
+        if self._runtime_profile.model_name in PROFILES_CVS:
+            expected_basename_token = self._runtime_profile.model_name
+            if expected_basename_token not in os.path.basename(str(selected_path)):
                 raise ValueError(
-                    f"profile model_name='kundur_cvs_v3' but profile JSON "
-                    f"path {selected_path!r} does not look like the "
-                    f"canonical kundur_cvs_v3.json. Refusing to launch v3 "
-                    f"with a non-canonical profile file (silent v2 IC "
-                    f"fallback risk)."
+                    f"profile model_name={expected_basename_token!r} but "
+                    f"profile JSON path {selected_path!r} basename does not "
+                    f"contain that token. Refusing to launch with a "
+                    f"non-canonical profile file (silent IC fallback risk)."
                 )
 
         # Phase 4 Gap 1 Path (C): resolve disturbance_type from explicit
@@ -803,7 +819,15 @@ class KundurSimulinkEnv(_KundurBaseEnv):
         # model_name is now guaranteed to equal self._runtime_profile.model_name
         # (or be None); guard above blocks any divergence. No replace() needed.
         cfg = make_bridge_config(self._runtime_profile, model_dir=resolved_dir)
+        if fast_restart is not None:
+            cfg = replace(cfg, fast_restart=bool(fast_restart))
         self.bridge = SimulinkBridge(cfg)
+        # Warmup duration: per-instance override (e.g. probe contexts) or
+        # module-level T_WARMUP. Stored on env instance to avoid env-var
+        # leakage into other code paths.
+        self._t_warmup_s = (
+            float(t_warmup_s) if t_warmup_s is not None else float(T_WARMUP)
+        )
 
     # ------------------------------------------------------------------
     # Backend hooks
@@ -839,8 +863,15 @@ class KundurSimulinkEnv(_KundurBaseEnv):
             # — Phase 4.0 audit §R2-Blocker1). Skip the writes under v3 to
             # avoid silent dead workspace assignments. v2 (kundur_cvs) and
             # legacy SPS paths unchanged.
+            #
+            # Z (2026-05-03): v3 Discrete also bypasses the tripload path —
+            # it uses Three-Phase Breaker + RLC Load reading LoadStep_amp_bus*
+            # directly (workspace var, no Dynamic Load block). Same restore
+            # logic as v3 Phasor. LOAD_STEP_TRIP_AMP is now name-valid in
+            # v3 Discrete (schema updated 2026-05-03); LoadStepRBranch writes
+            # use require_effective=False (state-reset semantics).
             cfg = self.bridge.cfg
-            if cfg.model_name != 'kundur_cvs_v3':
+            if cfg.model_name not in PROFILES_CVS_V3:
                 self.bridge.set_disturbance_load(
                     cfg.tripload1_p_var, cfg.tripload1_p_default
                 )
@@ -861,21 +892,49 @@ class KundurSimulinkEnv(_KundurBaseEnv):
                 # reset ensures every episode starts from the paper-IC
                 # condition: Bus 14 carries 248 MW, Bus 15 is open.
                 # Also zeros the Phase A++ CCS trip injection amps so a
-                # prior cc_inject dispatch does not leak.
+                # prior cc_inject dispatch does not leak (skipped in
+                # v3 Discrete where CCS blocks don't exist).
                 self.bridge.apply_workspace_var(
                     self._ws('LOAD_STEP_AMP', bus=14), 248e6
                 )
                 self.bridge.apply_workspace_var(
                     self._ws('LOAD_STEP_AMP', bus=15), 0.0
                 )
+                # LOAD_STEP_T: reset breaker SwitchTimes to far-future so
+                # warmup (0..t_warmup_s) does not accidentally fire the
+                # breaker. The adapter (LoadStepRBranch.apply) writes a
+                # within-window time (t_now+0.1) after warmup completes.
+                # Without this reset a prior episode's trigger_t could be
+                # smaller than t_warmup_s on the next reset, causing warmup
+                # to fire the breaker with IC-state amp values (the bug
+                # diagnosed 2026-05-03). 100.0 s is well beyond any
+                # reasonable sim window. require_effective omitted — _ws()
+                # uses name-validity only (default).
                 self.bridge.apply_workspace_var(
-                    self._ws('LOAD_STEP_TRIP_AMP', bus=14), 0.0
+                    self._ws('LOAD_STEP_T', bus=14), 100.0
                 )
                 self.bridge.apply_workspace_var(
-                    self._ws('LOAD_STEP_TRIP_AMP', bus=15), 0.0
+                    self._ws('LOAD_STEP_T', bus=15), 100.0
                 )
+                # CCS trip injection vars: name-valid in both v3 profiles.
+                # v3 Phasor: CCS Constant block reads it (name-valid, not
+                # effective due to ~0.01 Hz ESS-terminal signal).
+                # v3 Discrete: CCS blocks wrapped in `if false` (Phase 1.5
+                # to restore); write lands in dangling base-ws, no consumer.
+                # Both cases: write 0.0 as state-reset (no require_effective
+                # needed). Guard uses schema membership to stay profile-agnostic.
+                from scenarios.kundur.workspace_vars import (
+                    _SCHEMA as _WS_SCHEMA,
+                )
+                if cfg.model_name in _WS_SCHEMA['LOAD_STEP_TRIP_AMP'].profiles:
+                    self.bridge.apply_workspace_var(
+                        self._ws('LOAD_STEP_TRIP_AMP', bus=14), 0.0
+                    )
+                    self.bridge.apply_workspace_var(
+                        self._ws('LOAD_STEP_TRIP_AMP', bus=15), 0.0
+                    )
 
-            self.bridge.warmup(T_WARMUP)
+            self.bridge.warmup(self._t_warmup_s)
             self._sim_time = self.bridge.t_current
         except Exception:
             logger.exception("[Kundur-Simulink] Reset failed")
@@ -919,7 +978,7 @@ class KundurSimulinkEnv(_KundurBaseEnv):
         positive as Bus15 addition.
         """
         cfg = self.bridge.cfg
-        if cfg.model_name in ('kundur_cvs', 'kundur_cvs_v3'):
+        if cfg.model_name in PROFILES_CVS:
             from scenarios.kundur.disturbance_protocols import (
                 resolve_disturbance,
             )

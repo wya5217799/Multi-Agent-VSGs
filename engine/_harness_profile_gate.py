@@ -27,13 +27,15 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+from scenarios.kundur.workspace_vars import PROFILES_CVS_V3
+
 logger = logging.getLogger(__name__)
 
 # Map scenario_id -> set of runtime profile names that the harness_* tools
 # do NOT support. Add new entries here if a new profile variant is rolled
 # out that the harness path was not designed for.
 _UNSUPPORTED_PROFILES: dict[str, set[str]] = {
-    "kundur": {"kundur_cvs_v3"},
+    "kundur": set(PROFILES_CVS_V3),
     "ne39":   set(),  # extend if NE39 grows incompatible profiles
 }
 

@@ -1,0 +1,14 @@
+{
+  "scenario_id": "kundur",
+  "profile_id": "kundur_cvs_v3_discrete",
+  "model_name": "kundur_cvs_v3_discrete",
+  "solver_family": "sps_discrete",
+  "pe_measurement": "vi",
+  "phase_command_mode": "passthrough",
+  "warmup_mode": "technical_reset_only",
+  "feature_flags": {
+    "allow_pref_ramp": false,
+    "allow_simscape_solver_config": false,
+    "allow_feedback_only_pe_chain": false
+  }
+}

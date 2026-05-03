@@ -466,12 +466,19 @@ class LoadStepRBranch:
             k = ws("LOAD_STEP_AMP", bus=ls_bus_int, require_effective=True)
             bridge.apply_workspace_var(k, 0.0)
             keys.append(k); values.append(0.0)
+            # TRIP_AMP writes are state-reset (episode contamination
+            # prevention), not physical-disturbance writes. Use
+            # require_effective=False: v3 Discrete has CCS wrapped in
+            # `if false` (Phase 1.5 to restore), so the var is name-valid
+            # but not effective — the 0.0 write lands in a dangling base-ws
+            # var with no consumer. v3 Phasor CCS is also name-valid but not
+            # effective (~0.01 Hz signal). Neither warrants require_effective.
             k = ws("LOAD_STEP_TRIP_AMP", bus=ls_bus_int,
-                   require_effective=True)
+                   require_effective=False)
             bridge.apply_workspace_var(k, 0.0)
             keys.append(k); values.append(0.0)
             k = ws("LOAD_STEP_TRIP_AMP", bus=other_bus_int,
-                   require_effective=True)
+                   require_effective=False)
             bridge.apply_workspace_var(k, 0.0)
             keys.append(k); values.append(0.0)
         else:  # engage
@@ -479,14 +486,28 @@ class LoadStepRBranch:
             k = ws("LOAD_STEP_AMP", bus=ls_bus_int, require_effective=True)
             bridge.apply_workspace_var(k, amp_w)
             keys.append(k); values.append(amp_w)
+            # TRIP_AMP writes: state-reset only; see comment above.
             k = ws("LOAD_STEP_TRIP_AMP", bus=ls_bus_int,
-                   require_effective=True)
+                   require_effective=False)
             bridge.apply_workspace_var(k, 0.0)
             keys.append(k); values.append(0.0)
             k = ws("LOAD_STEP_TRIP_AMP", bus=other_bus_int,
-                   require_effective=True)
+                   require_effective=False)
             bridge.apply_workspace_var(k, 0.0)
             keys.append(k); values.append(0.0)
+
+        # LOAD_STEP_T: set breaker SwitchTimes to fire 0.1 s AFTER current
+        # sim time (post-warmup window). Without this write the breaker fires
+        # at the build-script default of t=5.0 s = end of warmup, using
+        # whatever LOAD_STEP_AMP was baked at IC — the adapter's AMP write
+        # (above) arrives too late. require_effective=False: schema marks
+        # this effective only in v3 Discrete; adapter must not gate on
+        # effectiveness so the same code path works under both v3 profiles
+        # (Phasor ignores it; Discrete uses it). Only write for the chosen bus.
+        k_t = ws("LOAD_STEP_T", bus=ls_bus_int, require_effective=False)
+        trigger_t = float(t_now) + 0.1
+        bridge.apply_workspace_var(k_t, trigger_t)
+        keys.append(k_t); values.append(trigger_t)
 
         # Silence PM + PMG (LoadStep order: silence PM, then PMG)
         kp, vp = _silence_pm(bridge, ws, t_now, cfg.n_agents)

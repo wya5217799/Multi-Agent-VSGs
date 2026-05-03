@@ -71,10 +71,15 @@ PAPER_NO_CONTROL_UNNORMALIZED = -15.20
 SETTLE_TOL_HZ = 0.005
 SETTLE_WINDOW_S = 1.0
 
-# Loadstep env-var prefixes that force LoadStep dispatch path inside
-# evaluate_policy (line 433-440 logic). Single source of truth used by
-# both the CLI conflict resolver and the per-episode dispatch branch.
-_LOADSTEP_ENV_PREFIXES: tuple[str, ...] = ("loadstep_paper_", "loadstep_ptdf_")
+# 2026-05-03: _LOADSTEP_ENV_PREFIXES + _resolve_disturbance_dispatch +
+# _build_runner_config moved to evaluation/runner_helpers.py for the
+# same reason as the metrics extraction (testability, locality).
+# Re-exported below; behavior byte-equivalent.
+from evaluation.runner_helpers import (  # noqa: F401  (re-export)
+    _LOADSTEP_ENV_PREFIXES,
+    _build_runner_config,
+    _resolve_disturbance_dispatch,
+)
 
 # 2026-04-30 Probe B metadata: kundur_cvs_v3 omega measurement source paths.
 # Hardcoded from build_kundur_cvs_v3.m::src_meta (lines 439-442) — IntW
@@ -98,99 +103,6 @@ KUNDUR_CVS_V3_OMEGA_SOURCES: list[dict] = [
 KUNDUR_CVS_V3_COMM_ADJ: dict[int, list[int]] = {
     0: [1, 3], 1: [0, 2], 2: [1, 3], 3: [2, 0],  # ring topology
 }
-
-
-# ---------------------------------------------------------------------------
-# Runner-level helpers (P0b/P0c/P3a, 2026-05-03)
-# ---------------------------------------------------------------------------
-
-
-def _resolve_disturbance_dispatch(
-    cli_mode: Optional[str],
-    env_type: str,
-) -> dict:
-    """Resolve --disturbance-mode (CLI) vs KUNDUR_DISTURBANCE_TYPE (env-var).
-
-    Three-zone semantics (P0c, 2026-05-03):
-
-    - CLI explicit (non-None) + env startswith loadstep_*  → SystemExit
-      (operator must pick one; loadstep dispatch ignores CLI mode silently
-      otherwise — refuse to run rather than produce mis-labeled JSON).
-    - CLI None (default) + env startswith loadstep_*  → stderr WARN,
-      use env-var precedence, record `implicit_conflict_warned=True` in
-      the returned dispatch_resolution (so JSON consumer can audit).
-    - Otherwise (no env, or non-loadstep env) → resolve cli_mode to its
-      default "bus" if None, return clean resolution.
-
-    Returns a dict with keys ``env_type``, ``cli_mode``, ``dispatch_path``
-    (one of "loadstep_paper" / "loadstep_ptdf" / "pm_step_proxy"), and
-    ``implicit_conflict_warned``. Pure function (no side effects beyond
-    stderr in the implicit-conflict branch); raises SystemExit on the
-    explicit-conflict branch.
-    """
-    is_loadstep = env_type.startswith(_LOADSTEP_ENV_PREFIXES)
-    if cli_mode is not None and is_loadstep:
-        raise SystemExit(
-            f"paper_eval: explicit --disturbance-mode={cli_mode!r} conflicts "
-            f"with KUNDUR_DISTURBANCE_TYPE={env_type!r} (loadstep dispatch "
-            f"ignores CLI mode). Either unset the env-var or omit "
-            f"--disturbance-mode."
-        )
-    implicit_conflict = (cli_mode is None and is_loadstep)
-    if implicit_conflict:
-        print(
-            f"[paper_eval] WARNING: --disturbance-mode unspecified but "
-            f"KUNDUR_DISTURBANCE_TYPE={env_type!r} forces loadstep dispatch. "
-            f"Using env-var; CLI mode is ignored.",
-            file=sys.stderr,
-        )
-    if env_type.startswith("loadstep_paper_"):
-        dispatch_path = "loadstep_paper"
-    elif env_type.startswith("loadstep_ptdf_"):
-        dispatch_path = "loadstep_ptdf"
-    else:
-        dispatch_path = "pm_step_proxy"
-    return {
-        "env_type": env_type,
-        "cli_mode": cli_mode,  # None if user did not specify
-        "dispatch_path": dispatch_path,
-        "implicit_conflict_warned": implicit_conflict,
-    }
-
-
-def _build_runner_config(
-    env,
-    settle_tol_hz: float,
-    settle_window_s: float,
-    dispatch_resolution: dict,
-) -> dict:
-    """Snapshot all runner-level params that affect JSON interpretation.
-
-    Anything that doesn't change RL/env behavior but affects how downstream
-    consumers interpret the metric numbers belongs here (P0b, 2026-05-03).
-    Reads PHI_* directly from env attributes so that any future env-var
-    override applied at env-construction time is captured (single source
-    of truth: ``env._PHI_F`` etc., set in kundur_simulink_env.py:148-154).
-    """
-    cfg: dict = {
-        "phi_f": float(getattr(env, "_PHI_F")),
-        "phi_h": float(getattr(env, "_PHI_H")),
-        "phi_d": float(getattr(env, "_PHI_D")),
-        "phi_h_per_agent": getattr(env, "_PHI_H_PER_AGENT", None),
-        "phi_d_per_agent": getattr(env, "_PHI_D_PER_AGENT", None),
-        "settle_tol_hz": float(settle_tol_hz),
-        "settle_window_s": float(settle_window_s),
-        "dispatch_resolution": dispatch_resolution,
-    }
-    # Per-agent overrides: convert numpy / list to plain JSON-friendly form.
-    for k in ("phi_h_per_agent", "phi_d_per_agent"):
-        v = cfg[k]
-        if v is not None:
-            try:
-                cfg[k] = [float(x) for x in v]
-            except TypeError:
-                cfg[k] = None  # not iterable / scalar None
-    return cfg
 
 
 # ---------------------------------------------------------------------------

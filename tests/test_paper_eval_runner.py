@@ -18,13 +18,20 @@ from typing import Optional
 import pytest
 
 from evaluation.metrics import EvalResult
+
+# Runner-level helpers were extracted from paper_eval.py to
+# evaluation/runner_helpers.py 2026-05-03. Tests import them directly.
+# paper_eval.py also re-exports for backward-compat (verified separately
+# by test_dispatch_helpers_re_exported_from_paper_eval below).
+from evaluation.runner_helpers import (
+    _LOADSTEP_ENV_PREFIXES,
+    _build_runner_config,
+    _resolve_disturbance_dispatch,
+)
 from evaluation.paper_eval import (
     SETTLE_TOL_HZ,
     SETTLE_WINDOW_S,
     _build_arg_parser,
-    _build_runner_config,
-    _LOADSTEP_ENV_PREFIXES,
-    _resolve_disturbance_dispatch,
     result_to_dict,
 )
 
@@ -123,6 +130,18 @@ def test_dispatch_explicit_conflict_with_other_modes_also_raises() -> None:
             _resolve_disturbance_dispatch(
                 cli_mode=mode, env_type="loadstep_ptdf_random_load"
             )
+
+
+def test_dispatch_helpers_re_exported_from_paper_eval() -> None:
+    """paper_eval.py re-export must resolve to the same objects as direct
+    runner_helpers import (backward-compat for any external caller that
+    historically imported these from evaluation.paper_eval).
+    """
+    from evaluation import paper_eval as _pe
+    from evaluation import runner_helpers as _rh
+    assert _pe._resolve_disturbance_dispatch is _rh._resolve_disturbance_dispatch
+    assert _pe._build_runner_config is _rh._build_runner_config
+    assert _pe._LOADSTEP_ENV_PREFIXES is _rh._LOADSTEP_ENV_PREFIXES
 
 
 def test_dispatch_loadstep_prefixes_constant_matches_implementation() -> None:

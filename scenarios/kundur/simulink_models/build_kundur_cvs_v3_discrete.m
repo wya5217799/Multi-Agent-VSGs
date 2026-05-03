@@ -285,16 +285,20 @@ for k = 1:size(loadstep_defs, 1)
     assignin('base', sprintf('LoadStep_t_%s',   lb), double(5.0));   % s (informational)
 end
 
-%% ===== Build line branches (Π-line: series R+L + shunt C/2 each end) =====
-% P2.1 fix-A (2026-04-26): NR uses lossy Π model with shunt cap at each
-% line end (Y_sh = jωC·L/2, in Siemens). The earlier 'RL'-only build
-% omitted ~200 MVAr line cap injection and caused a ω steady-region drift
-% above 1 plus initial transient kick. Match NR by emitting:
-%   - 1 series RL branch  (`<name>` block)
-%   - 2 shunt C branches  (`<name>_Csh_F` and `<name>_Csh_T`), each = C·L/2
-% Both shunt caps connect to ground at their respective bus end. Parallel
-% lines instantiate independently (each parallel adds its own pair of caps).
+%% ===== Build 3-phase PI Section Lines (Phase 1.1+ migration) =====
+% v3 Phasor used 1× single-phase Series RLC RL + 2× shunt-C/2 per line.
+% Discrete v3 uses 1× Three-Phase PI Section Line which has R+L+C built-in
+% (positive- and zero-sequence params).
+%
+% Pre-flight F11 (test_3phase_network_disc.m) verified Three-Phase PI
+% Section Line works at v3-scale (230kV/100MW/100km).
+% Pre-flight F12 (test_multisrc_coupling_disc.m) verified multi-source
+% Π line coupling synchronizes.
+%
+% Block path: sps_lib/Power Grid Elements/Three-Phase PI Section Line
+% Note: name has embedded newline (sps lib quirk), built via sprintf.
 n_lines = size(line_defs, 1);
+pi_path_3p = sprintf('sps_lib/Power Grid Elements/Three-Phase\nPI Section Line');
 for li = 1:n_lines
     name  = line_defs{li, 1};
     fb    = line_defs{li, 2};
@@ -304,91 +308,88 @@ for li = 1:n_lines
     Lk    = line_defs{li, 6};
     Ck    = line_defs{li, 7};
 
-    R_tot = Rk * Lkm;                  % Ω
-    L_tot = Lk * Lkm;                  % H
-    C_half = Ck * Lkm / 2;             % F (per end)
+    % Per-km params: positive sequence + standard zero-sequence approx
+    R_3p = [Rk, 3 * Rk];      % [R_pos, R_zero]
+    L_3p = [Lk, 3 * Lk];      % [L_pos, L_zero]
+    C_3p = [Ck, 0.6 * Ck];    % [C_pos, C_zero]
 
-    yposS = 200 + (li - 1) * 70;
+    % Phase 1.1+ guard: Three-Phase PI Section Line Discrete checks propagation
+    % speed = 1/sqrt(L·C) <= c (≈300,000 km/s). v3's "short" lines use
+    % L_short=0.5e-3 H/km + C_short=9e-9 F/km giving 471,000 km/s (> c). These
+    % single-km transformer-equivalent lines were Phasor-mode artifacts; in
+    % Discrete we MUST clamp C to keep speed sub-luminal. This is purely
+    % numerical (the "line" represents a transformer leakage L), so adjusting
+    % C does not change physical interpretation meaningfully.
+    c_kmps = 280000;   % safety margin under 300,000 km/s
+    v_pos = 1 / sqrt(Lk * Ck);
+    if v_pos > c_kmps
+        Ck_adj = (1/c_kmps)^2 / Lk;
+        C_3p = [Ck_adj, 0.6 * Ck_adj];
+        fprintf('RESULT: NOTE %s short-line C adjusted %g -> %g (v_orig=%.0f km/s)\n', ...
+            name, Ck, Ck_adj, v_pos);
+    end
 
-    % Series RL branch
-    add_block('powerlib/Elements/Series RLC Branch', [mdl '/' name], ...
-        'Position', [400 yposS 460 yposS+50]);
-    set_param([mdl '/' name], 'BranchType', 'RL', ...
-        'Resistance', sprintf('%.10g', R_tot), ...
-        'Inductance', sprintf('%.10g', L_tot));
+    yposS = 200 + (li - 1) * 110;
+    add_block(pi_path_3p, [mdl '/' name], ...
+        'Position', [400 yposS 480 yposS+90]);
+    set_param([mdl '/' name], ...
+        'Length', num2str(Lkm), ...
+        'Frequency', num2str(fn), ...
+        'Resistances', mat2str(R_3p), ...
+        'Inductances', mat2str(L_3p), ...
+        'Capacitances', mat2str(C_3p));
     set_param([mdl '/' name], 'UserDataPersistent', 'on', ...
         'UserData', struct('from', fb, 'to', tb));
-
-    % Shunt cap at FROM-end
-    cshF = [name '_Csh_F'];
-    add_block('powerlib/Elements/Series RLC Branch', [mdl '/' cshF], ...
-        'Position', [320 yposS+70 380 yposS+110]);
-    set_param([mdl '/' cshF], 'BranchType', 'C', ...
-        'Capacitance', sprintf('%.10g', C_half));
-    add_block('powerlib/Elements/Ground', [mdl '/' cshF '_GND'], ...
-        'Position', [320 yposS+130 360 yposS+160]);
-    add_line(mdl, [cshF '/RConn1'], [cshF '_GND/LConn1'], 'autorouting', 'smart');
-    set_param([mdl '/' cshF], 'UserDataPersistent', 'on', ...
-        'UserData', struct('bus', fb, 'src_line', name, 'role', 'shunt_C_half_F'));
-
-    % Shunt cap at TO-end
-    cshT = [name '_Csh_T'];
-    add_block('powerlib/Elements/Series RLC Branch', [mdl '/' cshT], ...
-        'Position', [480 yposS+70 540 yposS+110]);
-    set_param([mdl '/' cshT], 'BranchType', 'C', ...
-        'Capacitance', sprintf('%.10g', C_half));
-    add_block('powerlib/Elements/Ground', [mdl '/' cshT '_GND'], ...
-        'Position', [480 yposS+130 520 yposS+160]);
-    add_line(mdl, [cshT '/RConn1'], [cshT '_GND/LConn1'], 'autorouting', 'smart');
-    set_param([mdl '/' cshT], 'UserDataPersistent', 'on', ...
-        'UserData', struct('bus', tb, 'src_line', name, 'role', 'shunt_C_half_T'));
+    % Note: shunt-C is built-in to Three-Phase PI Section Line; no separate
+    % Csh_F/Csh_T blocks needed (v3-Phasor pattern obsoleted by 3-phase block).
 end
 
-%% ===== Build loads (Series RLC R+L for P+Q_ind, then shunt cap) =====
+%% ===== Build 3-phase Loads (Phase 1.1+ migration) =====
+% v3 Phasor used single-phase Series RLC RL.
+% Discrete v3 uses Three-Phase Series RLC Load (P + Q_ind direct param).
+% Pre-flight F11 verified Three-Phase Series RLC Load works at v3-scale.
 n_loads = size(load_defs, 1);
+load_path_3p = sprintf('sps_lib/Passives/Three-Phase\nSeries RLC Load');
 for ld = 1:n_loads
     name  = load_defs{ld, 1};
     bus   = load_defs{ld, 2};
     P_W   = load_defs{ld, 3};
     Q_var = load_defs{ld, 4};
 
-    % Const-Z RL: R = V²/P, L = V²/(ωQ)
-    R_load = double(Vbase^2 / P_W);
-    L_load = double(Vbase^2 / (wn * Q_var));
-
-    yposL = 200 + (ld - 1) * 100;
-    add_block('powerlib/Elements/Series RLC Branch', [mdl '/' name], ...
-        'Position', [800 yposL 860 yposL+60]);
-    set_param([mdl '/' name], 'BranchType', 'RL', ...
-        'Resistance', sprintf('%.10g', R_load), ...
-        'Inductance', sprintf('%.10g', L_load));
-
-    add_block('powerlib/Elements/Ground', [mdl '/GND_' name], ...
-        'Position', [800 yposL+90 840 yposL+120]);
-    add_line(mdl, [name '/RConn1'], ['GND_' name '/LConn1'], 'autorouting', 'smart');
+    yposL = 200 + (ld - 1) * 130;
+    add_block(load_path_3p, [mdl '/' name], ...
+        'Position', [800 yposL 880 yposL+90]);
+    set_param([mdl '/' name], ...
+        'Configuration', 'Y (grounded)', ...
+        'NominalVoltage', num2str(Vbase), ...
+        'NominalFrequency', num2str(fn), ...
+        'ActivePower', sprintf('%.10g', P_W), ...
+        'InductivePower', sprintf('%.10g', Q_var), ...
+        'CapacitivePower', '0');
 
     set_param([mdl '/' name], 'UserDataPersistent', 'on', ...
         'UserData', struct('bus', bus));
+    % Note: Load_const has internal Y-grounded neutral; no separate GND block.
 end
 
-% Shunt caps: Series RLC type 'C', C = Q / (ω·V²)
+% Shunt caps: Three-Phase Series RLC Load with CapacitivePower=Q_var
+% (Discrete v3 migration — replaces single-phase Series RLC C from v3 Phasor)
 n_shunts = size(shunt_defs, 1);
 for sh = 1:n_shunts
     name  = shunt_defs{sh, 1};
     bus   = shunt_defs{sh, 2};
     Q_var = shunt_defs{sh, 3};
 
-    C_sh = double(Q_var / (wn * Vbase^2));
-
-    yposC = 200 + (sh - 1) * 100;
-    add_block('powerlib/Elements/Series RLC Branch', [mdl '/' name], ...
-        'Position', [950 yposC 1010 yposC+60]);
-    set_param([mdl '/' name], 'BranchType', 'C', ...
-        'Capacitance', sprintf('%.10g', C_sh));
-
-    add_block('powerlib/Elements/Ground', [mdl '/GND_' name], ...
-        'Position', [950 yposC+90 990 yposC+120]);
-    add_line(mdl, [name '/RConn1'], ['GND_' name '/LConn1'], 'autorouting', 'smart');
+    yposC = 200 + (sh - 1) * 130;
+    add_block(load_path_3p, [mdl '/' name], ...
+        'Position', [950 yposC 1030 yposC+90]);
+    set_param([mdl '/' name], ...
+        'Configuration', 'Y (grounded)', ...
+        'NominalVoltage', num2str(Vbase), ...
+        'NominalFrequency', num2str(fn), ...
+        'ActivePower', '0', ...
+        'InductivePower', '0', ...
+        'CapacitivePower', sprintf('%.10g', Q_var));
 
     set_param([mdl '/' name], 'UserDataPersistent', 'on', ...
         'UserData', struct('bus', bus));
@@ -637,9 +638,10 @@ end
 %% ===== Build wind PVS (W1, W2) — Programmable Voltage Source, no swing eq =====
 % Model as `AC Voltage Source` with Phase = wind_term_a_rad (deg, fixed).
 % Amplitude scaled by WindAmp_w workspace knob — set 0 to trip.
-% We use `powerlib/Electrical Sources/AC Voltage Source` because powerlib
-% doesn't have a phasor-domain Programmable Voltage Source; the AC source's
-% Amplitude can be set to a workspace-evaluated expression.
+% PHASE 1.1+ PATCH (2026-05-03): Three-Phase Source (NonIdeal Yg) for Wind PVS.
+% v3 Phasor used single-phase AC Voltage Source. Discrete v3 needs 3-phase
+% to match network. NonIdealSource='on' avoids "ideal V parallel C" compile
+% error per F11 finding. Internal R+L provides Thévenin equivalent.
 wind_meta = {
     'W1', 4, 'WindAmp_1', 'Wphase_1', 'WVmag_1';
     'W2', 8, 'WindAmp_2', 'Wphase_2', 'WVmag_2';
@@ -655,104 +657,105 @@ for w = 1:size(wind_meta, 1)
     bx = 1300;
 
     src   = sprintf('PVS_%s', wname);
-    Lline = sprintf('Lwind_%s', wname);   % short connect to bus (negligible)
-    gnd   = sprintf('GND_%s', wname);
 
-    add_block('powerlib/Electrical Sources/AC Voltage Source', [mdl '/' src], ...
-        'Position', [bx cy bx+60 cy+50]);
+    add_block('sps_lib/Sources/Three-Phase Source', [mdl '/' src], ...
+        'Position', [bx cy bx+80 cy+90]);
     set_param([mdl '/' src], ...
-        'Amplitude', sprintf('(%s) * (%s)', Avar, Vvar), ...
-        'Phase',     sprintf('(%s) * 180/pi', Pvar), ...
-        'Frequency', '50', ...
-        'Measurements', 'None');
-
-    add_block('powerlib/Elements/Ground', [mdl '/' gnd], ...
-        'Position', [bx cy+70 bx+40 cy+100]);
-    add_line(mdl, [src '/LConn1'], [gnd '/LConn1'], 'autorouting', 'smart');
-
-    % short L_wind = 0 (PVS direct to bus); use a tiny L for solver health
-    add_block('powerlib/Elements/Series RLC Branch', [mdl '/' Lline], ...
-        'Position', [bx+80 cy bx+140 cy+30]);
-    set_param([mdl '/' Lline], 'BranchType', 'L', 'Inductance', '1e-6');
-    set_param([mdl '/' Lline], 'UserDataPersistent', 'on', ...
-        'UserData', struct('bus', bus, 'src', wname));
-    add_line(mdl, [src '/RConn1'], [Lline '/LConn1'], 'autorouting', 'smart');
+        'InternalConnection', 'Yg', ...
+        'Voltage',      sprintf('(%s) * (%s)', Avar, Vvar), ...
+        'PhaseAngle',   sprintf('(%s) * 180/pi', Pvar), ...
+        'Frequency',    num2str(fn), ...
+        'NonIdealSource', 'on', ...
+        'SpecifyImpedance', 'on', ...
+        'ShortCircuitLevel', '500e6', ...   % wind farm class
+        'BaseVoltage', num2str(Vbase), ...
+        'XRratio', '7');
 end
 
-%% ===== Connect electrical bus net (line endpoints to one another) =====
-% Topology: each bus is a logical "node" formed by every block whose
-% UserData.bus matches that bus number, plus every line whose endpoint
-% (from / to) matches that bus.
+%% ===== Connect electrical bus net (3-phase wiring, Phase 1.1+) =====
+% Phase 1.1+ migration (2026-05-03): each bus is a logical node formed by
+% PER-PHASE tying. Each 3-phase block contributes 3 ports (one per phase)
+% to the bus. They must be tied PHASE-WISE (A↔A, B↔B, C↔C).
 %
-% For the Phasor solver, all RConn ports of elements at the same logical
-% bus must be electrically tied. Implementation: pick a single port per
-% bus as the "anchor" and add lines from every other element-at-bus to it.
+% Strategy: per-phase anchor map. For each bus, three anchors (one per
+% phase). Each block-at-bus registers 3 ports (LConn1/2/3 or RConn1/2/3),
+% and each port is tied to its phase's anchor.
 
-bus_anchor = containers.Map('KeyType', 'double', 'ValueType', 'char');
+% Three independent anchor maps, one per phase
+bus_anchor_A = containers.Map('KeyType', 'double', 'ValueType', 'char');
+bus_anchor_B = containers.Map('KeyType', 'double', 'ValueType', 'char');
+bus_anchor_C = containers.Map('KeyType', 'double', 'ValueType', 'char');
 
-% --- helper: register an element-port at a bus (anchor or auto-link) ---
-register = @(bus, blkpath_port) local_register_at_bus(mdl, bus_anchor, bus, blkpath_port);
+% --- helper: register one block's L-side (3 ports) at a bus ---
+register3p_L = @(bus, name) local_register_at_bus(mdl, bus_anchor_A, bus, [name '/LConn1']);
+% (Define explicit local function below — lambda doesn't support 3 phases easily)
 
-% Line endpoints + Π shunt caps (each line: 2 series ports + 2 shunt-C ports)
+% Line endpoints (Three-Phase PI: 3 LConn + 3 RConn per line)
 for li = 1:n_lines
     name = line_defs{li, 1};
     fb   = line_defs{li, 2};
     tb   = line_defs{li, 3};
-    register(fb, [name '/LConn1']);
-    register(tb, [name '/RConn1']);
-    register(fb, [name '_Csh_F/LConn1']);    % shunt C/2 at FROM-end → bus fb
-    register(tb, [name '_Csh_T/LConn1']);    % shunt C/2 at TO-end   → bus tb
+    % FROM end (LConn1/2/3) → bus fb
+    local_register_at_bus(mdl, bus_anchor_A, fb, [name '/LConn1']);
+    local_register_at_bus(mdl, bus_anchor_B, fb, [name '/LConn2']);
+    local_register_at_bus(mdl, bus_anchor_C, fb, [name '/LConn3']);
+    % TO end (RConn1/2/3) → bus tb
+    local_register_at_bus(mdl, bus_anchor_A, tb, [name '/RConn1']);
+    local_register_at_bus(mdl, bus_anchor_B, tb, [name '/RConn2']);
+    local_register_at_bus(mdl, bus_anchor_C, tb, [name '/RConn3']);
 end
 
-% Loads + shunts + LoadStep — all anchor at their bus
+% Loads (Three-Phase Series RLC Load: 3 LConn per load)
 for ld = 1:n_loads
     name = load_defs{ld, 1};
     bus  = load_defs{ld, 2};
-    register(bus, [name '/LConn1']);
+    local_register_at_bus(mdl, bus_anchor_A, bus, [name '/LConn1']);
+    local_register_at_bus(mdl, bus_anchor_B, bus, [name '/LConn2']);
+    local_register_at_bus(mdl, bus_anchor_C, bus, [name '/LConn3']);
 end
+
+% Shunts (Three-Phase Series RLC Load capacitive: 3 LConn each)
 for sh = 1:n_shunts
     name = shunt_defs{sh, 1};
     bus  = shunt_defs{sh, 2};
-    register(bus, [name '/LConn1']);
-end
-for k = 1:2
-    name = loadstep_defs{k, 1};
-    bus  = loadstep_defs{k, 2};
-    register(bus, [name '/LConn1']);
+    local_register_at_bus(mdl, bus_anchor_A, bus, [name '/LConn1']);
+    local_register_at_bus(mdl, bus_anchor_B, bus, [name '/LConn2']);
+    local_register_at_bus(mdl, bus_anchor_C, bus, [name '/LConn3']);
 end
 
-% Phase A++ trip CCS: register RConn at bus (current INJECTION side; LConn
-% is at ground per build above).
+% LoadStep — Breaker has 3 LConn (bus side) + 3 RConn (load side)
+% bus → Breaker LConn1/2/3 → Breaker RConn1/2/3 → Load_step LConn1/2/3 (already wired internally)
 for k = 1:size(loadstep_defs, 1)
-    bus       = loadstep_defs{k, 2};
     bus_label = loadstep_defs{k, 3};
-    trip_name = sprintf('LoadStepTrip_%s', bus_label);
-    register(bus, [trip_name '/RConn1']);
+    breaker_name = sprintf('LoadStepBreaker_%s', bus_label);
+    bus = loadstep_defs{k, 2};
+    local_register_at_bus(mdl, bus_anchor_A, bus, [breaker_name '/LConn1']);
+    local_register_at_bus(mdl, bus_anchor_B, bus, [breaker_name '/LConn2']);
+    local_register_at_bus(mdl, bus_anchor_C, bus, [breaker_name '/LConn3']);
 end
 
-% Option E (2026-04-30): CCS at Bus 7 / Bus 9 load centers — register
-% RConn at the load-center bus.
-for k = 1:size(ccs_load_defs, 1)
-    bus       = ccs_load_defs{k, 2};
-    bus_label = ccs_load_defs{k, 3};
-    ccs_name  = sprintf('CCSLoad_%s', bus_label);
-    register(bus, [ccs_name '/RConn1']);
-end
+% CCS injection blocks DISABLED (wrapped in if false above) — skip wiring.
+% Phase 1.5 will restore CCS using sin-driven 3-phase pattern + register
+% the new 3-phase RConn ports here.
 
-% Source internal-X downstream port → bus
+% Source 3-phase output (VImeas RConn1/2/3) → bus
 for s = 1:n_src
     sname = src_meta{s, 1};
     bus   = src_meta{s, 2};
-    Lint  = sprintf('Lint_%s', sname);
-    register(bus, [Lint '/RConn1']);
+    vimeas = sprintf('VImeas_%s', sname);
+    local_register_at_bus(mdl, bus_anchor_A, bus, [vimeas '/RConn1']);
+    local_register_at_bus(mdl, bus_anchor_B, bus, [vimeas '/RConn2']);
+    local_register_at_bus(mdl, bus_anchor_C, bus, [vimeas '/RConn3']);
 end
 
-% Wind PVS L_wind downstream → bus
+% Wind PVS — Three-Phase Source NonIdeal Yg, register 3 RConn at bus
 for w = 1:size(wind_meta, 1)
     wname = wind_meta{w, 1};
     bus   = wind_meta{w, 2};
-    Lline = sprintf('Lwind_%s', wname);
-    register(bus, [Lline '/RConn1']);
+    src_name = sprintf('PVS_%s', wname);
+    local_register_at_bus(mdl, bus_anchor_A, bus, [src_name '/RConn1']);
+    local_register_at_bus(mdl, bus_anchor_B, bus, [src_name '/RConn2']);
+    local_register_at_bus(mdl, bus_anchor_C, bus, [src_name '/RConn3']);
 end
 
 %% ===== Save .slx + sidecar runtime constants .mat =====

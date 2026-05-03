@@ -294,3 +294,58 @@ def _settling_time_s(
 
 def _is_finite_arr(x: np.ndarray) -> bool:
     return bool(np.all(np.isfinite(x)))
+
+
+# ---------------------------------------------------------------------------
+# Bootstrap confidence interval (P2a, 2026-05-03)
+# ---------------------------------------------------------------------------
+
+
+def _bootstrap_ci(
+    values: list[float],
+    n_resample: int = 1000,
+    alpha: float = 0.05,
+    seed: int = 0,
+) -> dict:
+    """Percentile bootstrap mean + (1-alpha) confidence interval.
+
+    Resamples ``values`` with replacement ``n_resample`` times; for each
+    resample computes the mean; reports the empirical percentile-based
+    CI at ``alpha/2`` and ``1-alpha/2``. Reproducible given ``seed``.
+
+    Returns
+    -------
+    dict
+        {"mean", "std", "ci_lo", "ci_hi", "n", "n_resample", "alpha"}
+        On empty input returns all zeros + n=0 (does not raise).
+
+    Notes
+    -----
+    Used to attach uncertainty bands to summary metrics like
+    ``max_freq_dev_hz_mean`` so cross-policy comparisons can assert
+    statistical separation rather than rely on point-estimate eyeballs.
+    Pure-numpy; no scipy dependency.
+    """
+    if not values:
+        return {
+            "mean": 0.0, "std": 0.0, "ci_lo": 0.0, "ci_hi": 0.0,
+            "n": 0, "n_resample": int(n_resample), "alpha": float(alpha),
+        }
+    arr = np.asarray(values, dtype=np.float64)
+    n = arr.size
+    rng = np.random.default_rng(seed)
+    means = np.empty(n_resample, dtype=np.float64)
+    for i in range(n_resample):
+        idx = rng.integers(0, n, size=n)
+        means[i] = arr[idx].mean()
+    lo_q = (alpha / 2.0) * 100.0
+    hi_q = (1.0 - alpha / 2.0) * 100.0
+    return {
+        "mean": float(arr.mean()),
+        "std": float(arr.std(ddof=1)) if n > 1 else 0.0,
+        "ci_lo": float(np.percentile(means, lo_q)),
+        "ci_hi": float(np.percentile(means, hi_q)),
+        "n": int(n),
+        "n_resample": int(n_resample),
+        "alpha": float(alpha),
+    }

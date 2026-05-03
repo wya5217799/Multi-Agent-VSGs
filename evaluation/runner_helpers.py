@@ -125,6 +125,7 @@ def _build_runner_config(
     settle_window_s: float,
     dispatch_resolution: dict,
     scenario_provenance: Optional[dict] = None,
+    bootstrap_config: Optional[dict] = None,
 ) -> dict:
     """Snapshot all runner-level params that affect JSON interpretation.
 
@@ -149,6 +150,7 @@ def _build_runner_config(
         "settle_window_s": float(settle_window_s),
         "dispatch_resolution": dispatch_resolution,
         "scenario_provenance": scenario_provenance if scenario_provenance is not None else {},
+        "bootstrap_config": bootstrap_config if bootstrap_config is not None else {},
     }
     # Per-agent overrides: convert numpy / list to plain JSON-friendly form.
     for k in ("phi_h_per_agent", "phi_d_per_agent"):

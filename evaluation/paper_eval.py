@@ -43,6 +43,7 @@ import numpy as np
 from evaluation.metrics import (  # noqa: F401  (re-export, see below)
     EvalResult,
     PerEpisodeMetrics,
+    _bootstrap_ci,
     _compute_global_rf_per_agent,
     _compute_global_rf_unnorm,
     _compute_per_agent_max_abs_df,
@@ -70,6 +71,13 @@ PAPER_NO_CONTROL_UNNORMALIZED = -15.20
 # resolved value lands in JSON output's runner_config.settle_tol_hz.
 SETTLE_TOL_HZ = 0.005
 SETTLE_WINDOW_S = 1.0
+
+# Bootstrap CI defaults (P2a, 2026-05-03). Resolved values land in
+# runner_config.bootstrap_config of the output JSON; consumers can audit
+# the resampling parameters that produced the CI fields in summary.
+BOOTSTRAP_N_RESAMPLE: int = 1000
+BOOTSTRAP_ALPHA: float = 0.05  # 95% CI
+BOOTSTRAP_SEED_OFFSET: int = 7919  # combined with seed_base for reproducibility
 
 # 2026-05-03: _LOADSTEP_ENV_PREFIXES + _resolve_disturbance_dispatch +
 # _build_runner_config moved to evaluation/runner_helpers.py for the
@@ -372,6 +380,29 @@ def evaluate_policy(
             rh_abs_pcts.append(abs(p.r_h_total) / denom * 100.0)
     rh_abs_share_mean = sum(rh_abs_pcts) / max(len(rh_abs_pcts), 1)
 
+    # P2a (2026-05-03): bootstrap CI on key per-suite metrics. Each CI is
+    # computed with a deterministic seed derived from seed_base so two
+    # runs with the same data produce byte-equal CI. See _bootstrap_ci
+    # docstring for percentile-bootstrap semantics.
+    bs_seed = int(seed_base) + BOOTSTRAP_SEED_OFFSET
+    max_dev_ci = _bootstrap_ci(
+        max_devs, n_resample=BOOTSTRAP_N_RESAMPLE,
+        alpha=BOOTSTRAP_ALPHA, seed=bs_seed,
+    )
+    rocof_ci = _bootstrap_ci(
+        rocofs, n_resample=BOOTSTRAP_N_RESAMPLE,
+        alpha=BOOTSTRAP_ALPHA, seed=bs_seed + 1,
+    )
+    rh_abs_share_ci = _bootstrap_ci(
+        rh_abs_pcts, n_resample=BOOTSTRAP_N_RESAMPLE,
+        alpha=BOOTSTRAP_ALPHA, seed=bs_seed + 2,
+    )
+    rf_global_unnorms = [p.r_f_global_unnormalized for p in per_ep]
+    rf_global_ci = _bootstrap_ci(
+        rf_global_unnorms, n_resample=BOOTSTRAP_N_RESAMPLE,
+        alpha=BOOTSTRAP_ALPHA, seed=bs_seed + 3,
+    )
+
     summary = {
         "n_scenarios": len(per_ep),
         "n_steps_per_ep": M,
@@ -380,8 +411,11 @@ def evaluate_policy(
         "max_freq_dev_hz_mean": float(np.mean(max_devs)) if max_devs else 0.0,
         "max_freq_dev_hz_min": float(np.min(max_devs)) if max_devs else 0.0,
         "max_freq_dev_hz_max": float(np.max(max_devs)) if max_devs else 0.0,
+        # 2026-05-03 P2a: 95% bootstrap CI on per-suite mean.
+        "max_freq_dev_hz_ci95": max_dev_ci,
         "rocof_hz_per_s_mean": float(np.mean(rocofs)) if rocofs else 0.0,
         "rocof_hz_per_s_max": float(np.max(rocofs)) if rocofs else 0.0,
+        "rocof_hz_per_s_ci95": rocof_ci,
         "settled_pct": settled_pct,
         "settled_time_s_mean": (sum(settles) / len(settles)) if settles else None,
         "tds_failed_count": sum(1 for p in per_ep if p.tds_failed),
@@ -389,6 +423,10 @@ def evaluate_policy(
         # 2026-05-03 P3b: renamed from rh_share_pct_mean (schema_version=3).
         # See definition above; project metric, not paper formula.
         "rh_abs_share_pct_mean": rh_abs_share_mean,
+        "rh_abs_share_pct_ci95": rh_abs_share_ci,
+        # CI on per-episode r_f_global_unnormalized (per-suite mean), useful
+        # for cross-policy paper-target comparison once LOCK is unlocked.
+        "r_f_global_unnorm_ci95": rf_global_ci,
     }
 
     cumulative = {
@@ -667,12 +705,19 @@ def run_single_eval(
         n_scenarios=n_scenarios,
         seed_base=seed_base,
     )
+    bootstrap_config = {
+        "n_resample": BOOTSTRAP_N_RESAMPLE,
+        "alpha": BOOTSTRAP_ALPHA,
+        "seed_offset": BOOTSTRAP_SEED_OFFSET,
+        "seed_resolved": int(seed_base) + BOOTSTRAP_SEED_OFFSET,
+    }
     runner_config = _build_runner_config(
         env=env,
         settle_tol_hz=settle_tol_hz,
         settle_window_s=SETTLE_WINDOW_S,
         dispatch_resolution=dispatch_resolution,
         scenario_provenance=scenario_provenance,
+        bootstrap_config=bootstrap_config,
     )
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with output_path.open("w", encoding="utf-8") as f:

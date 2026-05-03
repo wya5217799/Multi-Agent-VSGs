@@ -21,6 +21,7 @@ import pytest
 from evaluation.metrics import (
     EvalResult,
     PerEpisodeMetrics,
+    _bootstrap_ci,
     _compute_global_rf_per_agent,
     _compute_global_rf_unnorm,
     _compute_per_agent_max_abs_df,
@@ -375,3 +376,61 @@ def test_generate_scenarios_respects_bus_choices() -> None:
     for s in scenarios:
         assert s["bus"] in bus_choices
         assert -0.5 <= s["magnitude_sys_pu"] <= 0.5
+
+
+# ---------------------------------------------------------------------------
+# P2a — _bootstrap_ci percentile-bootstrap mean + CI
+# ---------------------------------------------------------------------------
+
+
+def test_bootstrap_ci_empty_returns_zeros() -> None:
+    """Empty input → defensive zeros + n=0 (does not raise)."""
+    out = _bootstrap_ci([], n_resample=100, alpha=0.05, seed=0)
+    assert out["mean"] == 0.0
+    assert out["std"] == 0.0
+    assert out["ci_lo"] == 0.0
+    assert out["ci_hi"] == 0.0
+    assert out["n"] == 0
+
+
+def test_bootstrap_ci_singleton_has_zero_width() -> None:
+    """Single value → CI lo == hi == that value (no spread to bootstrap)."""
+    out = _bootstrap_ci([3.14], n_resample=100, alpha=0.05, seed=0)
+    assert out["mean"] == pytest.approx(3.14)
+    assert out["ci_lo"] == pytest.approx(3.14)
+    assert out["ci_hi"] == pytest.approx(3.14)
+    assert out["n"] == 1
+
+
+def test_bootstrap_ci_reproducible_with_same_seed() -> None:
+    """Same seed → byte-equal CI (reproducibility for cross-run audit)."""
+    vals = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]
+    a = _bootstrap_ci(vals, n_resample=200, alpha=0.05, seed=42)
+    b = _bootstrap_ci(vals, n_resample=200, alpha=0.05, seed=42)
+    assert a == b
+
+
+def test_bootstrap_ci_different_seeds_give_different_results() -> None:
+    """Different seeds produce different bootstrap distributions."""
+    vals = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]
+    a = _bootstrap_ci(vals, n_resample=200, alpha=0.05, seed=1)
+    b = _bootstrap_ci(vals, n_resample=200, alpha=0.05, seed=2)
+    # mean is exact (same input), but CI bounds are stochastic
+    assert a["mean"] == b["mean"]
+    assert (a["ci_lo"], a["ci_hi"]) != (b["ci_lo"], b["ci_hi"])
+
+
+def test_bootstrap_ci_brackets_sample_mean() -> None:
+    """For symmetric data, CI [lo, hi] should bracket the sample mean."""
+    vals = list(range(1, 51))  # 1..50, mean = 25.5
+    out = _bootstrap_ci(vals, n_resample=500, alpha=0.05, seed=0)
+    assert out["ci_lo"] < out["mean"] < out["ci_hi"]
+    assert out["mean"] == pytest.approx(25.5)
+
+
+def test_bootstrap_ci_records_config_fields() -> None:
+    """Output records n_resample / alpha / n for downstream auditing."""
+    out = _bootstrap_ci([1.0, 2.0, 3.0], n_resample=123, alpha=0.10, seed=0)
+    assert out["n_resample"] == 123
+    assert out["alpha"] == 0.10
+    assert out["n"] == 3

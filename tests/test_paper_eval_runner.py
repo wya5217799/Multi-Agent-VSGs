@@ -216,6 +216,26 @@ def test_runner_config_scenario_provenance_default_empty_for_backward_compat() -
     assert cfg["scenario_provenance"] == {}
 
 
+def test_runner_config_includes_bootstrap_config_when_provided() -> None:
+    """P2a: bootstrap_config flows through _build_runner_config."""
+    env = _FakeEnv()
+    dr = {"env_type": "", "cli_mode": None, "dispatch_path": "pm_step_proxy",
+          "implicit_conflict_warned": False}
+    bc = {"n_resample": 1000, "alpha": 0.05, "seed_offset": 7919,
+          "seed_resolved": 8000}
+    cfg = _build_runner_config(env, 0.005, 1.0, dr, bootstrap_config=bc)
+    assert cfg["bootstrap_config"] == bc
+
+
+def test_runner_config_bootstrap_config_default_empty_for_backward_compat() -> None:
+    """Caller not passing bootstrap_config gets {} (additive evolution)."""
+    env = _FakeEnv()
+    dr = {"env_type": "", "cli_mode": None, "dispatch_path": "pm_step_proxy",
+          "implicit_conflict_warned": False}
+    cfg = _build_runner_config(env, 0.005, 1.0, dr)
+    assert cfg["bootstrap_config"] == {}
+
+
 def test_runner_config_settle_tol_override_captured() -> None:
     """CLI --settle-tol-hz override flows into runner_config (not just default)."""
     env = _FakeEnv()

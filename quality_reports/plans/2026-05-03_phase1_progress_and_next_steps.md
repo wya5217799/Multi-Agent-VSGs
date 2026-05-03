@@ -7,6 +7,95 @@
 
 ---
 
+## §0 Quickstart for Fresh Session
+
+> If you're a new AI agent picking up this work, read this section FIRST — it
+> gives you the minimum context to verify state and choose next action.
+
+### §0.1 Project background (1 paragraph)
+
+Reproducing **Yang et al. TPWRS 2023** — multi-agent SAC reinforcement learning
+controls 4 energy storage system (ESS) units' virtual inertia H and damping D
+in a **Kundur 2-area power system**. The original Phasor-mode v3 model hit a
+fundamental wall: **electrical disturbances (LoadStep, CCS injection) don't
+propagate** in Phasor's static Y-matrix solver. The 2026-05-01 verdict
+initially REJECTED Discrete migration on cost grounds, but on 2026-05-03 user
+authorized override + Phase 0 SMIB Oracle (4.9 Hz @ 248 MW) falsified the
+REJECT. The `discrete-rebuild` branch is the migration to Discrete EMT mode
+with all module choices re-verified by pre-flights F11/F12/F13.
+
+### §0.2 Worktree + branch (CRITICAL)
+
+```
+Path:  C:\Users\27443\Desktop\Multi-Agent-VSGs-discrete
+Branch: discrete-rebuild
+```
+
+⚠️  **NOT the same as the main worktree** — main is at
+`C:\Users\27443\Desktop\Multi-Agent  VSGs` (double-space in path!) on `main`
+branch. The main worktree's `kundur_cvs_v3.slx` and helpers may **shadow**
+this branch's files in MATLAB path. If you see "shadowing" warnings, ensure
+this worktree's `scenarios/kundur/simulink_models/` is FIRST in `addpath`.
+
+### §0.3 Key new files (created on this branch, not in main)
+
+| File | Purpose |
+|---|---|
+| `scenarios/kundur/simulink_models/build_dynamic_source_discrete.m` | Per-source helper (sin → 3 single-phase CVS in Y-config + Pe via V·I) |
+| `scenarios/kundur/simulink_models/build_kundur_cvs_v3_discrete.m` | v3 Discrete build script (uses helper × 7) |
+| `probes/kundur/spike/build_minimal_smib_discrete.m` | Phase 0 SMIB Oracle (validated 4.9 Hz) |
+| `probes/kundur/spike/test_v3_discrete_ic_settle.m` | **Layer 2 TDD test — RUN THIS to verify state** |
+| `probes/kundur/spike/test_{3phase_network,multisrc_coupling,ic_delta_mapping}_disc.m` | F11/F12/F13 pre-flight tests |
+| `probes/kundur/spike/test_{cvs_disc_input,r_fastrestart_disc,var_resistor_disc,ccs_dynamic_disc,...}.m` | F1-F10 micro-experiments (parallel agent) |
+
+### §0.4 Verify current state (1 command)
+
+Via simulink-tools MCP (recommended):
+```matlab
+addpath('C:/Users/27443/Desktop/Multi-Agent-VSGs-discrete/probes/kundur/spike');
+addpath('C:/Users/27443/Desktop/Multi-Agent-VSGs-discrete/scenarios/kundur/simulink_models');
+test_v3_discrete_ic_settle();
+```
+
+**Expected output (2026-05-03 EOD baseline):**
+```
+RESULT: G1: PASS  ω=0.99534 ± 0.00029
+RESULT: G2: PASS  ω=0.99545 ± 0.00026
+RESULT: G3: PASS  ω=0.99642 ± 0.00041
+RESULT: ES1: PASS ω=0.99546 ± 0.00042
+RESULT: ES2: PASS ω=0.99649 ± 0.00093
+RESULT: ES3: FAIL ω=0.99663 ± 0.00177  (oscillate)
+RESULT: ES4: FAIL ω=0.99669 ± 0.00102  (oscillate)
+RESULT: 5/7 sources settled
+```
+
+**Branching logic:**
+- 5/7 PASS as above → state matches doc; proceed with Phase 1.3a (ES3/ES4 oscillation diagnosis, see §4)
+- **7/7 PASS** → someone solved 1.3a between sessions; update §3 + §4, move to Phase 1.4
+- **< 5/7 PASS** → regression; `git log --oneline -10` to see what changed; diagnose before touching code
+- **Build fails** → MATLAB engine state issue; `restart_engine` or `simulink_runtime_reset`
+
+### §0.5 Read order (15 min total)
+
+1. **This doc §1-§5** — completed work + key findings + current state + next actions (5 min)
+2. **`2026-05-03_phase0_smib_discrete_verdict.md`** — Phase 0 4.9 Hz oracle PASS evidence (3 min)
+3. **`2026-05-03_phase_b_extended_module_selection.md`** — F1-F9 micro-experiments + module decisions (5 min)
+4. **Main worktree `CLAUDE.md`** — project-wide coding conventions (skim, 2 min). Note: branch-specific paths are in §0.3 above, not in CLAUDE.md.
+
+After this 15-min read-up, you have full context to either:
+- Continue Phase 1.3a (ES3/ES4 oscillation diagnosis) — top of forward path
+- OR pick a different sub-task from §5
+
+### §0.6 Common pitfalls
+
+1. **Wrong worktree** — running `git status` in `Multi-Agent  VSGs` (main) instead of `Multi-Agent-VSGs-discrete` will mislead you. Always verify `git rev-parse --abbrev-ref HEAD` returns `discrete-rebuild`.
+2. **Shadow warnings** — MATLAB picks the wrong v3 build if main worktree is on path before this branch. Use absolute paths in `addpath` calls.
+3. **`MaxDataPoints=2`** on To Workspace blocks — helper sets this for live RL training; in tests set to `'inf'` BEFORE `sim()` to capture full trace.
+4. **CCS blocks disabled** — wrapped in `if false` in build script. Phase 1.5 sub-task. Don't enable yet.
+5. **Continuous Integrator + FixedStepDiscrete = compile FAIL** (F9). Helper currently uses Continuous Integrator + FixedStepAuto (works). Don't change solver to FixedStepDiscrete without first migrating helper to Discrete-Time Integrator.
+
+---
+
 ## §1 Completed (Phase 0 + Pre-flights + Phase 1.1 + Phase 1.1+)
 
 ### Phase 0 — SMIB Discrete Oracle ✅ PASS

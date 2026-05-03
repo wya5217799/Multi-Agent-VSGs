@@ -1,5 +1,19 @@
 # Phase 1 Next Steps — Resume Guide
 
+> **⚠️ SUPERSEDED (2026-05-03 EOD)**
+>
+> This document was written when only Phase 1.1 header+powergui patches were done.
+> It is no longer the authoritative state. Phase 1.1+ network 3-phase migration
+> + pre-flight tests F11/F12/F13 + helper validation now done; 5/7 sources settle.
+>
+> **Current authoritative state:** [`2026-05-03_phase1_progress_and_next_steps.md`](./2026-05-03_phase1_progress_and_next_steps.md)
+>
+> Kept for history only. Patches A-D in §2 are mostly DONE; new sub-tasks (1.3a oscillation, 1.3b ω gap, 1.4 oracle, 1.5 CCS) take precedence.
+
+---
+
+## ORIGINAL CONTENT (historical) — 
+
 **Status as of 2026-05-03:** Phase 0 PASS (committed), Phase 1.1 partial (header + powergui only).
 
 ---

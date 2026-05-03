@@ -5,6 +5,14 @@
 **Worktree:** `C:\Users\27443\Desktop\Multi-Agent-VSGs-discrete`
 **Author:** user-authorized override; previous verdict at `quality_reports/plans/p0_discrete_oracle_verdict.md`
 
+> **2026-05-03 EOD UPDATE**: Phase 0 + Phase 1.1 + Phase 1.1+ network migration
+> done in 1 session. Original Phase 1 estimate (8-12 days) was conservative —
+> pre-flight micro-experiments (F11/F12/F13) accelerated integration 5-10×.
+> Current authoritative state + remaining work: see
+> [`2026-05-03_phase1_progress_and_next_steps.md`](./2026-05-03_phase1_progress_and_next_steps.md).
+> Phase plan below kept as initial design reference; estimates are stale but
+> structure (Phase 0 → Phase 1.1 → Phase 1.4) was correct.
+
 ---
 
 ## 1. Why this plan supersedes 2026-05-01 REJECT

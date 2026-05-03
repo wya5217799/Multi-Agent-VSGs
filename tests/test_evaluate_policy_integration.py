@@ -291,7 +291,19 @@ def test_evaluate_policy_uses_scenarios_override_when_provided() -> None:
 
 
 def test_evaluate_policy_settle_tol_override_changes_settling_classification() -> None:
-    """Tighter tol_hz → fewer episodes settle (synthetic omega exceeds tol)."""
+    """Tighter tol_hz → fewer episodes settle (synthetic omega exceeds tol).
+
+    Uses ``settle_window_s=0.1`` (= 2 steps at dt=0.04) so the loose-tol
+    path can actually count early steps as settled within a 10-step
+    episode. The default ``SETTLE_WINDOW_S=1.0`` would be 25 steps and
+    never trigger on a 10-step trace — making this test vacuous (both
+    loose and tight would return None for all episodes).
+
+    Per code reviewer feedback (I-1, 2026-05-03 follow-up commit): with
+    the original window=1.0s, both ``loose.settled_pct`` and
+    ``tight.settled_pct`` were 0.0 and the inequality was satisfied
+    trivially without exercising the tol_hz parameter.
+    """
     env = _StubKundurEnv()
     common = dict(
         n_scenarios=3, seed_base=42, policy_label="x",
@@ -300,15 +312,75 @@ def test_evaluate_policy_settle_tol_override_changes_settling_classification() -
         fnom=env._F_NOM, dt_s=env.DT,
         dist_min=-0.5, dist_max=0.5, bus_choices=(7, 9),
         scenarios_override=None, disturbance_mode="bus",
-        settle_window_s=SETTLE_WINDOW_S,
+        settle_window_s=0.1,  # 2 steps at dt=0.04 — fits inside 10-step episode
     )
     loose = evaluate_policy(env=env, settle_tol_hz=1.0, **common)
     env2 = _StubKundurEnv()  # fresh env so step counters reset
     tight = evaluate_policy(env=env2, settle_tol_hz=1e-9, **common)
-    # Loose tol → more episodes count as settled.
-    assert loose.summary["settled_pct"] >= tight.summary["settled_pct"]
-    # Tight tol on this synthetic ramp → never settled (None mean).
+    # Synthetic ramp |Δf|_max(t) = 0.05 * t * (scenario_idx+1) * 4 Hz.
+    # Loose tol=1.0 Hz with window=0.1s (2 steps):
+    #   - scenario 0 (s+1=1): t=1→0.20, t=2→0.40 → window [T,T] → settles at t=0
+    #   - scenario 1 (s+1=2): t=1→0.40, t=2→0.80 → window [T,T] → settles at t=0
+    #   - scenario 2 (s+1=3): t=1→0.60, t=2→1.20 → window [T,F] → never
+    # Expected: loose.settled_pct ≈ 66.67% (2/3); tight.settled_pct = 0% (none).
+    assert loose.summary["settled_pct"] > tight.summary["settled_pct"], (
+        f"loose tol should settle more episodes than tight: "
+        f"loose={loose.summary['settled_pct']}, "
+        f"tight={tight.summary['settled_pct']}"
+    )
+    assert loose.summary["settled_pct"] > 0.0, (
+        f"loose tol failed to settle any scenario: "
+        f"settled_pct={loose.summary['settled_pct']}"
+    )
+    assert tight.summary["settled_pct"] == 0.0
     assert tight.summary["settled_time_s_mean"] is None
+    # Loose-tol settlers all converge at t=0 (first window), so the mean
+    # settling time across settlers is 0.0s.
+    assert loose.summary["settled_time_s_mean"] == pytest.approx(0.0)
+
+
+def test_evaluate_policy_handles_early_termination(monkeypatch) -> None:
+    """terminated=True mid-episode → loop breaks; per-ep n_steps reflects
+    actual run length, not steps_per_ep_expected.
+
+    Per code reviewer feedback (I-2, 2026-05-03 follow-up): the default
+    stub never terminates, so the early-break branch in evaluate_policy
+    (`if terminated or truncated: break`) was untested. This stub
+    subclass terminates after step 5; the resulting per-episode metric
+    should record n_steps=5 (not the full 10-step expected length).
+    """
+    class _EarlyTermStub(_StubKundurEnv):
+        TERMINATE_AT_STEP: int = 5
+
+        def step(self, action):
+            obs, reward, _, _, info = super().step(action)
+            terminated = self._step >= self.TERMINATE_AT_STEP
+            return obs, reward, terminated, False, info
+
+    env = _EarlyTermStub()
+    result = evaluate_policy(
+        env=env, n_scenarios=2, seed_base=42, policy_label="x",
+        checkpoint_path=None,
+        select_action_fn=make_zero_action_selector(env.N_ESS, 2),
+        fnom=env._F_NOM, dt_s=env.DT,
+        dist_min=-0.5, dist_max=0.5, bus_choices=(7, 9),
+        scenarios_override=None, disturbance_mode="bus",
+        settle_tol_hz=SETTLE_TOL_HZ, settle_window_s=SETTLE_WINDOW_S,
+    )
+    expected_steps_full = int(round(env.T_EPISODE / env.DT))  # 10
+    assert expected_steps_full == 10
+    for ep in result.per_episode_metrics:
+        # Step 5 returns terminated=True → loop appended that step's omega
+        # then broke; n_steps == 5 (not 10).
+        assert ep.n_steps == 5, (
+            f"early-termination stub returned n_steps={ep.n_steps}, "
+            f"expected 5 (terminated at step 5)"
+        )
+        # Defensive zeros from helpers shouldn't trigger — n_steps > 0
+        # branch should run in evaluate_policy.
+        assert ep.r_f_global_unnormalized != 0.0 or all(
+            o == 0.0 for o in ep.r_f_global_per_agent
+        )  # not strict, just sanity
 
 
 # ---------------------------------------------------------------------------

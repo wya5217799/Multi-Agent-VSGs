@@ -421,13 +421,20 @@ def test_scenario_provenance_manifest_missing_raises(tmp_path) -> None:
         )
 
 
-def test_scenario_provenance_manifest_path_none_falls_to_inline() -> None:
-    """If scenario_set != 'none' but manifest_path is None → inline (defensive)."""
+def test_scenario_provenance_manifest_path_none_with_nonzero_scenario_set_raises() -> None:
+    """scenario_set != 'none' + manifest_path=None → ValueError.
+
+    Code reviewer feedback (I-3, 2026-05-03 follow-up): previously the
+    helper silently fell through to inline mode and rewrote
+    scenario_set='none' in the output dict — producing JSON that lied
+    about the requested scenario_set. Now refuses to dispatch this
+    invalid combination.
+    """
     from evaluation.runner_helpers import _compute_scenario_provenance
-    prov = _compute_scenario_provenance(
-        scenario_set="test", manifest_path=None, n_scenarios=10, seed_base=99,
-    )
-    assert prov["source"] == "inline_generator"
+    with pytest.raises(ValueError, match="requires a manifest_path"):
+        _compute_scenario_provenance(
+            scenario_set="test", manifest_path=None, n_scenarios=10, seed_base=99,
+        )
 
 
 def test_scenario_provenance_sha256_changes_when_content_changes(tmp_path) -> None:

@@ -213,6 +213,16 @@ def _compute_scenario_provenance(
             "manifest_sha256_16": h,
             "n_scenarios": int(n_scenarios),
         }
+    # Reject silent fall-through: if caller asked for a manifest mode
+    # (scenario_set != 'none') but failed to provide a path, refuse to
+    # silently rewrite their input to 'none'. Per code reviewer feedback
+    # (I-3, 2026-05-03 follow-up): the prior defensive fall-through
+    # produced JSON that lied about the requested scenario_set.
+    if scenario_set != "none" and manifest_path is None:
+        raise ValueError(
+            f"scenario_set={scenario_set!r} requires a manifest_path, "
+            f"got None. To use the inline generator, pass scenario_set='none'."
+        )
     # Inline mode (deterministic generator, seed_base + n_scenarios are sufficient
     # to reproduce the scenario list — see evaluation.metrics.generate_scenarios).
     return {

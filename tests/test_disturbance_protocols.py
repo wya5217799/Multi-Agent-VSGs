@@ -550,19 +550,27 @@ class TestResolver:
         with pytest.raises(ValueError, match="unknown disturbance_type"):
             resolve_disturbance("nope_not_a_type")
 
+    # Originally "14_plus_single_vsg"; registry has grown since (Z route
+    # 2026-05-03 added pm_step_single_es{1-4}, loadstep_paper_ccs_*,
+    # pm_step_hybrid_sg_es). Count is now 22. Name kept for git-blame tracing.
     def test_known_types_includes_all_14_plus_single_vsg(self) -> None:
         kt = known_disturbance_types()
-        assert len(kt) == 14
+        assert len(kt) == 22
         assert "pm_step_single_vsg" in kt
         for label in [
             "pm_step_proxy_bus7", "pm_step_proxy_bus9",
             "pm_step_proxy_random_bus",
             "pm_step_proxy_g1", "pm_step_proxy_g2", "pm_step_proxy_g3",
             "pm_step_proxy_random_gen",
+            "pm_step_single_es1", "pm_step_single_es2",
+            "pm_step_single_es3", "pm_step_single_es4",
             "loadstep_paper_bus14", "loadstep_paper_bus15",
             "loadstep_paper_random_bus",
             "loadstep_paper_trip_bus14", "loadstep_paper_trip_bus15",
             "loadstep_paper_trip_random_bus",
+            "loadstep_paper_ccs_bus7", "loadstep_paper_ccs_bus9",
+            "loadstep_paper_ccs_random_load",
+            "pm_step_hybrid_sg_es",
         ]:
             assert label in kt, f"missing {label}"
 

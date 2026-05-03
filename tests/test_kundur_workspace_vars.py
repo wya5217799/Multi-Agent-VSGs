@@ -14,6 +14,7 @@ import pytest
 from scenarios.kundur.workspace_vars import (
     PROFILE_CVS_V2,
     PROFILE_CVS_V3,
+    PROFILES_CVS_V3,
     IndexFamily,
     WorkspaceVarError,
     WorkspaceVarSpec,
@@ -159,10 +160,12 @@ class TestSchemaIntrospection:
         assert PROFILE_CVS_V3 in spec.profiles
         assert PROFILE_CVS_V2 in spec.profiles
 
-    def test_spec_for_per_sg_v3_only(self) -> None:
+    # Historically "v3_only"; Z route (2026-05-03) widened to PROFILES_CVS_V3
+    # (kundur_cvs_v3 + kundur_cvs_v3_discrete). Name kept for git-blame tracing.
+    def test_spec_for_per_sg_v3_family(self) -> None:
         spec = spec_for("PMG_STEP_AMP")
         assert spec.family is IndexFamily.PER_SG
-        assert spec.profiles == frozenset({PROFILE_CVS_V3})
+        assert spec.profiles == PROFILES_CVS_V3
 
 
 # ---------------------------------------------------------------------------

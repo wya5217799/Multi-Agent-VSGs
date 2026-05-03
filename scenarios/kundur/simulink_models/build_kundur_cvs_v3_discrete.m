@@ -58,6 +58,25 @@ function build_kundur_cvs_v3_discrete()
 % v2 contract preservation: scenario_id, n_agents, dt, contract.py constants
 % are NOT touched by the build. The build only emits a .slx + runtime .mat.
 
+% --- P0-shadow worktree assert (added 2026-05-04) ---
+% Cross-worktree shadowing protection. Main worktree at
+% C:\Users\27443\Desktop\Multi-Agent  VSGs (double-space) shares some helper
+% names (slx_run_quiet, etc.) with this worktree at
+% C:\Users\27443\Desktop\Multi-Agent-VSGs-discrete; if the wrong helpers win
+% the addpath race, build can silently use the wrong .m. Hard-fail here is
+% cheap insurance. Override via env var `MAVSGS_DISABLE_WORKTREE_ASSERT=1`.
+expected_root = 'C:/Users/27443/Desktop/Multi-Agent-VSGs-discrete';
+disable_assert = getenv('MAVSGS_DISABLE_WORKTREE_ASSERT');
+pwd_norm = strrep(pwd, '\', '/');
+if ~strcmpi(disable_assert, '1') && ~startsWith(pwd_norm, expected_root)
+    error('build_kundur_cvs_v3_discrete:wrong_worktree', ...
+        ['Build attempted from wrong worktree.\n' ...
+         '  pwd=%s\n  expected to start with: %s\n' ...
+         'Override with: setenv MAVSGS_DISABLE_WORKTREE_ASSERT=1'], ...
+        pwd, expected_root);
+end
+% --- end shadow assert ---
+
 mdl       = 'kundur_cvs_v3_discrete';
 out_dir   = fileparts(mfilename('fullpath'));
 out_slx   = fullfile(out_dir, [mdl '.slx']);
@@ -293,7 +312,7 @@ for k = 1:size(loadstep_defs, 1)
     if strcmp(lb, 'bus14')
         amp_default = double(248e6);   % Task 2: LS1 pre-engaged
     else
-        amp_default = double(0.0);     % LS2 not engaged at IC
+        amp_default = double(1.0);     % LS2 IC placeholder 1 W (breaker closed, avoids infinite-Z)
     end
     assignin('base', sprintf('LoadStep_amp_%s', lb), amp_default);
     assignin('base', sprintf('LoadStep_t_%s',   lb), double(5.0));   % s (informational)
@@ -446,12 +465,24 @@ for k = 1:size(loadstep_defs, 1)
     if ~skip_breaker
         % Initial state of breaker depends on whether load is pre-engaged at IC.
         % Bus 14 LS1: pre-engaged 248 MW (paper line 993, see loadstep_defs default).
-        % Bus 15 LS2: not engaged at IC.
-        % Convention: closed initially if amp_default > 0 (load conducting at IC).
+        % Bus 15 LS2: 1 W IC placeholder load (see note below).
+        % Convention: both breakers closed at IC so the RLC branch is always
+        % electrically connected (avoids infinite-impedance numerical issues and
+        % ensures runtime LoadStep_amp_bus15 writes are physically effective).
+        %
+        % bus15 LoadStep breaker InitialState='closed' (was 'open' pre-2026-05-04).
+        %   Reason: 'open' + Three-Phase Breaker SwitchTimes compile-frozen (F2)
+        %   made bus15 RLC permanently disconnected — runtime LoadStep_amp_bus15
+        %   writes were electrically inert. Closing keeps bus15 dispatchable.
+        %   IC placeholder load (LoadStep_amp_bus15 = 1 W) avoids infinite-impedance
+        %   numerical issues. NR perturbation: 1 W = 1e-8 sys-pu (Sbase=100 MVA),
+        %   above outer_tol=1e-9 by 10x but well below closure_tol=1e-3 by 5 orders.
+        %   NR closure check still passes; no re-derive of kundur_ic_cvs_v3.json needed.
+        %   See compute_kundur_cvs_v3_powerflow.m + plan 2026-05-04_loadstep_bus15_hybrid_dispatch_fix.md.
         if strcmp(bus_label, 'bus14')
             breaker_init = 'closed';   % LS1 pre-engaged
         else
-            breaker_init = 'open';     % LS2 not engaged; trigger CLOSES it
+            breaker_init = 'closed';   % LS2 closed at IC (1 W placeholder, see comment above)
         end
 
         % Three-Phase Breaker

@@ -898,24 +898,11 @@ class KundurSimulinkEnv(_KundurBaseEnv):
                     self._ws('LOAD_STEP_AMP', bus=14), 248e6
                 )
                 self.bridge.apply_workspace_var(
-                    self._ws('LOAD_STEP_AMP', bus=15), 0.0
+                    self._ws('LOAD_STEP_AMP', bus=15), 1.0  # 1 W IC placeholder (bus15 breaker closed)
                 )
-                # LOAD_STEP_T: reset breaker SwitchTimes to far-future so
-                # warmup (0..t_warmup_s) does not accidentally fire the
-                # breaker. The adapter (LoadStepRBranch.apply) writes a
-                # within-window time (t_now+0.1) after warmup completes.
-                # Without this reset a prior episode's trigger_t could be
-                # smaller than t_warmup_s on the next reset, causing warmup
-                # to fire the breaker with IC-state amp values (the bug
-                # diagnosed 2026-05-03). 100.0 s is well beyond any
-                # reasonable sim window. require_effective omitted — _ws()
-                # uses name-validity only (default).
-                self.bridge.apply_workspace_var(
-                    self._ws('LOAD_STEP_T', bus=14), 100.0
-                )
-                self.bridge.apply_workspace_var(
-                    self._ws('LOAD_STEP_T', bus=15), 100.0
-                )
+                # LOAD_STEP_T reset writes removed (2026-05-04): Three-Phase
+                # Breaker SwitchTimes is compile-frozen in Discrete + FastRestart
+                # per F2; runtime writes are silent no-ops. No env.reset action needed.
                 # CCS trip injection vars: name-valid in both v3 profiles.
                 # v3 Phasor: CCS Constant block reads it (name-valid, not
                 # effective due to ~0.01 Hz ESS-terminal signal).

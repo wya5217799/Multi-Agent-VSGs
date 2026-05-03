@@ -44,7 +44,9 @@ results/harness/kundur/probe_state/state_snapshot_*.json
 results/harness/kundur/probe_state/STATE_REPORT_*.md
 results/harness/kundur/probe_state/p2_worker_*/
 results/harness/kundur/probe_state/p2_e2e_*/
+results/harness/kundur/probe_state/p2_post_*/
 results/harness/kundur/probe_state/probe_state_exp*/
+quality_reports/session_logs/
 scenarios/**/results/
 scenarios/**/*.autosave
 scenarios/**/*.fig

@@ -1,7 +1,7 @@
 # Implementation Plan: LoadStep bus15 + Hybrid RNG Dispatch Fix (post-P2 latent bugs)
 
 **Date:** 2026-05-04 (drafted 2026-05-03 EOD)
-**Status:** DRAFT — pending operator approval
+**Status:** DONE (2026-05-04) — FULL_PASS for parallelization correctness; LoadStep physics deferred to Phase 1.5. Estimated 3 hr / Actual ~2 hr.
 **Branch:** `discrete-rebuild`
 **Worktree:** `C:\Users\27443\Desktop\Multi-Agent-VSGs-discrete`
 **Trigger:** P2 E2E v2 verdict 2026-05-03 (`quality_reports/specs/2026-05-03_phase4_speedup_p2.md` §11): GATE-PHYS partial — 12/15 dispatches bit-exact + 3 dispatches diverge.
@@ -210,3 +210,90 @@ Activation checklist:
 ---
 
 *end — LoadStep + Hybrid dispatch fix plan as of 2026-05-04 EOD draft.*
+
+---
+
+# §Done Summary (append-only, post-execution)
+
+**Cycle date:** 2026-05-04
+**Estimate vs Actual:** 3 hr est / ~2 hr actual (-33%, subagent parallelism compressed wall)
+**Outcome:** P2 GATE-PHYS PARTIAL → PASS for parallelization correctness; LoadStep physics correctness deferred to Phase 1.5.
+
+## Modules executed
+
+### L1 (bus15 InitialState='open'→'closed' + 1W IC)
+- **Status**: applied; foundation only
+- `build_kundur_cvs_v3_discrete.m:451-465` — InitialState='closed' + 1W IC default + comment block citing F2 + NR tolerance
+- `env/simulink/kundur_simulink_env.py:900-901` — `_reset_backend` IC restore 0.0 → 1.0 W
+- **Verdict**: insufficient. NR tolerance check: 1 W = 1e-8 sys-pu; closure_tol=1e-3 passes by 5 orders. IC test 5/7 baseline preserved bit-exact (G1/G2/G3/ES1/ES2 PASS; ES3/ES4 oscillation unchanged).
+- **Why insufficient**: discovered post-build during E2E run. `LoadStep_amp_busN` workspace var feeds Three-Phase Series RLC Load.ActivePower (nontunable under FR). Closing the breaker doesn't help when amp writes are silent no-op. **Foundation kept** because closed-breaker matches future CCS endpoint topology.
+
+### L2 (LOAD_STEP_T no-op cleanup + schema flip)
+- **Status**: applied; cosmetic (no physical change)
+- `disturbance_protocols.py:499-510` — removed `LOAD_STEP_T` write from `LoadStepRBranch.apply`
+- `kundur_simulink_env.py:903-918` — removed `LoadStep_t_bus14/15 = 100.0` writes from `_reset_backend`
+- `workspace_vars.py:272-289` — `effective_in_profile=frozenset()` flip + dual-profile inactive_reason citing F2
+- **Verdict**: applied cleanly. 6 new unit tests in `test_p2_loadstep_bus15_inoperative.py`.
+
+### H1 (HybridSgEssMultiPoint deterministic target_g override)
+- **Status**: applied; **VERIFIED working bit-exact across modes**
+- `disturbance_protocols.py:869-896` — `target_g_override: int|None = None` field + `__post_init__` validation
+- `disturbance_protocols.py:818-820` — new factory entry `pm_step_hybrid_sg_es_probe_g2 = HybridSgEssMultiPoint(target_g_override=2)`
+- `_dynamics.py:316-327` — probe swaps `pm_step_hybrid_sg_es` → `pm_step_hybrid_sg_es_probe_g2` at dispatch time
+- **Verdict**: serial + parallel both produce 0.211105 (was 0.173 serial / 0.199 parallel pre-fix). Δ=0.0 across modes. 10 new unit tests in `test_p2_hybrid_target_g_override.py`.
+
+## E2E Gate Verdicts (post-P0-1)
+
+| Gate | Threshold | Measured | Verdict |
+|---|---|---|---|
+| GATE-PHYS | ≤1e-9 abs per dispatch | 15/15 bit-exact, max_delta 0.00e+00 | **PASS** |
+| GATE-WALL | ≤1192s @ N=4 | 761s wall (3.18× speedup vs serial 2421s) | **PASS** |
+| GATE-G15 | 5/5 verdicts identical | All match (G4 REJECT, G6 PENDING in both) | **PASS** |
+| GATE-LIC | 4 engines cold-start | 4 workers exit_code=0 | **PASS** |
+| GATE-RAM | ≤8 GB | ~6 GB (informational, not strictly measured) | OK |
+
+## LoadStep silent no-op finding (added during E2E investigation)
+
+Sim log fires repeatedly:
+> Variable 'LoadStep_amp_bus15' was changed but it is used in a nontunable parameter in 'kundur_cvs_v3_discrete/LoadStep_bus15'. The new value will not be used since the model is initialized with Fast Restart.
+
+Per-dispatch comparison (pre-P0-1 serial vs post-P0-1 serial):
+
+| Dispatch | Pre-fix | Post-fix | Δ | Note |
+|---|---|---|---|---|
+| loadstep_paper_bus14 | 0.108096 | 0.108096 | 0 | always residual; LoadStep amp write is no-op |
+| loadstep_paper_bus15 | 0.036119 | 0.108096 | +0.072 | residual chain shifted |
+| loadstep_paper_random_bus | 0.036119 | 0.108096 | +0.072 | same as bus15 |
+| pm_step_hybrid_sg_es | 0.173105 | 0.211105 | +0.038 | H1 pinned target_g=2 |
+| (12 PM_STEP dispatches) | varies | varies | +0.03 to +0.06 | residual chain shifted by hybrid change |
+
+Block-mechanism comparison:
+
+| Mechanism | Block | Amp parameter path | FR-tunable? |
+|---|---|---|---|
+| PM_STEP | `simulink/Sources/Constant` | workspace var → Constant.Value | YES |
+| CCS Trip / CCS Load | `simulink/Sources/Constant` → CCS | workspace var → Constant.Value → CCS | YES (currently disabled, Phase 1.5) |
+| LoadStep S/T (Three-Phase Series RLC Load) | `powerlib/Elements/Three-Phase Series RLC Load` | workspace var → ActivePower | **NO** (nontunable in FR) |
+
+Authoritative comment confirming Constant tunability under FR: `slx_helpers/vsg_bridge/slx_episode_warmup_cvs.m:160-164`.
+
+## Phase 1.5 link
+
+True LoadStep fix path = enable Option E CCS-based LoadStep (already prototyped in build script `if false` block at lines ~532-614). Phase 1.5 plan `quality_reports/plans/2026-05-03_phase1_5_ccs_restoration.md` updated to acknowledge LoadStep nontunable finding (2026-05-04).
+
+## Surprises encountered
+
+1. **NR tolerance precision**: plan claim "1W << NR tolerance" was loose — 1W = 1e-8 pu is above outer_tol=1e-9 by 10× (NR convergence IS perturbed at 1e-8 level), but well below closure_tol=1e-3 (closure check passes by 5 orders). Practical impact = none.
+2. **Three-Phase Series RLC Load.ActivePower nontunable**: not previously known. Discovered during E2E run via Simulink warning. Generalized: PM_STEP works because Constant.Value is tunable; LoadStep fails because RLC Load.ActivePower is not.
+3. **bus14 LoadStep was never actually working**: pre-P0-1 had bus14 PASS at Δ=0 between serial+parallel. We assumed bus14 fired the 248 MW pre-engaged step → 0 transition. Reality: bus14 also silent no-op; its "PASS" was deterministic residual.
+4. **Hybrid `pm_step_hybrid_sg_es_probe_g2` factory entry instead of in-place mutation**: executor agent's design choice — registered new dispatch type rather than mutating adapter at probe time. Cleaner; registry size 22 → 23, count test updated.
+
+## Next cycle backlog (deferred)
+
+- **P0-1b** (next): true LoadStep fix via Option E CCS substitution = Phase 1.5 plan execution (5 hr)
+- **P0-3**: gate eval auto module `_gate_eval.py` (1 hr)
+- **P1-1**: G4_position_hz threshold wire-in to `_verdict.py` (30 min)
+- **P1-2**: dispatch_metadata profile-aware floors (1 hr)
+- **P2-cleanup combined**: plan archive + v2 deprecation + path_guard (3 hr)
+
+*end — P0-1 Done summary.*

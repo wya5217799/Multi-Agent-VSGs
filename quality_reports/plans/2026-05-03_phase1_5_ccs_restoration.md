@@ -2,10 +2,29 @@
 
 **Target path:** `quality_reports/plans/2026-05-03_phase1_5_ccs_restoration.md`
 **Date:** 2026-05-03
-**Status:** DRAFT — ready for user approval
+**Status:** DRAFT — BLOCKED ON DISCOVERY (2026-05-04): LoadStep amp also nontunable under FR. See §0.5 below before proceeding.
 **Branch:** `discrete-rebuild`
 **Supersedes (relevant section):** §5 row "1.5" of `2026-05-03_phase1_progress_and_next_steps.md`
 **Authored by:** planner subagent (2026-05-03), persisted by parent agent
+
+---
+
+## §0.5 P0-1 finding (added 2026-05-04): LoadStep amp also nontunable
+
+P0-1 cycle (`quality_reports/plans/2026-05-04_loadstep_bus15_hybrid_dispatch_fix.md`) discovered that the existing v3 Discrete LoadStep mechanism (Three-Phase Breaker + Three-Phase Series RLC Load) is **fundamentally broken under FastRestart**:
+
+- LoadStep_amp_busN writes go to `Three-Phase Series RLC Load.ActivePower` (nontunable in FR; sim log warning explicit)
+- Three-Phase Breaker `SwitchTimes` + `InitialState` also compile-frozen
+- Net effect: ALL LoadStep dispatches (bus14, bus15, random_bus) produce silent no-op; the values measured in P2 ADR (e.g., 0.108096 Hz) are residual oscillations from preceding dispatches, not actual LoadStep responses
+- Even bus14 (with 248 MW pre-engaged IC) was never producing the paper-anchor disturbance — its prior "PASS" was determinism of silent no-op, not real physics
+
+**Implication for Phase 1.5**: Option E CCS substitution (currently `if false` in build script lines ~532-614) is now the **only viable path** to make LoadStep dispatches physically operative. Both LS1 (Bus 14, paper trip 248 MW reduction) and LS2 (Bus 15, paper engage 188 MW addition) require the CCS-Constant pattern; the existing RLC Load + Breaker pattern cannot be salvaged within FastRestart.
+
+**Acceptance gate addition** (proposed): after Phase 1.5 lands, re-run probe Phase 4 with `--workers=1`; LoadStep dispatch dispatches must produce non-trivial Δf (e.g., bus14 ≥ 1 Hz @ 248 MW, bus15 ≥ 0.5 Hz @ 188 MW). If still silent no-op, root cause beyond CCS substitution.
+
+**P0-1 foundation kept**: `bus15 InitialState='closed' + 1W IC` (L1) is preserved as-is; closed-breaker topology matches future CCS endpoint where load is electrically connected at IC. No revert needed before Phase 1.5.
+
+**Reference**: `quality_reports/plans/2026-05-04_loadstep_bus15_hybrid_dispatch_fix.md` §Done Summary "LoadStep silent no-op finding".
 
 ---
 

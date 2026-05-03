@@ -496,18 +496,9 @@ class LoadStepRBranch:
             bridge.apply_workspace_var(k, 0.0)
             keys.append(k); values.append(0.0)
 
-        # LOAD_STEP_T: set breaker SwitchTimes to fire 0.1 s AFTER current
-        # sim time (post-warmup window). Without this write the breaker fires
-        # at the build-script default of t=5.0 s = end of warmup, using
-        # whatever LOAD_STEP_AMP was baked at IC — the adapter's AMP write
-        # (above) arrives too late. require_effective=False: schema marks
-        # this effective only in v3 Discrete; adapter must not gate on
-        # effectiveness so the same code path works under both v3 profiles
-        # (Phasor ignores it; Discrete uses it). Only write for the chosen bus.
-        k_t = ws("LOAD_STEP_T", bus=ls_bus_int, require_effective=False)
-        trigger_t = float(t_now) + 0.1
-        bridge.apply_workspace_var(k_t, trigger_t)
-        keys.append(k_t); values.append(trigger_t)
+        # LOAD_STEP_T workspace-var write removed (2026-05-04): Three-Phase Breaker
+        # SwitchTimes is compile-frozen in Discrete + FastRestart per F2; runtime
+        # writes are silent no-ops. Breaker timing locked at compile via build script.
 
         # Silence PM + PMG (LoadStep order: silence PM, then PMG)
         kp, vp = _silence_pm(bridge, ws, t_now, cfg.n_agents)
@@ -826,6 +817,11 @@ _DISPATCH_TABLE: dict[str, Callable[[], DisturbanceProtocol]] = {
     # design doc (docs/superpowers/plans/2026-04-30-option-f-design.md).
     "pm_step_hybrid_sg_es":
         lambda: HybridSgEssMultiPoint(),
+    # 2026-05-04 H1 probe-pinned variant: target_g_override=2 (G2, middle SG).
+    # Used by probe runs to eliminate RNG state divergence across engine instances
+    # (serial vs parallel). Training code always uses pm_step_hybrid_sg_es (RNG).
+    "pm_step_hybrid_sg_es_probe_g2":
+        lambda: HybridSgEssMultiPoint(target_g_override=2),
 }
 
 
@@ -876,6 +872,10 @@ class HybridSgEssMultiPoint:
     # compensate pushes silent ES OPPOSITE way → 4 agents split mode-shape
     # → r_f differential preserved.
     compensate_sign_flip: bool = True
+    # 2026-05-04 H1 fix: optional probe-only override for target_g.
+    # When set to 1/2/3, bypasses RNG and produces deterministic dispatch.
+    # Training code (target_g_override=None, default) preserves existing RNG.
+    target_g_override: int | None = None
 
     def __post_init__(self) -> None:
         if not (0.0 < self.sg_share < 1.0):
@@ -894,6 +894,12 @@ class HybridSgEssMultiPoint:
                 f"HybridSgEssMultiPoint: target_g must be 1/2/3 or sentinel, "
                 f"got {self.target_g!r}"
             )
+        if self.target_g_override is not None:
+            if self.target_g_override not in (1, 2, 3):
+                raise ValueError(
+                    f"target_g_override must be 1, 2, or 3 (G1/G2/G3); "
+                    f"got {self.target_g_override}"
+                )
 
     def apply(
         self,
@@ -905,8 +911,14 @@ class HybridSgEssMultiPoint:
     ) -> DisturbanceTrace:
         ws = _make_ws(cfg.model_name, cfg.n_agents)
 
-        # Resolve G target
-        if isinstance(self.target_g, str):
+        # Resolve G target (target_g_override takes precedence over target_g/RNG)
+        if self.target_g_override is not None:
+            if self.target_g_override not in (1, 2, 3):
+                raise ValueError(
+                    f"target_g_override must be 1, 2, or 3 (G1/G2/G3); got {self.target_g_override}"
+                )
+            target_g = int(self.target_g_override)
+        elif isinstance(self.target_g, str):
             target_g = int(rng.integers(1, 4))  # uniform 1, 2, 3
         else:
             target_g = int(self.target_g)

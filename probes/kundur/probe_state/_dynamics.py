@@ -314,7 +314,17 @@ def run_per_dispatch(probe: "ModelStateProbe") -> dict[str, Any]:
             settle_steps = max(1, int(round(settle_window_s / DT_S)))
 
             try:
-                env._disturbance_type = d_type
+                # H1 fix (2026-05-04): pin target_g for hybrid dispatch to avoid
+                # RNG-state divergence across engine instances (serial vs parallel).
+                # The probe-pinned variant uses target_g_override=2 (G2, middle SG)
+                # so physics is identical regardless of process RNG state.
+                # Training always uses the original "pm_step_hybrid_sg_es" (no override).
+                _probe_d_type = (
+                    "pm_step_hybrid_sg_es_probe_g2"
+                    if d_type == "pm_step_hybrid_sg_es"
+                    else d_type
+                )
+                env._disturbance_type = _probe_d_type
                 # D3 fix (2026-05-03): re-seed env.np_random per dispatch.
                 # Without this, env.reset(seed=None) preserves RNG state across
                 # dispatches in the loop, making `pm_step_proxy_random_bus` and

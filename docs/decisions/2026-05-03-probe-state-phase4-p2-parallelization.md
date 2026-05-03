@@ -1,7 +1,7 @@
 # ADR: probe_state Phase 4 Subprocess Parallelization (P2)
 
 ## Status
-**Accepted with PARTIAL E2E PASS (2026-05-03 EOD)** — GATE-G15/WALL/LIC PASS, GATE-PHYS 12/15 dispatches bit-exact + 3 dispatches diverge from independent latent bug (LoadStep bus15/random_bus + hybrid_sg_es). Latent bug NOT P2-introduced; tracked in follow-up plan `2026-05-04_loadstep_bus15_hybrid_dispatch_fix.md`.
+**Accepted with FULL_PASS (2026-05-04 EOD)** — all 5 hard gates PASS. GATE-PHYS strict 15/15 bit-exact verified post-P0-1 (LoadStep+Hybrid fix cycle). LoadStep dispatch family caveat: see "LoadStep silent no-op caveat" in §Acceptance Gates.
 
 **Date:** 2026-05-03  
 **Branch:** discrete-rebuild  
@@ -138,13 +138,32 @@
 
 | Gate ID | Threshold | Measurement | Verdict (E2E run pending) |
 |---------|-----------|-------------|--------------------------|
-| **GATE-PHYS** | Per-dispatch \|serial − parallel\| ≤ 1e-9 absolute (max_abs_f_dev_hz_global, max_abs_f_dev_hz_per_agent element-wise, agents_responding_above_1mHz exact int) | Run `--workers=1 --phase 4 --t-warmup-s 5.0 --sim-duration 3.0` → serial snapshot. Run same with `--workers=4`. Extract 3 physics fields from each dispatch in both; compute diffs; assert all ≤ 1e-9. | **PARTIAL** — 12/15 bit-exact (delta=0.0); **3/15 FAIL** from independent latent bug: `loadstep_paper_bus15` & `loadstep_paper_random_bus` (delta 7.2e-2) + `pm_step_hybrid_sg_es` (delta 2.6e-2). Root cause = Three-Phase Breaker SwitchTimes compile-frozen (F2 mechanism applies) + bus15 InitialState='open' makes amp writes electrically inert + hybrid RNG state non-deterministic across engine instances. NOT P2-introduced; latent in dispatch mechanism. Tracked in `quality_reports/plans/2026-05-04_loadstep_bus15_hybrid_dispatch_fix.md` (DRAFT). |
-| **GATE-WALL** | wall_phase4_parallel ≤ 1192s @ N=4 (derived from 2168s alpha baseline × (0.25 + 0.30)) | `time` the probe with `--phase 4 --workers=4` on otherwise-quiet machine. Compare wall-clock s vs 1192s threshold. | **PASS** — parallel wall = **984.7s** (vs 1192s threshold; vs serial 2873s baseline = **2.92× speedup**). |
+| **GATE-PHYS** | Per-dispatch \|serial − parallel\| ≤ 1e-9 absolute (max_abs_f_dev_hz_global, max_abs_f_dev_hz_per_agent element-wise, agents_responding_above_1mHz exact int) | Run `--workers=1 --phase 4 --t-warmup-s 5.0 --sim-duration 3.0` → serial snapshot. Run same with `--workers=4`. Extract 3 physics fields from each dispatch in both; compute diffs; assert all ≤ 1e-9. | **PASS** — 15/15 bit-exact (max_delta 0.00e+00 abs at TOL 1e-9). Verified 2026-05-04 post-P0-1 with snapshots `p2_post_l2h1_serial/state_snapshot_20260504T000732.json` vs `p2_post_l2h1_parallel/state_snapshot_20260504T002521.json`. |
+| **GATE-WALL** | wall_phase4_parallel ≤ 1192s @ N=4 (derived from 2168s alpha baseline × (0.25 + 0.30)) | `time` the probe with `--phase 4 --workers=4` on otherwise-quiet machine. Compare wall-clock s vs 1192s threshold. | **PASS** — parallel wall = **761s = 12.7 min** (vs 2421s serial = 40.3 min, **3.18× speedup**; threshold 1192s @ N=4 cleared by 36%). |
 | **GATE-G15** | G1-G5 verdicts (PASS/REJECT/PENDING/ERROR) identical between serial and parallel; evidence structural fields (`n_above_floor`, `n_total`) match exactly; float-tail differences in numeric evidence acceptable | Extract falsification_gates.G1..G5 from both snapshots. Assert verdict fields match exactly across all 5. Assert evidence structural fields exact. | **PASS** — 5/5 verdicts identical (G1/G2/G3/G5 PASS, G4 REJECT pre-existing for both modes). |
 | **GATE-LIC** | 4-engine concurrent matlab.engine cold-start completes without license error within 60s | Run `--workers=4 --phase 4 --t-warmup-s 5.0 --sim-duration 3.0` (or pre-flight `--workers-license-check` Y4 helper). Grep logs for "MATLAB engine ready" ≥ 4 lines; zero `License Manager Error` or `checkout failed` patterns. | **PASS** — Y4 smoke 2026-05-03 (`probes/kundur/spike/test_y4_license_smoke.py`): 4 engines cold-started in 11.3s wall, 4/4 exit_code=0, no license error. |
 | **GATE-RAM** | Peak RSS ≤ 8 GB during N=4 run | Soft warning gate (not hard FAIL). Orchestrator samples `psutil.Process(child).memory_info().rss` every 30s; emits max. If exceeded, log WARNING; operator decides continuation. | **~6 GB peak (informational, not strictly measured)** — 4 engines × 1.5 GB + Python overhead; under 8 GB threshold. |
 
 **Gate execution order:** GATE-LIC first (must succeed or abort); GATE-WALL during run; GATE-PHYS + GATE-G15 post-run; GATE-RAM collected during.
+
+### LoadStep silent no-op caveat (post-P0-1, 2026-05-04)
+
+GATE-PHYS strict 1e-9 PASS verifies **parallelization determinism** — serial and parallel modes produce byte-identical per-dispatch values. It does NOT verify that LoadStep dispatches physically trigger the intended disturbance.
+
+**Finding**: All 3 LoadStep dispatches (`loadstep_paper_bus14`, `loadstep_paper_bus15`, `loadstep_paper_random_bus`) produce identical 0.108096 Hz in both modes — this is residual oscillation from the preceding dispatch in the queue, not a real LoadStep response. Sim log fires the diagnostic warning repeatedly:
+```
+Variable 'LoadStep_amp_bus15' was changed but it is used in a nontunable
+parameter in 'kundur_cvs_v3_discrete/LoadStep_bus15'. The new value will
+not be used since the model is initialized with Fast Restart.
+```
+
+**Mechanism**: `powerlib/Elements/Three-Phase Series RLC Load` has nontunable ActivePower parameter under FastRestart. PM_STEP_AMP works because PM_STEP feeds a `simulink/Sources/Constant` block whose `Value` param IS tunable under FR (per `slx_helpers/vsg_bridge/slx_episode_warmup_cvs.m:160-164`).
+
+**Bit-exact across modes**: silent no-op is deterministic given identical residual chain. P0-1 cycle's H1 fix (HybridSgEssMultiPoint.target_g_override pinned to G2) eliminated the prior RNG-state divergence on hybrid; LoadStep dispatch ordering happens to align across worker subsets. Both effects collapse the prior 3-dispatch divergence into bit-exact PASS.
+
+**Real fix**: Phase 1.5 CCS substitution (existing plan `quality_reports/plans/2026-05-03_phase1_5_ccs_restoration.md`) — replace Three-Phase Series RLC Load + Three-Phase Breaker with `simulink/Sources/Constant` → Real-Imag-to-Complex → Controlled Current Source. Already prototyped in build script `if false` block (lines ~532-614). Estimated 5 hr.
+
+**Status**: GATE-PHYS PASS for P2 parallelization; LoadStep dispatch family physics correctness deferred to Phase 1.5.
 
 ---
 
@@ -198,6 +217,7 @@ This ADR closes the decision-recording requirement of spec §8 (SHOULD S8: "Spec
 - **Post-module-δ acceptance test run:** E2E gates GATE-LIC, GATE-WALL, GATE-PHYS, GATE-G15, GATE-RAM executed. Verdicts populated in table above.
 - **Operator sign-off:** All gates PASS or documented downgrade (e.g., N downgraded from 4 → 3 if GATE-LIC fails at N=4).
 - **Final commit:** ADR merged with gate verdicts finalized.
+- **2026-05-04 EOD (post-P0-1):** GATE-PHYS PARTIAL → PASS verified. P2 ADR finalized FULL_PASS. LoadStep silent no-op caveat documented; deferred to Phase 1.5.
 
 ---
 

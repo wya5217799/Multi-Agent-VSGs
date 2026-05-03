@@ -274,16 +274,23 @@ _SCHEMA: dict[str, WorkspaceVarSpec] = {
         family=IndexFamily.PER_BUS,
         profiles=PROFILES_CVS_V3,
         description=(
-            "Three-Phase Breaker SwitchTimes trigger time (s) at bus 14 or "
-            "15. v3 Discrete: sets when the breaker fires to apply the load "
-            "step. env.reset writes 100.0 (far-future, prevents warmup "
-            "trigger); adapter writes t_now+0.1 after warmup completes."
+            "Inactive in all profiles; documented for legacy reference only. "
+            "Three-Phase Breaker SwitchTimes is compile-frozen in Discrete + "
+            "FastRestart per F2; runtime LOAD_STEP_T writes are silent no-ops. "
+            "Breaker timing is locked at build time via the build script. "
+            "See plan 2026-05-04_loadstep_bus15_hybrid_dispatch_fix.md."
         ),
-        effective_in_profile=frozenset({PROFILE_CVS_V3_DISCRETE}),
+        effective_in_profile=frozenset(),
         inactive_reason={
             PROFILE_CVS_V3: (
-                "Phasor LoadStep R-block has compile-frozen Resistance — "
-                "trigger time is irrelevant. See LOAD_STEP_AMP inactive_reason."
+                "Three-Phase Breaker SwitchTimes compile-frozen in Discrete+FastRestart per F2; "
+                "runtime LOAD_STEP_T writes are silent no-ops. Breaker timing locked at build time "
+                "via build script. See plan 2026-05-04_loadstep_bus15_hybrid_dispatch_fix.md."
+            ),
+            PROFILE_CVS_V3_DISCRETE: (
+                "Three-Phase Breaker SwitchTimes compile-frozen in Discrete+FastRestart per F2; "
+                "runtime LOAD_STEP_T writes are silent no-ops. Breaker timing locked at build time "
+                "via build script. See plan 2026-05-04_loadstep_bus15_hybrid_dispatch_fix.md."
             ),
         },
     ),

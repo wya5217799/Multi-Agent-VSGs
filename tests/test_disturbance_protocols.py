@@ -552,10 +552,11 @@ class TestResolver:
 
     # Originally "14_plus_single_vsg"; registry has grown since (Z route
     # 2026-05-03 added pm_step_single_es{1-4}, loadstep_paper_ccs_*,
-    # pm_step_hybrid_sg_es). Count is now 22. Name kept for git-blame tracing.
+    # pm_step_hybrid_sg_es; H1 2026-05-04 added pm_step_hybrid_sg_es_probe_g2).
+    # Count is now 23. Name kept for git-blame tracing.
     def test_known_types_includes_all_14_plus_single_vsg(self) -> None:
         kt = known_disturbance_types()
-        assert len(kt) == 22
+        assert len(kt) == 23
         assert "pm_step_single_vsg" in kt
         for label in [
             "pm_step_proxy_bus7", "pm_step_proxy_bus9",
@@ -571,6 +572,7 @@ class TestResolver:
             "loadstep_paper_ccs_bus7", "loadstep_paper_ccs_bus9",
             "loadstep_paper_ccs_random_load",
             "pm_step_hybrid_sg_es",
+            "pm_step_hybrid_sg_es_probe_g2",
         ]:
             assert label in kt, f"missing {label}"
 

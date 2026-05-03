@@ -3,6 +3,11 @@ __pycache__/
 *.pyo
 .claude/
 _archive/
+# Exception: superseded plans/gates are archived in-tree for git history audit
+!quality_reports/plans/_archive/
+!quality_reports/plans/_archive/**
+!quality_reports/gates/_archive/
+!quality_reports/gates/_archive/**
 .worktrees/
 
 # ANDES output

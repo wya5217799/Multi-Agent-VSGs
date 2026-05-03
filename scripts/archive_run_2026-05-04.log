@@ -1,0 +1,97 @@
+archive_superseded_plans.py [APPLY]
+  plans dir : C:\Users\27443\Desktop\Multi-Agent-VSGs-discrete\quality_reports\plans
+  gates dir : C:\Users\27443\Desktop\Multi-Agent-VSGs-discrete\quality_reports\gates
+
+=== Scanning plans/ ===
+  [candidate:rule3:hardcoded-glob] 2026-04-26_cvs_v3_topology_spec.md
+  [candidate:rule3:hardcoded-glob] 2026-04-26_kundur_cvs_v3_phase3_plan.md
+  [candidate:rule3:hardcoded-glob] 2026-04-26_kundur_cvs_v3_phase4_phase5_roadmap.md
+  [candidate:rule3:hardcoded-glob] 2026-04-26_kundur_cvs_v3_phase4_plan.md
+  [candidate:rule3:hardcoded-glob] 2026-04-26_kundur_cvs_v3_plan.md
+  [keep]               2026-04-27_simulink_tools_mcp_optimization_plan.md
+  [keep]               2026-04-28-kundur-cvs-v3-paper-alignment-task-list-FINAL.md
+  [candidate:rule3:hardcoded-glob] 2026-04-28-task-1-w2-to-bus8-execution-plan.md
+  [candidate:rule3:hardcoded-glob] 2026-04-28-task-2-bus14-preengage-execution-plan.md
+  [candidate:rule3:hardcoded-glob] 2026-04-28-task-3-action-range-doc-execution-plan.md
+  [keep]               2026-04-30_option_g_switch_rbank_phasor_first_then_discrete.md
+  [keep]               2026-04-30_probe_state_kundur_cvs.md
+  [keep]               2026-05-01_probe_state_phase_B.md
+  [keep]               2026-05-01_probe_state_phase_C.md
+  [keep]               2026-05-02_ode_paper_alignment.md
+  [retain:date>=2026-05-03] 2026-05-03_discrete_rebuild_phase0_smib_first.md
+  [retain:explicit]    2026-05-03_engineering_philosophy.md
+  [retain:date>=2026-05-03] 2026-05-03_paper_eval_metrics_extract.md
+  [retain:date>=2026-05-03] 2026-05-03_paper_eval_optimization.md
+  [retain:date>=2026-05-03] 2026-05-03_phase0_smib_discrete_verdict.md
+  [retain:explicit]    2026-05-03_phase1_5_ccs_restoration.md
+  [retain:date>=2026-05-03] 2026-05-03_phase1_next_steps.md
+  [retain:explicit]    2026-05-03_phase1_progress_and_next_steps.md
+  [retain:explicit]    2026-05-03_phase4_speedup_p2_plan.md
+  [retain:date>=2026-05-03] 2026-05-03_phase_b_extended_module_selection.md
+  [retain:date>=2026-05-03] 2026-05-03_phase_b_findings_cvs_discrete_unlock.md
+  [retain:explicit]    2026-05-04_loadstep_bus15_hybrid_dispatch_fix.md
+  [retain:explicit]    2026-05-04_p0-3_gate_eval_auto.md
+  [retain:date>=2026-05-03] 2026-05-04_p1-1_g4_threshold_wireup.md
+  [keep]               option_g_day0_dry_run_notes.md
+  [keep]               option_g_day0_feasibility_audit.md
+  [keep]               p0_discrete_oracle_verdict.md
+
+=== Scanning gates/ ===
+  [keep]               2026-04-25_kundur_cvs_p1_structure.md
+  [keep]               2026-04-25_kundur_cvs_p2_episode.md
+  [keep]               2026-04-25_kundur_cvs_p3_smoke.md
+  [keep]               2026-04-25_kundur_cvs_stage1_handoff.md
+  [keep]               2026-04-25_kundur_cvs_stage2_readiness_plan.md
+  [candidate:rule3:hardcoded-glob] 2026-04-26_kundur_cvs_g3prep_A_verdict.md
+  [candidate:rule3:hardcoded-glob] 2026-04-26_kundur_cvs_g3prep_B_verdict.md
+  [candidate:rule3:hardcoded-glob] 2026-04-26_kundur_cvs_g3prep_C_verdict.md
+  [candidate:rule3:hardcoded-glob] 2026-04-26_kundur_cvs_g3prep_D_config_verdict.md
+  [candidate:rule3:hardcoded-glob] 2026-04-26_kundur_cvs_g3prep_DE_smoke_spec.md
+  [candidate:rule3:hardcoded-glob] 2026-04-26_kundur_cvs_g3prep_E_AB_smoke_PASS.md
+  [candidate:rule3:hardcoded-glob] 2026-04-26_kundur_cvs_g3prep_E_smoke_FAIL.md
+  [candidate:rule3:hardcoded-glob] 2026-04-26_kundur_cvs_g3prep_F_50ep_observation_spec.md
+  [candidate:rule3:hardcoded-glob] 2026-04-26_kundur_cvs_g3prep_F_50ep_observation_VERDICT.md
+  [candidate:rule3:hardcoded-glob] 2026-04-26_kundur_cvs_g3prep_F_OD3_disturbance_reach_VERDICT.md
+  [candidate:rule3:hardcoded-glob] 2026-04-26_kundur_cvs_g3prep_F_OD3_FIX_design_note.md
+  [candidate:rule3:hardcoded-glob] 2026-04-26_kundur_cvs_g3prep_F_OD3_FIX_resanity_VERDICT.md
+  [candidate:rule3:hardcoded-glob] 2026-04-26_kundur_cvs_g3prep_F_OD3_FIX_VERDICT.md
+  [keep]               2026-04-26_kundur_cvs_gate3_entry_plan.md
+  [keep]               2026-04-26_kundur_cvs_p4_d1_topology.md
+  [keep]               2026-04-26_kundur_cvs_p4_d2_nr_ic.md
+  [keep]               2026-04-26_kundur_cvs_p4_d3_gate1.md
+  [keep]               2026-04-26_kundur_cvs_p4_d4_gate2.md
+  [keep]               2026-04-26_kundur_cvs_p4_d4_rev_gate2.md
+  [keep]               2026-04-26_kundur_cvs_p4_d4p2_readonly_audit.md
+  [keep]               2026-04-26_ne39_baseline_snapshot.md
+
+--- Archiving 8 plan(s) ---
+  [moved] 2026-04-26_cvs_v3_topology_spec.md -> _archive/2026-04-26_cvs_v3_topology_spec.md
+  [moved] 2026-04-26_kundur_cvs_v3_phase3_plan.md -> _archive/2026-04-26_kundur_cvs_v3_phase3_plan.md
+  [moved] 2026-04-26_kundur_cvs_v3_phase4_phase5_roadmap.md -> _archive/2026-04-26_kundur_cvs_v3_phase4_phase5_roadmap.md
+  [moved] 2026-04-26_kundur_cvs_v3_phase4_plan.md -> _archive/2026-04-26_kundur_cvs_v3_phase4_plan.md
+  [moved] 2026-04-26_kundur_cvs_v3_plan.md -> _archive/2026-04-26_kundur_cvs_v3_plan.md
+  [moved] 2026-04-28-task-1-w2-to-bus8-execution-plan.md -> _archive/2026-04-28-task-1-w2-to-bus8-execution-plan.md
+  [moved] 2026-04-28-task-2-bus14-preengage-execution-plan.md -> _archive/2026-04-28-task-2-bus14-preengage-execution-plan.md
+  [moved] 2026-04-28-task-3-action-range-doc-execution-plan.md -> _archive/2026-04-28-task-3-action-range-doc-execution-plan.md
+
+--- Archiving 13 gate(s) ---
+  [moved] 2026-04-26_kundur_cvs_g3prep_A_verdict.md -> _archive/2026-04-26_kundur_cvs_g3prep_A_verdict.md
+  [moved] 2026-04-26_kundur_cvs_g3prep_B_verdict.md -> _archive/2026-04-26_kundur_cvs_g3prep_B_verdict.md
+  [moved] 2026-04-26_kundur_cvs_g3prep_C_verdict.md -> _archive/2026-04-26_kundur_cvs_g3prep_C_verdict.md
+  [moved] 2026-04-26_kundur_cvs_g3prep_D_config_verdict.md -> _archive/2026-04-26_kundur_cvs_g3prep_D_config_verdict.md
+  [moved] 2026-04-26_kundur_cvs_g3prep_DE_smoke_spec.md -> _archive/2026-04-26_kundur_cvs_g3prep_DE_smoke_spec.md
+  [moved] 2026-04-26_kundur_cvs_g3prep_E_AB_smoke_PASS.md -> _archive/2026-04-26_kundur_cvs_g3prep_E_AB_smoke_PASS.md
+  [moved] 2026-04-26_kundur_cvs_g3prep_E_smoke_FAIL.md -> _archive/2026-04-26_kundur_cvs_g3prep_E_smoke_FAIL.md
+  [moved] 2026-04-26_kundur_cvs_g3prep_F_50ep_observation_spec.md -> _archive/2026-04-26_kundur_cvs_g3prep_F_50ep_observation_spec.md
+  [moved] 2026-04-26_kundur_cvs_g3prep_F_50ep_observation_VERDICT.md -> _archive/2026-04-26_kundur_cvs_g3prep_F_50ep_observation_VERDICT.md
+  [moved] 2026-04-26_kundur_cvs_g3prep_F_OD3_disturbance_reach_VERDICT.md -> _archive/2026-04-26_kundur_cvs_g3prep_F_OD3_disturbance_reach_VERDICT.md
+  [moved] 2026-04-26_kundur_cvs_g3prep_F_OD3_FIX_design_note.md -> _archive/2026-04-26_kundur_cvs_g3prep_F_OD3_FIX_design_note.md
+  [moved] 2026-04-26_kundur_cvs_g3prep_F_OD3_FIX_resanity_VERDICT.md -> _archive/2026-04-26_kundur_cvs_g3prep_F_OD3_FIX_resanity_VERDICT.md
+  [moved] 2026-04-26_kundur_cvs_g3prep_F_OD3_FIX_VERDICT.md -> _archive/2026-04-26_kundur_cvs_g3prep_F_OD3_FIX_VERDICT.md
+
+=== Summary ===
+  Plans archived : 8
+  Gates archived : 13
+  Total          : 21
+
+  Done.

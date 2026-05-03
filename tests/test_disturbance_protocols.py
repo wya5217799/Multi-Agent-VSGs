@@ -67,56 +67,50 @@ def make_bridge(profile: str = "kundur_cvs_v3") -> FakeBridge:
 
 
 # ---------------------------------------------------------------------------
-# Fixture: temporarily promote LoadStep family to effective in v3.
+# Fixture: loadstep_effective_v3
 #
-# Production schema marks LOAD_STEP_AMP / LOAD_STEP_TRIP_AMP as name-valid
-# but NOT physically-effective in v3 (R-block compile-freeze, CCS weak
-# signal — see NOTES.md §"2026-04-29 Eval 协议偏差"). Adapter writes
-# pass require_effective=True and raise WorkspaceVarError BEFORE any
-# bridge.apply_workspace_var call.
-#
-# To unit-test the WRITE VALUES (R-A LS1 IGNORE-magnitude, R-B LS2 abs(),
-# R-F silence, R-G symmetric paths), we need the adapter to actually
-# write. This fixture replaces the LoadStep entries in workspace_vars._SCHEMA
-# with promoted versions for the test duration. Restored automatically by
-# pytest's monkeypatch teardown.
-#
-# This fixture is test-only; it does NOT change production behavior or
-# the C3 hard rule that effective_in_profile is advanced only by physics
-# fix. The byte-level regression test (which compares oracle vs adapter
-# raise/no-raise behavior) does NOT use this fixture — it asserts the
-# production contract: both paths raise WorkspaceVarError identically.
+# Phase 1.5 reroute (2026-05-04): LoadStepRBranch now writes PM_STEP_AMP
+# directly (paper-lumped ΔP via Pm_step infrastructure). LOAD_STEP_AMP and
+# LOAD_STEP_TRIP_AMP are permanently deprecated (effective_in_profile =
+# frozenset() for all profiles). This fixture is retained as a no-op stub
+# so any remaining fixture references in test parametrization do not fail
+# at collection time. Tests that previously required the fixture to
+# promote LoadStep to effective are updated to work without it (since
+# LoadStepRBranch no longer uses those vars at all).
 # ---------------------------------------------------------------------------
 
 
 @pytest.fixture
-def loadstep_effective_v3(monkeypatch):
-    """Promote LOAD_STEP_AMP / LOAD_STEP_TRIP_AMP to effective in v3."""
-    from scenarios.kundur import workspace_vars
-    original = workspace_vars._SCHEMA
-    for key in ("LOAD_STEP_AMP", "LOAD_STEP_TRIP_AMP"):
-        old = original[key]
-        promoted = workspace_vars.WorkspaceVarSpec(
-            template=old.template,
-            family=old.family,
-            profiles=old.profiles,
-            description=old.description,
-            effective_in_profile=old.profiles,  # promote
-            inactive_reason={},
-        )
-        monkeypatch.setitem(workspace_vars._SCHEMA, key, promoted)
+def loadstep_effective_v3(monkeypatch):  # noqa: ARG001
+    """No-op stub: Phase 1.5 reroute removed CCS/RLC LoadStep writes.
+
+    LoadStepRBranch now routes through PM_STEP_AMP (always effective).
+    This fixture is retained to avoid fixture-not-found errors in any
+    parametrized tests that still reference it; it does nothing.
+    """
     yield
 
 
 # ---------------------------------------------------------------------------
-# R-A: LS1 IGNORE magnitude — bus14 trip always writes 0.0
+# R-A: LS1 bus14 trip — Phase 1.5 reroute Pm_step semantics
+#
+# Old semantic (P0-1c CCS, abandoned): wrote LOAD_STEP_TRIP_AMP[14].
+# New semantic (Phase 1.5 reroute 2026-05-04): writes PM_STEP_AMP@ES3
+# (Pm_step_amp_3) with positive magnitude (freq UP = paper LS1).
+# abs() applied: negative input → still positive Pm_step_amp_3.
 # ---------------------------------------------------------------------------
 
 
-class TestRiskA_LS1_IgnoresMagnitude:
-    @pytest.mark.parametrize("magnitude", [+0.5, -0.5, +5.0, -5.0, +0.0])
-    def test_bus14_trip_load_step_amp_is_zero(
-        self, magnitude: float, loadstep_effective_v3
+class TestRiskA_LS1_PmStepSemantics:
+    @pytest.mark.parametrize("magnitude,expected_pm", [
+        (+0.5, +0.5),
+        (-0.5, +0.5),   # negative magnitude → abs() → positive Pm_step
+        (+5.0, +5.0),
+        (-5.0, +5.0),
+        (+0.0, 0.0),
+    ])
+    def test_bus14_trip_writes_pm_step_amp_3_positive(
+        self, magnitude: float, expected_pm: float, loadstep_effective_v3
     ) -> None:
         cfg = FakeCfg()
         bridge = FakeBridge(cfg)
@@ -128,27 +122,40 @@ class TestRiskA_LS1_IgnoresMagnitude:
             t_now=1.0,
             cfg=cfg,
         )
-        # First write is LOAD_STEP_AMP[14] = 0.0, regardless of magnitude
-        assert bridge.calls[0] == ("LoadStep_amp_bus14", 0.0)
+        # Phase 1.5 reroute: writes PM_STEP_AMP@ES3 (Pm_step_amp_3)
+        pm_amps = {k: v for k, v in bridge.calls if k.startswith("Pm_step_amp_")}
+        assert "Pm_step_amp_3" in pm_amps, (
+            "bus14 dispatch must write Pm_step_amp_3 (ES3 = bus14 ESS)"
+        )
+        assert pm_amps["Pm_step_amp_3"] == pytest.approx(expected_pm)
+        assert pm_amps["Pm_step_amp_3"] >= 0.0, (
+            "bus14 Pm_step_amp_3 must be non-negative (freq UP)"
+        )
+        # Must NOT write LOAD_STEP_TRIP_AMP (CCS path abandoned)
+        ccs_writes = [k for k, _ in bridge.calls if "trip_amp" in k.lower()]
+        assert ccs_writes == []
 
 
 # ---------------------------------------------------------------------------
-# R-B: LS2 sign safety — bus15 engage uses abs()
+# R-B: LS2 sign safety — bus15 writes PM_STEP_AMP@ES4 negative (freq DOWN)
+#
+# Phase 1.5 reroute: bus15 now writes Pm_step_amp_4 with negative value.
+# Adapter applies -abs(magnitude) for bus15 (load increase = freq DOWN).
 # ---------------------------------------------------------------------------
 
 
-class TestRiskB_LS2_AbsoluteValue:
+class TestRiskB_LS2_PmStepNegative:
     @pytest.mark.parametrize(
-        "magnitude,expected_w",
+        "magnitude,expected_pm",
         [
-            (+1.88, 1.88e8),
-            (-1.88, 1.88e8),  # negative magnitude → still positive watts
-            (+0.0, 0.0),
-            (-0.5, 0.5e8),
+            (+1.88, -1.88),   # positive input → negated → freq DOWN
+            (-1.88, -1.88),   # negative input → abs then negate → freq DOWN
+            (+0.0,   0.0),
+            (-0.5,  -0.5),
         ],
     )
-    def test_bus15_engage_uses_abs_magnitude(
-        self, magnitude: float, expected_w: float, loadstep_effective_v3
+    def test_bus15_engage_writes_pm_step_amp_4_negative(
+        self, magnitude: float, expected_pm: float, loadstep_effective_v3
     ) -> None:
         cfg = FakeCfg()
         bridge = FakeBridge(cfg)
@@ -160,10 +167,18 @@ class TestRiskB_LS2_AbsoluteValue:
             t_now=1.0,
             cfg=cfg,
         )
-        first_write = bridge.calls[0]
-        assert first_write[0] == "LoadStep_amp_bus15"
-        assert first_write[1] == pytest.approx(expected_w)
-        assert first_write[1] >= 0.0
+        pm_amps = {k: v for k, v in bridge.calls if k.startswith("Pm_step_amp_")}
+        assert "Pm_step_amp_4" in pm_amps, (
+            "bus15 dispatch must write Pm_step_amp_4 (ES4 = bus15 ESS)"
+        )
+        assert pm_amps["Pm_step_amp_4"] == pytest.approx(expected_pm)
+        if magnitude != 0.0:
+            assert pm_amps["Pm_step_amp_4"] <= 0.0, (
+                "bus15 Pm_step_amp_4 must be non-positive (freq DOWN)"
+            )
+        # Must NOT write LOAD_STEP_AMP (RLC path abandoned)
+        ls_writes = [k for k, _ in bridge.calls if "LoadStep_amp" in k]
+        assert ls_writes == []
 
 
 # ---------------------------------------------------------------------------
@@ -357,9 +372,11 @@ class TestRiskF_SilenceOtherFamily:
         # 4 PM_STEP_T writes + 4 PM_STEP_AMP writes
         assert len(pm_writes) == 8
 
-    def test_loadstep_silences_both_pm_and_pmg(
+    def test_loadstep_silences_pmg_and_writes_all_pm(
         self, loadstep_effective_v3
     ) -> None:
+        # Phase 1.5 reroute: LoadStepRBranch writes PM_STEP_AMP (target +
+        # silence-others) and silences PMG. No LOAD_STEP_* writes.
         cfg = FakeCfg()
         bridge = FakeBridge(cfg)
         LoadStepRBranch(ls_bus=14).apply(
@@ -373,42 +390,43 @@ class TestRiskF_SilenceOtherFamily:
             1 for k, _ in bridge.calls if k.startswith("Pm_step_")
         )
         pmg_count = sum(1 for k, _ in bridge.calls if "Pmg" in k)
+        # 4 PM_STEP_T + 4 PM_STEP_AMP = 8 pm writes
         assert pm_count == 8
+        # 3 SG × (PMG_STEP_T + PMG_STEP_AMP) = 6 pmg writes
         assert pmg_count == 6
 
 
 # ---------------------------------------------------------------------------
-# R-G: bus14 engage / bus15 trip — symmetric paths supported
+# R-G: bus14 / bus15 — symmetric Pm_step paths (Phase 1.5 reroute)
 # ---------------------------------------------------------------------------
 
 
 class TestRiskG_SymmetricPaths:
-    def test_bus14_trip_and_bus15_engage_both_supported(
+    def test_bus14_and_bus15_both_write_pm_step(
         self, loadstep_effective_v3
     ) -> None:
-        # The legacy god method maps bus14→trip and bus15→engage by dtype;
-        # there is no direct dtype for bus15→trip. But the oracle's
-        # internal action variable can be exercised via the random_bus
-        # path with appropriate seeding. Verify both new adapter actions
-        # produce sensible writes.
+        # Phase 1.5 reroute: both buses write PM_STEP_AMP (different ESS index).
         cfg = FakeCfg()
-        # bus14 + trip via dtype
+        # bus14 → ES3 → positive Pm_step
         bridge_a = FakeBridge(cfg)
         LoadStepRBranch(ls_bus=14).apply(
             bridge=bridge_a, magnitude_sys_pu=+1.0,
             rng=np.random.default_rng(0), t_now=1.0, cfg=cfg,
         )
-        # bus15 + engage via dtype
+        # bus15 → ES4 → negative Pm_step
         bridge_b = FakeBridge(cfg)
         LoadStepRBranch(ls_bus=15).apply(
             bridge=bridge_b, magnitude_sys_pu=+1.0,
             rng=np.random.default_rng(0), t_now=1.0, cfg=cfg,
         )
-        # bus14 trip writes 0.0 to LOAD_STEP_AMP[14]
-        assert bridge_a.calls[0] == ("LoadStep_amp_bus14", 0.0)
-        # bus15 engage writes positive watts to LOAD_STEP_AMP[15]
-        assert bridge_b.calls[0][0] == "LoadStep_amp_bus15"
-        assert bridge_b.calls[0][1] > 0.0
+        pm_a = {k: v for k, v in bridge_a.calls if k.startswith("Pm_step_amp_")}
+        pm_b = {k: v for k, v in bridge_b.calls if k.startswith("Pm_step_amp_")}
+        # bus14: ES3 positive, all others zero
+        assert pm_a["Pm_step_amp_3"] > 0.0
+        assert pm_a["Pm_step_amp_4"] == 0.0
+        # bus15: ES4 negative, all others zero
+        assert pm_b["Pm_step_amp_4"] < 0.0
+        assert pm_b["Pm_step_amp_3"] == 0.0
 
 
 # ---------------------------------------------------------------------------
@@ -509,7 +527,18 @@ class TestRiskI_TraceConsistency:
     def test_trace_keys_and_values_have_equal_length_loadstep(
         self, dtype: str, loadstep_effective_v3
     ) -> None:
-        # LoadStep families need fixture to actually produce writes.
+        # Phase 1.5 reroute: loadstep_paper_* now writes PM_STEP_AMP natively
+        # (no fixture promotion needed). loadstep_paper_trip_* still uses
+        # LoadStepCcsInjection (LOAD_STEP_TRIP_AMP); fixture is no-op but
+        # CcsInjection writes use require_effective=True on LOAD_STEP_TRIP_AMP
+        # which is deprecated (frozenset() effective) → raises on production
+        # schema. Only test loadstep_paper_bus14 and loadstep_paper_bus15 here.
+        if "trip" in dtype:
+            pytest.skip(
+                "loadstep_paper_trip_* uses CcsInjection with deprecated "
+                "LOAD_STEP_TRIP_AMP (require_effective=True raises). "
+                "CCS path covered separately in TestLoadStepCcsInjection."
+            )
         cfg = FakeCfg()
         bridge = FakeBridge(cfg)
         protocol = resolve_disturbance(dtype)
@@ -598,23 +627,23 @@ class TestResolver:
 
 
 class TestRequireEffectiveWiring:
-    def test_load_step_raises_on_v3_production_schema(self) -> None:
-        """Production contract: LoadStep is name-valid but NOT effective
-        in v3. Adapter raises before any MATLAB write — no fixture used.
+    def test_load_step_bus14_succeeds_on_v3_phasor_via_pm_step(
+        self,
+    ) -> None:
+        """Phase 1.5 reroute: LoadStepRBranch uses PM_STEP_AMP (always
+        effective). No longer raises WorkspaceVarError on v3 Phasor.
+        The Phasor profile is supported by PM_STEP schema (PROFILES_CVS).
         """
         cfg = FakeCfg(model_name="kundur_cvs_v3")
         bridge = FakeBridge(cfg)
         adapter = LoadStepRBranch(ls_bus=14)
-        with pytest.raises(WorkspaceVarError) as exc_info:
-            adapter.apply(
-                bridge=bridge, magnitude_sys_pu=+1.0,
-                rng=np.random.default_rng(0), t_now=1.0, cfg=cfg,
-            )
-        # No writes happened before the raise
-        assert bridge.calls == []
-        # Error message cites the physical reason
-        assert "compile-frozen" in str(exc_info.value).lower() or \
-               "compile" in str(exc_info.value).lower()
+        trace = adapter.apply(
+            bridge=bridge, magnitude_sys_pu=+1.0,
+            rng=np.random.default_rng(0), t_now=1.0, cfg=cfg,
+        )
+        # Writes happen (PM_STEP_AMP is effective in v3 Phasor)
+        assert len(bridge.calls) > 0
+        assert trace.family == "paper_lumped_pm_step"
 
     def test_ess_pm_step_succeeds_on_v3(self) -> None:
         # PM_STEP family is name-valid AND effective in v3.
@@ -633,11 +662,11 @@ class TestRequireEffectiveWiring:
         assert trace.family == "ess_pm_step"
         assert len(bridge.calls) > 0
 
-    def test_loadstep_writes_with_test_fixture(
+    def test_loadstep_r_branch_writes_pm_step_natively(
         self, loadstep_effective_v3
     ) -> None:
-        """When LoadStep is promoted to effective (test-only fixture),
-        the adapter writes to MATLAB — used by R-A/R-B/R-G/R-F tests.
+        """Phase 1.5 reroute: LoadStepRBranch writes PM_STEP_AMP natively
+        (fixture is now a no-op — kept for parameter compat).
         """
         cfg = FakeCfg(model_name="kundur_cvs_v3")
         bridge = FakeBridge(cfg)
@@ -646,7 +675,7 @@ class TestRequireEffectiveWiring:
             bridge=bridge, magnitude_sys_pu=+1.0,
             rng=np.random.default_rng(0), t_now=1.0, cfg=cfg,
         )
-        assert trace.family == "load_step_r"
+        assert trace.family == "paper_lumped_pm_step"
         assert len(bridge.calls) > 0
 
 

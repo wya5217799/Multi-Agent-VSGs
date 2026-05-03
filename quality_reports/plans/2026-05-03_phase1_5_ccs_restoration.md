@@ -2,7 +2,7 @@
 
 **Target path:** `quality_reports/plans/2026-05-03_phase1_5_ccs_restoration.md`
 **Date:** 2026-05-03
-**Status:** BLOCKED ON DESIGN (2026-05-04 attempt 1 reverted): see §0.6 for the deeper finding — Option E `if false` block uses Phasor-only Real-Imag-to-Complex pattern, incompatible with Discrete-mode powergui. Redesign required: 3-phase sin-driven Constant→Product→CCS pattern (similar to `build_dynamic_source_discrete.m` SG/ESS helper). Estimated 1-2 hr design + 3 hr implementation. All first-attempt code reverted; only this plan retains the diagnosis.
+**Status:** SUPERSEDED (2026-05-04) by `2026-05-04_phase1_5_paper_lumped.md`. P0-1c CCS injection measured 62× weaker than paper LS1 baseline — CCS path abandoned. LoadStep LS1/LS2 now routed via Pm_step_amp_3/4 (paper-lumped ΔP). See §0.8 below for E2E measurement verdict.
 **Branch:** `discrete-rebuild`
 **Supersedes (relevant section):** §5 row "1.5" of `2026-05-03_phase1_progress_and_next_steps.md`
 **Authored by:** planner subagent (2026-05-03), persisted by parent agent
@@ -81,6 +81,33 @@ In **Discrete mode**, signals are real-valued time-domain. The CCS expects a rea
 **Acceptance gates G1.5-A..F (Section 1.2) UNCHANGED** — paper-anchor magnitude requirements survive the redesign; only the implementation pattern shifts.
 
 **Attempt 1 outcome (2026-05-04)**: code changes reverted in commit (next), pytest restored to baseline. The plan-doc finding (§0.6) is the deliverable of this cycle. Phase 1.5 redesign is the next cycle.
+
+---
+
+## §0.7 P0-1c attempt 1: bus14-only proof-of-concept (2026-05-04)
+
+**Scope**: bus14 ONLY. bus15 Three-Phase Breaker+RLC kept as-is (still broken, fix in attempt 2). bus7/9 Option E still in `if false` (future).
+
+**Pattern implemented** (see F4 `test_ccs_dynamic_disc.m`):
+```matlab
+Constant(LoadStep_trip_amp_bus14 / Vbase_const)  ──┐
+                                                     ├→ Product → CCS_A.Inport1
+Sine Wave(Amp=1, Freq=wn_const, Phase=0)          ──┘
+... (repeat for phases B, C with Phase=-2π/3, +2π/3)
+CCS_{A,B,C}.LConn1 → GND_neutral (shared)
+CCS_{A,B,C}.RConn1 → bus 14 phase anchor (bus_anchor_A/B/C at bus 14)
+```
+
+**Key finding — bus wiring approach**: The build script uses `local_register_at_bus(mdl, bus_anchor_X, bus, blk_port)` to tie block ports to bus phase anchors. Each single-phase CCS's `RConn1` is registered directly at bus 14's phase A/B/C anchor — the same mechanism used by all other 3-phase blocks (lines, loads, sources). No 3-phase aggregator block needed; the anchor-and-tie strategy handles phase-wise connections.
+
+**Schema changes**:
+- `LOAD_STEP_TRIP_AMP.effective_in_profile` promoted to include `PROFILE_CVS_V3_DISCRETE`
+- `LOAD_STEP_AMP.effective_in_profile` demoted to `frozenset()` (bus14 RLC removed, bus15 still broken)
+- `LoadStepRBranch.apply` bus14 trip path: writes `LOAD_STEP_TRIP_AMP[14] = amp_w` (not `LOAD_STEP_AMP[14] = 0`)
+
+**Tests**: 87 passed, 0 failed. New test: `tests/test_p0_1c_bus14_ccs_loadstep.py`.
+
+**Next step (attempt 2)**: validate via MATLAB rebuild (parent). If G1.5-B passes (≥0.3 Hz at bus14 CCS 248 MW), then fix bus15 and Option E.
 
 ---
 

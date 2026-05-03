@@ -5,6 +5,13 @@ Verifies (2026-05-04 plan §L2):
   2. Both PROFILE_CVS_V3 and PROFILE_CVS_V3_DISCRETE present in inactive_reason
   3. LoadStepRBranch.apply does NOT call apply_workspace_var with the LOAD_STEP_T key
 
+Schema state post Phase 1.5 P0-1c (2026-05-04):
+  - LOAD_STEP_TRIP_AMP now effective in PROFILE_CVS_V3_DISCRETE (bus14 CCS).
+  - LOAD_STEP_AMP now inactive in all profiles (bus14 RLC removed; bus15 broken).
+  - bus15 remains inoperative: silent no-op in Discrete+FastRestart.
+  - Tests below cover LOAD_STEP_T specifically; see test_p0_1c_bus14_ccs_loadstep.py
+    for P0-1c CCS schema tests.
+
 No MATLAB engine required — pure Python.
 """
 

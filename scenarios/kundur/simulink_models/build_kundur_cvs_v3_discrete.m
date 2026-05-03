@@ -83,19 +83,11 @@ out_slx   = fullfile(out_dir, [mdl '.slx']);
 ic_path   = fullfile(fileparts(out_dir), 'kundur_ic_cvs_v3.json');
 runtime_mat = fullfile(out_dir, [mdl '_runtime.mat']);
 
-% Phase 1.3a H1 falsification flag (2026-05-03). When true, skip
-% LoadStepBreaker_bus14 and connect LoadStep_bus14 directly to Bus 14
-% (the load is still 248 MW per Task 2 default, so NR remains consistent).
-% Decision: ES3 std @ [0.5,1]s after 1s sim. < 0.001 -> breaker IC is the
-% main excitation source (H1 SUPPORTED). >= 0.001 -> H1 FALSIFIED.
-% Default false (preserves 5/7 baseline). Override via:
-%   assignin('base', 'bus14_no_breaker', true); build_kundur_cvs_v3_discrete();
-try
-    bus14_no_breaker = logical(evalin('base', 'bus14_no_breaker'));
-catch
-    bus14_no_breaker = false;
-end
-fprintf('RESULT: bus14_no_breaker = %d\n', double(bus14_no_breaker));
+% Phase 1.5 reroute (2026-05-04): bus14_no_breaker flag removed.
+% H1 (breaker-as-excitation-source) was falsified; flag is no longer needed.
+% LoadStep bus14 LS1 now routes through Pm_step_amp_3 (paper-lumped ΔP),
+% not through a Three-Phase Breaker or CCS block at bus 14.
+% See plan 2026-05-04_phase1_5_paper_lumped.md and disturbance_protocols.py.
 
 %% ===== Read v3 IC =====
 ic = jsondecode(fileread(ic_path));
@@ -221,28 +213,11 @@ loadstep_defs = {
     'LoadStep_bus15', 15, 'bus15';   % paper Bus 15 ≈ v3 ESS bus 15 (near ES4)
 };
 
-% Option E (2026-04-30): CCS at Bus 7 / Bus 9 — true network LoadStep at
-% load center.  Reuses Phase A++ CCS Trip pattern (line ~365-425) but
-% targets the actual paper-Fig.3 load buses (Bus 7 = 967 MW load, Bus 9 =
-% 1767 MW load) instead of the ESS terminal buses (Bus 14/15) where the
-% CCS Trip path gave only ~0.01 Hz signal due to electrical distance from
-% load center. CCS injection at Bus 7/9 (where the 967+1767=2734 MW load
-% lives) is the project's first true network-side disturbance with
-% magnitude in the same ballpark as paper LoadStep 1 (248 MW reduction at
-% Bus 14, paper Fig.3) and LoadStep 2 (188 MW increase at Bus 15).
-%
-% Convention: workspace var `CCS_Load_amp_bus<bus>` is in W (system base);
-% positive amp = current INJECTION from GND→bus = generator-like = freq UP
-% (mimics paper LoadStep "trip" semantics where load disconnects). Negative
-% amp = current FROM bus→GND = additional load = freq DOWN (mimics paper
-% LoadStep "engage" semantics).
-%
-% Default amp=0 ⇒ CCS electrically absent ⇒ NR / IC unaffected ⇒ no
-% need to regenerate kundur_ic_cvs_v3.json.
-ccs_load_defs = {
-    'CCSLoad_bus7', 7, 'bus7';   % Bus 7 load center (967 MW load)
-    'CCSLoad_bus9', 9, 'bus9';   % Bus 9 load center (1767 MW load)
-};
+% Phase 1.5 reroute (2026-05-04): Option E CCS at Bus 7/9 removed.
+% CCS injection path abandoned (P0-1c measurement showed 62× weaker than
+% paper LS1 baseline). LoadStep LS1/LS2 now routed through Pm_step_amp_3/4
+% (paper-lumped ΔP via ESS swing equation). No CCS blocks in this model.
+% ccs_load_defs removed: CCSLoad_bus7, CCSLoad_bus9 no longer built.
 
 %% ===== Reset model =====
 if bdIsLoaded(mdl), close_system(mdl, 0); end
@@ -300,17 +275,17 @@ for w = 1:2
 end
 
 % --- LoadStep workspace amplitudes (W = watts of absorbed active power) ---
-% Phase A: paper-aligned naming `LoadStep_amp_bus14 / LoadStep_amp_bus15`.
-% Task 2 (2026-04-28, paper line 993): Bus 14 LS1 load is pre-engaged at IC
-% = 248e6 W; LS1 trigger = env writes 0 ⇒ R disengage ⇒ load drops out ⇒
-% freq UP ("sudden load reduction" paper-faithful).
-% Bus 15 LS2 default 0; LS2 trigger = env writes 188e6 ⇒ load engages ⇒
-% freq DOWN ("sudden load increase" paper-aligned).
-% Phase A++ CCS injection path retained (LoadStep_trip_amp_bus*) as alternate.
+% Phase 1.5 reroute (2026-05-04):
+%   bus14 (LS1): NO consumer block in this model. LoadStep_amp_bus14 is
+%     written as 0 for schema back-compat only. LS1 is now dispatched via
+%     Pm_step_amp_3 (ES3 swing eq, paper-lumped ΔP). No breaker/CCS at bus14.
+%   bus15 (LS2): Three-Phase Breaker + RLC Load still present.
+%     LoadStep_amp_bus15 drives RLC ActivePower. Default 1 W (breaker closed,
+%     avoids infinite-Z); LS2 trigger writes 188e6 at runtime.
 for k = 1:size(loadstep_defs, 1)
     lb = loadstep_defs{k, 3};
     if strcmp(lb, 'bus14')
-        amp_default = double(248e6);   % Task 2: LS1 pre-engaged
+        amp_default = double(0.0);     % Phase 1.5: no consumer block for bus14
     else
         amp_default = double(1.0);     % LS2 IC placeholder 1 W (breaker closed, avoids infinite-Z)
     end
@@ -428,27 +403,28 @@ for sh = 1:n_shunts
         'UserData', struct('bus', bus));
 end
 
-% PHASE 1.1 PATCH (2026-05-03): LoadStep — Three-Phase Breaker + Three-Phase
-% Series RLC Load (replaces v3 Series RLC R with Resistance from workspace var,
-% PROVEN compile-frozen in Discrete+FastRestart per test_r_fastrestart_disc.m).
+% Phase 1.5 reroute (2026-05-04): LoadStep — bus15 only.
+%   bus14 LS1 is now dispatched via Pm_step_amp_3 (ES3 swing equation,
+%   paper-lumped ΔP per §1.4 Remark 1). No Breaker or CCS block at bus 14.
+%   bus15 LS2 retains Three-Phase Breaker + Three-Phase Series RLC Load.
+%   LoadStep_amp_bus15 drives RLC ActivePower; breaker InitialState='closed'
+%   (1 W IC placeholder). See disturbance_protocols.py::LoadStepRBranch.
 %
-% Pattern (validated by Phase 0 SMIB oracle 4.9 Hz at 248 MW):
-%   Breaker (signal-controlled, closes at LoadStep_t_<lb>)
-%   ├ initial state: open if amp_default=0; closed if amp_default>0
-%   ├ SwitchTimes = [LoadStep_t_<lb>] (single transition: open→closed or closed→open)
-%   └ External = off (internal time-driven gating)
-% Three-Phase Series RLC Load (Y-grounded, R-only)
-%   ├ ActivePower = LoadStep_amp_<lb> (W, workspace var)
-%   └ Connection: VSG bus 14 / 15 (3-phase RConn1/2/3)
-%
-% Workspace contract preserved: `LoadStep_amp_<lb>` and `LoadStep_t_<lb>`
-% drive the load active power and trigger time. Default amp_default per
-% loadstep_defs (Bus 14 LS1 pre-engaged 248 MW; Bus 15 LS2 0 → trigger writes 188 MW).
+%   CCS blocks removed: LStripAmp_bus14, LStripSin{A,B,C}_bus14,
+%   LStripProd{A,B,C}_bus14, LStripCCS{A,B,C}_bus14, LStripGNDneutral_bus14.
+%   Option E CCS at Bus 7/9 (ccs_load_defs) also removed.
+%   Disabled if-false CCS block (RI2C pattern, Phase A++) also removed.
 load_path_3p = sprintf('sps_lib/Passives/Three-Phase\nSeries RLC Load');
 for k = 1:size(loadstep_defs, 1)
     name      = loadstep_defs{k, 1};
     bus       = loadstep_defs{k, 2};
     bus_label = loadstep_defs{k, 3};
+
+    % Phase 1.5: bus14 has no Simulink LoadStep block — LS1 dispatched via
+    % Pm_step_amp_3 at Python level (disturbance_protocols.py).
+    if strcmp(bus_label, 'bus14')
+        continue;
+    end
 
     breaker_name = sprintf('LoadStepBreaker_%s', bus_label);
     load_name    = name;   % keep historical name for downstream wiring
@@ -457,41 +433,23 @@ for k = 1:size(loadstep_defs, 1)
     yposLS = 200 + (k - 1) * 130;
     bxLS   = 1100;
 
-    % H1 falsification: when bus14_no_breaker=true and bus_label=='bus14',
-    % skip the breaker block and connect load directly to Bus 14 (NR
-    % remains consistent because LoadStep_amp_bus14 default is still 248e6).
-    skip_breaker = bus14_no_breaker && strcmp(bus_label, 'bus14');
+    % bus15 LoadStep breaker InitialState='closed' (1 W placeholder).
+    %   Reason: 'open' + Three-Phase Breaker SwitchTimes compile-frozen (F2)
+    %   made bus15 RLC permanently disconnected — runtime LoadStep_amp_bus15
+    %   writes were electrically inert. Closing keeps bus15 dispatchable.
+    %   IC placeholder load (LoadStep_amp_bus15 = 1 W) avoids infinite-impedance
+    %   numerical issues. NR perturbation: 1 W = 1e-8 sys-pu (Sbase=100 MVA),
+    %   above outer_tol=1e-9 by 10x but well below closure_tol=1e-3 by 5 orders.
+    %   NR closure check still passes; no re-derive of kundur_ic_cvs_v3.json needed.
+    %   See compute_kundur_cvs_v3_powerflow.m + plan 2026-05-04_loadstep_bus15_hybrid_dispatch_fix.md.
+    breaker_init = 'closed';   % LS2 closed at IC (1 W placeholder, see comment above)
 
-    if ~skip_breaker
-        % Initial state of breaker depends on whether load is pre-engaged at IC.
-        % Bus 14 LS1: pre-engaged 248 MW (paper line 993, see loadstep_defs default).
-        % Bus 15 LS2: 1 W IC placeholder load (see note below).
-        % Convention: both breakers closed at IC so the RLC branch is always
-        % electrically connected (avoids infinite-impedance numerical issues and
-        % ensures runtime LoadStep_amp_bus15 writes are physically effective).
-        %
-        % bus15 LoadStep breaker InitialState='closed' (was 'open' pre-2026-05-04).
-        %   Reason: 'open' + Three-Phase Breaker SwitchTimes compile-frozen (F2)
-        %   made bus15 RLC permanently disconnected — runtime LoadStep_amp_bus15
-        %   writes were electrically inert. Closing keeps bus15 dispatchable.
-        %   IC placeholder load (LoadStep_amp_bus15 = 1 W) avoids infinite-impedance
-        %   numerical issues. NR perturbation: 1 W = 1e-8 sys-pu (Sbase=100 MVA),
-        %   above outer_tol=1e-9 by 10x but well below closure_tol=1e-3 by 5 orders.
-        %   NR closure check still passes; no re-derive of kundur_ic_cvs_v3.json needed.
-        %   See compute_kundur_cvs_v3_powerflow.m + plan 2026-05-04_loadstep_bus15_hybrid_dispatch_fix.md.
-        if strcmp(bus_label, 'bus14')
-            breaker_init = 'closed';   % LS1 pre-engaged
-        else
-            breaker_init = 'closed';   % LS2 closed at IC (1 W placeholder, see comment above)
-        end
-
-        % Three-Phase Breaker
-        add_block('sps_lib/Power Grid Elements/Three-Phase Breaker', ...
-            [mdl '/' breaker_name], 'Position', [bxLS yposLS bxLS+60 yposLS+80]);
-        set_param([mdl '/' breaker_name], 'InitialState', breaker_init, ...
-            'SwitchA', 'on', 'SwitchB', 'on', 'SwitchC', 'on', ...
-            'External', 'off', 'SwitchTimes', sprintf('[%s]', t_var));
-    end
+    % Three-Phase Breaker
+    add_block('sps_lib/Power Grid Elements/Three-Phase Breaker', ...
+        [mdl '/' breaker_name], 'Position', [bxLS yposLS bxLS+60 yposLS+80]);
+    set_param([mdl '/' breaker_name], 'InitialState', breaker_init, ...
+        'SwitchA', 'on', 'SwitchB', 'on', 'SwitchC', 'on', ...
+        'External', 'off', 'SwitchTimes', sprintf('[%s]', t_var));
 
     % Three-Phase Series RLC Load (R-only, Y-grounded)
     add_block(load_path_3p, [mdl '/' load_name], ...
@@ -501,137 +459,16 @@ for k = 1:size(loadstep_defs, 1)
         'ActivePower', sprintf('max(LoadStep_amp_%s, 1)', bus_label), ...
         'InductivePower', '0', 'CapacitivePower', '0');
 
-    if ~skip_breaker
-        % Wire Breaker RConn1/2/3 → Load LConn1/2/3
-        add_line(mdl, [breaker_name '/RConn1'], [load_name '/LConn1'], 'autorouting', 'smart');
-        add_line(mdl, [breaker_name '/RConn2'], [load_name '/LConn2'], 'autorouting', 'smart');
-        add_line(mdl, [breaker_name '/RConn3'], [load_name '/LConn3'], 'autorouting', 'smart');
+    % Wire Breaker RConn1/2/3 → Load LConn1/2/3
+    add_line(mdl, [breaker_name '/RConn1'], [load_name '/LConn1'], 'autorouting', 'smart');
+    add_line(mdl, [breaker_name '/RConn2'], [load_name '/LConn2'], 'autorouting', 'smart');
+    add_line(mdl, [breaker_name '/RConn3'], [load_name '/LConn3'], 'autorouting', 'smart');
 
-        % UserData on the breaker so downstream registry can find this LoadStep
-        set_param([mdl '/' breaker_name], 'UserDataPersistent', 'on', ...
-            'UserData', struct('bus', bus, 'bus_label', bus_label, ...
-                               'load_block', load_name));
-    end
-end
-
-% PHASE 1.1 PATCH (2026-05-03): CCS injection blocks DISABLED for now.
-% v3 used RI2C complex-phasor pattern driving CCS — proven to fail compile
-% in Discrete mode (test_cvs_disc_input.m result C). Future patch will
-% restore these using sin-driven 3-phase CCS (similar to source-chain pattern).
-% For Phase 1.3 (compile + IC settle test), CCS is not needed — Breaker+Load
-% LoadStep mechanism above provides the disturbance signal.
-if false  % CCS_DISABLED — restore in Phase 1.5+ with sin-driven pattern
-% LoadStep TRIP direction (Phase A++ 2026-04-27) — Controlled Current Source
-% per bus, in parallel with the Series RLC R load. Drives the trip-direction
-% disturbance (freq UP) which a passive R cannot do. CCS is single-phase and
-% Phasor-compatible (verified in library lookup).
-%
-% Wiring: LConn = ground, RConn = bus. Per powerlib convention current flows
-% L → external → R, so positive Constant input ⇒ I from GND → bus =
-% INJECTION (= "negative load" = generator-like = freq UP).
-%
-% Magnitude: Constant outputs complex current via Real-Imag-to-Complex
-%     I_phasor = (LoadStep_trip_amp_<lb> / Vbase_const) + 0j  (A, peak)
-% At bus voltage V ≈ Vbase∠δ_bus with small δ, real(V·conj(I)) ≈
-% Vbase · I_real · cos(δ) ≈ amp_W active power injected. Direction is purely
-% real (in phase with reference), close-to-active for small bus angles.
-%
-% Default amp_W = 0 ⇒ I_phasor = 0+0j ⇒ source electrically absent ⇒ NR / IC
-% unaffected. env writes LoadStep_trip_amp_<lb> mid-episode.
-for k = 1:size(loadstep_defs, 1)
-    bus       = loadstep_defs{k, 2};
-    bus_label = loadstep_defs{k, 3};
-
-    trip_name   = sprintf('LoadStepTrip_%s', bus_label);
-    re_name     = sprintf('ITripRe_%s',     bus_label);
-    im_name     = sprintf('ITripIm_%s',     bus_label);
-    ri2c_name   = sprintf('ITripRI2C_%s',   bus_label);
-    gnd_name    = sprintf('GND_%s',         trip_name);
-
-    yposLT = 600 + (k - 1) * 110;
-    bxLT   = 1100;
-
-    % Real component: amp_W / Vbase_const   (A, peak)
-    add_block('simulink/Sources/Constant', [mdl '/' re_name], ...
-        'Position', [bxLT-160 yposLT bxLT-100 yposLT+20], ...
-        'Value', sprintf('LoadStep_trip_amp_%s / Vbase_const', bus_label));
-
-    % Imag component: 0 (purely active injection at reference angle)
-    add_block('simulink/Sources/Constant', [mdl '/' im_name], ...
-        'Position', [bxLT-160 yposLT+30 bxLT-100 yposLT+50], 'Value', '0');
-
-    % Real-Imag → Complex (Phasor signal type for the CCS input)
-    add_block('simulink/Math Operations/Real-Imag to Complex', [mdl '/' ri2c_name], ...
-        'Position', [bxLT-80 yposLT bxLT-40 yposLT+40]);
-    add_line(mdl, [re_name '/1'], [ri2c_name '/1'], 'autorouting', 'smart');
-    add_line(mdl, [im_name '/1'], [ri2c_name '/2'], 'autorouting', 'smart');
-
-    % Controlled Current Source: LConn=GND, RConn=bus → +I = INJECTION
-    add_block('powerlib/Electrical Sources/Controlled Current Source', ...
-        [mdl '/' trip_name], 'Position', [bxLT yposLT bxLT+60 yposLT+50]);
-    set_param([mdl '/' trip_name], 'Initialize', 'off', 'Measurements', 'None');
-    add_line(mdl, [ri2c_name '/1'], [trip_name '/1'], 'autorouting', 'smart');
-
-    % Ground at LConn (current source from ground side)
-    add_block('powerlib/Elements/Ground', [mdl '/' gnd_name], ...
-        'Position', [bxLT-50 yposLT+70 bxLT-10 yposLT+90]);
-    add_line(mdl, [trip_name '/LConn1'], [gnd_name '/LConn1'], ...
-        'autorouting', 'smart');
-
-    set_param([mdl '/' trip_name], 'UserDataPersistent', 'on', ...
+    % UserData on the breaker so downstream registry can find this LoadStep
+    set_param([mdl '/' breaker_name], 'UserDataPersistent', 'on', ...
         'UserData', struct('bus', bus, 'bus_label', bus_label, ...
-                           'mode', 'trip_inject'));
+                           'load_block', load_name));
 end
-
-% Option E (2026-04-30): CCS at Bus 7 / Bus 9 load centers. Same pattern
-% as Phase A++ Trip CCS above, but at network load center rather than ESS
-% terminal. Workspace var `CCS_Load_amp_<lb>` drives Real component;
-% Imag = 0 (purely active). Default amp=0 ⇒ NR/IC untouched.
-for k = 1:size(ccs_load_defs, 1)
-    bus       = ccs_load_defs{k, 2};
-    bus_label = ccs_load_defs{k, 3};
-
-    ccs_name    = sprintf('CCSLoad_%s', bus_label);
-    re_name     = sprintf('CCSLoadRe_%s',     bus_label);
-    im_name     = sprintf('CCSLoadIm_%s',     bus_label);
-    ri2c_name   = sprintf('CCSLoadRI2C_%s',   bus_label);
-    gnd_name    = sprintf('GND_%s',           ccs_name);
-
-    yposCC = 850 + (k - 1) * 110;
-    bxCC   = 1100;
-
-    % Real component: amp_W / Vbase_const   (A, peak)
-    add_block('simulink/Sources/Constant', [mdl '/' re_name], ...
-        'Position', [bxCC-160 yposCC bxCC-100 yposCC+20], ...
-        'Value', sprintf('CCS_Load_amp_%s / Vbase_const', bus_label));
-
-    % Imag component: 0 (purely active injection at reference angle)
-    add_block('simulink/Sources/Constant', [mdl '/' im_name], ...
-        'Position', [bxCC-160 yposCC+30 bxCC-100 yposCC+50], 'Value', '0');
-
-    % Real-Imag → Complex (Phasor signal type for the CCS input)
-    add_block('simulink/Math Operations/Real-Imag to Complex', [mdl '/' ri2c_name], ...
-        'Position', [bxCC-80 yposCC bxCC-40 yposCC+40]);
-    add_line(mdl, [re_name '/1'], [ri2c_name '/1'], 'autorouting', 'smart');
-    add_line(mdl, [im_name '/1'], [ri2c_name '/2'], 'autorouting', 'smart');
-
-    % Controlled Current Source: LConn=GND, RConn=bus → +I = INJECTION
-    add_block('powerlib/Electrical Sources/Controlled Current Source', ...
-        [mdl '/' ccs_name], 'Position', [bxCC yposCC bxCC+60 yposCC+50]);
-    set_param([mdl '/' ccs_name], 'Initialize', 'off', 'Measurements', 'None');
-    add_line(mdl, [ri2c_name '/1'], [ccs_name '/1'], 'autorouting', 'smart');
-
-    % Ground at LConn
-    add_block('powerlib/Elements/Ground', [mdl '/' gnd_name], ...
-        'Position', [bxCC-50 yposCC+70 bxCC-10 yposCC+90]);
-    add_line(mdl, [ccs_name '/LConn1'], [gnd_name '/LConn1'], ...
-        'autorouting', 'smart');
-
-    set_param([mdl '/' ccs_name], 'UserDataPersistent', 'on', ...
-        'UserData', struct('bus', bus, 'bus_label', bus_label, ...
-                           'mode', 'ccs_load_center'));
-end
-end  % end CCS_DISABLED guard (if false ... end)
 
 %% ===== Build dynamic sources (3 SG + 4 ESS) with full swing-eq closure =====
 % Each source produces a CVS at internal EMF, connected through internal X
@@ -777,30 +614,25 @@ for sh = 1:n_shunts
     local_register_at_bus(mdl, bus_anchor_C, bus, [name '/LConn3']);
 end
 
-% LoadStep — Breaker has 3 LConn (bus side) + 3 RConn (load side)
-% bus → Breaker LConn1/2/3 → Breaker RConn1/2/3 → Load_step LConn1/2/3 (already wired internally)
-% H1 falsification: when bus14_no_breaker=true, register the LOAD's LConn
-% directly on Bus 14 (no breaker block in path).
+% LoadStep wiring — Phase 1.5 reroute (2026-05-04):
+%   bus14: NO Simulink LoadStep block. LS1 dispatched via Pm_step_amp_3
+%          at Python level (disturbance_protocols.py::LoadStepRBranch).
+%          No bus anchor registration needed for bus 14 LoadStep.
+%   bus15: Three-Phase Breaker LConn1/2/3 at bus 15.
 for k = 1:size(loadstep_defs, 1)
     bus_label = loadstep_defs{k, 3};
     bus = loadstep_defs{k, 2};
-    skip_breaker = bus14_no_breaker && strcmp(bus_label, 'bus14');
-    if skip_breaker
-        load_name = loadstep_defs{k, 1};
-        local_register_at_bus(mdl, bus_anchor_A, bus, [load_name '/LConn1']);
-        local_register_at_bus(mdl, bus_anchor_B, bus, [load_name '/LConn2']);
-        local_register_at_bus(mdl, bus_anchor_C, bus, [load_name '/LConn3']);
-    else
-        breaker_name = sprintf('LoadStepBreaker_%s', bus_label);
-        local_register_at_bus(mdl, bus_anchor_A, bus, [breaker_name '/LConn1']);
-        local_register_at_bus(mdl, bus_anchor_B, bus, [breaker_name '/LConn2']);
-        local_register_at_bus(mdl, bus_anchor_C, bus, [breaker_name '/LConn3']);
+    if strcmp(bus_label, 'bus14')
+        % Phase 1.5: no Simulink block at bus14 for LoadStep.
+        % LS1 disturbance is paper-lumped into Pm_step_amp_3 (ES3 swing eq).
+        continue;
     end
+    % bus15: Three-Phase Breaker LConn1/2/3 at bus 15 (LS2 mechanism).
+    breaker_name = sprintf('LoadStepBreaker_%s', bus_label);
+    local_register_at_bus(mdl, bus_anchor_A, bus, [breaker_name '/LConn1']);
+    local_register_at_bus(mdl, bus_anchor_B, bus, [breaker_name '/LConn2']);
+    local_register_at_bus(mdl, bus_anchor_C, bus, [breaker_name '/LConn3']);
 end
-
-% CCS injection blocks DISABLED (wrapped in if false above) — skip wiring.
-% Phase 1.5 will restore CCS using sin-driven 3-phase pattern + register
-% the new 3-phase RConn ports here.
 
 % Source 3-phase output (VImeas RConn1/2/3) → bus
 for s = 1:n_src
@@ -883,40 +715,27 @@ for w = 1:2
     % `apply_workspace_var('WindAmp_<w>', <0..1>)` at runtime. P4.1a (2026-04-27).
     runtime_consts.(sprintf('WindAmp_%d', w)) = double(1.0);
 end
-% Phase A (2026-04-27): LoadStep amp/t defaults referenced by Constants.
-% Cold-start MATLAB needs these in runtime.mat.
-% Task 2 (2026-04-28): Bus 14 LS1 default = 248e6 W (pre-engaged per paper
-% line 993 "sudden load reduction"); Bus 15 LS2 default = 0 W (LS2 = step-on
-% direction per paper line 994).
+% LoadStep amp/t defaults — runtime.mat cold-start seeding.
+% Phase 1.5 reroute (2026-05-04):
+%   bus14 (LS1): no consumer block in Simulink. LoadStep_amp/t_bus14 kept
+%     in runtime.mat for schema back-compat (workspace_vars.py still
+%     defines them; remove from mat would break cold-start var check).
+%     Value = 0.0 (schema-inert; LS1 dispatched via Pm_step_amp_3).
+%   bus15 (LS2): Three-Phase Breaker + RLC Load still present.
+%     LoadStep_amp_bus15 default 0.0 W; runtime trigger writes 188e6.
+%   LoadStep_trip_amp_* and CCS_Load_amp_* removed (no consumer blocks).
 for k = 1:size(loadstep_defs, 1)
     lb = loadstep_defs{k, 3};
-    if strcmp(lb, 'bus14')
-        rt_amp_default = double(248e6);   % Task 2: LS1 pre-engaged
-    else
-        rt_amp_default = double(0.0);     % LS2 default off
-    end
-    runtime_consts.(sprintf('LoadStep_amp_%s', lb)) = rt_amp_default;
+    runtime_consts.(sprintf('LoadStep_amp_%s', lb)) = double(0.0);
     runtime_consts.(sprintf('LoadStep_t_%s',   lb)) = double(5.0);
-end
-% Phase A++ (2026-04-27): trip-direction current source amp defaults
-% referenced by Constants ITripRe_<lb>. amp=0 ⇒ I_phasor = 0+0j ⇒ source
-% electrically absent ⇒ NR / IC unaffected. env writes mid-episode.
-for k = 1:size(loadstep_defs, 1)
-    lb = loadstep_defs{k, 3};
-    runtime_consts.(sprintf('LoadStep_trip_amp_%s', lb)) = double(0.0);
-end
-% Option E (2026-04-30): CCS load center amp defaults at Bus 7/9.
-% Same convention as LoadStep_trip_amp_*: amp=0 ⇒ NR/IC untouched.
-for k = 1:size(ccs_load_defs, 1)
-    lb = ccs_load_defs{k, 3};
-    runtime_consts.(sprintf('CCS_Load_amp_%s', lb)) = double(0.0);
 end
 save(runtime_mat, '-struct', 'runtime_consts');
 
 %% ===== Diagnostic print =====
 fprintf('RESULT: build_kundur_cvs_v3 saved %s\n', out_slx);
 fprintf('RESULT: 16-bus paper topology, 3 SG + 4 ESS swing-eq + 2 PVS\n');
-fprintf('RESULT: lines=%d, loads=%d, shunts=%d, loadsteps=%d\n', n_lines, n_loads, n_shunts, 2);
+fprintf('RESULT: Phase 1.5 reroute: LS1 via Pm_step_amp_3, LS2 via LoadStepBreaker_bus15\n');
+fprintf('RESULT: lines=%d, loads=%d, shunts=%d, loadsteps(bus15 breaker only)=%d\n', n_lines, n_loads, n_shunts, 1);
 fprintf('RESULT: ESS Pm0_sys_pu = [%.4f %.4f %.4f %.4f]\n', ess_Pm0_sys);
 fprintf('RESULT: SG  Pm0_sys_pu = [%.4f %.4f %.4f]\n', sg_Pm0_sys);
 fprintf('RESULT: ESS Vemf_pu    = [%.4f %.4f %.4f %.4f]\n', ess_Vemf_pu);

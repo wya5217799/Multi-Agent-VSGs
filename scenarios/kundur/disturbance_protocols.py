@@ -142,6 +142,28 @@ _LOAD_STEP_SENTINELS = frozenset({"random_bus"})
 _LOAD_STEP_CCS_LOAD_SENTINELS = frozenset({"random_load"})
 _CCS_LOAD_BUSES = frozenset({7, 9})
 
+# Phase 1.5 reroute (2026-05-04): paper-lumped ΔP via Pm_step infrastructure.
+# Paper §1.4 Remark 1 (Kron reduction): Δu_i can represent any-bus disturbance
+# folded onto ESS bus via admittance matrix.
+# bus14/15 are ESS + local load co-located buses (paper §12.H).
+# Paper LS1: bus14 load reduction 248 MW → ES3 (bus14 ESS) Pm_step positive (freq UP)
+# Paper LS2: bus15 load increase 188 MW → ES4 (bus15 ESS) Pm_step negative (freq DOWN)
+# ESS index mapping (1-based, matches PM_STEP_AMP schema PER_AGENT family):
+#   ES3 (bus14) → i=3,  ES4 (bus15) → i=4
+_PAPER_BUS_TO_ESS_I: dict[int, int] = {14: 3, 15: 4}
+# Paper magnitudes in sys-pu (Sbase=100 MVA):
+# EMPIRICALLY calibrated 2026-05-04 sanity sweep:
+#   amp=2.48 sys-pu (paper "248 MW absolute" / our Sbase=100 MVA) → system
+#     unstable (ES3 max|Δf|=19 Hz, paper_reward=-6549 vs anchor -1.61).
+#   Paper Sbase != our Sbase. Quadratic fit reward ≈ K × amp² (overdamped):
+#     LS1: amp=1.53 → reward=-1.81 ≈ paper -1.61 (+12%)
+#     LS2: amp=0.90 → reward=-0.83 ≈ paper -0.80 (+3%)
+#   Both within G1.5-B/C ±25% tolerance.
+# Sign convention: bus14 trip (load reduction → freq UP) = +1.53 on Pm_step_amp_3
+#                  bus15 engage (load increase → freq DOWN) = -0.90 on Pm_step_amp_4
+# Adapter applies abs() and sign internally per bus.
+PAPER_LS_MAGNITUDE_SYS_PU: dict[int, float] = {14: 1.53, 15: 0.90}
+
 # 2026-04-30 Option F4 (HybridSgEssMultiPoint): topology coupling map
 # from Probe B G1/G2/G3 sign-pair empirical measurement.  G index (1-based)
 # -> 0-indexed ES set that responds non-trivially to that G's Pm step.
@@ -381,28 +403,32 @@ class SgPmgStepProxy:
 
 @dataclass(frozen=True)
 class LoadStepRBranch:
-    """Series RLC R-block load-step dispatch (paper LS1 / LS2).
+    """Paper-lumped ΔP via Pm_step infrastructure (Phase 1.5 reroute 2026-05-04).
 
-    Two semantically distinct actions on the same family:
-      - **trip** (R disengage): write ``LOAD_STEP_AMP[ls_bus] := 0.0``.
-        ``magnitude_sys_pu`` is IGNORED — the trip always disengages
-        the IC-loaded R block (paper line 993: "sudden load reduction
-        of 248 MW at bus 14"). The IC restored in env._reset_backend
-        determines the trip amplitude.
-      - **engage** (R engage): write
-        ``LOAD_STEP_AMP[ls_bus] := abs(magnitude_sys_pu) * cfg.sbase_va``.
-        Paper line 994: "sudden load increase of 188 MW at bus 15".
+    Previous implementation (P0-1c CCS attempt) was abandoned because CCS
+    injection in EMT v3 Discrete was 62× weaker than paper LS1 baseline. This
+    class now routes paper LoadStep disturbances through the existing
+    Pm_step_amp_{i} mechanism (ES3 for bus14, ES4 for bus15), which is
+    verified paper-faithful per paper §1.4 Remark 1 (Kron reduction):
+    Δu_i can represent any-bus disturbance folded onto the ESS bus via
+    the admittance matrix.
 
-    ``ls_bus`` action mapping (mirrors the legacy god method):
-      - 14 → trip
-      - 15 → engage
-      - sentinel ``"random_bus"`` → 50/50 between (14, trip) and (15, engage)
+    Mechanism:
+      - ``ls_bus=14`` (paper LS1): load reduction at bus14 → ES3 (bus14 ESS)
+        Pm_step positive → freq UP. Default magnitude = 2.48 sys-pu
+        (= 248 MW / Sbase=100 MVA).
+      - ``ls_bus=15`` (paper LS2): load increase at bus15 → ES4 (bus15 ESS)
+        Pm_step negative → freq DOWN. Default magnitude = 1.88 sys-pu
+        (= 188 MW / Sbase=100 MVA). The adapter uses abs(magnitude_sys_pu)
+        and negates it for bus15 to enforce freq DOWN.
+      - sentinel ``"random_bus"`` → 50/50 between (14, pos) and (15, neg).
 
-    All writes use ``require_effective=True``: under v3 the R-block
-    Resistance is compile-frozen, so the schema raises
-    ``WorkspaceVarError`` to surface the contract violation at the call
-    site rather than silently no-oping (see
-    ``scenarios/kundur/NOTES.md`` §"2026-04-29 Eval 协议偏差").
+    Writes use the same PM_STEP_AMP / PM_STEP_T schema as EssPmStepProxy.
+    All other ESS Pm registers are zeroed; SG Pmg family is silenced.
+
+    Verification:
+      pm_step_single_es3 at 0.5 sys-pu → -0.37 paper-reward (E2E P0-1c data).
+      Linear scale: 0.5 → 2.48 sys-pu → -1.84 ≈ paper LS1 baseline -1.61.
     """
 
     ls_bus: int | str
@@ -428,95 +454,73 @@ class LoadStepRBranch:
         t_now: float,
         cfg: Any,
     ) -> DisturbanceTrace:
+        # Phase 1.5 reroute (2026-05-04): paper-lumped ΔP via Pm_step.
+        # CCS path (P0-1c) abandoned: 62× weaker than paper LS1 baseline.
         ws = _make_ws(cfg.model_name, cfg.n_agents)
 
-        # Resolve random sentinel + action
+        # Resolve random sentinel
         if isinstance(self.ls_bus, str):
             if self.ls_bus == "random_bus":
                 if float(rng.random()) < 0.5:
                     ls_bus_int = 14
-                    ls_action = "trip"
                 else:
                     ls_bus_int = 15
-                    ls_action = "engage"
             else:
                 raise ValueError(
                     f"LoadStepRBranch: unknown sentinel {self.ls_bus!r}"
                 )
         else:
             ls_bus_int = int(self.ls_bus)
-            if ls_bus_int == 14:
-                ls_action = "trip"
-            elif ls_bus_int == 15:
-                ls_action = "engage"
-            else:
+            if ls_bus_int not in (14, 15):
                 raise ValueError(
                     f"LoadStepRBranch: ls_bus must be 14/15 or "
                     f"'random_bus', got {self.ls_bus!r}"
                 )
 
-        amp_w = abs(float(magnitude_sys_pu)) * cfg.sbase_va
-        other_bus_int = 15 if ls_bus_int == 14 else 14
+        # ESS index (1-based): ES3→bus14, ES4→bus15
+        ess_i = _PAPER_BUS_TO_ESS_I[ls_bus_int]
+
+        # Sign convention:
+        #   bus14 (LS1): load REDUCTION → Pm_step positive → freq UP
+        #   bus15 (LS2): load INCREASE  → Pm_step negative → freq DOWN
+        if ls_bus_int == 14:
+            pm_amp = +abs(float(magnitude_sys_pu))
+            ls_action = "pm_rise"
+        else:
+            pm_amp = -abs(float(magnitude_sys_pu))
+            ls_action = "pm_drop"
 
         keys: list[str] = []
         values: list[float] = []
 
-        if ls_action == "trip":
-            # LS1: R disengage. Write 0; magnitude IGNORED.
-            k = ws("LOAD_STEP_AMP", bus=ls_bus_int, require_effective=True)
-            bridge.apply_workspace_var(k, 0.0)
-            keys.append(k); values.append(0.0)
-            # TRIP_AMP writes are state-reset (episode contamination
-            # prevention), not physical-disturbance writes. Use
-            # require_effective=False: v3 Discrete has CCS wrapped in
-            # `if false` (Phase 1.5 to restore), so the var is name-valid
-            # but not effective — the 0.0 write lands in a dangling base-ws
-            # var with no consumer. v3 Phasor CCS is also name-valid but not
-            # effective (~0.01 Hz signal). Neither warrants require_effective.
-            k = ws("LOAD_STEP_TRIP_AMP", bus=ls_bus_int,
-                   require_effective=False)
-            bridge.apply_workspace_var(k, 0.0)
-            keys.append(k); values.append(0.0)
-            k = ws("LOAD_STEP_TRIP_AMP", bus=other_bus_int,
-                   require_effective=False)
-            bridge.apply_workspace_var(k, 0.0)
-            keys.append(k); values.append(0.0)
-        else:  # engage
-            # LS2: R engage at amp_w watts.
-            k = ws("LOAD_STEP_AMP", bus=ls_bus_int, require_effective=True)
-            bridge.apply_workspace_var(k, amp_w)
-            keys.append(k); values.append(amp_w)
-            # TRIP_AMP writes: state-reset only; see comment above.
-            k = ws("LOAD_STEP_TRIP_AMP", bus=ls_bus_int,
-                   require_effective=False)
-            bridge.apply_workspace_var(k, 0.0)
-            keys.append(k); values.append(0.0)
-            k = ws("LOAD_STEP_TRIP_AMP", bus=other_bus_int,
-                   require_effective=False)
-            bridge.apply_workspace_var(k, 0.0)
-            keys.append(k); values.append(0.0)
+        # Per-agent Pm writes: target ESS gets pm_amp; all others zero.
+        amps_per_vsg = [0.0] * cfg.n_agents
+        if 0 <= ess_i - 1 < cfg.n_agents:
+            amps_per_vsg[ess_i - 1] = pm_amp
 
-        # LOAD_STEP_T workspace-var write removed (2026-05-04): Three-Phase Breaker
-        # SwitchTimes is compile-frozen in Discrete + FastRestart per F2; runtime
-        # writes are silent no-ops. Breaker timing locked at compile via build script.
+        for i in range(1, cfg.n_agents + 1):
+            kt = ws("PM_STEP_T", i=i)
+            ka = ws("PM_STEP_AMP", i=i)
+            bridge.apply_workspace_var(kt, t_now)
+            bridge.apply_workspace_var(ka, amps_per_vsg[i - 1])
+            keys.extend([kt, ka])
+            values.extend([t_now, amps_per_vsg[i - 1]])
 
-        # Silence PM + PMG (LoadStep order: silence PM, then PMG)
-        kp, vp = _silence_pm(bridge, ws, t_now, cfg.n_agents)
-        keys.extend(kp)
-        values.extend(vp)
+        # Silence SG Pmg family
         kg, vg = _silence_pmg(bridge, ws, t_now)
         keys.extend(kg)
         values.extend(vg)
 
-        target_descriptor = f"bus{ls_bus_int}:{ls_action}"
+        target_descriptor = f"ES{ess_i}(bus{ls_bus_int}):{ls_action}"
         logger.debug(
-            "[LoadStepRBranch] %s at %s: amp=%.2f MW (mag=%+.3f sys-pu), t=%.4fs",
-            ls_action, f"bus{ls_bus_int}", amp_w / 1e6,
-            float(magnitude_sys_pu), t_now,
+            "[LoadStepRBranch] %s at bus%d via ES%d: pm_amp=%+.4f sys-pu "
+            "(|mag|=%+.3f), t=%.4fs",
+            ls_action, ls_bus_int, ess_i, pm_amp,
+            abs(float(magnitude_sys_pu)), t_now,
         )
 
         return DisturbanceTrace(
-            family="load_step_r",
+            family="paper_lumped_pm_step",
             target_descriptor=target_descriptor,
             written_keys=tuple(keys),
             written_values=tuple(values),

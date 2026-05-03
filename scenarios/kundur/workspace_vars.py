@@ -220,32 +220,54 @@ _SCHEMA: dict[str, WorkspaceVarSpec] = {
         description=(
             "Bus-attached load amplitude (W) at bus 14 or 15. "
             "v3 Phasor: Series RLC R-block (compile-frozen). "
-            "v3 Discrete: Three-Phase Series RLC Load.ActivePower behind "
-            "Three-Phase Breaker (working)."
+            "v3 Discrete bus14: no consumer block — Three-Phase RLC Load "
+            "removed in Phase 1.5 P0-1c (replaced with CCS pattern); writes "
+            "are silent no-ops. "
+            "v3 Discrete bus15: Three-Phase Series RLC Load.ActivePower behind "
+            "Three-Phase Breaker (still broken — silent no-op, Phase 1.5 "
+            "attempt 2 to fix)."
         ),
-        effective_in_profile=frozenset({PROFILE_CVS_V3_DISCRETE}),
+        effective_in_profile=frozenset(),
         inactive_reason={
             PROFILE_CVS_V3: (
                 "Series RLC R Resistance string compile-frozen at FastRestart; "
                 "writes do not re-evaluate the R-block. "
                 "See scenarios/kundur/NOTES.md §'2026-04-29 Eval 协议偏差'."
             ),
+            PROFILE_CVS_V3_DISCRETE: (
+                "bus14: Three-Phase RLC Load removed in Phase 1.5 P0-1c; "
+                "LoadStep_amp_bus14 has no consumer block in v3 Discrete — "
+                "writes are silent no-ops. Use LOAD_STEP_TRIP_AMP for bus14. "
+                "bus15: Three-Phase Breaker + RLC Load still broken (silent "
+                "no-op in Discrete+FastRestart). Phase 1.5 attempt 2 to fix."
+            ),
         },
     ),
-    # Phase A++ Controlled Current Source trip injection.
+    # Phase A++ / Phase 1.5 Controlled Current Source trip injection.
     # Name-valid in v3 Phasor (CCS Constant block reads it) but NOT physically
     # effective: measured signal at Bus 14/15 ESS terminals is ~0.01 Hz
     # (electrically distant from load center), well below paper-grade.
-    # Name-valid in v3 Discrete as a reserved slot: CCS blocks are currently
-    # wrapped in `if false` (Phase 1.5 to restore). Writes land in a dangling
-    # base-ws var with no consumer block reading it; no physical effect.
-    # The LoadStepRBranch adapter writes 0.0 as a state-reset (preventing
-    # episode contamination) using require_effective=False.
+    # Phase 1.5 P0-1c CCS attempt (2026-05-04): ABANDONED. E2E measurement
+    # confirmed CCS injection was 62× weaker than paper LS1 baseline (-0.023
+    # paper-reward vs paper -1.61). CCS build blocks removed from build script.
+    # Phase 1.5 reroute: LoadStepRBranch now writes PM_STEP_AMP@ES3/ES4
+    # instead of this var. LOAD_STEP_TRIP_AMP is name-valid (schema compat)
+    # but not effective in any profile. See plan
+    # 2026-05-04_phase1_5_paper_lumped.md.
     "LOAD_STEP_TRIP_AMP": WorkspaceVarSpec(
         template="LoadStep_trip_amp_bus{bus}",
         family=IndexFamily.PER_BUS,
         profiles=frozenset({PROFILE_CVS_V3, PROFILE_CVS_V3_DISCRETE}),
-        description="CCS trip-injection amplitude (W) at bus 14 or 15.",
+        description=(
+            "CCS trip-injection amplitude (W) at bus 14 or 15. "
+            "DEPRECATED: Phase 1.5 P0-1c CCS path abandoned (62× weaker than "
+            "paper LS1 baseline). LoadStepRBranch now uses PM_STEP_AMP@ES3/ES4 "
+            "instead (paper-lumped ΔP via Pm_step infrastructure). "
+            "This var remains name-valid for schema back-compat only. "
+            "v3 Phasor: ~0.01 Hz ESS-terminal signal (electrically distant). "
+            "v3 Discrete: CCS blocks removed from build script in Phase 1.5 "
+            "reroute — writes are silent no-ops."
+        ),
         effective_in_profile=frozenset(),
         inactive_reason={
             PROFILE_CVS_V3: (
@@ -254,11 +276,11 @@ _SCHEMA: dict[str, WorkspaceVarSpec] = {
                 "See scenarios/kundur/NOTES.md §'2026-04-29 Eval 协议偏差'."
             ),
             PROFILE_CVS_V3_DISCRETE: (
-                "CCS blocks currently wrapped in `if false` in "
-                "build_kundur_cvs_v3_discrete.m; Phase 1.5 to restore. "
-                "Workspace var name is reserved (writes are no-op until "
-                "CCS blocks are built). Use require_effective=False for "
-                "state-reset writes (episode contamination prevention)."
+                "Phase 1.5 P0-1c CCS path abandoned (2026-05-04): E2E "
+                "measurement 62× weaker than paper LS1 baseline. CCS blocks "
+                "removed from build script. LoadStepRBranch now routes through "
+                "PM_STEP_AMP@ES3/ES4 (paper-lumped ΔP). See plan "
+                "2026-05-04_phase1_5_paper_lumped.md."
             ),
         },
     ),

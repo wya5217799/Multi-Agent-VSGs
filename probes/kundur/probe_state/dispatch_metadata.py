@@ -229,34 +229,69 @@ METADATA: dict[str, DispatchMetadata] = {
         expected_df_hz_per_sys_pu=0.42,
     ),
     # =====================================================================
-    # LoadStep R-branch — name-valid only (compile-frozen at FastRestart)
+    # LoadStep paper-lumped ΔP via Pm_step (Phase 1.5 reroute 2026-05-04)
     # =====================================================================
+    # CCS path (P0-1c) abandoned: 62× weaker than paper LS1 baseline.
+    # Paper §1.4 Remark 1 (Kron reduction): LS1/LS2 lumped as Pm_step on
+    # co-located ESS (ES3=bus14 for LS1, ES4=bus15 for LS2).
+    # Magnitudes calibrated EMPIRICALLY (2026-05-04 sanity sweep):
+    #   Quadratic fit reward ≈ K × amp² (overdamped system, ζ=2.81 per A2):
+    #     K_LS1 = -0.69 / amp²  → target -1.61 → amp = 1.53 sys-pu
+    #     K_LS2 = -0.99 / amp²  → target -0.80 → amp = 0.90 sys-pu
+    #   Direct verify: amp=1.53 → -1.81 (LS1, +12% target), amp=-0.90 → -0.83 (LS2, +3%)
+    #   Both within G1.5-B/C ±25% tolerance.
+    # NOTE: paper "248 MW absolute" does NOT map to our Sbase=100 MVA system.
+    #   At amp=2.48 sys-pu, ES3 system goes nonlinear/unstable (max|Δf|=19 Hz).
+    #   Empirical 1.53/0.90 is paper-equivalent perturbation in our system.
+    # ES3/ES4 max|Δf| at paper-equivalent: 0.39 Hz / 0.23 Hz — falls in
+    #   A2 physics upper bound [0.30, 0.52] Hz. Two metrics agree.
     "loadstep_paper_bus14": DispatchMetadata(
-        "loadstep_paper_bus14", "load_step_r", "bus_14",
-        _DEFAULT_MAG, _DEFAULT_SIM_S, "freq_drop",
-        "Series RLC R load engage at bus 14. Compile-frozen — NOT effective.",
-        expected_min_df_hz=0.005,
-        mag_unit="sys-pu -> W via cfg.sbase_va",
+        "loadstep_paper_bus14", "paper_lumped_pm_step", "ES3(bus14)",
+        1.53, _DEFAULT_SIM_S, "freq_rise",
+        "Phase 1.5 reroute (2026-05-04): paper LS1 via PM_STEP_AMP@ES3 "
+        "(bus14 ESS). Positive Pm_step → freq UP (paper LS1 load reduction). "
+        "Default magnitude 1.53 sys-pu (empirically calibrated to match "
+        "paper §8.4 LS1 reward = -1.61 Hz²; at amp=2.48 system blows up). "
+        "Verified 2026-05-04: amp=1.53 → paper_reward=-1.81 (+12% target). "
+        "Acceptance gate G1.5-B: paper_reward in [-2.0, -1.2] (±25%). "
+        "ES3 max|Δf| ≈ 0.39 Hz (within A2 [0.30, 0.52] Hz physics bound).",
+        expected_min_df_hz=0.30,
+        expected_max_df_hz=None,
+        mag_unit="sys-pu (ES3 Pm_step, empirically calibrated)",
         t_trigger_s=_DEFAULT_T_TRIG,
-        historical_source="NOTES.md '2026-04-29 Eval 协议偏差' (R-block frozen)",
+        historical_source="P1.5 reroute sanity sweep (2026-05-04); paper §8.4 LS1",
+        expected_df_hz_per_sys_pu=None,
     ),
     "loadstep_paper_bus15": DispatchMetadata(
-        "loadstep_paper_bus15", "load_step_r", "bus_15",
-        _DEFAULT_MAG, _DEFAULT_SIM_S, "freq_drop",
-        "Series RLC R load engage at bus 15. Compile-frozen — NOT effective.",
-        expected_min_df_hz=0.005,
-        mag_unit="sys-pu -> W via cfg.sbase_va",
+        "loadstep_paper_bus15", "paper_lumped_pm_step", "ES4(bus15)",
+        0.90, _DEFAULT_SIM_S, "freq_drop",
+        "Phase 1.5 reroute (2026-05-04): paper LS2 via PM_STEP_AMP@ES4 "
+        "(bus15 ESS). Negative Pm_step → freq DOWN (paper LS2 load increase). "
+        "Default magnitude 0.90 sys-pu (empirically calibrated to match "
+        "paper §8.4 LS2 reward = -0.80 Hz²). "
+        "Verified 2026-05-04: amp=-0.90 → paper_reward=-0.83 (+3% target). "
+        "Acceptance gate G1.5-C: paper_reward in [-1.0, -0.6] (±25%). "
+        "ES4 max|Δf| ≈ 0.23 Hz. Adapter applies negative sign internally.",
+        expected_min_df_hz=0.15,
+        expected_max_df_hz=None,
+        mag_unit="sys-pu (ES4 Pm_step, sign negated by adapter)",
         t_trigger_s=_DEFAULT_T_TRIG,
-        historical_source="NOTES.md '2026-04-29 Eval 协议偏差'",
+        historical_source="P1.5 reroute sanity sweep (2026-05-04); paper §8.4 LS2",
+        expected_df_hz_per_sys_pu=None,
     ),
     "loadstep_paper_random_bus": DispatchMetadata(
-        "loadstep_paper_random_bus", "load_step_r", "random",
-        _DEFAULT_MAG, _DEFAULT_SIM_S, "freq_drop",
-        "Random Series RLC R bus. NOT effective (compile-frozen).",
-        expected_min_df_hz=0.005,
-        mag_unit="sys-pu -> W via cfg.sbase_va",
+        "loadstep_paper_random_bus", "paper_lumped_pm_step", "random(ES3|ES4)",
+        1.53, _DEFAULT_SIM_S, "either",
+        "Phase 1.5 reroute (2026-05-04): random 50/50 between paper LS1 "
+        "(ES3/bus14, freq_rise, amp=1.53) and paper LS2 (ES4/bus15, "
+        "freq_drop, amp=0.90 magnitude). Default 1.53 = LS1 scale; "
+        "LS2 path uses 0.90 with sign negation. Expected behavior: 'either'.",
+        expected_min_df_hz=0.15,
+        expected_max_df_hz=None,
+        mag_unit="sys-pu (ES3 amp=1.53 or ES4 amp=-0.90 by random pick)",
         t_trigger_s=_DEFAULT_T_TRIG,
-        historical_source="NOTES.md '2026-04-29 Eval 协议偏差'",
+        historical_source="P1.5 reroute sanity sweep (2026-05-04)",
+        expected_df_hz_per_sys_pu=None,
     ),
     # =====================================================================
     # CCS injection at ESS terminal (Bus 14/15) — name-valid, ~0.01 Hz

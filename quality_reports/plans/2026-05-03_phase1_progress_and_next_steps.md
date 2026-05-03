@@ -136,7 +136,7 @@ Wall: 1.74s for 1s sim (1.7× real-time)
 | **1.3b** | Diagnose ω = 0.995 vs 1.0 (or accept as tolerance) | 1-3 hours |
 | **1.4** | 248 MW LoadStep oracle on full v3 Discrete (paper anchor) | 2-4 hours |
 | **1.5** | Restore CCS injection (sin-driven 3-phase pattern) | 4-6 hours |
-| **1.5+** | Speed optimization tests F14-F17 (see §6) | 4-8 hours |
+| **1.5+** | Speed optimization (TRIGGERED ONLY — see §6) | 0 hours default; 30 min if triggered |
 | **1.6** | Update env config + paper_eval to use v3 Discrete | 2-4 hours |
 | **1.7** | First trained policy run on v3 Discrete | 1-2 days |
 
@@ -145,18 +145,66 @@ Wall: 1.74s for 1s sim (1.7× real-time)
 
 ---
 
-## §6 Training Speed Optimization — F14-F17 Roadmap
+## §6 Training Time Risk Mitigation — Lean / Trigger-on-Demand
 
-**Why deferred to Phase 1.5+**: F8 in parallel agent's work tested solver/sample-time on TRIVIAL networks (1 source + 1 load). v3-scale has 7 sources + 19 lines + complex coupling — performance can be very different. Tests must run on actual v3 Discrete model.
+**Methodology shift (2026-05-03 EOD review)**: Original F14-F17 list was "test for testing's sake" — pre-optimization with no decision context. Replaced with measure-first / optimize-only-if-needed.
 
-| # | Test | Goal | Acceptance |
-|---|---|---|---|
-| F14 | SampleTime sweep (50/100/200 μs on full v3) | Find fastest dt with no signal degradation | Pe accuracy < 1% degradation; wall < 1.5× of 50μs baseline |
-| F15 | FastRestart speedup measurement at v3 scale | Quantify episode reset savings | FastRestart gives ≥ 5× speedup on 5s episode reset |
-| F16 | Pe filter on/off speed/quality trade-off | Decide if FIR Mean (20ms) worth ~4% overhead | Cleaner Pe ≥ 50% std reduction on RL signal |
-| F17 | Single-episode total wall projection | Project 200-episode training time | Single 5s episode + reset < 5s wall ⇒ 200 episodes ≤ ~30 min |
+### §6.1 Baseline projection from existing data
 
-**Estimated total**: 4-8 hours after Phase 1.5 done.
+From Phase 1.1+ IC test (1s sim → 1.74s wall, 1.7× real-time at v3 scale):
+
+```
+Single 5s episode sim   ≈ 1.7 × 5s = 8.5s wall
+Single episode reset    ≈ 1s wall (FastRestart, assumed)
+Per-episode total       ≈ 9.5s wall
+200 episodes pure sim   ≈ 32 min wall
++ RL overhead (SAC, replay buffer, etc.) ≈ +30-50%
+TOTAL TRAINING WALL     ≈ 40-60 min  (acceptable)
+```
+
+This projection comes from data we already have (v3 IC test). **No additional speed tests needed if projection holds.**
+
+### §6.2 Trigger condition for speed tests
+
+Defer all speed optimization to AFTER trial training:
+
+```
+Phase 1.6 接 paper_eval / probe_state
+   ↓
+Run TRIAL training: 10-20 episodes on v3 Discrete
+   ↓
+Measure actual wall-clock per episode + reset
+   ↓
+Extrapolate to 200 episodes
+   ├─ < 2 hr  → ship as-is, no speed tests needed
+   ├─ 2-4 hr  → run minimal speed test (D5 only, ~10 min) — FastRestart toggle
+   └─ > 4 hr  → run full triggered speed test bundle (~30 min)
+```
+
+### §6.3 Triggered Speed Test Bundle (run only if 200-episode projection > 2 hr)
+
+If the trigger fires, run a SINGLE combined test that resolves the 3 highest-ROI module decisions in ~30 min:
+
+| Decision | Variables | Acceptance |
+|---|---|---|
+| **D2** Sample time | dt ∈ {50, 100, 200} μs | largest dt with Pe error < 1% and IC settle stable |
+| **D3** Integrator+Solver pair | (Continuous + FixedStepAuto) vs (Discrete-Time + FixedStepDiscrete) | faster pair if speedup ≥ 1.5× |
+| **D5** FastRestart | on vs off (only matters at v3-scale; trivial result expected to be similar to F3/F4) | adopt if reset speedup ≥ 3× |
+
+Combined sweep: 3 dt × 2 integrator-solver × 2 FastRestart = 12 configs × ~5s wall each = 60s + setup. Total wall < 30 min including writing the test.
+
+**Skipped from earlier roadmap** (low ROI relative to cost):
+- D1 Solver type sweep — F8 trivial result said all similar; v3 retest probably wastes time
+- D4 Pe filter — quality issue not speed (deferred to RL signal-quality review, not speed)
+- D6 3-phase line variant — invasive change for unclear gain
+- D7 Source NonIdeal SCL — minor effect
+- D8 Training parallelism (multi-env) — infrastructure decision, separate scope
+
+### §6.4 Why this is the right framing
+
+YAGNI: don't optimize what's not measured to be slow. Existing data already projects 40-60 min training, comfortably under any reasonable threshold. If projection holds → 0 wasted hours. If it fails → 30 min of targeted tests (not 4-8 hr).
+
+Pre-optimization risk mitigation is not free — it costs hours of design + execution that could go to actual training, RL agent tuning, or paper-anchor validation. By deferring optimization to "triggered on miss", we preserve that budget for higher-leverage work.
 
 ---
 

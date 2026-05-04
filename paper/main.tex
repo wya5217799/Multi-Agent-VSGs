@@ -239,11 +239,14 @@ $3.0$--$9.8\,\%$. Top/bottom ratios range from $10.7$ to $23.1$.
 \begin{figure}[!t]
   \centering
   \includegraphics[width=0.92\columnwidth]{figures/fig1_agent_share_3seeds.png}
-  \caption{Per-agent ablation share across initial three seeds (Phase 4,
-  $\Phi_{\text{ABS}} = 0$, legacy $p_{\text{cf}} = 0$). Agent~a1 (ES2
-  at Bus~16) dominates 50--74\,\%; agent~a2 (ES3 at Bus~14) contributes
-  6--17\,\%. Five-seed mean under corrected $p_{\text{cf}} = 0.1$ is
-  $64\,\%$ (\cref{tab:dominance}).}
+  \caption{Per-agent ablation share across five seeds (Phase 4,
+  $\Phi_{\text{ABS}} = 0$, paper-faithful $p_{\text{cf}} = 0.1$).
+  Agent~a1 (ES2 at Bus~16) dominates with a five-seed mean of $64\,\%$
+  and range $54.6$--$74.7\,\%$; agent~a2 (ES3 at Bus~14) contributes
+  $5$--$17\,\%$. Lower bound updated from $50\,\%$ (legacy
+  $p_{\text{cf}} = 0$) to $54.6\,\%$ under corrected conditions;
+  qualitative dominance pattern is unchanged. See \cref{tab:dominance}
+  for seed-by-seed breakdown.}
   \label{fig:agent-share}
 \end{figure}
 
@@ -254,6 +257,35 @@ observation. ES3 at Bus~14, which directly hosts disturbance load
 steps, contributes only $5$--$17\,\%$. \emph{The disturbance-host
 agent learns to under-react}, ceding control to agents with richer
 observability of network-mediated transients.
+
+\begin{figure}[!t]
+  \centering
+  \includegraphics[width=0.92\columnwidth]{figures/fig2_ckpt_trajectory_seed42.png}
+  \caption{Checkpoint-trajectory of agent~a1 ablation share (seed~42,
+  500 episodes). Share locks at $56.6\,\%$ by episode~100 and remains
+  within $1$ percentage point through episode~500, confirming structural
+  rather than transient dominance. \emph{Provenance caveat}: trajectory
+  probe conducted under legacy $p_{\text{cf}} = 0.0$; five-seed mean
+  a1 share at corrected $p_{\text{cf}} = 0.1$ is $64\,\%$ (range
+  $54.6$--$74.7\,\%$, see \cref{fig:agent-share}). Qualitative pattern
+  (early lock by episode~100) is unchanged.}
+  \label{fig:ckpt-trajectory}
+\end{figure}
+
+\paragraph*{Figure provenance note.}
+\emph{Figures~\ref{fig:agent-share} and~\ref{fig:cumrf} were
+regenerated on 2026-05-04 with paper-faithful $p_{\text{cf}} = 0.1$
+data sources
+(\texttt{results/andes\_eval\_paper\_grade/},
+\texttt{agent\_state\_phase4\_seed*\_commfail01.json}).
+Figures~\ref{fig:ckpt-trajectory}, \ref{fig:lsls},
+and~\ref{fig:worst} use legacy $p_{\text{cf}} = 0.0$ data generated
+prior to the comm-fail bug fix (2026-05-04); their qualitative patterns
+are explicitly verified against post-fix data in the cited audit
+reports
+(\texttt{quality\_reports/audits/2026-05-04\_*.md}).
+All numerical claims in tables and text use post-fix,
+$p_{\text{cf}} = 0.1$ values throughout.}
 
 \subsection{Test-set asymmetry fix (Phase 3 v2)}
 
@@ -296,10 +328,16 @@ provenance-tainted and are not used for headline claims.
 \begin{figure}[!t]
   \centering
   \includegraphics[width=0.92\columnwidth]{figures/fig3_cum_rf_comparison.png}
-  \caption{Cumulative $r_f$ per episode across 50 fixed test scenarios.
-  DDIC seed~44 (best) outperforms tuned adaptive on cum-$r_f$;
-  five-seed mean exhibits high cross-seed variance (sample
-  $\sigma = 0.265$, $\sigma / |\bar{x}| = 22\,\%$).}
+  \caption{Cumulative $r_f$ per episode across 50 fixed test scenarios
+  ($p_{\text{cf}} = 0.1$, paper-faithful, $n = 5$ seeds). DDIC
+  five-seed mean: $-1.186$ (std $0.265$, $22\,\%$ of mean). Bootstrap
+  $95\,\%$ CI on totals $[-1.393,\,-0.984]$ contains the adaptive
+  point estimate $-1.060$: DDIC is statistically \emph{tied} with
+  adaptive at $\alpha = 0.05$. Error bars show $95\,\%$ bootstrap CI.
+  Gate~A3 fires ($\sigma > 0.25$); Tier-B ($n = 10$) recommended for a
+  non-overlapping-CI claim. DDIC seed~44 (best) outperforms adaptive on
+  cum-$r_f$; high cross-seed variance prevents a definitive aggregate
+  claim.}
   \label{fig:cumrf}
 \end{figure}
 
@@ -369,7 +407,10 @@ backend and reward-formula differences.
   \caption{Paper-specific load steps. LS1: Bus~14 $-2.48$~p.u.; LS2:
   Bus~15 $+1.88$~p.u. DDIC seed~44 outperforms adaptive in cum-$r_f$
   on both; absolute magnitudes are $5$--$7\times$ smaller than the
-  reference paper.}
+  reference paper. \emph{Provenance caveat}: figure data from the
+  paper-specific scenario evaluator (deprecated $p_{\text{cf}} = 0.0$;
+  run 2026-05-03 prior to comm-fail bug fix); qualitative ranking and
+  $5$--$7\times$ magnitude gap are unchanged at $p_{\text{cf}} = 0.1$.}
   \label{fig:lsls}
 \end{figure}
 
@@ -505,7 +546,11 @@ host's local transient.
   \includegraphics[width=0.92\columnwidth]{figures/fig5_worst_eps_scatter.png}
   \caption{Worst-five-episode scatter, max-$\Delta f$ vs.\ disturbance
   magnitude. PQ$_{\text{Bus14}}$ at $1.80$~p.u.\ dominates failure
-  clusters across seeds (highlighted).}
+  clusters across seeds (highlighted). \emph{Provenance caveat}:
+  worst-episode trace from seed~42 at legacy $p_{\text{cf}} = 0.0$;
+  the PQ$_{\text{Bus14}}$ $1.80$~p.u.\ cluster pattern is structural
+  and replicates under $p_{\text{cf}} = 0.1$ across all five seeds
+  (see \S\ref{ssec:dominance}).}
   \label{fig:worst}
 \end{figure}
 

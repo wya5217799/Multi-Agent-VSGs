@@ -91,7 +91,27 @@ _CONTROLLER_NAMES = {
     "ddic_seed44",
     "ddic_seed45",
     "ddic_seed46",
+    # 2026-05-04 hparam sweep: arbitrary checkpoint dir via --ckpt-dir
+    "ddic_custom",
 }
+
+
+def _load_agents_from_dir(ckpt_dir: Path) -> list[SACAgent]:
+    """Load 4 SACAgents from any directory containing agent_{0..3}_final.pt."""
+    agents = []
+    for i in range(N_AGENTS):
+        ckpt_path = ckpt_dir / f"agent_{i}_final.pt"
+        agent = SACAgent(
+            obs_dim=OBS_DIM,
+            action_dim=ACTION_DIM,
+            hidden_sizes=HIDDEN_SIZES,
+            device="cpu",
+        )
+        state = torch.load(str(ckpt_path), map_location="cpu")
+        agent.actor.load_state_dict(state["actor"])
+        agent.actor.eval()
+        agents.append(agent)
+    return agents
 
 
 # ── agent loading ─────────────────────────────────────────────────────────────
@@ -249,6 +269,21 @@ def main() -> None:
         default=int(os.environ.get("N_EPS_OVERRIDE", "50")),
         help="Number of test episodes (default 50; override for smoke tests)",
     )
+    parser.add_argument(
+        "--ckpt-dir",
+        type=str,
+        default=None,
+        help="Custom checkpoint directory (required for ddic_custom). "
+             "If sibling training_log.json contains hparam_effective, those "
+             "are monkey-patched to AndesMultiVSGEnv class attrs BEFORE env "
+             "construction (action range must match training).",
+    )
+    parser.add_argument(
+        "--label",
+        type=str,
+        default=None,
+        help="Override output label (default: derived from controller name)",
+    )
     args = parser.parse_args()
 
     n_test_eps: int = args.n_eps
@@ -256,6 +291,25 @@ def main() -> None:
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
     ctrl_name: str = args.controller
+
+    # 2026-05-04 hparam sweep: monkey-patch hparam_effective from training_log
+    # BEFORE env construction so action range / phi values match training.
+    # Only relevant for ddic_custom controllers; baseline controllers ignore it.
+    if ctrl_name == "ddic_custom":
+        if args.ckpt_dir is None:
+            raise SystemExit("ddic_custom requires --ckpt-dir")
+        ckpt_dir = Path(args.ckpt_dir)
+        tl_path = ckpt_dir / "training_log.json"
+        if tl_path.exists():
+            tl = json.load(open(tl_path))
+            eff = tl.get("hparam_effective", {})
+            if eff:
+                print(f"[worker:{ctrl_name}] applying hparam_effective from {tl_path}:")
+                for attr in ("PHI_F", "PHI_D", "DM_MIN", "DM_MAX", "DD_MIN", "DD_MAX"):
+                    if attr in eff:
+                        old = getattr(AndesMultiVSGEnv, attr)
+                        setattr(AndesMultiVSGEnv, attr, float(eff[attr]))
+                        print(f"   {attr}: {old} -> {eff[attr]}")
 
     print(f"[worker:{ctrl_name}] Building ANDES env...")
     t0 = time.time()
@@ -271,6 +325,12 @@ def main() -> None:
         action_fn = _action_adaptive
         agents = None
         label = "adaptive_K10_K400"
+    elif ctrl_name == "ddic_custom":
+        ckpt_dir = Path(args.ckpt_dir)
+        print(f"[worker:{ctrl_name}] Loading DDIC custom from {ckpt_dir}...")
+        agents = _load_agents_from_dir(ckpt_dir)
+        action_fn = _action_ddic
+        label = args.label or f"ddic_custom_{ckpt_dir.name}"
     else:
         # ddic_seedXX
         seed_str = ctrl_name.split("ddic_seed")[1]

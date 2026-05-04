@@ -160,10 +160,20 @@ constant in the ANDES \texttt{GENCLS} convention.
 hyperparameters and ranges that deviate from the values stated by
 Yang~\emph{et al.}~\cite{yang2023ddic}. All deviations are documented;
 none are paper-faithful. The most consequential is the reward-weight
-rebalance: the original $\Phi_F = 100$ produces an
-$r_f / r_d$ ratio so small that agents do not learn to attenuate
-frequency excursions; we increased $\Phi_F$ to $10\,000$ and reduced
-$\Phi_D$ from $1.0$ to $0.02$ during Phase 2 calibration.
+rebalance: at the paper-original $\Phi_F = 100$, the SAC policy
+gradient is dominated by $r_d$ ($84.9\,\%$ of weighted reward) and
+$r_h$ ($13.6\,\%$), with $r_f$ contributing only $1.52\,\%$
+(50-episode trace, configuration \texttt{phase1\_probe};
+$r_{f,\text{raw}} / r_{d,\text{raw}} \approx 1.3 \times 10^{-4}$).%
+\footnote{Reverse-engineered from the per-step weighted/raw reward
+streams; full analysis in
+\texttt{quality\_reports/audits/2026-05-04\_andes\_hparam\_sensitivity\_final\_verdict.md}~\S13.}
+The frequency-control signal is gradient-invisible, falling more than
+$3\times$ below the $5\,\%$ lower bound at which SAC reliably learns
+multi-objective trade-offs. We therefore increased $\Phi_F$ to
+$10\,000$ and reduced $\Phi_D$ from $1.0$ to $0.02$ during Phase~2
+calibration. \Cref{ssec:hparam-sensitivity} characterizes the
+sensitivity of our final results to this choice.
 
 \begin{table}[!t]
   \centering
@@ -501,6 +511,131 @@ the dominance is structural rather than init-driven: changing
 the initialization redistributes \emph{which} agent dominates, but does
 not eliminate the dominance phenomenon nor improve the mean.
 
+\subsection{Local hyperparameter sensitivity}\label{ssec:hparam-sensitivity}
+
+A reasonable critique of any null result is that the chosen
+hyperparameters might be poorly tuned, masking a real architectural
+advantage. We screen the local sensitivity of our DDIC baseline
+($\Phi_F = 10\,000$, $\Phi_D = 0.02$, $\Delta M \in [-10, 30]$,
+$\Delta D \in [-10, 30]$) by perturbing each axis log-symmetrically
+in a single-seed sweep and confirming the most-promising perturbation
+at $n = 5$.
+
+\paragraph{Sweep design.} Six perturbation configurations were
+trained for 100 episodes each at seed~42, with all other
+hyperparameters fixed: $\Phi_F \in \{3000, 30000\}$ ($\pm 3\times$
+on the F-axis), $\Phi_D \in \{0.006, 0.06\}$ ($\pm 3\times$ on the
+D-axis), and action range $\{[-5, 15], [-20, 60]\}$ ($\pm 2\times$).
+Anchor perturbations were also evaluated: the paper-original
+$\Phi_F = 100$ (configuration \texttt{phase1\_probe}, see
+\S\ref{sec:setup}-B) and action range $\pm 20\times$ (configuration
+\texttt{phase11\_ddic\_wide}, $77$~episodes before TDS divergence).%
+\footnote{Phase~11 wide-action setup and TDS-divergence trace are
+documented in
+\texttt{quality\_reports/audits/2026-05-04\_phase11\_wide\_range\_pilot\_plan.md}.}
+Each trained checkpoint was evaluated against our paper-grade
+evaluator on $50$~test episodes (\texttt{env.seed} $20000\text{--}20049$,
+$p_{\text{cf}} = 0.1$) for cum-$r_f$. The pre-registered robustness
+gate is $\sigma < 0.265$ -- the baseline 5-seed standard deviation;
+configurations whose hparam-perturbation dispersion exceeds
+seed-perturbation dispersion are labelled \emph{fragile}. The protocol
+and gate definitions were frozen prior to running the sweep.%
+\footnote{Pre-registration:
+\texttt{quality\_reports/plans/2026-05-04\_andes\_hparam\_sensitivity\_spec.md}.}
+
+\Cref{tab:hparam-sweep} reports the result.
+
+\begin{table}[!t]
+  \centering
+  \caption{Local hyperparameter sweep, single seed (42), 50-episode
+    cum-$r_f$ eval. Baseline = \textit{f\_mid}; n=5 cross-seed
+    baseline std = $0.265$. Pre-registered gate: per-axis
+    $\sigma < 0.265$.}
+  \label{tab:hparam-sweep}
+  \footnotesize
+  \begin{tabular}{lcccc}
+    \toprule
+    Config & $\Phi_F$ & $\Phi_D$ & action & cum-$r_f$ \\
+    \midrule
+    \multicolumn{5}{c}{\emph{F-axis ($\pm 3\times$)}}\\
+    f\_low  & $3000$    & $0.02$ & $[-10, 30]$ & $-2.361$ \\
+    f\_mid  & $10\,000$ & $0.02$ & $[-10, 30]$ & $-1.191$ (baseline)\\
+    f\_high & $30\,000$ & $0.02$ & $[-10, 30]$ & $-1.488$ \\
+    \multicolumn{4}{r}{\textbf{F-axis $\sigma$ (3 pts):}} & \textbf{0.608} \\
+    \midrule
+    \multicolumn{5}{c}{\emph{D-axis ($\pm 3\times$)}}\\
+    d\_low  & $10\,000$ & $0.006$ & $[-10, 30]$ & $-1.607$ \\
+    d\_high & $10\,000$ & $0.06$  & $[-10, 30]$ & $-2.807$ \\
+    \multicolumn{4}{r}{\textbf{D-axis $\sigma$ (3 pts):}} & \textbf{0.839} \\
+    \midrule
+    \multicolumn{5}{c}{\emph{action-axis ($\pm 2\times$)}}\\
+    a\_low  & $10\,000$ & $0.02$ & $[-5, 15]$  & $-2.416$ \\
+    a\_high & $10\,000$ & $0.02$ & $[-20, 60]$ & diverged at ep~50 \\
+    \multicolumn{4}{r}{\textbf{action-axis $\sigma$ (2 valid pts):}} & \textbf{0.866} \\
+    \midrule
+    \multicolumn{5}{c}{\emph{Anchors (paper-original)}}\\
+    F-anchor      & $100$ & --- & --- & gradient-invisible (\S\ref{sec:setup}-B) \\
+    action-anchor & --- & --- & $[-200, 600]$ & TDS-divergent \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+All three robustness gates fail: per-axis $\sigma$ exceeds the
+$0.265$ baseline-seed-std bound by $2.3\times$ ($\Phi_F$),
+$3.2\times$ ($\Phi_D$), and $3.3\times$ (action). Two of the six
+neighborhood points exhibit pathological training behaviour:
+\textit{a\_high} (action range $\pm 2\times$) reward-diverges at
+episode~50 (slope $-284.7$/ep, $R^2 = 0.30$), monitor-halted; the
+action-anchor ($\pm 20\times$, reused from a Phase~11 wide-action
+pilot) shows continuous TDS divergence in the simulator and never
+reaches a stable training regime. The paper-original $\Phi_F = 100$
+produces the gradient-invisibility documented in \S\ref{sec:setup}-B.
+
+\paragraph{n=5 confirmation at f\_high.} The single-seed result of
+$-1.488$ at f\_high (only $25\,\%$ worse than baseline at seed~42)
+raised the question of whether the gap was seed-noise versus a
+genuinely viable alternative operating point. We trained four
+additional seeds (43, 44, 45, 46) under the f\_high configuration
+($\Phi_F = 30\,000$). \Cref{tab:hparam-fhigh-n5} aggregates the
+result.
+
+\begin{table}[!t]
+  \centering
+  \caption{f\_high ($\Phi_F = 30\,000$) n=5 confirmation. Baseline =
+    Phase~4 ($\Phi_F = 10\,000$). Bootstrap $n_{\text{resample}} =
+    1000$, $\alpha = 0.05$, seed~$=7919$.}
+  \label{tab:hparam-fhigh-n5}
+  \footnotesize
+  \begin{tabular}{lcc}
+    \toprule
+    Quantity & f\_high (n=5) & Baseline (n=5) \\
+    \midrule
+    Seeds          & 42, 43, 44, 45, 46 & 42, 43, 44, 45, 46 \\
+    Mean cum-$r_f$ & $-1.735$ & $-1.186$ \\
+    Std (sample, ddof=1) & $0.361$ & $0.265$ \\
+    Bootstrap CI ($95\,\%$) & $[-2.057,\, -1.449]$ & $[-1.393,\, -0.984]$ \\
+    Mean max-$\Delta f$ & $0.263$~Hz & $0.238$~Hz \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+The two $95\,\%$ bootstrap CIs are disjoint with a $0.055$-unit gap.
+f\_high is significantly \emph{worse} than baseline at $n = 5$, with
+$36\,\%$ larger seed dispersion. The seed-42 single point ($-1.488$)
+was on the optimistic tail of the f\_high distribution and not
+representative.
+
+\paragraph{Verdict.} The neighborhood sweep does not yield a viable
+alternative operating point in any of the directions tested. Our
+chosen baseline is the local minimum within the tested $\pm 3\times$
+neighborhood on $\Phi_F$ and $\Phi_D$ and the tested $\pm 2\times$
+neighborhood on action range. The basin slope is steep: every tested
+direction degrades cum-$r_f$ by at least $25\,\%$ with no compensating
+reduction in seed variance. The reproducibility of our DDIC numbers
+is therefore conditional on the specific hyperparameter choice; the
+result is a point estimate on a sensitive ridge, not a locally robust
+performance basin.
+
 \section{Root-Cause Synthesis}\label{sec:rootcause}
 
 \subsection{Why the DDIC/adaptive ratio is reversed}
@@ -590,6 +725,18 @@ no statistically measurable advantage over a one-agent shared policy.
         qualitative ranking on paper-specific scenarios is preserved.
   \item Phase~10 warmstart pilot is filed as a null result:
         same-init does not break the structural dominance.
+  \item Performance is sensitive to hyperparameter choice within the
+        $\pm 3\times$ neighborhood on $\Phi_F$ and $\Phi_D$ and
+        $\pm 2\times$ on action range
+        (\cref{ssec:hparam-sensitivity}). Our chosen baseline is the
+        local minimum of the tested neighborhood; every perturbation
+        evaluated degraded cum-$r_f$ by $\geq 25\,\%$. n=5 confirmation
+        at $\Phi_F = 30\,000$ rules out the upper-axis direction as
+        an alternative. The paper-original $\Phi_F = 100$ is
+        gradient-invisible (\S\ref{sec:setup}-B); the paper-original
+        action range ($\pm 20\times$) produces TDS divergence. The
+        DDIC numbers in this paper are conditional on the specific
+        hyperparameter point.
 \end{enumerate}
 
 \section{Limitations}\label{sec:limits}
@@ -647,6 +794,18 @@ multi-agent advantage emerges only when EMT-grade nonlinear dynamics
 are present, or whether the advantage in the original paper was an
 artifact of evaluator construction or hyperparameter choices not
 documented in the original work.
+
+We have ruled out hyperparameter under-tuning as an explanation for
+the observed null result: a single-seed $\pm 3\times$ neighborhood
+sweep on $\Phi_F$ and $\Phi_D$ and a $\pm 2\times$ sweep on action
+range (\cref{ssec:hparam-sensitivity}) shows every direction degrades
+cum-$r_f$ by at least $25\,\%$, and an n=5 confirmation at the
+most-promising perturbation ($\Phi_F = 30\,000$) yields a mean
+($-1.735$) lying outside the baseline $95\,\%$ bootstrap CI. The
+multi-agent decoration finding is therefore robust to hyperparameter
+choice within the tested neighborhood; the burden of explanation
+shifts to backend characteristics or architectural choices not
+addressed here.
 
 \section*{Reproducibility}
 

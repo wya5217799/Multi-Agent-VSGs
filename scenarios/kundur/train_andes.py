@@ -47,6 +47,20 @@ def parse_args():
                    help="从指定目录加载模型继续训练, 如 results/andes_models_r3")
     p.add_argument("--seed-offset", type=int, default=0,
                    help="seed 偏移量, 避免与之前训练重复 (如之前训练了600ep, 设为600)")
+    # 2026-05-04 hparam sensitivity sweep: monkey-patch class attrs of AndesMultiVSGEnv
+    # before env construction; None = use base_env.py defaults (byte-identical to prior).
+    p.add_argument("--phi-f", type=float, default=None,
+                   help="Override AndesMultiVSGEnv.PHI_F (default: from base_env.py)")
+    p.add_argument("--phi-d", type=float, default=None,
+                   help="Override AndesMultiVSGEnv.PHI_D")
+    p.add_argument("--dm-min", type=float, default=None,
+                   help="Override AndesMultiVSGEnv.DM_MIN (action lower bound for ΔM)")
+    p.add_argument("--dm-max", type=float, default=None,
+                   help="Override AndesMultiVSGEnv.DM_MAX")
+    p.add_argument("--dd-min", type=float, default=None,
+                   help="Override AndesMultiVSGEnv.DD_MIN (action lower bound for ΔD)")
+    p.add_argument("--dd-max", type=float, default=None,
+                   help="Override AndesMultiVSGEnv.DD_MAX")
     return p.parse_args()
 
 
@@ -57,9 +71,34 @@ def main():
     if args.warmup is None:
         args.warmup = _cfg_early.WARMUP_STEPS
 
+    # 2026-05-03 Option D: seed torch RNG so SAC stochasticity is reproducible
+    # (4-25 D-floor diagnostic: R2 vs combo-300 divergence was SAC stochastic luck,
+    # not config; without this seed the same --seed produced different policies)
+    np.random.seed(args.seed + args.seed_offset)
+    torch.manual_seed(args.seed + args.seed_offset)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(args.seed + args.seed_offset)
+
     print("=" * 60)
     print(f" ANDES MADRL Training — {args.episodes} episodes")
     print("=" * 60)
+
+    # 2026-05-04 hparam sweep: monkey-patch class attrs BEFORE first env construction.
+    # AndesMultiVSGEnv inherits PHI_F/PHI_D/DM_MIN/MAX/DD_MIN/MAX from AndesBaseEnv;
+    # base.__init__ reads these as class attrs to compute self._DM_*_runtime, so the
+    # patch must precede every AndesMultiVSGEnv(...) call (loop creates one per episode).
+    _hparam_overrides = {}
+    for attr, val in [("PHI_F", args.phi_f), ("PHI_D", args.phi_d),
+                      ("DM_MIN", args.dm_min), ("DM_MAX", args.dm_max),
+                      ("DD_MIN", args.dd_min), ("DD_MAX", args.dd_max)]:
+        if val is not None:
+            old = getattr(AndesMultiVSGEnv, attr)
+            setattr(AndesMultiVSGEnv, attr, float(val))
+            _hparam_overrides[attr] = (old, float(val))
+    if _hparam_overrides:
+        print(" [hparam-override]")
+        for k, (old, new) in _hparam_overrides.items():
+            print(f"   {k}: {old} -> {new}")
 
     os.makedirs(args.save_dir, exist_ok=True)
     os.makedirs("results/figures", exist_ok=True)
@@ -78,8 +117,6 @@ def main():
     buffer_size = cfg.BUFFER_SIZE
     batch_size = cfg.BATCH_SIZE
 
-    total_updates = args.episodes * AndesMultiVSGEnv.STEPS_PER_EPISODE
-
     agents = []
     for i in range(N):
         agent = SACAgent(
@@ -91,7 +128,6 @@ def main():
             tau=tau,
             buffer_size=buffer_size,
             batch_size=batch_size,
-            total_updates=total_updates,
         )
         agents.append(agent)
 
@@ -253,6 +289,15 @@ def main():
             "episodes_completed": last_ep + 1,
             "episodes_planned": args.episodes,
             "interrupted": interrupted,
+            "hparam_overrides": {k: new for k, (_old, new) in _hparam_overrides.items()},
+            "hparam_effective": {
+                "PHI_F": AndesMultiVSGEnv.PHI_F,
+                "PHI_D": AndesMultiVSGEnv.PHI_D,
+                "DM_MIN": AndesMultiVSGEnv.DM_MIN,
+                "DM_MAX": AndesMultiVSGEnv.DM_MAX,
+                "DD_MIN": AndesMultiVSGEnv.DD_MIN,
+                "DD_MAX": AndesMultiVSGEnv.DD_MAX,
+            },
         }
         log_path = os.path.join(args.save_dir, "training_log.json")
         with open(log_path, "w") as f:

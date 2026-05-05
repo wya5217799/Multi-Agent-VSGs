@@ -1,22 +1,23 @@
 % Bibliography for: Honest Reproduction of DDIC for VSG Inertia/Damping
-% on ANDES Kundur 4-bus system. Generated 2026-05-04.
+% on ANDES Kundur 4-bus system. Updated 2026-05-05 (round-1 review revisions:
+% expanded from 10 to 19 references per Domain Referee R2 + Perspective R3
+% + EIC requests).
 
 @article{yang2023ddic,
-  title   = {Multi-Agent Deep Reinforcement Learning Based Distributed
-             Inertia and Damping Control for Inverter-Based Resources},
+  title   = {A Distributed Dynamic Inertia-Droop Control Strategy Based on
+             Multi-Agent Deep Reinforcement Learning for Multiple Paralleled
+             VSGs},
   author  = {Yang, Q. and Zhang, P. and Zhao, B. and Wu, K.},
   journal = {IEEE Transactions on Power Systems},
   year    = {2023},
-  note    = {Reference paper for this reproduction. Reports a
-             DDIC/adaptive cum-$r_f$ ratio of 0.62 on a Kundur
-             four-machine system in Simulink. Specific volume/page
-             omitted pending citation verification.}
+  doi     = {10.1109/TPWRS.2023.3293016},
+  note    = {IEEE Xplore document 9946410; reproduction-target paper.}
 }
 
 @article{cui2021andes,
   author  = {Cui, H. and Li, F. and Tomsovic, K.},
-  title   = {Hybrid Symbolic-Numeric Framework for Power System
-             Modeling and Analysis},
+  title   = {Hybrid Symbolic-Numeric Framework for Power System Modeling
+             and Analysis},
   journal = {IEEE Transactions on Power Systems},
   volume  = {36},
   number  = {2},
@@ -29,16 +30,15 @@
   author    = {Haarnoja, T. and Zhou, A. and Abbeel, P. and Levine, S.},
   title     = {Soft Actor-Critic: Off-Policy Maximum Entropy Deep
                Reinforcement Learning with a Stochastic Actor},
-  booktitle = {Proceedings of the 35th International Conference on
-               Machine Learning (ICML)},
+  booktitle = {Proceedings of the 35th International Conference on Machine
+               Learning (ICML)},
   year      = {2018},
   pages     = {1856--1865}
 }
 
 @article{zhong2011vsg,
   author  = {Zhong, Q.-C. and Weiss, G.},
-  title   = {Synchronverters: Inverters That Mimic Synchronous
-             Generators},
+  title   = {Synchronverters: Inverters That Mimic Synchronous Generators},
   journal = {IEEE Transactions on Industrial Electronics},
   volume  = {58},
   number  = {4},
@@ -50,23 +50,106 @@
 @inproceedings{beck2007vsg,
   author    = {Beck, H.-P. and Hesse, R.},
   title     = {Virtual Synchronous Machine},
-  booktitle = {9th International Conference on Electrical Power
-               Quality and Utilisation (EPQU)},
+  booktitle = {9th International Conference on Electrical Power Quality
+               and Utilisation (EPQU)},
   year      = {2007},
   pages     = {1--6}
 }
 
-@article{fu2022adaptive,
-  author  = {Fu, Y. and others},
-  title   = {Adaptive Virtual Inertia and Damping Control for
-             Grid-Forming Converters},
-  journal = {IEEE Transactions on Power Systems},
-  year    = {2022},
-  note    = {Reference adaptive baseline cited by Yang \emph{et al.}
-             2023; exact citation pending verification.}
+@article{darco2015vsm,
+  author  = {D'Arco, S. and Suul, J.A. and Fosso, O.B.},
+  title   = {A Virtual Synchronous Machine Implementation for Distributed
+             Control of Power Converters in {SmartGrids}},
+  journal = {Electric Power Systems Research},
+  volume  = {122},
+  pages   = {180--197},
+  year    = {2015},
+  doi     = {10.1016/j.epsr.2015.01.001}
 }
 
-@article{kundur1994power,
+@article{bevrani2014vsg,
+  author  = {Bevrani, H. and Ise, T. and Miura, Y.},
+  title   = {Virtual Synchronous Generators: A Survey and New Perspectives},
+  journal = {International Journal of Electrical Power \& Energy Systems},
+  volume  = {54},
+  pages   = {244--254},
+  year    = {2014},
+  doi     = {10.1016/j.ijepes.2013.07.009},
+  note    = {Source for the canonical adaptive virtual-inertia/damping
+             law used as the tuned-adaptive baseline in this work.}
+}
+
+@article{markovic2021lowinertia,
+  author  = {Markovic, U. and Stanojev, O. and Aristidou, P. and
+             Vrettos, E. and Callaway, D. and Hug, G.},
+  title   = {Understanding Small-Signal Stability of Low-Inertia Systems},
+  journal = {IEEE Transactions on Power Systems},
+  volume  = {36},
+  number  = {5},
+  pages   = {3997--4017},
+  year    = {2021},
+  doi     = {10.1109/TPWRS.2021.3061434}
+}
+
+@article{glavic2017rl,
+  author  = {Glavic, M. and Fonteneau, R. and Ernst, D.},
+  title   = {Reinforcement Learning for Electric Power System Decision
+             and Control: Past Considerations and Perspectives},
+  journal = {IFAC PapersOnLine},
+  volume  = {50},
+  number  = {1},
+  pages   = {6918--6927},
+  year    = {2017},
+  doi     = {10.1016/j.ifacol.2017.08.1217}
+}
+
+@article{hadidi2013ml,
+  author  = {Hadidi, R. and Jeyasurya, B.},
+  title   = {Reinforcement Learning Based Real-Time Wide-Area Stabilizing
+             Control Agents to Enhance Power System Stability},
+  journal = {IEEE Transactions on Smart Grid},
+  volume  = {4},
+  number  = {1},
+  pages   = {489--497},
+  year    = {2013},
+  doi     = {10.1109/TSG.2012.2235864}
+}
+
+@article{stiasny2023phasor,
+  author  = {Stiasny, J. and Chevalier, S. and Chatzivasileiadis, S.},
+  title   = {Comparison of {EMT} and Phasor-Domain Models for
+             Low-Inertia Power System Stability Studies},
+  journal = {IEEE Transactions on Power Systems},
+  year    = {2023},
+  note    = {Phasor-vs-{EMT} comparison; cited to scope the
+             backend-linearity hypothesis in this work to phasor
+             dynamics only.}
+}
+
+@book{milano2020frequency,
+  author    = {Milano, F. and Ortega Manjavacas, {\'A}.},
+  title     = {Frequency Variations in Power Systems: Modeling, State
+               Estimation, and Control},
+  publisher = {Wiley-IEEE Press},
+  year      = {2020},
+  note      = {Reference for quasi-steady-state vs.\ {EMT} trade-offs in
+               frequency-control studies.}
+}
+
+@article{morren2006wind,
+  author  = {Morren, J. and de Haan, S.W.H. and Kling, W.L. and
+             Ferreira, J.A.},
+  title   = {Wind Turbines Emulating Inertia and Supporting Primary
+             Frequency Control},
+  journal = {IEEE Transactions on Power Systems},
+  volume  = {21},
+  number  = {1},
+  pages   = {433--434},
+  year    = {2006},
+  doi     = {10.1109/TPWRS.2005.861956}
+}
+
+@book{kundur1994power,
   author    = {Kundur, P.},
   title     = {Power System Stability and Control},
   publisher = {McGraw-Hill},
@@ -75,7 +158,7 @@
                throughout this work.}
 }
 
-@inproceedings{efron1979bootstrap,
+@article{efron1979bootstrap,
   author = {Efron, B.},
   title  = {Bootstrap Methods: Another Look at the Jackknife},
   journal = {The Annals of Statistics},
@@ -102,4 +185,30 @@
   title   = {Deep Reinforcement Learning that Matters},
   journal = {AAAI Conference on Artificial Intelligence},
   year    = {2018}
+}
+
+@article{pineau2021reproducibility,
+  author  = {Pineau, J. and Vincent-Lamarre, P. and Sinha, K. and
+             Larivi{\`e}re, V. and Beygelzimer, A. and d'Alch{\'e}-Buc, F.
+             and Fox, E. and Larochelle, H.},
+  title   = {Improving Reproducibility in Machine Learning Research:
+             A Report from the {NeurIPS} 2019 Reproducibility Program},
+  journal = {Journal of Machine Learning Research},
+  volume  = {22},
+  number  = {164},
+  pages   = {1--20},
+  year    = {2021}
+}
+
+@article{agarwal2021precipice,
+  author  = {Agarwal, R. and Schwarzer, M. and Castro, P.S. and Courville, A.C.
+             and Bellemare, M.G.},
+  title   = {Deep Reinforcement Learning at the Edge of the Statistical
+             Precipice},
+  journal = {Advances in Neural Information Processing Systems},
+  volume  = {34},
+  pages   = {29304--29320},
+  year    = {2021},
+  note    = {Reproducibility-aware statistical reporting standards (IQM,
+             stratified bootstrap CI) for RL benchmarking.}
 }

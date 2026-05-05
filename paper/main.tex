@@ -20,9 +20,9 @@
 
 \begin{document}
 
-\title{An Honest Reproduction of Multi-Agent SAC for Virtual
-Synchronous Generator Inertia and Damping Control: Evidence That the
-Multi-Agent Framework Is Decorative on a Phasor-Based Backend}
+\title{Backend-Dependent Performance of Multi-Agent SAC for Virtual
+Synchronous Generator Inertia and Damping Control: A Reproduction
+Study on the ANDES Kundur Four-Bus System}
 
 \author{Yuang~Wei%
 \thanks{Manuscript prepared 2026-05-04. This is a reproduction study;
@@ -49,14 +49,17 @@ seeds). However, against a tuned adaptive baseline ($K_H = 10$,
 $K_D = 400$), DDIC is statistically tied: bootstrap 95\,\%
 confidence interval $[-1.39,\,-0.98]$ contains the adaptive point
 estimate $-1.060$. Three converging lines of evidence indicate the
-multi-agent framework is decorative on this system: (i) per-agent
-ablation shows one agent (ES2 at Bus 16) accounts for 54.6--74.7\,\% of
-control share across five seeds (mean 64\,\%); (ii) a shared-parameter
-single-actor SAC trained at $1/5$ the budget matches DDIC within
-7.5\,\% (DECORATIVE\_CONFIRMED); (iii) actor-warmstart from the shared
-policy reduces seed-to-seed variance by 14.8\,\% but degrades the mean
-by 7.9\,\% (WARMSTART\_WORSE), confirming the imbalance is structural
-rather than initialization-driven. We additionally identify and fix
+multi-agent framework adds no measurable advantage \emph{on this
+system at this configuration}: (i) per-agent ablation shows one agent
+(ES2 at Bus 16) accounts for 54.6--74.7\,\% of control share across
+five seeds (mean 64\,\%); (ii) a shared-parameter single-actor SAC
+trained with one quarter of the network parameters matches DDIC
+within 7.5\,\% at $n = 3$ seeds (DECORATIVE\_CONFIRMED, with the
+caveat that the shared-parameter baseline is at $n = 3$ vs.\ DDIC at
+$n = 5$); (iii) actor-warmstart from the shared policy reduces
+seed-to-seed variance by 14.8\,\% but degrades the mean by 7.9\,\%
+(WARMSTART\_WORSE), confirming the imbalance is structural rather
+than initialization-driven. We additionally identify and fix
 three same-class evaluation bugs in which evaluation scripts ran at
 $p_{\text{cf}} = 0$ while training used $p_{\text{cf}} = 0.1$, inflating
 headline numbers by approximately 6\,\%. Our DDIC/adaptive cum-$r_f$
@@ -106,9 +109,13 @@ contributions of this work are:
         6\,\%.
   \item Three converging lines of evidence
         (per-agent ablation, shared-parameter baseline, warmstart
-        pilot) that the multi-agent framework is \emph{decorative} on
-        this system: a single-actor policy at one fifth of the
-        training budget matches the four-agent DDIC.
+        pilot) that the multi-agent framework adds no measurable
+        advantage on this system at the operating point we tune:
+        a single-actor policy with one quarter of the network
+        parameters matches the four-agent DDIC at $n = 3$ seeds.
+        We label this finding \emph{architecturally redundant on
+        the ANDES phasor-equilibrium backend} and discuss its scope
+        in \cref{sec:rootcause,sec:limits}.
   \item A statistically tied (not better) DDIC--adaptive comparison at
         $n = 5$ training seeds, with bootstrap 95\,\% confidence
         intervals overlapping. Gate A3 (high cross-seed dispersion)
@@ -271,31 +278,40 @@ observability of network-mediated transients.
 \begin{figure}[!t]
   \centering
   \includegraphics[width=0.92\columnwidth]{figures/fig2_ckpt_trajectory_seed42.png}
-  \caption{Checkpoint-trajectory of agent~a1 ablation share (seed~42,
+  \caption{\textbf{[Legacy $p_{\text{cf}}=0.0$ trace]}
+  Checkpoint-trajectory of agent~a1 ablation share (seed~42,
   500 episodes). Share locks at $56.6\,\%$ by episode~100 and remains
   within $1$ percentage point through episode~500, confirming structural
   rather than transient dominance. \emph{Provenance caveat}: trajectory
-  probe conducted under legacy $p_{\text{cf}} = 0.0$; five-seed mean
+  probe conducted prior to the $p_{\text{cf}}$ bug fix; five-seed mean
   a1 share at corrected $p_{\text{cf}} = 0.1$ is $64\,\%$ (range
-  $54.6$--$74.7\,\%$, see \cref{fig:agent-share}). Qualitative pattern
-  (early lock by episode~100) is unchanged.}
+  $54.6$--$74.7\,\%$, see \cref{fig:agent-share}, regenerated). The
+  qualitative pattern (early lock by episode~100) is unchanged
+  between $p_{\text{cf}} = 0.0$ and $0.1$, and \emph{no quantitative
+  claim in the main text relies on this figure}.}
   \label{fig:ckpt-trajectory}
 \end{figure}
 
 \paragraph*{Figure provenance note.}
-\emph{Figures~\ref{fig:agent-share} and~\ref{fig:cumrf} were
-regenerated on 2026-05-04 with paper-faithful $p_{\text{cf}} = 0.1$
-data sources
+\emph{Figures~\ref{fig:agent-share} and~\ref{fig:cumrf} (used for
+all numerical-anchor tasks) were regenerated on 2026-05-04 with
+paper-faithful $p_{\text{cf}} = 0.1$ data sources
 (\texttt{results/andes\_eval\_paper\_grade/},
 \texttt{agent\_state\_phase4\_seed*\_commfail01.json}).
 Figures~\ref{fig:ckpt-trajectory}, \ref{fig:lsls},
-and~\ref{fig:worst} use legacy $p_{\text{cf}} = 0.0$ data generated
-prior to the comm-fail bug fix (2026-05-04); their qualitative patterns
-are explicitly verified against post-fix data in the cited audit
-reports
-(\texttt{quality\_reports/audits/2026-05-04\_*.md}).
-All numerical claims in tables and text use post-fix,
-$p_{\text{cf}} = 0.1$ values throughout.}
+and~\ref{fig:worst} are flagged \textbf{[Legacy $p_{\text{cf}}=0.0$
+trace]} in their captions and use data generated prior to the
+comm-fail bug fix (2026-05-04). These three figures are illustrative
+of qualitative patterns explicitly verified against post-fix data in
+the cited audit reports
+(\texttt{quality\_reports/audits/2026-05-04\_*.md}); no numerical
+claim in any table or in the text relies on them. We retain them in
+the main body to show the qualitative trajectories described in the
+narrative; a future revision should regenerate these figures
+end-to-end at $p_{\text{cf}} = 0.1$ once the underlying probes
+(checkpoint trajectory, paper-specific load-step replay, worst-episode
+scatter) are re-run. All quantitative claims throughout the paper use
+$p_{\text{cf}} = 0.1$ data.}
 
 \subsection{Test-set asymmetry fix (Phase 3 v2)}
 
@@ -414,13 +430,16 @@ backend and reward-formula differences.
 \begin{figure}[!t]
   \centering
   \includegraphics[width=0.92\columnwidth]{figures/fig4_paper_scenarios_ls1_ls2.png}
-  \caption{Paper-specific load steps. LS1: Bus~14 $-2.48$~p.u.; LS2:
+  \caption{\textbf{[Legacy $p_{\text{cf}}=0.0$ trace]}
+  Paper-specific load steps. LS1: Bus~14 $-2.48$~p.u.; LS2:
   Bus~15 $+1.88$~p.u. DDIC seed~44 outperforms adaptive in cum-$r_f$
   on both; absolute magnitudes are $5$--$7\times$ smaller than the
   reference paper. \emph{Provenance caveat}: figure data from the
   paper-specific scenario evaluator (deprecated $p_{\text{cf}} = 0.0$;
   run 2026-05-03 prior to comm-fail bug fix); qualitative ranking and
-  $5$--$7\times$ magnitude gap are unchanged at $p_{\text{cf}} = 0.1$.}
+  $5$--$7\times$ magnitude gap are unchanged at $p_{\text{cf}} = 0.1$.
+  \emph{No quantitative claim in tables or text relies on this
+  figure}; it is illustrative of the qualitative pattern.}
   \label{fig:lsls}
 \end{figure}
 
@@ -466,9 +485,16 @@ The shared-parameter mean ($-1.069$) is $7.5\,\%$ less negative than
 DDIC ($-1.156$, $n = 3$) and is essentially identical to adaptive
 ($-1.060$, $0.8\,\%$ difference in per-episode mean). Bootstrap CIs
 overlap among all three methods. We label this finding
-\textbf{DECORATIVE\_CONFIRMED}: the multi-agent framework adds no
-statistically measurable advantage over a single-actor shared-parameter
-policy at matched training budget on this system.
+\textbf{DECORATIVE\_CONFIRMED} with two explicit caveats: (a) the
+shared-parameter comparison is at $n = 3$ vs.\ DDIC at $n = 5$, an
+acknowledged sample-size asymmetry that is the highest-priority
+follow-up (see \cref{sec:limits}); (b) the shared-parameter actor
+processes four agents' transitions per environment step, so the
+\emph{network-parameter} count is $1/4$ that of DDIC but the
+\emph{gradient-update} count per episode is comparable. Within
+these caveats, the multi-agent architecture provides no measurable
+advantage over a single-actor policy at matched training budget on
+the ANDES Kundur 4-VSG system.
 
 \subsection{Phase~10: shared-policy warmstart (rejected)}
 
@@ -636,34 +662,97 @@ is therefore conditional on the specific hyperparameter choice; the
 result is a point estimate on a sensitive ridge, not a locally robust
 performance basin.
 
+\paragraph{Caveat on the per-axis $\sigma$ comparison.} The 0.265
+threshold above is the n=5 cross-seed sample standard deviation at
+the baseline operating point: it measures \emph{seed-induced
+dispersion at one configuration}. The per-axis $\sigma$ values
+(0.608, 0.839, 0.866) measure \emph{point-spread across deliberately
+chosen hyperparameter settings, each at $n = 1$}. These are not
+strictly the same kind of dispersion --- the latter scales with the
+local curvature of the cum-$r_f$ surface in addition to seed noise,
+so any axis with non-trivial curvature will exceed the cross-seed
+$\sigma$ by construction. We retain the comparison as a heuristic
+fragility indicator but emphasize that the substantive finding ---
+\emph{every direction tested degrades cum-$r_f$ by $\geq 25\,\%$} ---
+is direct evidence and does not depend on the $\sigma$ ratio. A
+methodologically tighter test would compute cross-hparam variance at
+$n = 5$ each (matched-$n$ comparison); we report the screening
+result here and treat matched-$n$ confirmation as future work
+(\cref{sec:limits}).
+
 \section{Root-Cause Synthesis}\label{sec:rootcause}
 
 \subsection{Why the DDIC/adaptive ratio is reversed}
 
-We attribute the reversed ratio ($1.12$ ours vs.\ $0.62$ paper) to
-three factors:
+The ratio reversal ($1.12$ ours vs.\ $0.62$ paper) cannot be cleanly
+attributed to a single mechanism because three substantial factors
+changed simultaneously between the reference work and ours: the
+simulator (Simulink EMT vs.\ ANDES phasor-equilibrium), the reward
+weights (Phase~2 rebalance), and the action range ($20\times$
+narrower). Below we discuss each as a contributing hypothesis;
+disentangling their relative magnitudes would require running the
+paper-faithful configuration on ANDES and the project configuration
+on Simulink, neither of which we attempt here.
 
-\paragraph{Backend linearity}
+\paragraph{Backend linearity (hypothesis 1)}
 The ANDES phasor-equilibrium TDS uses a quasi-steady-state assumption
-on transmission and bus voltages. Disturbance responses are smoother
-and more linear than in the Simulink EMT model used by Yang
-\emph{et al.}, where converter dynamics, line transients, and harmonic
-content provide a richer signal space for SAC's nonlinear value
-function to exploit.
+on transmission and bus voltages~\cite{cui2021andes,milano2020frequency}.
+Disturbance responses are smoother and more linear than in the
+Simulink EMT model used by Yang \emph{et al.}~\cite{yang2023ddic},
+where converter inner-loop dynamics, line transients, and harmonic
+content~\cite{stiasny2023phasor,markovic2021lowinertia} provide a
+richer signal space for SAC's nonlinear value function to exploit.
+Phasor-EMT comparison studies~\cite{stiasny2023phasor} find systematic
+discrepancies on inverter-dominated benchmarks; this hypothesis
+predicts that re-running our project configuration on a Simulink EMT
+backend would partially restore the multi-agent advantage. We do not
+test this prediction.
 
-\paragraph{Per-agent capacity imbalance}
+\paragraph{Reward-weight rescaling (hypothesis 2)}
+Our $\Phi_F = 10\,000$, $\Phi_D = 0.02$ rebalance was a documented
+deviation (\cref{tab:deviations}) made because the paper-original
+$\Phi_F = 100$ rendered the frequency component gradient-invisible
+on this backend (\cref{sec:setup}-B). However, this rebalance also
+re-shapes the optimization landscape: the sensitivity sweep
+(\cref{ssec:hparam-sensitivity}) shows the result is conditional on
+the chosen $(\Phi_F,\Phi_D)$ point. If reward shape, not backend, is
+the dominant factor, the ratio reversal would partially reflect
+optimization-landscape change, not backend dynamics.
+
+\paragraph{Action-range narrowing (hypothesis 3)}
+$\Delta H \in [-5, 15]$ vs.\ paper $[-100, 300]$ is a $20\times$
+constraint. Narrower action range may suppress per-agent specialization
+that the original paper relied on for the multi-agent advantage; the
+Phase~11 wide-action pilot (\cref{ssec:hparam-sensitivity}, anchor row)
+showed paper-faithful action ranges trigger TDS divergence on our
+backend, so we cannot test this hypothesis directly without addressing
+the divergence first.
+
+\paragraph{Per-agent capacity imbalance (mechanism, not deviation)}
 \Cref{ssec:dominance} establishes that one agent captures
 $\approx 64\,\%$ of control share. DDIC is therefore an
 \emph{effectively single-agent} system, and the multi-agent
-coordination overhead (independent critics, decentralized
-observation) does not pay off.
+coordination overhead (independent critics, decentralized observation
+\cite{glavic2017rl,hadidi2013ml}) does not pay off. This mechanism
+is internal to our system and does not depend on which of hypotheses
+1--3 dominates the cross-paper ratio comparison.
 
-\paragraph{Control-step timing constraints}
+\paragraph{Control-step timing constraints (mechanism)}
 Peak $\Delta f$ occurs at disturbance step~0 (impulse response). The
 first agent action is at step~1, so the immediate transient is
 physically uncontrollable by any feedback. DDIC and adaptive both face
 the same hard limit, so no learning advantage emerges on max-$\Delta
-f$.
+f$~\cite{kundur1994power}.
+
+\paragraph{Most defensible reading}
+Given three confounded deviations and $n = 5$ seeds, the most
+defensible reading is: \emph{the multi-agent advantage reported in
+\cite{yang2023ddic} does not transfer to the joint
+backend--reward--range configuration tested here, with backend
+linearity~(\cite{milano2020frequency,stiasny2023phasor}) being one
+plausible but unisolated contributor.} Closing this attribution gap
+is the highest-priority follow-up after Phase 9 sample-size matching
+(\cref{sec:limits}).
 
 \subsection{Failure clustering on the disturbance-host bus}
 
@@ -679,25 +768,34 @@ host's local transient.
 \begin{figure}[!t]
   \centering
   \includegraphics[width=0.92\columnwidth]{figures/fig5_worst_eps_scatter.png}
-  \caption{Worst-five-episode scatter, max-$\Delta f$ vs.\ disturbance
+  \caption{\textbf{[Legacy $p_{\text{cf}}=0.0$ trace]}
+  Worst-five-episode scatter, max-$\Delta f$ vs.\ disturbance
   magnitude. PQ$_{\text{Bus14}}$ at $1.80$~p.u.\ dominates failure
   clusters across seeds (highlighted). \emph{Provenance caveat}:
   worst-episode trace from seed~42 at legacy $p_{\text{cf}} = 0.0$;
   the PQ$_{\text{Bus14}}$ $1.80$~p.u.\ cluster pattern is structural
   and replicates under $p_{\text{cf}} = 0.1$ across all five seeds
-  (see \S\ref{ssec:dominance}).}
+  (see \S\ref{ssec:dominance}). \emph{No quantitative claim in tables
+  or text relies on this figure}; it is illustrative of structural
+  vulnerability documented in §III.C.}
   \label{fig:worst}
 \end{figure}
 
-\subsection{Triangulation: framework decoration}
+\subsection{Triangulation: architectural redundancy}
 
 Three independent observations converge on the same conclusion:
 (i)~per-agent ablation shows $64\,\%$ mean dominance by one agent;
-(ii)~shared-parameter SAC at $1/5$ training budget matches DDIC
-(\cref{tab:phase9}); (iii)~shared-policy warmstart preserves the mean
-within $\pm 8\,\%$ but does not improve it (\cref{tab:phase10}). On the
-ANDES Kundur four-VSG system, the four-agent architecture contributes
+(ii)~shared-parameter SAC with $1/4$ the network parameters matches
+DDIC (\cref{tab:phase9}, $n = 3$); (iii)~shared-policy warmstart
+preserves the mean within $\pm 8\,\%$ but does not improve it
+(\cref{tab:phase10}, $n = 3$). On the ANDES Kundur four-VSG system at
+the operating point we tune, the four-agent architecture contributes
 no statistically measurable advantage over a one-agent shared policy.
+The scope of this triangulation is bounded: the shared-parameter and
+warmstart comparisons are at $n = 3$ (acknowledged in \cref{sec:limits});
+extending Phase~9 to $n = 5$ is the highest-priority follow-up and
+would close the sample-size asymmetry with the DDIC--adaptive
+comparison.
 
 \section{Honest Claims}\label{sec:claims}
 
@@ -710,12 +808,26 @@ no statistically measurable advantage over a one-agent shared policy.
   \item DDIC loses to adaptive on max-$\Delta f$ by $9$--$11\,\%$
         across both 3-seed and 5-seed cohorts.
   \item The DDIC/adaptive ratio reversed from the reference paper
-        ($1.12$ ours vs.\ $0.62$ theirs) suggests the learning
-        advantage does not transfer to a phasor-equilibrium backend.
-  \item The multi-agent framework is decorative on this system. Three
+        ($1.12$ ours vs.\ $0.62$ theirs). We attribute this to a
+        \emph{joint} effect of three uncontrolled factors that each
+        independently could explain the reversal: backend dynamics
+        (phasor-equilibrium ANDES vs.\ EMT-grade Simulink), reward-weight
+        rescaling ($\Phi_F$~$100\rightarrow 10\,000$, $\Phi_D$~$1.0\rightarrow
+        0.02$), and action-range narrowing ($20\times$). At $n = 5$
+        we cannot disentangle these; the most defensible reading is
+        \emph{the multi-agent advantage reported in
+        \cite{yang2023ddic} does not transfer to our specific
+        backend--reward--range configuration on the ANDES Kundur
+        4-VSG system}.
+  \item The multi-agent architecture provides no measurable
+        advantage on this system at our operating point. Three
         independent lines of evidence (\cref{sec:rootcause}) converge.
-        A single shared-parameter policy at matched budget achieves
-        equivalent performance.
+        A single shared-parameter policy with $1/4$ the network
+        parameters achieves equivalent performance at $n = 3$. We
+        scope this finding to the ANDES Kundur 4-VSG configuration
+        with paper-deviating reward weights and action range; it does
+        not generalize to multi-agent VSG control on EMT backends or
+        at paper-faithful hyperparameters (see \cref{sec:limits}).
   \item Failure modes are structural and bus-specific
         (PQ$_{\text{Bus14}}$ at $1.80$~p.u.).
   \item Project deviations are documented but material: hyperparameter
@@ -742,28 +854,68 @@ no statistically measurable advantage over a one-agent shared policy.
 \section{Limitations}\label{sec:limits}
 
 \begin{itemize}
-  \item \emph{Statistical sample}: $n = 5$ seeds with sample
-        $\sigma = 0.265$ ($22\,\%$ of mean) triggers Gate A3
-        (dispersion threshold). A non-overlapping-CI claim against
-        adaptive would require Tier-B ($n = 10$) retraining.
-  \item \emph{Adaptive baseline}: a generic
-        proportional-derivative adaptive law $(K_H |\dot\omega|,\,
-        K_D|\Delta\omega|)$ with a $5{\times}5$ K-grid sweep was
-        chosen heuristically; tighter tuning may exist.
+  \item \emph{Statistical sample on the headline DDIC--adaptive
+        comparison}: $n = 5$ seeds with sample $\sigma = 0.265$
+        ($22\,\%$ of mean) triggers Gate A3 (dispersion threshold).
+        A non-overlapping-CI claim against adaptive would require
+        Tier-B ($n = 10$) retraining.
+  \item \emph{Sample-size asymmetry on the architectural-redundancy
+        comparison}: Phase~9 shared-parameter SAC was trained at
+        $n = 3$ seeds while Phase~4 DDIC was trained at $n = 5$.
+        The DECORATIVE\_CONFIRMED finding (\cref{sec:rootcause})
+        therefore rests on a smaller sample than the DDIC--adaptive
+        tie claim. Three converging lines of evidence (per-agent
+        ablation, shared-parameter, warmstart) collectively support
+        the conclusion, but extending Phase~9 to matched $n = 5$ is
+        the highest-priority follow-up and the only revision that
+        would convert "decorative consistent with" into "decorative
+        statistically confirmed."
+  \item \emph{Confounded backend--reward--range deviations}: the
+        reversed DDIC/adaptive ratio ($1.12$ vs.\ paper's $0.62$) is
+        attributable in principle to any of three factors that
+        changed between the reference and this work
+        (\cref{sec:rootcause}): backend dynamics
+        (phasor vs.\ EMT~\cite{stiasny2023phasor}), reward weights
+        ($\Phi_F$, $\Phi_D$ rebalanced by $\sim 100\times$ and $\sim 50\times$),
+        and action range ($20\times$ narrower). At $n = 5$ we
+        cannot disentangle their individual contributions; closing
+        this attribution gap requires running the paper-faithful
+        configuration on ANDES, the project configuration on
+        Simulink, or both.
+  \item \emph{Adaptive baseline tuning}: the canonical proportional-
+        derivative adaptive law $(K_H |\dot\omega|,\,K_D|\Delta\omega|)$
+        derived from~\cite{bevrani2014vsg,darco2015vsm} is tuned with
+        a $5{\times}5$ K-grid sweep. A denser ($10{\times}10$) grid or
+        Bayesian optimization might shift the adaptive operating
+        point by a few percent; the tied-CI verdict at $n = 5$ is
+        likely robust to such adjustments but has not been verified.
+  \item \emph{Hparam sensitivity coverage}: the $\pm 2$ to
+        $\pm 3\times$ sweep (\cref{ssec:hparam-sensitivity}) is local
+        and one-dimensional per axis. A 2D probe across
+        $(\Phi_F, \Phi_D)$ at multiple points, or extension of the
+        sweep to the shared-parameter and adaptive baselines, was
+        not run; we cannot claim global hparam robustness.
   \item \emph{Convergence at 500 episodes}: checkpoint-trajectory
         analysis on seed~42 shows agent~a1's share locks at $56.6\,\%$
         by episode~100 and remains within $1$~percentage point through
         episode~500. Longer training is unlikely to redistribute. We
         did not test $\geq 1000$ episodes.
+  \item \emph{Topology}: findings are specific to the modified Kundur
+        four-bus configuration with four ESS. Whether the
+        architectural-redundancy phenomenon replicates on larger
+        systems (e.g., NE39, IEEE 68-bus) is untested. The repository
+        contains an NE39 implementation; an $n = 3$ pilot is the
+        most cost-effective second-system check.
   \item \emph{Cross-backend dominance}: an action-cosine probe
         suggests agents trained on Simulink show different
         differentiation than ANDES (Simulink: cos $\in [-0.08,\,+0.15]$;
         ANDES: $[+0.31,\,+0.35]$), but the definitive ablation test
         on Simulink requires a live MATLAB engine and is not run here.
   \item \emph{Other architectures untested}: centralized-training-
-        decentralized-execution (CTDE) with a shared critic was not
-        attempted; it is conceptually orthogonal to our findings and
-        is a natural follow-up.
+        decentralized-execution (CTDE) with a shared critic, attention/
+        communication mechanisms (e.g., MAPPO, QMIX), and credit-
+        assignment schemes were not attempted; they are conceptually
+        orthogonal to our findings and are a natural follow-up.
 \end{itemize}
 
 \section{Conclusion}\label{sec:conclusion}
@@ -774,10 +926,13 @@ achieves a meaningful improvement over uncontrolled operation
 ($3.36\times$ on cum-$r_f$ at $n = 5$) but is not statistically better
 than a tuned proportional-derivative adaptive baseline. Three
 converging lines of evidence -- per-agent ablation showing $64\,\%$
-mean dominance, a shared-parameter SAC matching DDIC at $1/5$ budget,
-and a warmstart pilot that redistributes dominance without improving
-the mean -- support the conclusion that the multi-agent framework is
-decorative on this system.
+mean dominance, a shared-parameter SAC matching DDIC at $n = 3$ with
+$1/4$ the network parameters, and a warmstart pilot that redistributes
+dominance without improving the mean -- support the conclusion that
+the multi-agent architecture provides no measurable advantage
+\emph{on this system at the operating point we tune}, scoped to
+the ANDES phasor-equilibrium backend with paper-deviating reward
+weights and action range.
 
 We additionally identify three same-class evaluation bugs in which
 evaluation scripts ran at $p_{\text{cf}} = 0$ while training used
@@ -786,26 +941,30 @@ The corrected, paper-faithful evaluator and all training/eval
 artifacts are released alongside this paper.
 
 The reversal of the DDIC/adaptive performance ratio between Simulink
-($0.62$, paper) and ANDES ($1.12$, this work) is consistent with
-backend linearity: phasor-equilibrium dynamics are smoother and more
-amenable to simple feedback control, leaving less room for SAC's
-nonlinear value function. Future work should examine whether the
-multi-agent advantage emerges only when EMT-grade nonlinear dynamics
-are present, or whether the advantage in the original paper was an
-artifact of evaluator construction or hyperparameter choices not
-documented in the original work.
+($0.62$, paper) and ANDES ($1.12$, this work) cannot be cleanly
+attributed to a single mechanism: backend dynamics
+(phasor vs.\ EMT~\cite{stiasny2023phasor,milano2020frequency}),
+reward-weight rescaling, and action-range narrowing all changed
+simultaneously. Backend linearity remains a plausible but unisolated
+contributor (\cref{sec:rootcause}). Future work should examine each
+factor independently --- ideally by running the paper-faithful
+configuration on ANDES and the project configuration on Simulink ---
+and should extend the architectural-redundancy comparison
+(Phase~9 shared-parameter) to $n = 5$ to match the DDIC--adaptive
+sample size.
 
-We have ruled out hyperparameter under-tuning as an explanation for
-the observed null result: a single-seed $\pm 3\times$ neighborhood
+We have ruled out gross hyperparameter under-tuning as an explanation
+for the observed null result: a single-seed $\pm 3\times$ neighborhood
 sweep on $\Phi_F$ and $\Phi_D$ and a $\pm 2\times$ sweep on action
 range (\cref{ssec:hparam-sensitivity}) shows every direction degrades
-cum-$r_f$ by at least $25\,\%$, and an n=5 confirmation at the
+cum-$r_f$ by at least $25\,\%$, and an $n = 5$ confirmation at the
 most-promising perturbation ($\Phi_F = 30\,000$) yields a mean
-($-1.735$) lying outside the baseline $95\,\%$ bootstrap CI. The
-multi-agent decoration finding is therefore robust to hyperparameter
-choice within the tested neighborhood; the burden of explanation
-shifts to backend characteristics or architectural choices not
-addressed here.
+($-1.735$) lying outside the baseline $95\,\%$ bootstrap CI. Within
+the tested neighborhood, the architectural-redundancy finding is
+not rescued by retuning; the burden of explanation shifts to
+backend characteristics, architectural variants
+(CTDE~\cite{glavic2017rl}, communication-augmented MARL), or
+configurations outside the tested neighborhood.
 
 \section*{Reproducibility}
 

@@ -53,13 +53,13 @@ multi-agent framework adds no measurable advantage \emph{on this
 system at this configuration}: (i) per-agent ablation shows one agent
 (ES2 at Bus 16) accounts for 54.6--74.7\,\% of control share across
 five seeds (mean 64\,\%); (ii) a shared-parameter single-actor SAC
-trained with one quarter of the network parameters matches DDIC
-within 7.5\,\% at $n = 3$ seeds (DECORATIVE\_CONFIRMED, with the
-caveat that the shared-parameter baseline is at $n = 3$ vs.\ DDIC at
-$n = 5$); (iii) actor-warmstart from the shared policy reduces
-seed-to-seed variance by 14.8\,\% but degrades the mean by 7.9\,\%
-(WARMSTART\_WORSE), confirming the imbalance is structural rather
-than initialization-driven. We additionally identify and fix
+trained with one quarter of the network parameters matches DDIC at
+matched $n = 5$ seeds (mean cum-$r_f$ $-1.028$ vs.\ DDIC $-1.186$,
+overlapping bootstrap $95\,\%$ CIs, $48\,\%$ smaller cross-seed std;
+DECORATIVE\_CONFIRMED at $n = 5$); (iii) actor-warmstart from the
+shared policy reduces seed-to-seed variance by 14.8\,\% but degrades
+the mean by 7.9\,\% (WARMSTART\_WORSE), confirming the imbalance is
+structural rather than initialization-driven. We additionally identify and fix
 three same-class evaluation bugs in which evaluation scripts ran at
 $p_{\text{cf}} = 0$ while training used $p_{\text{cf}} = 0.1$, inflating
 headline numbers by approximately 6\,\%. Our DDIC/adaptive cum-$r_f$
@@ -112,10 +112,12 @@ contributions of this work are:
         pilot) that the multi-agent framework adds no measurable
         advantage on this system at the operating point we tune:
         a single-actor policy with one quarter of the network
-        parameters matches the four-agent DDIC at $n = 3$ seeds.
-        We label this finding \emph{architecturally redundant on
-        the ANDES phasor-equilibrium backend} and discuss its scope
-        in \cref{sec:rootcause,sec:limits}.
+        parameters matches the four-agent DDIC at matched $n = 5$
+        seeds, with overlapping bootstrap CIs and roughly half the
+        cross-seed standard deviation. We label this finding
+        \emph{architecturally redundant on the ANDES phasor-equilibrium
+        backend} and discuss its scope in
+        \cref{sec:rootcause,sec:limits}.
   \item A statistically tied (not better) DDIC--adaptive comparison at
         $n = 5$ training seeds, with bootstrap 95\,\% confidence
         intervals overlapping. Gate A3 (high cross-seed dispersion)
@@ -454,47 +456,55 @@ imbalance ratio rose to $57.5\times$. Per-agent reward shaping cannot
 fix structural dominance because the root cause is physical position,
 not reward signal magnitude.
 
-\subsection{Phase~9: shared-parameter SAC baseline (DECORATIVE\_CONFIRMED)}
+\subsection{Phase~9: shared-parameter SAC baseline (DECORATIVE\_CONFIRMED at $n = 5$)}
 
 To test the structural claim of multi-agent value, we trained a
 single SAC actor with weights shared across all four ESS, applied
 per-agent on local seven-dimensional observations. The shared-parameter
-training matches DDIC's hyperparameters in all other respects.
-\Cref{tab:phase9} reports the comparison.
+training matches DDIC's hyperparameters in all other respects. Per
+Tier-1 revision T1.1, we extended the original $n = 3$ comparison to
+$n = 5$ seeds (42, 43, 44, 45, 46) to match the DDIC sample size and
+remove the previous sample-size asymmetry. \Cref{tab:phase9} reports
+the matched-$n$ comparison.
 
 \begin{table}[!t]
   \centering
-  \caption{Shared-parameter SAC vs.\ DDIC, $n = 3$ seeds, 500~episodes.
-  All values under $p_{\text{cf}} = 0.1$. Per-episode bootstrap 95\,\%
-  CIs.}
+  \caption{Shared-parameter SAC vs.\ DDIC at matched $n = 5$ seeds,
+  500~episodes, paper-grade evaluator at $p_{\text{cf}} = 0.1$ on
+  the fixed 50-episode test set (\texttt{env.seed} 20000--20049).
+  Per-seed totals are 50-episode cum-$r_f$. Bootstrap CIs over the
+  5 per-seed totals (\(n_{\text{resample}}=1000\), \(\alpha=0.05\),
+  seed=7919).}
   \label{tab:phase9}
   \footnotesize
-  \begin{tabular}{lcc}
+  \begin{tabular}{lcccc}
     \toprule
-    Method & cum-$r_f$ total & 95\,\% CI per ep \\
+    Method & $n$ & Mean cum-$r_f$ & Std (ddof=1) & 95\,\% bootstrap CI \\
     \midrule
-    Shared-param ($n=3$) & $\mathbf{-1.069}$ & $[-0.0237,\,-0.0193]$ \\
-    DDIC ($n=3$)         & $-1.156$ & $[-0.0259,\,-0.0206]$ \\
-    DDIC ($n=5$)         & $-1.186$ & $[-0.0303,\,-0.0171]$ \\
-    Adaptive K=10/400    & $-1.060$ & $[-0.0264,\,-0.0163]$ \\
+    Shared-param      & $5$ & $\mathbf{-1.028}$ & $0.136$ & $[-1.125,\,-0.917]$ \\
+    DDIC (Phase 4)    & $5$ & $-1.186$ & $0.265$ & $[-1.393,\,-0.984]$ \\
+    Adaptive K=10/400 & $1$ & $-1.060$ & --- & per-ep $[-0.0264,\,-0.0163]$ \\
     \bottomrule
   \end{tabular}
 \end{table}
 
-The shared-parameter mean ($-1.069$) is $7.5\,\%$ less negative than
-DDIC ($-1.156$, $n = 3$) and is essentially identical to adaptive
-($-1.060$, $0.8\,\%$ difference in per-episode mean). Bootstrap CIs
-overlap among all three methods. We label this finding
-\textbf{DECORATIVE\_CONFIRMED} with two explicit caveats: (a) the
-shared-parameter comparison is at $n = 3$ vs.\ DDIC at $n = 5$, an
-acknowledged sample-size asymmetry that is the highest-priority
-follow-up (see \cref{sec:limits}); (b) the shared-parameter actor
-processes four agents' transitions per environment step, so the
-\emph{network-parameter} count is $1/4$ that of DDIC but the
-\emph{gradient-update} count per episode is comparable. Within
-these caveats, the multi-agent architecture provides no measurable
-advantage over a single-actor policy at matched training budget on
-the ANDES Kundur 4-VSG system.
+At matched $n = 5$, shared-parameter SAC achieves a mean cum-$r_f$ of
+$-1.028$ (std $0.136$) versus DDIC's $-1.186$ (std $0.265$). The
+shared-parameter mean is $13.4\,\%$ less negative than DDIC and the
+across-seed standard deviation is $48\,\%$ smaller. The bootstrap
+$95\,\%$ CIs overlap ($[-1.125,\,-0.917]$ vs $[-1.393,\,-0.984]$),
+so the difference is not statistically significant: the two methods
+are tied at the $0.05$ level, with shared-parameter trending
+\emph{better}. We label this finding
+\textbf{DECORATIVE\_CONFIRMED at $n = 5$}: at matched seed budget,
+the multi-agent architecture provides no measurable advantage over
+a single-actor shared-parameter policy on the ANDES Kundur 4-VSG
+system; if anything, the simpler architecture trends marginally
+better and exhibits roughly half the cross-seed variance. Note that
+the shared-parameter actor processes four agents' transitions per
+environment step, so the \emph{network-parameter} count is $1/4$
+that of DDIC but the \emph{gradient-update} count per episode is
+comparable.
 
 \subsection{Phase~10: shared-policy warmstart (rejected)}
 
@@ -786,16 +796,17 @@ host's local transient.
 Three independent observations converge on the same conclusion:
 (i)~per-agent ablation shows $64\,\%$ mean dominance by one agent;
 (ii)~shared-parameter SAC with $1/4$ the network parameters matches
-DDIC (\cref{tab:phase9}, $n = 3$); (iii)~shared-policy warmstart
-preserves the mean within $\pm 8\,\%$ but does not improve it
-(\cref{tab:phase10}, $n = 3$). On the ANDES Kundur four-VSG system at
-the operating point we tune, the four-agent architecture contributes
-no statistically measurable advantage over a one-agent shared policy.
-The scope of this triangulation is bounded: the shared-parameter and
-warmstart comparisons are at $n = 3$ (acknowledged in \cref{sec:limits});
-extending Phase~9 to $n = 5$ is the highest-priority follow-up and
-would close the sample-size asymmetry with the DDIC--adaptive
-comparison.
+DDIC at matched $n = 5$ seeds with overlapping $95\,\%$ bootstrap
+CIs and roughly half the cross-seed std (\cref{tab:phase9});
+(iii)~shared-policy warmstart preserves the mean within $\pm 8\,\%$
+but does not improve it (\cref{tab:phase10}, $n = 3$). On the ANDES
+Kundur four-VSG system at the operating point we tune, the four-agent
+architecture contributes no statistically measurable advantage over
+a one-agent shared policy; the simpler architecture in fact trends
+marginally better at the same seed budget. The scope of this
+triangulation is bounded: the warmstart pilot remains at $n = 3$
+(acknowledged in \cref{sec:limits}); the shared-parameter--vs.--DDIC
+comparison is at matched $n = 5$ as of this revision.
 
 \section{Honest Claims}\label{sec:claims}
 
@@ -859,17 +870,13 @@ comparison.
         ($22\,\%$ of mean) triggers Gate A3 (dispersion threshold).
         A non-overlapping-CI claim against adaptive would require
         Tier-B ($n = 10$) retraining.
-  \item \emph{Sample-size asymmetry on the architectural-redundancy
-        comparison}: Phase~9 shared-parameter SAC was trained at
-        $n = 3$ seeds while Phase~4 DDIC was trained at $n = 5$.
-        The DECORATIVE\_CONFIRMED finding (\cref{sec:rootcause})
-        therefore rests on a smaller sample than the DDIC--adaptive
-        tie claim. Three converging lines of evidence (per-agent
-        ablation, shared-parameter, warmstart) collectively support
-        the conclusion, but extending Phase~9 to matched $n = 5$ is
-        the highest-priority follow-up and the only revision that
-        would convert "decorative consistent with" into "decorative
-        statistically confirmed."
+  \item \emph{Phase~10 warmstart pilot remains at $n = 3$}: of the
+        three triangulation lines, the shared-parameter comparison
+        (Phase~9) was extended to matched $n = 5$ in this revision
+        (\cref{tab:phase9}); the warmstart pilot (Phase~10) remains
+        at $n = 3$. We retain its WARMSTART\_WORSE label as
+        consistent with the dominance-is-structural finding but
+        flag it as the smallest-sample piece of the triangulation.
   \item \emph{Confounded backend--reward--range deviations}: the
         reversed DDIC/adaptive ratio ($1.12$ vs.\ paper's $0.62$) is
         attributable in principle to any of three factors that
@@ -926,13 +933,14 @@ achieves a meaningful improvement over uncontrolled operation
 ($3.36\times$ on cum-$r_f$ at $n = 5$) but is not statistically better
 than a tuned proportional-derivative adaptive baseline. Three
 converging lines of evidence -- per-agent ablation showing $64\,\%$
-mean dominance, a shared-parameter SAC matching DDIC at $n = 3$ with
-$1/4$ the network parameters, and a warmstart pilot that redistributes
-dominance without improving the mean -- support the conclusion that
-the multi-agent architecture provides no measurable advantage
-\emph{on this system at the operating point we tune}, scoped to
-the ANDES phasor-equilibrium backend with paper-deviating reward
-weights and action range.
+mean dominance, a shared-parameter SAC at matched $n = 5$ seeds with
+$1/4$ the network parameters that matches DDIC ($-1.028$ vs.\ $-1.186$
+mean cum-$r_f$, overlapping bootstrap CIs, $48\,\%$ smaller cross-seed
+std), and a warmstart pilot that redistributes dominance without
+improving the mean -- support the conclusion that the multi-agent
+architecture provides no measurable advantage \emph{on this system at
+the operating point we tune}, scoped to the ANDES phasor-equilibrium
+backend with paper-deviating reward weights and action range.
 
 We additionally identify three same-class evaluation bugs in which
 evaluation scripts ran at $p_{\text{cf}} = 0$ while training used

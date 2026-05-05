@@ -834,11 +834,13 @@ comparison is at matched $n = 5$ as of this revision.
         advantage on this system at our operating point. Three
         independent lines of evidence (\cref{sec:rootcause}) converge.
         A single shared-parameter policy with $1/4$ the network
-        parameters achieves equivalent performance at $n = 3$. We
-        scope this finding to the ANDES Kundur 4-VSG configuration
-        with paper-deviating reward weights and action range; it does
-        not generalize to multi-agent VSG control on EMT backends or
-        at paper-faithful hyperparameters (see \cref{sec:limits}).
+        parameters matches DDIC at matched $n = 5$ seeds with
+        overlapping bootstrap $95\,\%$ CIs and roughly half the
+        cross-seed std (\cref{tab:phase9}). We scope this finding to
+        the ANDES Kundur 4-VSG configuration with paper-deviating
+        reward weights and action range; it does not generalize to
+        multi-agent VSG control on EMT backends or at paper-faithful
+        hyperparameters (see \cref{sec:limits}).
   \item Failure modes are structural and bus-specific
         (PQ$_{\text{Bus14}}$ at $1.80$~p.u.).
   \item Project deviations are documented but material: hyperparameter
@@ -957,9 +959,10 @@ simultaneously. Backend linearity remains a plausible but unisolated
 contributor (\cref{sec:rootcause}). Future work should examine each
 factor independently --- ideally by running the paper-faithful
 configuration on ANDES and the project configuration on Simulink ---
-and should extend the architectural-redundancy comparison
-(Phase~9 shared-parameter) to $n = 5$ to match the DDIC--adaptive
-sample size.
+to disentangle the relative contributions. The
+architectural-redundancy comparison itself was extended to matched
+$n = 5$ in this work (\cref{tab:phase9}); remaining sample-size
+concerns are limited to the warmstart pilot at $n = 3$ (\cref{sec:limits}).
 
 We have ruled out gross hyperparameter under-tuning as an explanation
 for the observed null result: a single-seed $\pm 3\times$ neighborhood

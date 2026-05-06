@@ -59,23 +59,28 @@ _log_path="$log_path"
 _cmd="$cmd"
 
 if [[ "${ANDES_CPU_DRY_RUN:-}" == "1" ]]; then
-    # test mode: async subshell (no disown), still writes done.json
+    # test mode: async subshell (no disown), still writes done.json.
+    # Redirect subshell's own stdin/out/err to /dev/null so caller's pipe (e.g.
+    # subprocess.run capture_output=True) can close immediately when this
+    # script exits, instead of waiting on inherited FDs.
     (
         bash -c "$_cmd" > "$_log_path" 2>&1
         ec=$?
         printf '{"id":"%s","exit_code":%d,"finished_at_utc":"%s"}
 '             "$_run_id" "$ec" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$_done_json"
-    ) &
+    ) </dev/null >/dev/null 2>&1 &
     pid=$!
     echo "pid=$pid"
 else
-    # production: background subshell, disown so daemon exit does not kill it
+    # production: background subshell, disown so daemon exit does not kill it.
+    # Same </dev/null >/dev/null 2>&1 redirect: prevents the subshell from
+    # holding the launcher's stdout FD open (root cause of subprocess.run hangs).
     (
         bash -c "$_cmd" > "$_log_path" 2>&1
         ec=$?
         printf '{"id":"%s","exit_code":%d,"finished_at_utc":"%s"}
 '             "$_run_id" "$ec" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$_done_json"
-    ) &
+    ) </dev/null >/dev/null 2>&1 &
     pid=$!
     disown $pid 2>/dev/null || true
     echo "pid=$pid"

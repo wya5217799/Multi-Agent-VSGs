@@ -21,7 +21,9 @@ MAX_TICKS="${MAX_TICKS:-0}"
 LOCK_FILE="${LOCK_FILE:-/tmp/rloop_daemon.lock}"
 
 log() {
-    echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) $*" | tee -a "$DAEMON_LOG"
+    # nohup already redirects stdout->DAEMON_LOG, so plain echo suffices.
+    # Previous `| tee -a` double-wrote each line because tee also writes to stdout.
+    echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) $*"
 }
 
 # Single-instance lock via flock
@@ -52,7 +54,10 @@ while true; do
     fi
 
     # Run tick logic via separate Python script (avoids bash heredoc nesting issues)
-    "$PY" "$TICK_PY" "$STATE_FILE" "$free_gb" "$tick" "$REPO" >> "$DAEMON_LOG" 2>&1 || true
+    # -u forces unbuffered stdout so tick logs appear in real time.
+    log "tick=$tick begin free_gb=$free_gb"
+    "$PY" -u "$TICK_PY" "$STATE_FILE" "$free_gb" "$tick" "$REPO" || true
+    log "tick=$tick end"
 
     sleep "$TICK_S"
 done

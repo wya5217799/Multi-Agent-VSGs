@@ -1,11 +1,11 @@
 {
   "version": "1.0",
-  "round_idx": 0,
+  "round_idx": 4,
   "started_at_utc": "2026-05-06T04:34:13.188361Z",
   "budget": {
-    "rounds_used": 0,
+    "rounds_used": 4,
     "rounds_cap": 20,
-    "wall_hr_used": 0.0,
+    "wall_hr_used": 1.7,
     "wall_hr_cap": 72,
     "tokens_used": 0,
     "tokens_cap": 800000
@@ -17,7 +17,8 @@
     "wsl_total_cpu": 32,
     "omp_env_defaults": {
       "OMP_NUM_THREADS": "4",
-      "MKL_NUM_THREADS": "4"
+      "MKL_NUM_THREADS": "4",
+      "PYTHONUNBUFFERED": "1"
     }
   },
   "gates": {
@@ -33,9 +34,417 @@
     "delta_pct": null
   },
   "pending": [],
-  "running": [],
-  "done": [],
+  "running": [
+    {
+      "id": "r04_A_phid1p0_s42",
+      "pid": 9534,
+      "started_at_utc": "2026-05-06T10:31:49.928455Z",
+      "log_tail_check_ok": true,
+      "out_dir": "results/research_loop/r04_A_phid1p0_s42",
+      "log": "results/research_loop/r04_A_phid1p0_s42.train.log"
+    },
+    {
+      "id": "r04_A_phid1p0_s43",
+      "pid": 9544,
+      "started_at_utc": "2026-05-06T10:31:49.928455Z",
+      "log_tail_check_ok": true,
+      "out_dir": "results/research_loop/r04_A_phid1p0_s43",
+      "log": "results/research_loop/r04_A_phid1p0_s43.train.log"
+    },
+    {
+      "id": "r04_A_phid1p0_s44",
+      "pid": 9551,
+      "started_at_utc": "2026-05-06T10:31:49.928455Z",
+      "log_tail_check_ok": true,
+      "out_dir": "results/research_loop/r04_A_phid1p0_s44",
+      "log": "results/research_loop/r04_A_phid1p0_s44.train.log"
+    },
+    {
+      "id": "r04_A_phid1p0_s45",
+      "pid": 9561,
+      "started_at_utc": "2026-05-06T10:31:49.928455Z",
+      "log_tail_check_ok": true,
+      "out_dir": "results/research_loop/r04_A_phid1p0_s45",
+      "log": "results/research_loop/r04_A_phid1p0_s45.train.log"
+    },
+    {
+      "id": "r04_A_phid1p0_s46",
+      "pid": 9574,
+      "started_at_utc": "2026-05-06T10:31:49.928455Z",
+      "log_tail_check_ok": true,
+      "out_dir": "results/research_loop/r04_A_phid1p0_s46",
+      "log": "results/research_loop/r04_A_phid1p0_s46.train.log"
+    }
+  ],
+  "done": [
+    {
+      "id": "r01_BC_probe",
+      "exit_code": 0,
+      "finished_at_utc": "2026-05-06T07:23:24Z",
+      "verdict_path": "round_01_verdict.md",
+      "overall_score_v2": null,
+      "axes": {
+        "phaseB_governor_add": "PASS",
+        "phaseC_h0_sweep": "FAIL (probe bug, incident)"
+      }
+    },
+    {
+      "id": "r01_A_stress_b2048_h1024",
+      "exit_code": 0,
+      "finished_at_utc": "2026-05-06T07:31:18Z",
+      "verdict_path": "round_01_verdict.md",
+      "overall_score_v2": null,
+      "axes": {
+        "final_R": -4529.8,
+        "std_e49": 0.208,
+        "TDS_fail_pct": 8.0,
+        "wall_s": 652,
+        "note": "GPU stress 1024⁴ batch 2048; wall 10% faster"
+      }
+    },
+    {
+      "id": "r01_A_lam0p01_s42",
+      "exit_code": 0,
+      "finished_at_utc": "2026-05-06T07:35:14Z",
+      "verdict_path": "round_01_verdict.md",
+      "overall_score_v2": null,
+      "axes": {
+        "final_R": -1741.6,
+        "std_e49": 0.182,
+        "TDS_fail_pct": 8.0,
+        "wall_s": 708
+      }
+    },
+    {
+      "id": "r01_A_lam0p01_s43",
+      "exit_code": 0,
+      "finished_at_utc": "2026-05-06T07:35:01Z",
+      "verdict_path": "round_01_verdict.md",
+      "overall_score_v2": null,
+      "axes": {
+        "final_R": -2473.0,
+        "std_e49": 0.195,
+        "TDS_fail_pct": 10.0,
+        "wall_s": 695
+      }
+    },
+    {
+      "id": "r01_A_lam0p01_s44",
+      "exit_code": 0,
+      "finished_at_utc": "2026-05-06T07:35:22Z",
+      "verdict_path": "round_01_verdict.md",
+      "overall_score_v2": null,
+      "axes": {
+        "final_R": -2346.2,
+        "std_e49": 0.185,
+        "TDS_fail_pct": 8.0,
+        "wall_s": 716
+      }
+    },
+    {
+      "id": "r01_A_lam0p01_s45",
+      "exit_code": 0,
+      "finished_at_utc": "2026-05-06T07:35:10Z",
+      "verdict_path": "round_01_verdict.md",
+      "overall_score_v2": null,
+      "axes": {
+        "final_R": -3121.7,
+        "std_e49": 0.185,
+        "TDS_fail_pct": 10.0,
+        "wall_s": 704
+      }
+    },
+    {
+      "id": "r01_A_lam0p01_s46",
+      "exit_code": 0,
+      "finished_at_utc": "2026-05-06T07:35:06Z",
+      "verdict_path": "round_01_verdict.md",
+      "overall_score_v2": null,
+      "axes": {
+        "final_R": -3507.4,
+        "std_e49": 0.182,
+        "TDS_fail_pct": 10.0,
+        "wall_s": 700
+      }
+    },
+    {
+      "id": "r01_A_lam0p001_s42",
+      "exit_code": 0,
+      "finished_at_utc": "2026-05-06T07:35:26Z",
+      "verdict_path": "round_01_verdict.md",
+      "overall_score_v2": null,
+      "axes": {
+        "final_R": -1747.2,
+        "std_e49": 0.185,
+        "TDS_fail_pct": 8.0,
+        "wall_s": 720
+      }
+    },
+    {
+      "id": "r01_A_lam0p1_s42",
+      "exit_code": 0,
+      "finished_at_utc": "2026-05-06T07:36:03Z",
+      "verdict_path": "round_01_verdict.md",
+      "overall_score_v2": null,
+      "axes": {
+        "final_R": -1753.6,
+        "std_e49": 0.18,
+        "TDS_fail_pct": 8.0,
+        "wall_s": 697
+      }
+    },
+    {
+      "id": "r02_C_pre_h0_sweep_v2",
+      "exit_code": 0,
+      "finished_at_utc": "2026-05-06T07:49:30Z",
+      "verdict_path": "round_02_verdict.md",
+      "overall_score_v2": null,
+      "axes": {
+        "H0_20": "PASS",
+        "H0_30": "PASS",
+        "H0_50": "PASS",
+        "H0_80": "PASS"
+      }
+    },
+    {
+      "id": "r02_A_lam0p01_200ep_s42",
+      "exit_code": 0,
+      "finished_at_utc": "2026-05-06T08:21:00Z",
+      "verdict_path": "round_02_verdict.md",
+      "overall_score_v2": null,
+      "axes": {
+        "final_R": -922.8,
+        "std_e199": 0.12,
+        "TDS%": 10.0,
+        "fpeak": 0.88,
+        "wall_s": 1885
+      }
+    },
+    {
+      "id": "r02_A_lam0p01_200ep_s43",
+      "exit_code": 0,
+      "finished_at_utc": "2026-05-06T08:21:04Z",
+      "verdict_path": "round_02_verdict.md",
+      "overall_score_v2": null,
+      "axes": {
+        "final_R": -1204.5,
+        "std_e199": 0.135,
+        "TDS%": 10.0,
+        "fpeak": 0.88,
+        "wall_s": 1890
+      }
+    },
+    {
+      "id": "r02_A_lam0p01_200ep_s44",
+      "exit_code": 0,
+      "finished_at_utc": "2026-05-06T08:21:20Z",
+      "verdict_path": "round_02_verdict.md",
+      "overall_score_v2": null,
+      "axes": {
+        "final_R": -983.3,
+        "std_e199": 0.113,
+        "TDS%": 8.7,
+        "fpeak": 0.9,
+        "wall_s": 1906
+      }
+    },
+    {
+      "id": "r02_A_lam0p01_200ep_s45",
+      "exit_code": 0,
+      "finished_at_utc": "2026-05-06T08:21:06Z",
+      "verdict_path": "round_02_verdict.md",
+      "overall_score_v2": null,
+      "axes": {
+        "final_R": -978.8,
+        "std_e199": 0.147,
+        "TDS%": 10.0,
+        "fpeak": 0.92,
+        "wall_s": 1893
+      }
+    },
+    {
+      "id": "r02_A_lam0p01_200ep_s46",
+      "exit_code": 0,
+      "finished_at_utc": "2026-05-06T08:21:01Z",
+      "verdict_path": "round_02_verdict.md",
+      "overall_score_v2": null,
+      "axes": {
+        "final_R": -1205.2,
+        "std_e199": 0.098,
+        "TDS%": 10.0,
+        "fpeak": 0.91,
+        "wall_s": 1887
+      }
+    },
+    {
+      "id": "r03_governor_wire_probe",
+      "exit_code": 0,
+      "finished_at_utc": "2026-05-06T08:49:37Z",
+      "verdict_path": "round_03_verdict.md",
+      "overall_score_v2": null,
+      "axes": {
+        "phaseB_governor_add": "PASS",
+        "ieeeg1_n": 4,
+        "exst1_n": 4,
+        "5step_TDS": "ok"
+      }
+    },
+    {
+      "id": "r03_A_lam0p01_500ep_s42",
+      "exit_code": 0,
+      "finished_at_utc": "2026-05-06T09:54:39Z",
+      "verdict_path": "round_03_verdict.md",
+      "overall_score_v2": null,
+      "axes": {
+        "final_R": -826.6,
+        "std_e299": 0.18,
+        "TDS%": 9.0,
+        "wall_s": 3896,
+        "6axis_LS1": 0.04,
+        "cum_rf_LS1": -0.1359,
+        "max_df_LS1": 0.531
+      }
+    },
+    {
+      "id": "r03_A_lam0p01_500ep_s43",
+      "exit_code": 0,
+      "finished_at_utc": "2026-05-06T09:54:31Z",
+      "verdict_path": "round_03_verdict.md",
+      "overall_score_v2": null,
+      "axes": {
+        "final_R": -1011.4,
+        "std_e299": 0.172,
+        "TDS%": 9.3,
+        "wall_s": 3888,
+        "cum_rf_LS1": -0.0711,
+        "max_df_LS1": 0.522
+      }
+    },
+    {
+      "id": "r03_A_lam0p01_500ep_s44",
+      "exit_code": 0,
+      "finished_at_utc": "2026-05-06T09:54:36Z",
+      "verdict_path": "round_03_verdict.md",
+      "overall_score_v2": null,
+      "axes": {
+        "final_R": -787.7,
+        "std_e299": 0.113,
+        "TDS%": 9.3,
+        "wall_s": 3893,
+        "cum_rf_LS1": -0.1005,
+        "max_df_LS1": 0.511
+      }
+    },
+    {
+      "id": "r03_A_lam0p01_500ep_s45",
+      "exit_code": 0,
+      "finished_at_utc": "2026-05-06T09:54:33Z",
+      "verdict_path": "round_03_verdict.md",
+      "overall_score_v2": 0.036,
+      "axes": {
+        "final_R": -789.1,
+        "std_e299": 0.113,
+        "TDS%": 9.3,
+        "wall_s": 3890,
+        "cum_rf_LS1": -0.0827,
+        "max_df_LS1": 0.545,
+        "6axis_overall": 0.036
+      }
+    },
+    {
+      "id": "r03_A_lam0p01_500ep_s46",
+      "exit_code": 0,
+      "finished_at_utc": "2026-05-06T09:54:29Z",
+      "verdict_path": "round_03_verdict.md",
+      "overall_score_v2": null,
+      "axes": {
+        "final_R": -1054.8,
+        "std_e299": 0.15,
+        "TDS%": 9.3,
+        "wall_s": 3884,
+        "cum_rf_LS1": -0.1167,
+        "max_df_LS1": 0.611
+      }
+    },
+    {
+      "id": "r04_adaptive_baseline_eval",
+      "exit_code": 0,
+      "finished_at_utc": "2026-05-06T10:32:15Z",
+      "verdict_path": null,
+      "overall_score_v2": null,
+      "axes": {}
+    },
+    {
+      "id": "r04_governor_V3_smoke_s42",
+      "exit_code": 0,
+      "finished_at_utc": "2026-05-06T10:39:35Z",
+      "verdict_path": null,
+      "overall_score_v2": null,
+      "axes": {}
+    },
+    {
+      "id": "r04_obs9_smoke_v2_s42",
+      "exit_code": 0,
+      "finished_at_utc": "2026-05-06T10:39:25Z",
+      "verdict_path": null,
+      "overall_score_v2": null,
+      "axes": {}
+    }
+  ],
   "killed": [],
-  "ai_session_log": [],
+  "ai_session_log": [
+    {
+      "wake_at_utc": "2026-05-06T05:55:00Z",
+      "context_used_tok": 75000,
+      "wrote": [
+        "round_01_plan.md (saturated)",
+        "scripts/research_loop/r01_bc_probe.py",
+        "env/andes/base_env.py (smoothing patch)",
+        "scripts/backends/sac_gpu.sh",
+        "scenarios/kundur/train_andes.py (DEVICE env)",
+        ".claude/skills/research-loop/SKILL.md (GPU policy)"
+      ],
+      "session_id": "R01_launch_saturated"
+    },
+    {
+      "wake_at_utc": "2026-05-06T07:42:00Z",
+      "context_used_tok": 130000,
+      "wrote": [
+        "round_01_verdict.md",
+        "incidents/r01_h0_probe_disturbance_bug.md",
+        "round_02_plan.md",
+        "scripts/research_loop/r02_h0_sweep_v2.py"
+      ],
+      "session_id": "R01_verdict_R02_launch"
+    },
+    {
+      "wake_at_utc": "2026-05-06T08:35:00Z",
+      "context_used_tok": 165000,
+      "wrote": [
+        "round_02_verdict.md",
+        "round_03_plan.md",
+        "scripts/research_loop/r03_governor_wire_probe.py",
+        "env/andes/base_env.py (INCLUDE_OWN_ACTION_OBS env var patch)"
+      ],
+      "session_id": "R02_verdict_R03_launch"
+    },
+    {
+      "wake_at_utc": "2026-05-06T10:00:00Z",
+      "context_used_tok": 220000,
+      "wrote": [
+        "round_03_verdict.md",
+        "round_04_plan.md",
+        "env/andes/andes_vsg_env_v3.py (V3 = V2+governor)",
+        "scenarios/kundur/train_andes_v3.py",
+        "scripts/research_loop/r04_adaptive_baseline_eval.py",
+        "scenarios/kundur/train_andes.py (obs_dim env-var read)",
+        ".claude/skills/research-loop/SKILL.md (L1 verdict 6-section template)",
+        "paper/figures/_archive_R0_2026-05-06/ (L2: 8 R0 variants archived)",
+        "paper/figures/r03_lam0p01_s42_best/ (R03 paper-spec figs)",
+        "results/research_loop/eval_r03_paper_spec/ (5seed eval JSONs)"
+      ],
+      "session_id": "R03_verdict_R04_launch"
+    }
+  ],
   "handoff_pointers": []
 }

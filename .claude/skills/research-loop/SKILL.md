@@ -59,6 +59,61 @@ verdict 阶段必调 `/andes-compare` 当:
 
 输出落 `quality_reports/research_loop/round_NN_compare.md`.
 
+## ⚠ Verdict 6-段强制模板 (L1, 2026-05-07)
+
+每 round_NN_verdict.md 必含 6 段, 缺任一段不算完整:
+
+```markdown
+# R{NN} Verdict
+**Status / Wall / Trigger**
+
+## §1 实测 (ground truth)
+- train_reward: 5 seed mean ± std @ final ep
+- paper-spec eval: cum_rf, max_df (项目 vs 论文)
+- 表格列每 arm 的 final_R / std / TDS% / fpeak / wall
+
+## §2 6-axis paper alignment
+- 调 `evaluation/paper_grade_axes.py <eval_dir>` 出 6-axis JSON
+- 表格: axis 1-6 score (0-1) + geometric mean + paper benchmark gap
+- 若 eval driver 缺 → 标 "NOT MEASURED" 并入 R{N+1} 优先 #1
+
+## §3 视觉对比 (paper vs project fig)
+- 路径: paper/figures/<variant>/fig{6,7,8,9}_*.png vs ../一切/论文/Figure.paper/{6,7,8,9}.png
+- 1-2 句具体 diff: "项目 Δf peak 0.X Hz vs paper 0.13 Hz, 锯齿/平滑, ΔH 方向正/负"
+
+## §4 Hyperparam vs paper Table I
+- 表格列 Class A/B/C deviation:
+  - A: 必须靠近 (违规 → bug, 必修)
+  - B: 可保留 deviation (写论文声明)
+  - C: ANDES 平台局限 (不可消)
+- 见 `feedback_research_boundaries.md`
+
+## §5 假设验证 (H1-Hn)
+- 上轮 H 验/部分/证伪, 一行 reason
+
+## §6 R{N+1} candidates
+- ≤4 候选, priority 排, rationale 一行
+- K_max default 8 (CPU 物理上限), GPU=optional
+```
+
+L1 enforces: 写 verdict 时如发现 § 缺失, 不准跳过, 必补 (即使 "NOT MEASURED YET" 也要写明
+为啥 + 入 R{N+1} 优先).
+
+## ⚠ Verdict 必含 paper-fig 6-axis 闭环 (per 2026-05-07 user 强 input)
+
+判训成功的 gold standard = `paper/figures/<variant>/fig{6,7,8,9}*.png` vs
+`C:\Users\27443\Desktop\一切\论文\Figure.paper\{6,7,8,9}.png` 视觉对比 + 6-axis 量化.
+
+每 round verdict 必走 ckpt → eval driver (V2-compat) → traces JSON →
+`evaluation/paper_grade_axes.py` (6-axis JSON) → `paper/figure_scripts/figs6_9_ls_traces.py`
+(fig regen) → verdict 写 6-axis score + 视觉对比 1 句.
+
+train_reward / action_std / cum_rf 是代理量, 不能替代 6-axis. 见
+`feedback_paper_fig_is_gold_standard.md`.
+
+R01-R03 因 `_eval_paper_specific.py` (eval driver) 2026-05-07 stash 事故丢, 写了 "6-axis NOT
+MEASURED YET" — R04 第一任务必 rebuild driver + 跑 R03 ckpt 闭环.
+
 ## ⚠ Verdict 强制双 metric (per OPT-3, 2026-05-07)
 
 verdict "实测" 节必须写 **两个** metric, 不准只引训练:
@@ -100,13 +155,16 @@ echo $! > /tmp/rloop_daemon.pid
 
 终止: `kill $(cat /tmp/rloop_daemon.pid)`
 
-## ANDES Throughput 默认 (per spec §11.5, 2026-05-06 verdict)
+## ANDES Throughput 默认 (per spec §11.5 + 2026-05-07 user override)
 
 - WSL `~/.wslconfig`: `memory=24GB processors=32 swap=8GB`
 - 单 ANDES run: ~800 MB RSS, 安全位 1.5 GB
 - OMP_NUM_THREADS=4 / MKL_NUM_THREADS=4 必须 (BLAS oversub 防御)
 - 5 路并行最甜 (1.12× 单进程)
-- GPU SAC: REJECT (网络 256-256 太小)
+- GPU SAC: **optional, 不 REJECT**. 2026-05-06 verdict 实测 256-256 网络 GPU 训练慢
+  ~4% (ROI 弱), 但**不是兼容性问题**, 跑得动. 用户授权: 候选可指定 GPU
+  (cmd 加 `DEVICE=cuda CUDA_VISIBLE_DEVICES=0`, backend=`sac_gpu`), 不再要求人工授权
+  每次. 见 `feedback_gpu_policy_optional.md`.
 
 ## Handoff 流程 (ctx 满)
 

@@ -61,6 +61,10 @@ def parse_args():
                    help="Override AndesMultiVSGEnv.DD_MIN (action lower bound for ΔD)")
     p.add_argument("--dd-max", type=float, default=None,
                    help="Override AndesMultiVSGEnv.DD_MAX")
+    p.add_argument("--batch-size", type=int, default=None,
+                   help="Override config.BATCH_SIZE (research-loop GPU stress)")
+    p.add_argument("--hidden-size", type=int, default=None,
+                   help="Override config.HIDDEN_SIZES uniform width (research-loop GPU stress)")
     return p.parse_args()
 
 
@@ -104,8 +108,14 @@ def main():
     os.makedirs("results/figures", exist_ok=True)
 
     # ─── 环境 & Agent ───
+    # obs_dim 须读 env var (INCLUDE_OWN_ACTION_OBS 会增加 +2), 不能直接读类属性 OBS_DIM,
+    # 否则 R03 obs9 smoke 那种 shape mismatch (replay buffer (7,) vs env (9,)) 复现.
+    # 见 incidents/r03_obs9_shape_mismatch_bug.md.
     N = AndesMultiVSGEnv.N_AGENTS
-    obs_dim = AndesMultiVSGEnv.OBS_DIM
+    _include_own_action = bool(int(os.environ.get("INCLUDE_OWN_ACTION_OBS", "0")))
+    obs_dim = AndesMultiVSGEnv.OBS_DIM + (2 if _include_own_action else 0)
+    if _include_own_action:
+        print(f"[obs] INCLUDE_OWN_ACTION_OBS=1 -> obs_dim {AndesMultiVSGEnv.OBS_DIM} -> {obs_dim}")
     action_dim = 2
 
     # SAC 超参数 (论文 Table I, 从 config.py 读取)
@@ -116,6 +126,20 @@ def main():
     tau = cfg.TAU_SOFT
     buffer_size = cfg.BUFFER_SIZE
     batch_size = cfg.BATCH_SIZE
+    if args.batch_size is not None:
+        print(f"[hparam-override] BATCH_SIZE: {batch_size} -> {args.batch_size}")
+        batch_size = args.batch_size
+    if args.hidden_size is not None:
+        new_hidden = [args.hidden_size] * len(hidden_sizes)
+        print(f"[hparam-override] HIDDEN_SIZES: {hidden_sizes} -> {new_hidden}")
+        hidden_sizes = new_hidden
+
+    # Device selection: env var DEVICE overrides default cpu (per research-loop GPU policy)
+    device_env = os.environ.get("DEVICE", "cpu").lower()
+    if device_env == "cuda" and not torch.cuda.is_available():
+        print("[device] DEVICE=cuda requested but torch.cuda.is_available()=False, falling back to cpu")
+        device_env = "cpu"
+    print(f"[device] using {device_env}")
 
     agents = []
     for i in range(N):
@@ -128,6 +152,7 @@ def main():
             tau=tau,
             buffer_size=buffer_size,
             batch_size=batch_size,
+            device=device_env,
         )
         agents.append(agent)
 

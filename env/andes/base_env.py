@@ -19,6 +19,7 @@ ANDES 多智能体 VSG 环境基类
 
 from abc import ABC, abstractmethod
 from collections import deque
+import os
 import numpy as np
 
 from scenarios.contract import KUNDUR as _DEFAULT_CONTRACT
@@ -77,6 +78,12 @@ class AndesBaseEnv(ABC):
     # Do NOT port to Simulink without validating on that backend first.
     PHI_ABS = 50.0  # 绝对频率偏差惩罚权重 (补充项, 解决 Kundur 紧耦合问题)
 
+    # Action smoothing penalty (research_loop R01 Phase A)
+    # r_smooth = -LAMBDA_SMOOTH * sum_i [ ((dM_i - prev_dM_i)/dM_range)^2
+    #                                   + ((dD_i - prev_dD_i)/dD_range)^2 ]
+    # 0.0 disables. Override at runtime via LAMBDA_SMOOTH env var.
+    LAMBDA_SMOOTH = 0.0
+
     # 参数平滑过渡 (避免 ANDES TDS 因参数突变发散)
     N_SUBSTEPS = 5                   # 每个控制步分成 5 小段渐变
 
@@ -111,6 +118,21 @@ class AndesBaseEnv(ABC):
 
         # omega 归一化系数 (ANDES omega 以 p.u. 表示, 1.0=标称)
         self._omega_scale = self.FN * 2 * np.pi  # 转换到 rad/s 偏差
+
+        # Action smoothing: env-var override of class default
+        self._lambda_smooth = float(
+            os.environ.get("LAMBDA_SMOOTH", str(self.LAMBDA_SMOOTH))
+        )
+
+        # Optional: include own previous action in obs (R03 probe).
+        # Off by default to keep V1/V2 actor compatibility. When ON, OBS_DIM += 2
+        # at instance level (class attr untouched).
+        self._include_own_action_obs = bool(int(
+            os.environ.get("INCLUDE_OWN_ACTION_OBS", "0")
+        ))
+        if self._include_own_action_obs:
+            self.OBS_DIM = self.__class__.OBS_DIM + 2
+            self._last_action = np.zeros((self.N_AGENTS, 2), dtype=np.float32)
 
     def close(self):
         """Clean up ANDES system resources."""
@@ -208,6 +230,14 @@ class AndesBaseEnv(ABC):
         self._prev_M = self.M0.copy()
         self._prev_D = self.D0.copy()
 
+        # 记录上一步物理增量 (用于 LAMBDA_SMOOTH 平滑惩罚)
+        self._prev_delta_M = np.zeros(self.N_AGENTS)
+        self._prev_delta_D = np.zeros(self.N_AGENTS)
+
+        # 重置 INCLUDE_OWN_ACTION_OBS 的 last_action 缓存
+        if self._include_own_action_obs:
+            self._last_action = np.zeros((self.N_AGENTS, 2), dtype=np.float32)
+
         return self._build_obs()
 
     def _pre_build(self, **kwargs):
@@ -285,6 +315,30 @@ class AndesBaseEnv(ABC):
         rewards, r_f_sum, r_h_sum, r_d_sum = self._compute_rewards(
             omega, omega_dot, delta_M, delta_D)
 
+        # 5b. Action smoothing penalty (R01 Phase A; LAMBDA_SMOOTH=0.0 disables, paper-faithful)
+        r_smooth_sum = 0.0
+        if self._lambda_smooth > 0.0:
+            dM_range = max(self.DM_MAX - self.DM_MIN, 1e-6)
+            dD_range = max(self.DD_MAX - self.DD_MIN, 1e-6)
+            smooth_pen = 0.0
+            for i in range(self.N_AGENTS):
+                dm_diff = (delta_M[i] - self._prev_delta_M[i]) / dM_range
+                dd_diff = (delta_D[i] - self._prev_delta_D[i]) / dD_range
+                smooth_pen += dm_diff * dm_diff + dd_diff * dd_diff
+            r_smooth_sum = -self._lambda_smooth * smooth_pen
+            r_per_agent = r_smooth_sum / self.N_AGENTS
+            for i in range(self.N_AGENTS):
+                rewards[i] += r_per_agent
+
+        self._prev_delta_M = delta_M.copy()
+        self._prev_delta_D = delta_D.copy()
+
+        # 5c. Cache last action for INCLUDE_OWN_ACTION_OBS obs append
+        if self._include_own_action_obs:
+            for i in range(self.N_AGENTS):
+                self._last_action[i, 0] = float(actions[i][0])
+                self._last_action[i, 1] = float(actions[i][1])
+
         # 6. 终止条件
         done = self.step_count >= self.STEPS_PER_EPISODE
 
@@ -312,6 +366,7 @@ class AndesBaseEnv(ABC):
             "r_f": r_f_sum,
             "r_h": r_h_sum,
             "r_d": r_d_sum,
+            "r_smooth": r_smooth_sum,
             "max_freq_deviation_hz": max_freq_deviation_hz,
             "tds_failed": tds_failed,
         }
@@ -379,9 +434,10 @@ class AndesBaseEnv(ABC):
         # 转换为偏差量 (标称值 = 1.0 p.u.)
         d_omega = (omega - 1.0) * self._omega_scale   # rad/s 偏差
 
+        obs_dim = self.OBS_DIM  # instance attr, may include +2 for last action
         obs = {}
         for i in range(self.N_AGENTS):
-            o = np.zeros(self.OBS_DIM, dtype=np.float32)
+            o = np.zeros(obs_dim, dtype=np.float32)
 
             # 本地信息 (归一化)
             o[0] = P_es[i] / 2.0
@@ -405,6 +461,10 @@ class AndesBaseEnv(ABC):
                         o[3 + k] = d_omega_j / 3.0
                         o[3 + self.MAX_NEIGHBORS + k] = od_j / 5.0
 
+            # Optional: append own last action (2 dims) for R03 obs probe
+            if self._include_own_action_obs:
+                o[-2] = self._last_action[i, 0]
+                o[-1] = self._last_action[i, 1]
             obs[i] = o
         return obs
 

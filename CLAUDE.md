@@ -29,7 +29,7 @@
 
 | 改什么 | 读哪份 NOTES |
 |---|---|
-| **`env/andes/*`、`scenarios/kundur/train_andes*.py`、`_eval_paper_specific*.py`** | **`scenarios/kundur/NOTES_ANDES.md`** (2026-05-07 6-axis 修正, **必读**) |
+| **`env/andes/*`、`scenarios/kundur/train_andes*.py`、`scripts/research_loop/eval_paper_spec_v2.py`** | **`scenarios/kundur/NOTES_ANDES.md`** (2026-05-07 6-axis 修正 + L4 重构, **必读**) |
 | 论文复现量级对账 (6-axis 真实) | `docs/paper/andes_replication_status_2026-05-07_6axis.md` ← **当前权威** |
 | `scenarios/kundur/*`、`env/simulink/kundur_simulink_env.py` | `scenarios/kundur/NOTES.md` |
 | `scenarios/new_england/*`、`env/simulink/ne39_simulink_env.py` | `scenarios/new_england/NOTES.md` |
@@ -124,6 +124,9 @@ Simulink 建模规则见 `docs/knowledge/simulink_rules.md`。
 | MATLAB 引擎配置 | `engine/matlab_session.py` (重连、路径) |
 | Simulink 桥接配置 | `scenarios/kundur/config_simulink.py::KUNDUR_BRIDGE_CONFIG` |
 | 绘图样式 | `plotting/paper_style.py` |
+| **ANDES eval 单一入口 (L4 lock-in 2026-05-07)** | `scripts/research_loop/eval_paper_spec_v2.py` — 老入口 (`_eval_paper_grade_andes*`, `_phase{3,4,9}*_eval`, `_re_eval_best_ckpts`) 已归档 `scenarios/kundur/_legacy_2026-04/` |
+| 6-axis paper-spec 量化 | `evaluation/paper_grade_axes.py` |
+| Fig 6/7/8/9 (LS1/LS2 traces) 生成 | `paper/figure_scripts/figs6_9_ls_traces.py` |
 
 ## 重要注意事项
 

@@ -111,8 +111,17 @@ L1 enforces: 写 verdict 时如发现 § 缺失, 不准跳过, 必补 (即使 "N
 train_reward / action_std / cum_rf 是代理量, 不能替代 6-axis. 见
 `feedback_paper_fig_is_gold_standard.md`.
 
-R01-R03 因 `_eval_paper_specific.py` (eval driver) 2026-05-07 stash 事故丢, 写了 "6-axis NOT
-MEASURED YET" — R04 第一任务必 rebuild driver + 跑 R03 ckpt 闭环.
+R01-R03 因老 driver `_eval_paper_specific.py` 2026-05-07 stash 事故丢, 写了 "6-axis NOT
+MEASURED YET" — R03 已 rebuild 为 `scripts/research_loop/eval_paper_spec_v2.py`, R04 完成
+闭环验证. 老入口 `scenarios/kundur/_eval_paper_grade_andes*` / `_phase{3,4,9}*_eval` 等 13 文件
+已归档 `scenarios/kundur/_legacy_2026-04/` (L4 lock-in 2026-05-07), 不要 import.
+
+## eval 单一入口 (L4 lock-in 2026-05-07)
+
+ANDES paper-spec eval 唯一脚本: `scripts/research_loop/eval_paper_spec_v2.py`.
+任何 round plan / verdict 中 eval 段 cmd 必为该脚本; 不要复活 _legacy_2026-04/ 下任何文件.
+
+老入口归档清单见 `scenarios/kundur/_legacy_2026-04/README.md`.
 
 ## ⚠ Verdict 强制双 metric (per OPT-3, 2026-05-07)
 

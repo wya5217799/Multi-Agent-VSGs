@@ -1,9 +1,13 @@
 #!/usr/bin/env bash
-# Full Tier A post-training pipeline: verify convergence, run probes, eval, aggregate, update predraft
-# Run from WSL after BOTH seeds 45 and 46 training_log.json files exist:
-#   source ~/andes_venv/bin/activate
-#   cd '/mnt/c/Users/27443/Desktop/Multi-Agent  VSGs'
-#   bash scripts/run_tier_a_post_training.sh 2>&1 | tee results/tier_a_post_training.log
+# ⚠ DEAD pipeline (2026-05-07 L4 lock-in): depends on archived
+# scenarios/kundur/_eval_paper_grade_andes_one.py (now in _legacy_2026-04/).
+# Do NOT run as-is. Replacement: scripts/research_loop/eval_paper_spec_v2.py.
+# Kept for historical reference; remove if unused after R06.
+#
+# Original purpose: Full Tier A post-training pipeline: verify convergence, run probes, eval,
+# aggregate, update predraft. Run from WSL after BOTH seeds 45 and 46 training_log.json files exist.
+echo "ERROR: scripts/run_tier_a_post_training.sh is dead (L4 lock-in 2026-05-07). Use scripts/research_loop/eval_paper_spec_v2.py." >&2
+exit 1
 
 set -e
 PROJ="/mnt/c/Users/27443/Desktop/Multi-Agent  VSGs"

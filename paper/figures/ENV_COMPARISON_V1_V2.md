@@ -3,6 +3,11 @@
 > ⚠ **2026-05-07 更新**: 本文件 cum_rf "完美匹配 103%" 声明被 6-axis 推翻.
 > V2 env 仅 sync 积分量级匹配, max_df / final_df / settling / range / smoothness 5/6 axis 全 fail.
 > 真实状态: `docs/paper/andes_replication_status_2026-05-07_6axis.md`
+>
+> ⚠ **2026-05-07 L4 重构**: 文中所有 `_eval_paper_specific.py` / `_v2_d0_sweep.py` /
+> `_v2_linex_sweep.py` / `_run_v2_5seed.sh` 命令是 R0 期 (2026-04~05) 历史快照.
+> 这些脚本现已归档至 `scenarios/kundur/_legacy_2026-04/`. **不要用作当前 eval 入口**;
+> 当前 paper-spec eval 唯一脚本 = `scripts/research_loop/eval_paper_spec_v2.py`.
 
 ## TL;DR (旧 cum_rf 单维)
 
@@ -120,10 +125,10 @@ V1 SAC actor 在 V2 env 下 zero-shot 表现见 6-axis ranking. V2-trained actor
 ## 文件
 
 ```
-env/andes/andes_vsg_env_v2.py                          — V2 子类
-scenarios/kundur/_eval_paper_specific.py               — 加 EVAL_PAPER_SPEC_ENV 切换
-scenarios/kundur/_v2_d0_sweep.py                       — D₀ sweep 工具
-scenarios/kundur/_v2_linex_sweep.py                    — LINE_X sweep 工具
-scenarios/kundur/train_andes_v2.py                     — V2 train 包装
-scenarios/kundur/_run_v2_5seed.sh                      — V2 5-seed 启动
+env/andes/andes_vsg_env_v2.py                                          — V2 子类
+scenarios/kundur/_legacy_2026-04/_eval_paper_specific.py               — [archived] 历史 EVAL_PAPER_SPEC_ENV 切换 (2026-05-07 stash 事故丢的脚本; 现 eval = scripts/research_loop/eval_paper_spec_v2.py)
+scenarios/kundur/_legacy_2026-04/_v2_d0_sweep.py                       — [archived] D₀ sweep 工具
+scenarios/kundur/_legacy_2026-04/_v2_linex_sweep.py                    — [archived] LINE_X sweep 工具
+scenarios/kundur/train_andes_v2.py                                     — V2 train 包装
+scenarios/kundur/_legacy_2026-04/_run_v2_5seed.sh                      — [archived] V2 5-seed 启动
 ```

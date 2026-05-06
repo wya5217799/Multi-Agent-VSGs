@@ -87,7 +87,9 @@ V1 4 ESS 同质 D₀ → 4 节点频率响应过同步 → cum_rf 量级偏小. 
 500 ep 训练里多 model 出现 **final 后期退化** (critic loss 上升, episode reward 震荡).
 应**用 best.pt 而非 final.pt** eval.
 
-工具: `scenarios/kundur/_re_eval_best_ckpts.py` 一次扫所有老 model best vs final.
+工具: 历史用 `_re_eval_best_ckpts.py` 一次扫. **L4 重构后 (2026-05-07) 该脚本已归档到
+`scenarios/kundur/_legacy_2026-04/`**, 现统一通过 `scripts/research_loop/eval_paper_spec_v2.py`
+跑 `--suffix best` 和 `--suffix final` 两遍后人工对比 cum_rf / 6-axis.
 
 ## 6. 关键 results/ 目录定位
 
@@ -147,6 +149,21 @@ python evaluation/paper_grade_axes.py results/andes_eval_xxx/
 
 GENROU H 已验证 (M=117 在 Sn=900 base, 折 Sbase=100 后 H=6.5, 与 Kundur [49] 一致).
 **不是 H 问题, 是 D=0 + 无 governor**.
+
+## 9.5. L4 eval 单一入口 lock-in (2026-05-07)
+
+**唯一 paper-spec eval 脚本**: `scripts/research_loop/eval_paper_spec_v2.py`.
+
+R03 verdict 暴露 5+ 并存 eval 入口混乱, R04 完成闭环验证. 13 个 R0 期 (2026-04~05) eval/sweep
+脚本 (`_eval_paper_grade_andes*` / `_phase{3,4,9}*_eval` / `_re_eval_best_ckpts` / `_v2_*_sweep`
+/ `_run_v2_5seed.sh`) 已归档到 `scenarios/kundur/_legacy_2026-04/`. **不要从 _legacy/ import**.
+
+历史 `_eval_paper_specific.py` 在 2026-05-07 stash 事故中丢失, 已被 `eval_paper_spec_v2.py`
+取代; 依赖它的 `_phase9_*_reeval` 等脚本归档时已 broken.
+
+老 pipeline `scripts/run_tier_a_post_training.sh` 因依赖归档脚本现已 dead, 不要重启.
+
+详见 `_legacy_2026-04/README.md` 文件清单.
 
 ## 10. 修代码契约
 

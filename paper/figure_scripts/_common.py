@@ -34,12 +34,21 @@ import os as _os
 REPO = Path(__file__).resolve().parents[2]
 RUNS_ROOT = REPO / "results" / "sim_kundur" / "runs"  # Simulink legacy
 
-# Per-model output subdir via PAPER_FIG_VARIANT env var:
-#   PAPER_FIG_VARIANT=v2env_phase3v2_seed44 → paper/figures/v2env_phase3v2_seed44/
-#   未设 → paper/figures/  (default)
+# Per-model output subdir resolution (priority order):
+#   1. PAPER_FIG_VARIANT env var → paper/figures/<variant>/
+#   2. PAPER_FIG_DDIC_LABEL env var (auto-derive) → paper/figures/v2env_<label>/
+#   3. neither → paper/figures/  (default, top-level overwrites)
 OUT_DIR_BASE = REPO / "paper" / "figures"
 _VARIANT = _os.environ.get("PAPER_FIG_VARIANT", "")
+if not _VARIANT:
+    _AUTO_LBL = _os.environ.get("PAPER_FIG_DDIC_LABEL", "")
+    if _AUTO_LBL:
+        # Strip "ddic_" prefix if present, prepend "v2env_" for clarity
+        _stripped = _AUTO_LBL[5:] if _AUTO_LBL.startswith("ddic_") else _AUTO_LBL
+        _VARIANT = f"v2env_{_stripped}"
 OUT_DIR = OUT_DIR_BASE / _VARIANT if _VARIANT else OUT_DIR_BASE
+if _VARIANT:
+    OUT_DIR.mkdir(parents=True, exist_ok=True)
 
 # ANDES paths (current active path, 2026-05-06)
 ANDES_RESULTS = REPO / "results"

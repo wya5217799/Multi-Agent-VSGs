@@ -8,6 +8,36 @@ short and link to the source record instead of duplicating document bodies.
 Agent entry points are defined in `AGENTS.md` (governed by `docs/control_manifest.toml`).
 This file is an index only — do not maintain a parallel Start Here list here.
 
+- **`quality_reports/specs/2026-05-07_research_loop_design.md`** — 自动研究循环 spec (3 层架构, daemon + state.json + AI 会话, 跨会话续命, caveman 文档). Skill: `.claude/skills/research-loop/`. Daemon: `scripts/research_loop_daemon.sh`.
+
+## 🎯 Active Work (2026-05-06): ANDES Kundur Paper Reproduction
+
+**Frontier**: ANDES path 已多处达 paper-level (LS1+LS2 cum_rf < 5% diff).
+
+| Status | Item |
+|---|---|
+| ✓ DONE | dt bug fix (0.6s → 0.2s in `env/andes/base_env.py`) |
+| ✓ DONE | V2 hetero env D₀=[20,16,4,8] → no-ctrl LS1 = 103% paper match |
+| ✓ DONE | PHI_D=0.05 (balanced) → LS2 DDIC = 5.4% diff (paper-level, n=1) |
+| ✓ DONE | Best vs Final ckpt audit → 多 model 论文 5% 内 (top: warmstart_seed42 final = LS1 4.5% / LS2 1.8%) |
+| TODO | V2 env + PHI_D=0.05 + best ckpt 三合一重训 5 seed (P0) |
+| TODO | PHI_D 0.10/0.20/0.50 sweep (P0) |
+| TODO | Sec.IV-D 通信失败 / Sec.IV-E 通信延迟 eval (P1) |
+| ✗ 不可消 | max_df 5× (动作范围 + GENROU D=0 + 扰动相对幅值) |
+
+**Key files for new conversations** (按读序):
+1. `scenarios/kundur/NOTES_ANDES.md` — 修代码必读 (V1/V2 env, results 目录, verdicts, 失败模式)
+2. `docs/paper/andes_replication_status_2026-05-06.md` — 论文复现量级对账表
+3. `paper/figures/ENV_COMPARISON_V1_V2.md` — V2 hetero env 设计 + sweep 结果
+4. `docs/paper/kd_4agent_paper_facts.md` — 论文事实唯一规范
+5. `CLAUDE.md` §当前活跃路径 = ANDES Kundur
+
+**Key data dirs** (2026-05-06):
+- `results/andes_eval_bestckpt_re_eval_2026-05-06/` — best vs final 全扫
+- `results/andes_eval_paper_specific_v2/` — V1 paper-aligned LS traces
+- `results/andes_eval_specific_v2_d0_20_16_4_8/` — V2 final hetero env
+- `results/andes_postfix_balanced_seed{42,43,44}/` — PHI_D=0.05 训过的 3 seed
+
 ## Decisions
 
 - [2026-04-05 Harness architecture](docs/decisions/2026-04-05-harness-architecture.md)

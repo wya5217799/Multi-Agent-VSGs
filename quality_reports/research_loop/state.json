@@ -1,0 +1,41 @@
+{
+  "version": "1.0",
+  "round_idx": 0,
+  "started_at_utc": "2026-05-06T04:34:13.188361Z",
+  "budget": {
+    "rounds_used": 0,
+    "rounds_cap": 20,
+    "wall_hr_used": 0.0,
+    "wall_hr_cap": 72,
+    "tokens_used": 0,
+    "tokens_cap": 800000
+  },
+  "ram": {
+    "free_gb_min_hard": 4,
+    "per_run_estimate_gb": 1.5,
+    "cpu_threads_per_run": 4,
+    "wsl_total_cpu": 32,
+    "omp_env_defaults": {
+      "OMP_NUM_THREADS": "4",
+      "MKL_NUM_THREADS": "4"
+    }
+  },
+  "gates": {
+    "G1": null,
+    "G2": null,
+    "G3": null,
+    "G4": null,
+    "G5": null,
+    "G6": null
+  },
+  "stagnation": {
+    "last_3_overall": [],
+    "delta_pct": null
+  },
+  "pending": [],
+  "running": [],
+  "done": [],
+  "killed": [],
+  "ai_session_log": [],
+  "handoff_pointers": []
+}

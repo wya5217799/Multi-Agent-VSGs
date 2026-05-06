@@ -369,7 +369,14 @@ from scripts.research_loop.check_state import check_state_dict
 
 
 def default_empty_state() -> dict:
-    """起步空 state, 通过 schema 检查."""
+    """起步空 state, 通过 schema 检查.
+
+    ram 字段含 ANDES throughput 实测默认 (per spec §11.5):
+    - per_run_estimate_gb=1.5 (实测 ~800 MB + safety)
+    - cpu_threads_per_run=4 (OMP=4 必须, BLAS oversub 防御)
+    - wsl_total_cpu=32 (`~/.wslconfig` patched)
+    - omp_env_defaults: daemon 启训练时注入
+    """
     return {
         "version": "1.0",
         "round_idx": 0,
@@ -379,7 +386,16 @@ def default_empty_state() -> dict:
             "wall_hr_used": 0.0, "wall_hr_cap": 72,
             "tokens_used": 0, "tokens_cap": 800000,
         },
-        "ram": {"free_gb_min_hard": 4, "per_run_estimate_gb": 2.5},
+        "ram": {
+            "free_gb_min_hard": 4,
+            "per_run_estimate_gb": 1.5,
+            "cpu_threads_per_run": 4,
+            "wsl_total_cpu": 32,
+            "omp_env_defaults": {
+                "OMP_NUM_THREADS": "4",
+                "MKL_NUM_THREADS": "4",
+            },
+        },
         "gates": {"G1": None, "G2": None, "G3": None, "G4": None, "G5": None, "G6": None},
         "stagnation": {"last_3_overall": [], "delta_pct": None},
         "pending": [],
@@ -1000,6 +1016,12 @@ mkdir -p "$out_dir" "$(dirname "$log_path")"
 # 包装: 跑 cmd, 完成后写 _done.json
 done_json="$out_dir/_done.json"
 
+# OMP env injection (per spec §11.5, ANDES throughput 实测默认)
+# 调用方 (daemon) 应该已经把 OMP_NUM_THREADS 等 env 传进来,
+# 这里加 fallback default 防漏: 4 是实测最优 (BLAS 不 oversub).
+export OMP_NUM_THREADS="${OMP_NUM_THREADS:-4}"
+export MKL_NUM_THREADS="${MKL_NUM_THREADS:-4}"
+
 if [[ "${ANDES_CPU_DRY_RUN:-}" == "1" ]]; then
     # 测试模式: 直接 sh -c 跑, 同步等
     (
@@ -1011,7 +1033,7 @@ if [[ "${ANDES_CPU_DRY_RUN:-}" == "1" ]]; then
     pid=$!
     echo "pid=$pid"
 else
-    # 正式: nohup 后台
+    # 正式: nohup 后台 (env vars 通过 export 已传)
     (
         bash -c "$cmd" > "$log_path" 2>&1
         ec=$?
@@ -1236,10 +1258,19 @@ with with_state_lock(STATE):
         # MVP: 简单 log 警报, 不主动 kill (待 v2)
         print(f"tick={TICK} RAM_TIGHT free={free_gb} hard={hard} running={len(s['running'])}")
 
-    # 3. fit 起 pending
-    usable = max(0, free_gb - hard)
-    fit_count = int(usable / per) if per > 0 else 0
+    # 3. fit 起 pending — RAM AND CPU 双约束 (per spec §11.5 throughput verdict)
+    ram_block = s["ram"]
+    cpu_threads = ram_block.get("cpu_threads_per_run", 4)
+    wsl_cpu = ram_block.get("wsl_total_cpu", 32)
+    omp_env = ram_block.get("omp_env_defaults",
+                            {"OMP_NUM_THREADS": "4", "MKL_NUM_THREADS": "4"})
+
+    usable_ram = max(0, free_gb - hard)
+    ram_fit = int(usable_ram / per) if per > 0 else 0
+    cpu_fit = wsl_cpu // cpu_threads
+    fit_count = min(ram_fit, cpu_fit)
     fit_count = max(0, fit_count - len(s["running"]))
+    print(f"tick={TICK} ram_fit={ram_fit} cpu_fit={cpu_fit} fit={fit_count}")
 
     # 按 priority desc 选 pending
     s["pending"].sort(key=lambda x: -x.get("priority", 0))
@@ -1256,13 +1287,15 @@ with with_state_lock(STATE):
             new_pending.append(p)  # backend 未实现, 留 pending
             print(f"tick={TICK} skip id={p['id']} backend={backend} (no launcher)")
             continue
+        # 注入 OMP env (per spec §11.5)
+        launch_env = {**os.environ, **{k: str(v) for k, v in omp_env.items()}}
         out = subprocess.run(
             [launcher, "launch",
              "--id", p["id"],
              "--cmd", p["cmd"],
              "--out-dir", p["out_dir"],
              "--log", p["log"]],
-            env={**os.environ},
+            env=launch_env,
             capture_output=True, text=True
         )
         # 解析 pid=<pid>
@@ -1554,7 +1587,7 @@ with with_state_lock(STATE):
         'cmd': '/home/wya/andes_venv/bin/python scenarios/kundur/train_andes_v2.py --episodes 30 --seed 42 --phi-d 0.05 --save-dir results/andes_v2_smooth_smoke_seed42',
         'out_dir': 'results/andes_v2_smooth_smoke_seed42',
         'log': 'results/andes_v2_smooth_smoke_seed42.train.log',
-        'expected_hr': 0.6, 'ram_gb': 2.5, 'priority': 5,
+        'expected_hr': 0.6, 'ram_gb': 1.5, 'priority': 5,
         'rationale': 'R01 Phase A smoothing 30ep smoke (smoke before full)',
         'queued_by': 'manual_test_T11'
     })

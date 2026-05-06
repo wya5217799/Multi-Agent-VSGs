@@ -92,7 +92,13 @@ ANDES 6-axis recovery 自治化. AI 在循环里:
   },
   "ram": {
     "free_gb_min_hard": 4,
-    "per_run_estimate_gb": 2.5
+    "per_run_estimate_gb": 1.5,
+    "cpu_threads_per_run": 4,
+    "wsl_total_cpu": 32,
+    "omp_env_defaults": {
+      "OMP_NUM_THREADS": "4",
+      "MKL_NUM_THREADS": "4"
+    }
   },
   "gates": { "G1": null, "G2": null, "G3": null, "G4": null, "G5": null, "G6": null },
   "stagnation": { "last_3_overall": [], "delta_pct": null },
@@ -142,8 +148,11 @@ ANDES 6-axis recovery 自治化. AI 在循环里:
 1. 加锁 `flock /tmp/research_loop.lock` (避免双开)
 2. 读 + 校验 state.json
 3. 算 `free_ram_gb = $(free -g | awk '/Mem:/ {print $7}')`
-4. `fit_count = max(0, floor((free_ram_gb - free_gb_min_hard) / per_run_estimate_gb))`
-5. 起 fit_count 个最高 priority pending → nohup 起 → 移 running
+4. `fit_count = min(RAM_fit, CPU_fit)` 双约束 (per 2026-05-06 throughput verdict):
+   - `RAM_fit = max(0, floor((free_ram_gb - free_gb_min_hard) / per_run_estimate_gb))`
+   - `CPU_fit = floor(wsl_total_cpu / cpu_threads_per_run)` (e.g. 32/4 = 8)
+   - 实测 5 路并行干净 (1.12× wall 退化), 8 路理论但未测
+5. 起 fit_count 个最高 priority pending → 注入 `omp_env_defaults` env vars → nohup 起 → 移 running
 6. 监 running 进程:
    - exit 0 → 跑 `evaluation/paper_grade_axes.py` 出 6-axis JSON → 写 done
    - exit ≠ 0 → 写 done 标 fail (AI 下轮看)
@@ -247,9 +256,11 @@ G<x> > <thr>
 
 ```
 # R<NN> Verdict
-## 实测
-exp1: 6axis=<X>  overall=<Y>  G=<ABCDEF>  log=<path>
-exp2: ...
+## 实测 (强制双 metric)
+exp1:
+  train_reward (R_avg10, 5 seed mean±std): <X>
+  paper_grade  (cum_rf @50 fixed test seeds): <Y>
+  6axis_overall: <Z>  G=<ABCDEF>  log=<path>
 ## 对比
 vs 上轮: 升/降, 哪 axis
 vs 论文: 哪 axis 还差几倍
@@ -260,6 +271,11 @@ H1: 验 / 证伪 / 部分 (一行理由)
 ## (可选) 数据表
 | axis | LS1 | LS2 | paper | gap |
 ```
+
+**Why 强制双 metric** (来自 2026-05-06 throughput G6 surprise): 单 seed
+train_reward 受 RNG drift 影响, 同 hyperparam 不同 seed cum_rf 可差 8.6×
+非真改. paper_grade @50 fixed test seeds 才是真信号. AI 不准只引 train
+不引 paper_grade 即下结论 H 验证.
 
 **§7.3 incident_<id>.md** (随写, AI 自由):
 
@@ -386,6 +402,34 @@ state.json 每 pending 项有 `backend` 字段, daemon 路由到对应 .sh.
 - `research_loop/check_state.py`
 
 GPU/MATLAB 留 stub (空文件 + comment).
+
+### §11.5 ANDES throughput 默认 (per 2026-05-06 verdict)
+
+来源: `quality_reports/verdicts/2026-05-06_andes_throughput_opt.md` (G1/G2/G3 PASS, G4/G5 REJECT).
+
+| 项 | 实测值 | 备注 |
+|---|---|---|
+| WSL RAM | 24 GB (`~/.wslconfig` patched) | 默认 15 GB 不够 5 路 |
+| WSL CPU | 32 vCPU (`processors=32`) | 同上 |
+| 单 ANDES run RSS | ~800 MB / 安全位 1.5 GB | spec 早期 2.5 GB 高估 60% |
+| OMP_NUM_THREADS | **4 必须** | BLAS oversubscription = 1.12× 退化 |
+| MKL_NUM_THREADS | 4 必须 | 同 |
+| 5 路并行 wall | 925s (100ep, max) | = 单进程 1.12×, 实测最甜区 |
+| 8 路并行 wall | 未测 | 32/4=8 理论上限 |
+| GPU SAC | REJECT | 网络 256-256 训练慢 4%, 只 eval 微胜 |
+| env reuse | REJECT | reset 仅 4% ep, ROI 负, ANDES `force=True` warning |
+
+**Daemon 默认 inject env vars** (per state.ram.omp_env_defaults):
+```bash
+OMP_NUM_THREADS=4 MKL_NUM_THREADS=4 nohup <cmd> &
+```
+
+**起步 K_max 影响** (combined with §9):
+- budget_pct > 0.40 → K_max=4, 实并 = min(4, RAM_fit, CPU_fit) ≈ 4 (RAM/CPU 都够)
+- budget_pct ∈ (0.20, 0.40] → K_max=2
+- budget_pct ≤ 0.20 → K_max=1
+
+未来用更大网络 (≥1024 hidden) 或 batch≥1024 时, GPU stub 可重测.
 
 ---
 

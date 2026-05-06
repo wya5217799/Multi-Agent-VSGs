@@ -9,13 +9,21 @@ Everything here serves this single goal. When in doubt about whether to add,
 keep, or remove something, ask: **does this help reproduce a paper result, or
 does it standardize a repeated AI operation on the repo?** If neither, do not do it.
 
-- Paper facts: `docs/paper/yang2023-fact-base.md`
-- Reproduction status: `docs/paper/experiment-index.md`
+- Paper facts: `docs/paper/kd_4agent_paper_facts.md` (KD 4-agent 唯一规范)
+- Reproduction status (ANDES, current frontier): `docs/paper/andes_replication_status_2026-05-07_6axis.md`
 
-The **Simulink backend is the active reproduction path**. ANDES and ODE backends
-exist historically but are not the current focus — do not spend effort on them
-unless the user explicitly asks. **When ODE work is requested**: entry point is
-`env/ode/` (`power_system.py`, `multi_vsg_env.py`) + `env/ode/NOTES.md`.
+**Active backend (2026-05-06 切换): ANDES Kundur**. 6-axis 真实评估暴露当前 0% paper-aligned
+(overall 0.036 / 1.0). 已写 4 phase recovery plan (Phase A-E).
+**When working on the Paper Track, default to ANDES**:
+- First read: `quality_reports/handoff/2026-05-07_andes_6axis_recovery_handoff.md` (5 min 接续)
+- Then: `scenarios/kundur/NOTES_ANDES.md` (V1/V2 env, results map, verdicts)
+- 6-axis 量化: `evaluation/paper_grade_axes.py`
+- V2 hetero env: `env/andes/andes_vsg_env_v2.py` (D₀=[20,16,4,8])
+
+**Simulink backend** (`kundur_cvs_v3` / `ne39`) — **maintenance mode**, PAPER-ANCHOR LOCK
+still active.
+
+**ODE backend** — historical path-dictionary. Entry: `env/ode/NOTES.md`.
 
 ## Scope
 

@@ -1,16 +1,31 @@
-# Per-Model Figure Variants Index (2026-05-06 重建)
+# Per-Model Figure Variants Index (2026-05-07, 6-axis ranked)
 
+> ⚠ **2026-05-07 修正**: 用 6-axis 重排, **所有 model 实际 < 0.04 / 1.0**.
+> 旧 ranking (cum_rf 单维) 失真. 详见
+> `docs/paper/andes_replication_status_2026-05-07_6axis.md`.
+>
 > 4 个 model variants, 每个独立子目录, 含 fig6/7/8/9 (LS1/LS2 时序).
 > fig4 (training curves) + fig5 (50-ep cum reward) 在 `paper/figures/` 顶层共享.
 
-## Variants 排序 (按 max(LS1 diff, LS2 diff) 升序)
+## Variants 6-Axis Ranking (2026-05-07)
 
-| Subdir | DDIC ckpt | LS1 cum_rf | LS1 diff | LS2 cum_rf | LS2 diff | 最差 |
-|---|---|---|---|---|---|---|
-| **`v2env_phase3v2_seed44/`** | `ddic_phase3v2_seed44` (V1 trained, PHI_ABS=50) | -0.722 | **-6.2%** | -0.471 | **+9.4%** | **9.4%** ✓ paper-grade |
-| `v2env_postfix_dt02_seed43_best/` | `ddic_postfix_dt02_seed43_best` (V1, default hyper) | -0.562 | +17.3% | -0.422 | +18.8% | 18.8% |
-| `v2env_v2trained_seed42_best/` | `ddic_v2_balanced_seed42_best` (V2-trained, PHI_D=0.05) | -0.830 | -22.0% | -0.423 | +18.7% | 22.0% |
-| `v2env_balanced_seed46_final/` | `ddic_balanced_seed46_final` (V1, PHI_D=0.05) | -0.669 | **+1.6%** byte-near | -0.354 | +31.9% | 31.9% (LS1 单独最佳) |
+| Rank | Subdir | DDIC ckpt | overall | 强项 axis | 弱项 axis |
+|---|---|---|---|---|---|
+| 1 | `v2env_balanced_seed46_final/` | `ddic_balanced_seed46_final` | **0.035** | LS1 cum_rf 1.6% byte-near (cherry-pick); ΔH/ΔD smoothness 0.85+ | max_df 5×; settling ∞; range 70× 偏小 |
+| 2 | `v2env_postfix_dt02_seed43_best/` | `ddic_postfix_dt02_seed43_best` | 0.034 | smoothness 0.8 | 同上 |
+| 3 | `v2env_v2trained_seed42_best/` | `ddic_v2_balanced_seed42_best` | 0.033 | (V2-trained 代表) smoothness 0.75 | V2 训练数值不稳 (TDS fails 7%) |
+| 4 | `v2env_phase3v2_seed44/` | `ddic_phase3v2_seed44` | **0.033** | (旧 verdict 锁定) cum_rf 9.4% diff | smoothness ΔD std=22 严重锯齿 |
+
+**注意**: 4 个 variant overall score 差距 < 0.005, 几乎并列. 全部在 5/6 axis 上得 0 分.
+
+### 旧 cum_rf 单维 ranking (历史, SUPERSEDED)
+
+| Subdir | DDIC ckpt | LS1 cum_rf | LS1 diff | LS2 cum_rf | LS2 diff |
+|---|---|---|---|---|---|
+| `v2env_phase3v2_seed44/` | `ddic_phase3v2_seed44` | -0.722 | -6.2% | -0.471 | +9.4% |
+| `v2env_postfix_dt02_seed43_best/` | `ddic_postfix_dt02_seed43_best` | -0.562 | +17.3% | -0.422 | +18.8% |
+| `v2env_v2trained_seed42_best/` | `ddic_v2_balanced_seed42_best` | -0.830 | -22.0% | -0.423 | +18.7% |
+| `v2env_balanced_seed46_final/` | `ddic_balanced_seed46_final` | -0.669 | +1.6% byte-near | -0.354 | +31.9% |
 
 **论文参考**: LS1 DDIC = -0.68, LS2 DDIC = -0.52 (`kd_4agent_paper_facts.md` §8.4).
 
@@ -58,14 +73,21 @@ done
 | `PAPER_FIG_TRAIN_RUN` | training_log.json run dir (fig4 用) | `andes_phase4_noPHIabs_seed42` |
 | `PAPER_FIG_FIG5_DDIC` | Fig.5 DDIC json filename | `ddic_seed44.json` |
 
-## 决策
+## 决策 (2026-05-07 修正)
 
-- **写论文用**: `v2env_phase3v2_seed44/` (verdict 锁定, 双 <10% diff)
-- **PHI_D=0.05 验证用**: `v2env_balanced_seed46_final/` (LS1 byte-near, LS2 退化)
-- **V2-trained ablation**: `v2env_v2trained_seed42_best/` (V2 训练数值不稳)
+- **写论文用**: 不再有"paper-grade"选项. 选 #1 `v2env_balanced_seed46_final/` 作展示, 但
+  论文 contribution 必须诚实写"机制对齐 + 量级 documented deviation"
+- **PHI_D=0.05 验证用**: balanced 系列, 但 n=3 不稳 (s42 LS2 5.4% lucky, s44=72%)
+- **V2-trained ablation**: `v2env_v2trained_seed42_best/`, 不如 V1 actor zero-shot
 - **default-hyper baseline**: `v2env_postfix_dt02_seed43_best/`
 
-详见 `quality_reports/verdicts/2026-05-06_andes_paper_figs_v1_v2_verdict.md`.
+## 历史决策
+
+- 2026-05-06 旧 verdict 标 PASS, 用 cum_rf 单维, **被 6-axis 推翻**
+- 2026-05-07 6-axis 重评, 暴露所有 model overall < 0.04, 物理动态全 fail
+
+详见 `quality_reports/verdicts/2026-05-06_andes_paper_figs_v1_v2_verdict.md` (SUPERSEDED) +
+`docs/paper/andes_replication_status_2026-05-07_6axis.md`.
 
 ## 历史教训 (2026-05-06)
 

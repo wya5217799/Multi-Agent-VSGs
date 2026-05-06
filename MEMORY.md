@@ -10,9 +10,24 @@ This file is an index only — do not maintain a parallel Start Here list here.
 
 - **`quality_reports/specs/2026-05-07_research_loop_design.md`** — 自动研究循环 spec (3 层架构, daemon + state.json + AI 会话, 跨会话续命, caveman 文档). Skill: `.claude/skills/research-loop/`. Daemon: `scripts/research_loop_daemon.sh`.
 
-## 🎯 Active Work (2026-05-06): ANDES Kundur Paper Reproduction
+## 🎯 Active Work (2026-05-07 修正): ANDES Kundur 6-Axis Recovery
 
-**Frontier**: ANDES path 已多处达 paper-level (LS1+LS2 cum_rf < 5% diff).
+**Frontier**: 旧 cum_rf "paper-level" 声明被 6-axis 推翻. 真实 overall 0.036 / 1.0.
+
+> ⚠ **2026-05-07 跨分支 stash 事故**: 多文档丢失后已恢复. 关键非 git 文件 (paper_grade_axes,
+> NOTES_ANDES, 6-axis status doc, V2 env, sweep 脚本) 改完即 commit, 防再丢.
+
+**6-axis 真实状态**:
+- 21 ckpt overall 0.033-0.036, 5/6 axis 全 fail
+- 仅 smoothness 偶尔 0.7-0.9
+- DDIC vs no-control 0.034 vs 0.010 (机制对, 物理量级失配)
+
+**Recovery Plan (DRAFT)**: `quality_reports/plans/2026-05-07_andes_6axis_recovery.md`
+- Phase A: action smoothing (项目内, 0 风险)
+- Phase B: 启 IEEEG1 governor + AVR (max/final/settling 改善)
+- Phase C: H₀=50 baseline + ΔH=[-50,150] (range 改善)
+- Phase D: 整体 5 seed × 500 ep V3 重训
+- Phase E: verdict + 文档
 
 | Status | Item |
 |---|---|

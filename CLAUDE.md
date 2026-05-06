@@ -1,5 +1,24 @@
 # Multi-Agent VSGs — 代码导航指南
-> 路径字典。决策顺序: `AGENTS.md` → `docs/paper/yang2023-fact-base.md` → `engine/harness_reference.py` → 本文件。与 AGENTS.md 冲突以 AGENTS.md 为准。
+> 路径字典。决策顺序: `AGENTS.md` → `docs/paper/kd_4agent_paper_facts.md` (KD 4-agent 唯一规范) → `engine/harness_reference.py` → 本文件。
+
+## 🚨 当前活跃路径 = ANDES Kundur (2026-05-06 切换, 2026-05-07 真相修正)
+
+**论文复现主线在 ANDES**, 不在 Simulink. 新对话进来**首先读** `quality_reports/handoff/2026-05-07_andes_6axis_recovery_handoff.md` (5 分钟接续), 然后按需读:
+1. `docs/paper/andes_replication_status_2026-05-07_6axis.md` — 真实状态 (6-axis 评估)
+2. `quality_reports/audits/2026-05-07_andes_6axis_failure_analysis.md` — 失败分析
+3. `quality_reports/plans/2026-05-07_andes_6axis_recovery.md` — 恢复 plan
+4. `evaluation/paper_grade_axes.py` — 6-axis 量化函数
+5. `scenarios/kundur/NOTES_ANDES.md` — 修代码必读
+
+**复现进展速查 (2026-05-07 修正, 6-axis 真实)**:
+- ⚠ 旧 "cum_rf paper-level" 声明已被 6-axis 推翻
+- 真实状态: 所有 21 ckpt overall score **0.033-0.036 / 1.0**
+- 5/6 axis 全 fail: max_df 3-4×偏大 / final_df 2-4× / settling ∞ / ΔH range 70× 偏小 / ΔD range 45× 偏小
+- 仅 smoothness 偶尔 0.7-0.9
+- 量化函数: `evaluation/paper_grade_axes.py`
+- 完整 ranking: `results/andes_paper_alignment_6axis_2026-05-07.json`
+
+**Simulink 路径 (kundur_cvs_v3 / ne39)**: 历史活跃, 现在维护性. PAPER-ANCHOR LOCK 仍 active.
 
 ## 代码搜索规则
 - **已知确切符号/字符串** → 用 Grep/Glob（快，精确）
@@ -10,6 +29,8 @@
 
 | 改什么 | 读哪份 NOTES |
 |---|---|
+| **`env/andes/*`、`scenarios/kundur/train_andes*.py`、`_eval_paper_specific*.py`** | **`scenarios/kundur/NOTES_ANDES.md`** (2026-05-07 6-axis 修正, **必读**) |
+| 论文复现量级对账 (6-axis 真实) | `docs/paper/andes_replication_status_2026-05-07_6axis.md` ← **当前权威** |
 | `scenarios/kundur/*`、`env/simulink/kundur_simulink_env.py` | `scenarios/kundur/NOTES.md` |
 | `scenarios/new_england/*`、`env/simulink/ne39_simulink_env.py` | `scenarios/new_england/NOTES.md` |
 | `env/simulink/_base.py`、`plotting/evaluate.py`、`utils/training_viz.py`、`engine/simulink_bridge.py` | `env/simulink/COMMON_NOTES.md` + 两份场景 NOTES |
@@ -19,7 +40,10 @@
 
 ## 项目概述
 Yang et al. TPWRS 2023 论文复现。多智能体 SAC 控制 VSG 的虚拟惯量 H 和阻尼 D。
-**活跃路径 = Simulink × {Kundur, NE39}**。ANDES/ODE 4 行为历史遗留，仅作路径字典，不主动投入工作。
+
+**活跃路径 (2026-05-06 切换): ANDES Kundur** — 6-axis 真实评估暴露 0% paper-aligned, 已写 4 phase recovery plan.
+**Simulink × {Kundur, NE39}**: 历史活跃, 维护性, PAPER-ANCHOR LOCK 仍 active.
+**ODE**: 路径字典, 不主动投入.
 
 ## 后端 × 拓扑 → 关键文件
 

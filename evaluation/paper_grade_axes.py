@@ -48,15 +48,18 @@ PAPER = {
         scenario="load_step_1",
         max_abs_df_Hz=0.13, final_abs_df_Hz=0.08, settling_to_residual_s=3.0,
         dH_avg_smooth_std=0.0, dD_avg_smooth_std=0.0,
-        dH_range=(-100.0, 250.0), dD_range=(-200.0, 500.0),
-        note="Fig.6 no-ctrl + Fig.7 DDIC, 6s window",
+        # paper Sec.IV-B Eq.12 box bounds (R07 fix 2026-05-07: was (-100,250)/(-200,500))
+        dH_range=(-100.0, 300.0), dD_range=(-200.0, 600.0),
+        note="Fig.6 no-ctrl + Fig.7 DDIC, 6s window. Box bounds = paper Eq.12 action constraints.",
     ),
     "load_step_2": PaperBenchmark(
         scenario="load_step_2",
         max_abs_df_Hz=0.10, final_abs_df_Hz=0.05, settling_to_residual_s=2.5,
         dH_avg_smooth_std=0.0, dD_avg_smooth_std=0.0,
-        dH_range=(-100.0, 200.0), dD_range=(-200.0, 300.0),
-        note="Fig.8 no-ctrl + Fig.9 DDIC, 6s window",
+        # paper Sec.IV-B Eq.12 box bounds same for all LS (R07 fix: was visual extraction
+        # (-100,200)/(-200,300), but paper Eq.12 is LS-agnostic action constraint).
+        dH_range=(-100.0, 300.0), dD_range=(-200.0, 600.0),
+        note="Fig.8 no-ctrl + Fig.9 DDIC, 6s window. Box bounds = paper Eq.12 action constraints.",
     ),
 }
 
@@ -128,6 +131,31 @@ def _action_range(arr: np.ndarray) -> tuple[float, float]:
     return float(avg.min()), float(avg.max())
 
 
+def _box_containment(proj_min: float, proj_max: float,
+                     box_min: float, box_max: float,
+                     tol_factor: float = 0.2) -> float:
+    """A2 score (R07 Bug-A fix 2026-05-07): 1.0 if proj within [box_min, box_max].
+
+    Penalty only for box-bound overshoot (action constraint violation).
+
+    Per R06 audit (audits/2026-05-07_eval_formula_audit.md):
+    - paper Sec.IV-B Eq.12 box bounds are ACTION CONSTRAINTS, not span benchmarks
+    - paper §8.4 + Eq.17 (r^h = -ΔH_avg^2) requires ΔH_avg → 0 (conservation)
+    - 老逻辑 score = 1 - |1 - proj_span/paper_span|/0.5 反向惩罚 ΔH span 不够大,
+      跟 paper 守恒约束矛盾, R05 全 8 arms 在此 axis = 0 (proj_span ≈ 1, paper 350)
+    - A2: in-box → 1.0, overshoot 越界扣分
+
+    Caveat: project DM_MIN/MAX = [-10, 30] → ΔH ∈ [-5, +15], 远小于 box [-100, +300].
+    A2 给"平凡满分", 不区分 "agent 守恒" vs "action bound 限制". 算 conservation 信号
+    需另加 axis (R08 候选).
+    """
+    overshoot_neg = max(0.0, box_min - proj_min)
+    overshoot_pos = max(0.0, proj_max - box_max)
+    box_width = max(box_max - box_min, 1.0)
+    overshoot_frac = (overshoot_neg + overshoot_pos) / box_width
+    return max(0.0, 1.0 - overshoot_frac / tol_factor)
+
+
 def evaluate_trace(trace_json_path: Path, paper: PaperBenchmark, is_ddic: bool,
                    label: str) -> TraceScore:
     """Compute 6-axis score for one trace JSON."""
@@ -172,18 +200,21 @@ def evaluate_trace(trace_json_path: Path, paper: PaperBenchmark, is_ddic: bool,
                               max(0.0, 1.0 - proj_dH_std / TOL["dH_smooth"])))
         axes.append(AxisScore("dD_avg_smoothness", proj_dD_std, 0.0,
                               max(0.0, 1.0 - proj_dD_std / TOL["dD_smooth"])))
+        # R07 Bug-A fix: range axis = box containment, not span match (see _box_containment doc)
         proj_dH_span = proj_dH_max - proj_dH_min
         paper_dH_span = paper.dH_range[1] - paper.dH_range[0]
         proj_dD_span = proj_dD_max - proj_dD_min
         paper_dD_span = paper.dD_range[1] - paper.dD_range[0]
-        dH_ratio = proj_dH_span / paper_dH_span if paper_dH_span > 0 else 0.0
-        dD_ratio = proj_dD_span / paper_dD_span if paper_dD_span > 0 else 0.0
-        axes.append(AxisScore("dH_range_match", proj_dH_span, paper_dH_span,
-                              max(0.0, 1.0 - abs(1 - dH_ratio) / TOL["range_factor"]),
-                              note=f"ratio={dH_ratio:.2f}"))
-        axes.append(AxisScore("dD_range_match", proj_dD_span, paper_dD_span,
-                              max(0.0, 1.0 - abs(1 - dD_ratio) / TOL["range_factor"]),
-                              note=f"ratio={dD_ratio:.2f}"))
+        dH_score = _box_containment(proj_dH_min, proj_dH_max,
+                                     paper.dH_range[0], paper.dH_range[1])
+        dD_score = _box_containment(proj_dD_min, proj_dD_max,
+                                     paper.dD_range[0], paper.dD_range[1])
+        axes.append(AxisScore(
+            "dH_range_in_box", proj_dH_span, paper_dH_span, dH_score,
+            note=f"proj=[{proj_dH_min:+.2f},{proj_dH_max:+.2f}] box=[{paper.dH_range[0]:+.0f},{paper.dH_range[1]:+.0f}]"))
+        axes.append(AxisScore(
+            "dD_range_in_box", proj_dD_span, paper_dD_span, dD_score,
+            note=f"proj=[{proj_dD_min:+.2f},{proj_dD_max:+.2f}] box=[{paper.dD_range[0]:+.0f},{paper.dD_range[1]:+.0f}]"))
 
     scores = [a.score for a in axes]
     overall = math.exp(sum(math.log(max(s, 0.01)) for s in scores) / len(scores))

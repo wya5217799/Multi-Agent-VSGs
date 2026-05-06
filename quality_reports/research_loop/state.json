@@ -34,48 +34,7 @@
     "delta_pct": null
   },
   "pending": [],
-  "running": [
-    {
-      "id": "r06_v1_5seed_200ep_s42",
-      "pid": 12561,
-      "started_at_utc": "2026-05-06T11:51:03.124809Z",
-      "log_tail_check_ok": true,
-      "out_dir": "results/research_loop/r06_v1_5seed_200ep_s42",
-      "log": "results/research_loop/r06_v1_5seed_200ep_s42.train.log"
-    },
-    {
-      "id": "r06_v1_5seed_200ep_s43",
-      "pid": 12568,
-      "started_at_utc": "2026-05-06T11:51:03.124809Z",
-      "log_tail_check_ok": true,
-      "out_dir": "results/research_loop/r06_v1_5seed_200ep_s43",
-      "log": "results/research_loop/r06_v1_5seed_200ep_s43.train.log"
-    },
-    {
-      "id": "r06_v1_5seed_200ep_s44",
-      "pid": 12575,
-      "started_at_utc": "2026-05-06T11:51:03.124809Z",
-      "log_tail_check_ok": true,
-      "out_dir": "results/research_loop/r06_v1_5seed_200ep_s44",
-      "log": "results/research_loop/r06_v1_5seed_200ep_s44.train.log"
-    },
-    {
-      "id": "r06_v1_5seed_200ep_s45",
-      "pid": 12585,
-      "started_at_utc": "2026-05-06T11:51:03.124809Z",
-      "log_tail_check_ok": true,
-      "out_dir": "results/research_loop/r06_v1_5seed_200ep_s45",
-      "log": "results/research_loop/r06_v1_5seed_200ep_s45.train.log"
-    },
-    {
-      "id": "r06_v1_5seed_200ep_s46",
-      "pid": 12595,
-      "started_at_utc": "2026-05-06T11:51:03.124809Z",
-      "log_tail_check_ok": true,
-      "out_dir": "results/research_loop/r06_v1_5seed_200ep_s46",
-      "log": "results/research_loop/r06_v1_5seed_200ep_s46.train.log"
-    }
-  ],
+  "running": [],
   "done": [
     {
       "id": "r01_BC_probe",
@@ -597,6 +556,46 @@
       },
       "finished_at_utc": "2026-05-07T11:30:00Z",
       "note": "actually completed 30ep but daemon mis-marked killed; ckpt+log preserved"
+    },
+    {
+      "id": "r06_v1_5seed_200ep_s42",
+      "exit_code": 0,
+      "finished_at_utc": "2026-05-06T12:38:04Z",
+      "verdict_path": null,
+      "overall_score_v2": null,
+      "axes": {}
+    },
+    {
+      "id": "r06_v1_5seed_200ep_s44",
+      "exit_code": 0,
+      "finished_at_utc": "2026-05-06T12:38:06Z",
+      "verdict_path": null,
+      "overall_score_v2": null,
+      "axes": {}
+    },
+    {
+      "id": "r06_v1_5seed_200ep_s46",
+      "exit_code": 0,
+      "finished_at_utc": "2026-05-06T12:38:04Z",
+      "verdict_path": null,
+      "overall_score_v2": null,
+      "axes": {}
+    },
+    {
+      "id": "r06_v1_5seed_200ep_s43",
+      "exit_code": 0,
+      "finished_at_utc": "2026-05-06T12:38:10Z",
+      "verdict_path": null,
+      "overall_score_v2": null,
+      "axes": {}
+    },
+    {
+      "id": "r06_v1_5seed_200ep_s45",
+      "exit_code": 0,
+      "finished_at_utc": "2026-05-06T12:38:11Z",
+      "verdict_path": null,
+      "overall_score_v2": null,
+      "axes": {}
     }
   ],
   "killed": [],

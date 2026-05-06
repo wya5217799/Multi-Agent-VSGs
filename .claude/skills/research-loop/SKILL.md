@@ -123,6 +123,80 @@ ANDES paper-spec eval 唯一脚本: `scripts/research_loop/eval_paper_spec_v2.py
 
 老入口归档清单见 `scenarios/kundur/_legacy_2026-04/README.md`.
 
+## ⚠ Explore → Exploit 两阶段方法论 (per user 2026-05-07 + R05 验证)
+
+R01-R04 走偏: 每 round 1 hyperparam × 5 seed × 200-500 ep, 是 paper-style report
+不是 explore. 5-seed std 在 explore 阶段 = 噪声不是信号. 4 round 烧 ~120 min wall
+还没找到 optimal region.
+
+**R05 验证**: 8 arm × 30ep × 1 seed × parallel ~20 min wall, 立刻 falsify hyperparam
+是 root cause 假设 (8 arm 全 6-axis = 0.037 attractor). 信息密度 8× 高于老路径.
+见 `round_05_verdict.md` + 修订 plan 注 `round_05_plan.md`.
+
+**正确流程: 每个研究 cycle 分 2 phase**.
+
+### Phase E (explore, 找最优区间) — N seed=1 × K hyperparam × short
+
+| 字段 | 默认 |
+|---|---|
+| K (arm 数) | 6-8 (单变量 sweep, 每 arm 改 1 个 hyperparam 维度) |
+| seed/arm | **1** (不强求 std, paper-style report 留给 P 阶段) |
+| episodes | 30-80 (ANDES SAC: 30ep 够 falsify hyperparam, 50-80ep 看 cum_rf 收敛) |
+| parallel | 2-3 路 (CPU 争用 paranoid, 不是 8 路 GPU 神话) |
+| wall | 20-60 min |
+| 评判 | **6-axis trend** (axis 提升 ≥ 0.10 absolute), **不看 cum_rf 绝对值** |
+
+### Phase P (exploit, 验证 winner) — N seed=5 × K' hyperparam × long
+
+| 字段 | 默认 |
+|---|---|
+| K' (top-N) | 2-3 (E 阶段 axis-trend 排名前几) |
+| seed/arm | 5 (出 mean±std) |
+| episodes | 200-500 (paper-style 收敛) |
+| parallel | 1-2 路 (long train compute heavy) |
+| wall | 60-120 min |
+| 评判 | 6-axis overall + paper-fig 视觉对比 (gold standard) |
+
+### Phase A (audit, 物理对齐 — R05 attractor 触发) — 0 train, 主上下文人工
+
+E 阶段 K arms 全部 falsified (e.g. 6-axis 完全并列, hyperparam 不是 root) → pivot
+到 audit-first, 不再 train:
+- eval 公式审计 (单位 / 窗口 / 归一化 vs paper)
+- action 物理语义审计 (ESS P 注入 vs GENCLS.M/D 直接调)
+- disturbance protocol 审计 (LS magnitude calibration)
+
+A 阶段产出 = `audits/<topic>.md`, 决策 next round 是 train (修 mismatch 后) 还是
+更深 audit. 见 R06 plan 模板.
+
+### Round 决策契约
+
+每写 round_NN_plan.md, 第一段必写:
+```
+**Phase**: Explore | Exploit | Audit | Mixed
+**Reason**: <为啥这阶段>
+```
+
+不写 phase 等于 plan 不合规.
+
+### 反模式 (don't)
+
+- ❌ "5 seed × 同 hyperparam × 200 ep" 出现在 explore 阶段 (信号 ≠ 噪声)
+- ❌ "1 seed × 30 ep" 出现在 exploit 阶段 (RNG drift, 单点不出 paper)
+- ❌ R+1 抢 R 的 winner 之前没跑 P 阶段 (没验, 不准 anchor paper)
+- ❌ E 阶段 K arms 全 falsified 还继续 train 调参 (R05 教训: pivot audit, 不是再 explore)
+- ❌ 8-way GPU parallel 假设 (ANDES TDS CPU-bound, 8 路 fight CPU 实测 30-40 min wall)
+
+### 单 cycle 总 wall
+
+E + P ≈ 90-180 min (1-3 hours), 比单 round "5seed × 200ep × 1 hyperparam" (~45 min)
+慢 2-4×, 但**信息密度 8-10×** (E 探 8 维度 vs 老法 1 维度 × 5 重复).
+
+E + A 路径 (R05 attractor 触发): E 20 min + A 主上下文 60-90 min = ~110 min, 不烧训练.
+
+老路径 vs 新路径 4 round 比较:
+- 老 (R01-R04): 4 round × ~30 min × 5 seed-rep = 120 min, 4 个 hyperparam point, 0 winner found
+- 新 (R05+R06): E phase 20 min + A phase pending → 已 falsify hyperparam 假设, 进物理 root-cause
+
 ## ⚠ Verdict 强制双 metric (per OPT-3, 2026-05-07)
 
 verdict "实测" 节必须写 **两个** metric, 不准只引训练:

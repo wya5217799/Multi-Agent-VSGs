@@ -1,11 +1,11 @@
 {
   "version": "1.0",
-  "round_idx": 4,
+  "round_idx": 6,
   "started_at_utc": "2026-05-06T04:34:13.188361Z",
   "budget": {
-    "rounds_used": 4,
+    "rounds_used": 6,
     "rounds_cap": 20,
-    "wall_hr_used": 1.7,
+    "wall_hr_used": 3.0,
     "wall_hr_cap": 72,
     "tokens_used": 0,
     "tokens_cap": 800000
@@ -36,44 +36,44 @@
   "pending": [],
   "running": [
     {
-      "id": "r04_A_phid1p0_s42",
-      "pid": 9534,
-      "started_at_utc": "2026-05-06T10:31:49.928455Z",
+      "id": "r06_v1_5seed_200ep_s42",
+      "pid": 12561,
+      "started_at_utc": "2026-05-06T11:51:03.124809Z",
       "log_tail_check_ok": true,
-      "out_dir": "results/research_loop/r04_A_phid1p0_s42",
-      "log": "results/research_loop/r04_A_phid1p0_s42.train.log"
+      "out_dir": "results/research_loop/r06_v1_5seed_200ep_s42",
+      "log": "results/research_loop/r06_v1_5seed_200ep_s42.train.log"
     },
     {
-      "id": "r04_A_phid1p0_s43",
-      "pid": 9544,
-      "started_at_utc": "2026-05-06T10:31:49.928455Z",
+      "id": "r06_v1_5seed_200ep_s43",
+      "pid": 12568,
+      "started_at_utc": "2026-05-06T11:51:03.124809Z",
       "log_tail_check_ok": true,
-      "out_dir": "results/research_loop/r04_A_phid1p0_s43",
-      "log": "results/research_loop/r04_A_phid1p0_s43.train.log"
+      "out_dir": "results/research_loop/r06_v1_5seed_200ep_s43",
+      "log": "results/research_loop/r06_v1_5seed_200ep_s43.train.log"
     },
     {
-      "id": "r04_A_phid1p0_s44",
-      "pid": 9551,
-      "started_at_utc": "2026-05-06T10:31:49.928455Z",
+      "id": "r06_v1_5seed_200ep_s44",
+      "pid": 12575,
+      "started_at_utc": "2026-05-06T11:51:03.124809Z",
       "log_tail_check_ok": true,
-      "out_dir": "results/research_loop/r04_A_phid1p0_s44",
-      "log": "results/research_loop/r04_A_phid1p0_s44.train.log"
+      "out_dir": "results/research_loop/r06_v1_5seed_200ep_s44",
+      "log": "results/research_loop/r06_v1_5seed_200ep_s44.train.log"
     },
     {
-      "id": "r04_A_phid1p0_s45",
-      "pid": 9561,
-      "started_at_utc": "2026-05-06T10:31:49.928455Z",
+      "id": "r06_v1_5seed_200ep_s45",
+      "pid": 12585,
+      "started_at_utc": "2026-05-06T11:51:03.124809Z",
       "log_tail_check_ok": true,
-      "out_dir": "results/research_loop/r04_A_phid1p0_s45",
-      "log": "results/research_loop/r04_A_phid1p0_s45.train.log"
+      "out_dir": "results/research_loop/r06_v1_5seed_200ep_s45",
+      "log": "results/research_loop/r06_v1_5seed_200ep_s45.train.log"
     },
     {
-      "id": "r04_A_phid1p0_s46",
-      "pid": 9574,
-      "started_at_utc": "2026-05-06T10:31:49.928455Z",
+      "id": "r06_v1_5seed_200ep_s46",
+      "pid": 12595,
+      "started_at_utc": "2026-05-06T11:51:03.124809Z",
       "log_tail_check_ok": true,
-      "out_dir": "results/research_loop/r04_A_phid1p0_s46",
-      "log": "results/research_loop/r04_A_phid1p0_s46.train.log"
+      "out_dir": "results/research_loop/r06_v1_5seed_200ep_s46",
+      "log": "results/research_loop/r06_v1_5seed_200ep_s46.train.log"
     }
   ],
   "done": [
@@ -370,25 +370,233 @@
       "id": "r04_adaptive_baseline_eval",
       "exit_code": 0,
       "finished_at_utc": "2026-05-06T10:32:15Z",
-      "verdict_path": null,
-      "overall_score_v2": null,
-      "axes": {}
+      "verdict_path": "round_04_verdict.md",
+      "overall_score_v2": 0.01,
+      "axes": {
+        "6axis_overall": 0.01,
+        "LS1_cum_rf": -0.123,
+        "LS1_max_df": 0.566,
+        "verdict": "= no_ctrl, H2 falsified"
+      }
     },
     {
       "id": "r04_governor_V3_smoke_s42",
       "exit_code": 0,
       "finished_at_utc": "2026-05-06T10:39:35Z",
-      "verdict_path": null,
+      "verdict_path": "round_04_verdict.md",
       "overall_score_v2": null,
-      "axes": {}
+      "axes": {
+        "final_R": -23748,
+        "fpeak": 0.42,
+        "agent3_mu": 0.03,
+        "critic_loss_stuck": 113000,
+        "wall_s": 459
+      }
     },
     {
       "id": "r04_obs9_smoke_v2_s42",
       "exit_code": 0,
       "finished_at_utc": "2026-05-06T10:39:25Z",
-      "verdict_path": null,
+      "verdict_path": "round_04_verdict.md",
       "overall_score_v2": null,
-      "axes": {}
+      "axes": {
+        "final_R": -23061,
+        "fpeak": 0.42,
+        "shape_OK": true,
+        "wall_s": 448
+      }
+    },
+    {
+      "id": "r04_A_phid1p0_s42",
+      "exit_code": 0,
+      "finished_at_utc": "2026-05-06T11:16:39Z",
+      "verdict_path": "round_04_verdict.md",
+      "overall_score_v2": 0.037,
+      "axes": {
+        "final_R": -1930.5,
+        "std_e199": 0.045,
+        "fpeak": 0.86,
+        "6axis_overall": 0.037,
+        "wall_s": 2682,
+        "smoothness_axis": 0.99
+      }
+    },
+    {
+      "id": "r04_A_phid1p0_s43",
+      "exit_code": 0,
+      "finished_at_utc": "2026-05-06T11:16:23Z",
+      "verdict_path": "round_04_verdict.md",
+      "overall_score_v2": 0.037,
+      "axes": {
+        "final_R": -1952.2,
+        "std_e199": 0.09,
+        "fpeak": 0.9,
+        "6axis_overall": 0.037,
+        "wall_s": 2666
+      }
+    },
+    {
+      "id": "r04_A_phid1p0_s44",
+      "exit_code": 0,
+      "finished_at_utc": "2026-05-06T11:16:43Z",
+      "verdict_path": "round_04_verdict.md",
+      "overall_score_v2": 0.037,
+      "axes": {
+        "final_R": -1952.5,
+        "std_e199": 0.09,
+        "fpeak": 0.8,
+        "6axis_overall": 0.037,
+        "wall_s": 2687
+      }
+    },
+    {
+      "id": "r04_A_phid1p0_s45",
+      "exit_code": 0,
+      "finished_at_utc": "2026-05-06T11:16:28Z",
+      "verdict_path": "round_04_verdict.md",
+      "overall_score_v2": 0.037,
+      "axes": {
+        "final_R": -2114.7,
+        "std_e199": 0.053,
+        "fpeak": 0.89,
+        "6axis_overall": 0.037,
+        "wall_s": 2672
+      }
+    },
+    {
+      "id": "r04_A_phid1p0_s46",
+      "exit_code": 0,
+      "finished_at_utc": "2026-05-06T11:16:34Z",
+      "verdict_path": "round_04_verdict.md",
+      "overall_score_v2": 0.037,
+      "axes": {
+        "final_R": -2271.8,
+        "std_e199": 0.07,
+        "fpeak": 0.87,
+        "6axis_overall": 0.037,
+        "wall_s": 2677
+      }
+    },
+    {
+      "id": "r05_disturb_5x_s42",
+      "exit_code": 0,
+      "finished_at_utc": "2026-05-06T11:28:54Z",
+      "verdict_path": "round_05_verdict.md",
+      "overall_score_v2": 0.037,
+      "axes": {
+        "final_R": -6925,
+        "cum_rf_LS1": -0.067,
+        "max_df_LS1": 0.452,
+        "6axis_overall": 0.037,
+        "rank": 2
+      }
+    },
+    {
+      "id": "r05_combo_v1_disturb5x_s42",
+      "exit_code": 0,
+      "finished_at_utc": "2026-05-06T11:29:32Z",
+      "verdict_path": "round_05_verdict.md",
+      "overall_score_v2": 0.037,
+      "axes": {
+        "final_R": -5465,
+        "cum_rf_LS1": -0.064,
+        "max_df_LS1": 0.456,
+        "6axis_overall": 0.037,
+        "rank": 1,
+        "note": "BEST by reward, but 6-axis tied 0.037 with all"
+      }
+    },
+    {
+      "id": "r05_lam_zero_s42",
+      "exit_code": 0,
+      "verdict_path": "round_05_verdict.md",
+      "overall_score_v2": 0.037,
+      "axes": {
+        "final_R": -23747,
+        "cum_rf_LS1": -0.12,
+        "max_df_LS1": 0.478,
+        "6axis_overall": 0.037,
+        "rank": 3
+      },
+      "finished_at_utc": "2026-05-07T11:30:00Z",
+      "note": "actually completed 30ep but daemon mis-marked killed; ckpt+log preserved"
+    },
+    {
+      "id": "r05_v1_env_back_s42",
+      "exit_code": 0,
+      "verdict_path": "round_05_verdict.md",
+      "overall_score_v2": 0.037,
+      "axes": {
+        "final_R": -11116,
+        "cum_rf_LS1": -0.088,
+        "max_df_LS1": 0.466,
+        "6axis_overall": 0.037,
+        "rank": 8
+      },
+      "finished_at_utc": "2026-05-07T11:30:00Z",
+      "note": "actually completed 30ep but daemon mis-marked killed; ckpt+log preserved"
+    },
+    {
+      "id": "r05_baseline_paper_s42",
+      "exit_code": 0,
+      "verdict_path": "round_05_verdict.md",
+      "overall_score_v2": 0.037,
+      "axes": {
+        "final_R": -23748,
+        "cum_rf_LS1": -0.12,
+        "max_df_LS1": 0.478,
+        "6axis_overall": 0.037,
+        "rank": 4
+      },
+      "finished_at_utc": "2026-05-07T11:30:00Z",
+      "note": "actually completed 30ep but daemon mis-marked killed; ckpt+log preserved"
+    },
+    {
+      "id": "r05_phid_5x_s42",
+      "exit_code": 0,
+      "verdict_path": "round_05_verdict.md",
+      "overall_score_v2": 0.037,
+      "axes": {
+        "final_R": -98713,
+        "cum_rf_LS1": -0.096,
+        "max_df_LS1": 0.485,
+        "6axis_overall": 0.037,
+        "rank": 6,
+        "note": "reward collapsed, but 6-axis equal"
+      },
+      "finished_at_utc": "2026-05-07T11:30:00Z",
+      "note": "actually completed 30ep but daemon mis-marked killed; ckpt+log preserved"
+    },
+    {
+      "id": "r05_action_range_2x_s42",
+      "exit_code": 0,
+      "verdict_path": "round_05_verdict.md",
+      "overall_score_v2": 0.037,
+      "axes": {
+        "final_R": -93997,
+        "cum_rf_LS1": -0.088,
+        "max_df_LS1": 0.466,
+        "6axis_overall": 0.037,
+        "rank": 7,
+        "note": "reward collapsed"
+      },
+      "finished_at_utc": "2026-05-07T11:30:00Z",
+      "note": "actually completed 30ep but daemon mis-marked killed; ckpt+log preserved"
+    },
+    {
+      "id": "r05_v3_governor_s42",
+      "exit_code": 0,
+      "verdict_path": "round_05_verdict.md",
+      "overall_score_v2": 0.037,
+      "axes": {
+        "final_R": -23748,
+        "cum_rf_LS1": -0.12,
+        "max_df_LS1": 0.478,
+        "6axis_overall": 0.037,
+        "rank": 5
+      },
+      "finished_at_utc": "2026-05-07T11:30:00Z",
+      "note": "actually completed 30ep but daemon mis-marked killed; ckpt+log preserved"
     }
   ],
   "killed": [],
@@ -444,6 +652,27 @@
         "results/research_loop/eval_r03_paper_spec/ (5seed eval JSONs)"
       ],
       "session_id": "R03_verdict_R04_launch"
+    },
+    {
+      "wake_at_utc": "2026-05-06T11:25:00Z",
+      "context_used_tok": 290000,
+      "wrote": [
+        "round_04_verdict.md",
+        "round_05_plan.md",
+        "env/andes/andes_vsg_env.py (DISTURB_SCALE env var)",
+        "results/research_loop/eval_r04_phid1p0/ (5seed eval JSONs)"
+      ],
+      "session_id": "R04_verdict_R05_short_bandit"
+    },
+    {
+      "wake_at_utc": "2026-05-06T11:45:00Z",
+      "context_used_tok": 350000,
+      "wrote": [
+        "round_05_verdict.md",
+        "round_06_plan.md",
+        "results/research_loop/eval_r05/ (16 + 2 baseline JSONs)"
+      ],
+      "session_id": "R05_falsified_R06_audit_pivot"
     }
   ],
   "handoff_pointers": []

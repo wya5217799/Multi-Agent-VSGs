@@ -72,6 +72,15 @@ class AndesMultiVSGEnv(AndesBaseEnv):
                          comm_fail_prob=comm_fail_prob,
                          comm_delay_steps=comm_delay_steps,
                          forced_link_failures=forced_link_failures)
+        # R05 disturb scale env var (calibrate disturbance magnitude vs paper).
+        # paper cum_rf 比项目 8× 偏大 → 嫌疑 disturbance 量级在 ANDES 中实际 1/8.
+        # DISTURB_SCALE multiplies DIST_MIN/DIST_MAX at instance level.
+        import os as _os
+        scale = float(_os.environ.get("DISTURB_SCALE", "1.0"))
+        if scale != 1.0:
+            self.DIST_MIN = type(self).DIST_MIN * scale
+            self.DIST_MAX = type(self).DIST_MAX * scale
+            print(f"[disturb] DISTURB_SCALE={scale} -> DIST_MIN={self.DIST_MIN}, DIST_MAX={self.DIST_MAX}")
         self.case_path = andes.get_case("kundur/kundur_full.xlsx")
 
     def _build_system(self):
